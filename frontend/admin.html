@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Flexia Admin Dashboard</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+/* ====================== FLEXIA ADMIN CSS ====================== */
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+font-family: 'Segoe UI', system-ui, sans-serif;
+}
+body {
+background: #050510;
+color: #e0e0ff;
+min-height: 100vh;
+padding: 20px;
+}
+#admin-container {
+max-width: 1400px;
+margin: 0 auto;
+}
+header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+padding: 20px 0;
+border-bottom: 1px solid #2a2a4a;
+margin-bottom: 30px;
+flex-wrap: wrap;
+gap: 15px;
+}
+header h1 {
+font-size: 28px;
+background: linear-gradient(90deg, #00eeff, #7b61ff);
+-webkit-background-clip: text;
+background-clip: text;
+color: transparent;
+font-weight: 700;
+margin: 0;
+}
+.btn-secondary {
+background: #2a2a4a;
+color: #00eeff;
+border: 1px solid #00eeff;
+padding: 8px 16px;
+border-radius: 6px;
+cursor: pointer;
+font-weight: 600;
+transition: all 0.2s;
+}
+.btn-secondary:hover {
+background: #1a1a3a;
+transform: translateY(-1px);
+}
+.admin-section {
+background: #0d0d1a;
+border: 1px solid #252540;
+border-radius: 12px;
+padding: 20px;
+margin-bottom: 25px;
+}
+.admin-section h3 {
+font-size: 20px;
+margin-bottom: 15px;
+color: #7b61ff;
+display: flex;
+align-items: center;
+gap: 8px;
+}
+#stats-summary {
+display: flex;
+gap: 20px;
+flex-wrap: wrap;
+padding: 15px !important;
+background: #121225 !important;
+border-radius: 10px;
+border-left: 3px solid #7b61ff;
+}
+#stats-summary div {
+font-size: 15px;
+}
+#stats-summary strong {
+color: #7b61ff;
+}
+.user-item, .withdrawal-item, .whatsapp-number-item, .tiktok-history-item {
+background: #151528;
+padding: 12px;
+margin: 8px 0;
+border-radius: 8px;
+border-left: 2px solid #00eeff;
+font-size: 14px;
+}
+button {
+background: #7b61ff;
+color: white;
+border: none;
+padding: 8px 14px;
+border-radius: 6px;
+cursor: pointer;
+font-weight: 600;
+margin: 4px;
+transition: background 0.2s;
+}
+button:hover {
+background: #6a50e0;
+}
+input, textarea {
+background: #121225;
+border: 1px solid #252540;
+color: #e0e0ff;
+padding: 10px;
+border-radius: 6px;
+width: 100%;
+margin: 5px 0;
+}
+input:focus, textarea:focus {
+outline: none;
+border-color: #7b61ff;
+}
+.social-link-item {
+display: flex;
+justify-content: space-between;
+align-items: center;
+background: #151528;
+padding: 10px;
+margin: 6px 0;
+border-radius: 6px;
+}
+.message {
+padding: 10px;
+margin: 10px 0;
+border-radius: 8px;
+text-align: center;
+font-weight: 500;
+}
+.message.success {
+background: rgba(0, 200, 83, 0.2);
+color: #00c853;
+}
+.message.error {
+background: rgba(255, 82, 82, 0.2);
+color: #ff5252;
+}
+.hidden {
+display: none !important;
+}
+/* Tab Navigation */
+.admin-tabs {
+display: flex;
+gap: 5px;
+margin-bottom: 25px;
+border-bottom: 1px solid #252540;
+padding-bottom: 10px;
+flex-wrap: wrap;
+}
+.tab-btn {
+background: transparent;
+color: #a0a0c0;
+border: none;
+padding: 10px 20px;
+border-radius: 8px 8px 0 0;
+cursor: pointer;
+transition: all 0.3s;
+font-weight: 600;
+}
+.tab-btn:hover {
+color: #e0e0ff;
+background: #1a1a3a;
+}
+.tab-btn.active {
+background: #7b61ff;
+color: white;
+}
+.tab-content {
+display: none;
+}
+.tab-content.active {
+display: block;
+}
+/* Table Styles */
+.table-container {
+overflow-x: auto;
+margin-top: 15px;
+}
+table {
+width: 100%;
+border-collapse: collapse;
+}
+th, td {
+padding: 10px;
+text-align: left;
+border-bottom: 1px solid #252540;
+}
+th {
+background: #121225;
+color: #7b61ff;
+font-weight: 600;
+}
+tr:hover {
+background: #151528;
+}
+/* Badges */
+.badge {
+padding: 4px 8px;
+border-radius: 12px;
+font-size: 12px;
+font-weight: 600;
+}
+.badge-success {
+background: #00c853;
+color: white;
+}
+.badge-danger {
+background: #ff5252;
+color: white;
+}
+.badge-warning {
+background: #ff9800;
+color: white;
+}
+.badge-info {
+background: #2196f3;
+color: white;
+}
+/* Modal Styles */
+.modal-content {
+background: #0d0d1a;
+color: #e0e0ff;
+border: 1px solid #252540;
+}
+.modal-header {
+border-bottom: 1px solid #252540;
+}
+.modal-footer {
+border-top: 1px solid #252540;
+}
+.btn-close {
+filter: invert(1) grayscale(100%) brightness(200%);
+}
+/* Day Selector */
+.day-selector {
+max-height: 200px;
+overflow-y: auto;
+border: 1px solid #252540;
+border-radius: 5px;
+padding: 10px;
+background: #121225;
+display: flex;
+flex-wrap: wrap;
+gap: 5px;
+}
+.day-checkbox {
+display: flex;
+align-items: center;
+gap: 5px;
+min-width: 60px;
+}
+.day-checkbox input[type="checkbox"] {
+margin: 0;
+}
+.day-checkbox label {
+font-size: 14px;
+cursor: pointer;
+}
+.day-checkbox input:checked + label {
+color: #7b61ff;
+font-weight: bold;
+}
+/* Stats Cards */
+.stats-card {
+background: #121225;
+border-radius: 10px;
+padding: 15px;
+text-align: center;
+border-left: 4px solid #7b61ff;
+}
+.stats-card h3 {
+margin: 0;
+font-size: 24px;
+color: #00eeff;
+}
+.stats-card p {
+margin: 5px 0 0 0;
+color: #a0a0c0;
+font-size: 14px;
+}
+/* Withdrawal Status Report */
+.status-indicator {
+display: inline-block;
+width: 12px;
+height: 12px;
+border-radius: 50%;
+margin-right: 5px;
+}
+.status-allowed {
+background: #00c853;
+}
+.status-restricted {
+background: #ff5252;
+}
+.status-not-today {
+background: #ff9800;
+}
+/* Global Withdrawal Days Display */
+.global-days-display {
+background: #121225;
+border: 2px solid #7b61ff;
+border-radius: 8px;
+padding: 15px;
+margin: 15px 0;
+}
+.global-days-display h4 {
+color: #00eeff;
+margin-bottom: 10px;
+font-size: 16px;
+}
+.global-days-display .days-list {
+color: #e0e0ff;
+font-size: 18px;
+font-weight: bold;
+}
+.global-days-display .days-note {
+color: #a0a0c0;
+font-size: 12px;
+margin-top: 8px;
+}
+@media (max-width: 768px) {
+#stats-summary {
+flex-direction: column;
+}
+header {
+flex-direction: column;
+align-items: flex-start;
+}
+.admin-tabs {
+overflow-x: auto;
+white-space: nowrap;
+padding-bottom: 5px;
+}
+.table-container {
+font-size: 14px;
+}
+}
+</style>
+</head>
+<body>
+<div id="admin-container">
+<header>
+<h1><i class="fas fa-crown"></i> Flexia Admin Dashboard</h1>
+<button onclick="adminLogout()" class="btn-secondary">
+<i class="fas fa-sign-out-alt"></i> Logout
+</button>
+</header>
+
+<!-- Tab Navigation -->
+<div class="admin-tabs">
+<button class="tab-btn active" onclick="showTab('dashboard')">
+<i class="fas fa-tachometer-alt"></i> Dashboard
+</button>
+<button class="tab-btn" onclick="showTab('globalSettings')">
+<i class="fas fa-globe"></i> Global Settings
+</button>
+<button class="tab-btn" onclick="showTab('tiktokDaily')">
+<i class="fab fa-tiktok"></i> TikTok Daily
+</button>
+<button class="tab-btn" onclick="showTab('users')">
+<i class="fas fa-users"></i> Users
+</button>
+<button class="tab-btn" onclick="showTab('withdrawals')">
+<i class="fas fa-money-bill-wave"></i> Withdrawals
+</button>
+<button class="tab-btn" onclick="showTab('withdrawalReport')">
+<i class="fas fa-chart-bar"></i> Withdrawal Report
+</button>
+<button class="tab-btn" onclick="showTab('settings')">
+<i class="fas fa-cog"></i> Settings
+</button>
+<button class="tab-btn" onclick="showTab('coupons')">
+<i class="fas fa-ticket-alt"></i> Coupons
+</button>
+<button class="tab-btn" onclick="showTab('whatsapp')">
+<i class="fab fa-whatsapp"></i> WhatsApp
+</button>
+</div>
+
+<!-- TikTok Daily Tab -->
+<div id="tiktokDaily" class="tab-content">
+<div class="admin-section">
+<h3><i class="fab fa-tiktok"></i> Set Today's TikTok Task</h3>
+<p>Enter a real TikTok profile link (e.g., https://www.tiktok.com/@username)</p>
+<div class="mb-3">
+<label>TikTok Profile Link</label>
+<input type="url" id="tiktok-link-input" placeholder="https://www.tiktok.com/@..." />
+</div>
+<button onclick="setTikTokDaily()" class="btn btn-success" style="background:#00c853;">
+<i class="fas fa-save"></i> Set Today's TikTok Task
+</button>
+<div id="tiktok-message" class="message hidden"></div>
+</div>
+
+<div class="admin-section">
+<h3><i class="fas fa-eye"></i> Current TikTok Task</h3>
+<div id="current-tiktok-display">
+Loading...
+</div>
+</div>
+
+<div class="admin-section">
+<h3><i class="fas fa-history"></i> Recent TikTok Tasks (Last 7 Days)</h3>
+<div id="tiktok-history-list">
+Loading history...
+</div>
+</div>
+</div>
+
+<!-- Settings Tab (Registration Control REMOVED) -->
+<div id="settings" class="tab-content">
+<div class="admin-section">
+<h3><i class="fas fa-share-alt"></i> Social Media Links</h3>
+<p>Users will see these links in the app settings.</p>
+<div class="mb-3">
+<label>WhatsApp Group Link</label>
+<input type="url" id="whatsapp-link" placeholder="https://chat.whatsapp.com/..." />
+</div>
+<div class="mb-3">
+<label>Telegram Group Link</label>
+<input type="url" id="telegram-link" placeholder="https://t.me/..." />
+</div>
+<div class="mb-3">
+<label>Facebook Group Link</label>
+<input type="url" id="facebook-link" placeholder="https://facebook.com/groups/..." />
+</div>
+<button onclick="saveSocialLinks()" style="background: #4CAF50;">
+<i class="fas fa-save"></i> Save Links
+</button>
+<div id="social-message" class="message hidden"></div>
+</div>
+<div class="admin-section">
+<h3><i class="fas fa-key"></i> Change Admin Password</h3>
+<div class="mb-3">
+<label>Current Password</label>
+<input type="password" id="current-password" placeholder="Current password" />
+</div>
+<div class="mb-3">
+<label>New Password</label>
+<input type="password" id="new-password" placeholder="New password (min 8 chars)" />
+</div>
+<div class="mb-3">
+<label>Confirm New Password</label>
+<input type="password" id="confirm-password" placeholder="Confirm new password" />
+</div>
+<button onclick="changeAdminPassword()" style="background: #2196F3;">
+<i class="fas fa-key"></i> Change Password
+</button>
+<div id="password-message" class="message hidden"></div>
+</div>
+</div>
+
+<!-- Other Tabs -->
+<div id="dashboard" class="tab-content active">
+<div class="admin-section">
+<h3><i class="fas fa-chart-line"></i> System Overview</h3>
+<div class="row">
+<div class="col-md-3 mb-3">
+<div class="stats-card">
+<h3 id="total-users-count">—</h3>
+<p>Total Users</p>
+</div>
+</div>
+<div class="col-md-3 mb-3">
+<div class="stats-card">
+<h3 id="pending-withdrawals-count">—</h3>
+<p>Pending Withdrawals</p>
+</div>
+</div>
+<div class="col-md-3 mb-3">
+<div class="stats-card">
+<h3 id="total-balance">—</h3>
+<p>Total Platform Balance</p>
+</div>
+</div>
+<div class="col-md-3 mb-3">
+<div class="stats-card">
+<h3 id="today-date">—</h3>
+<p>Today's Date</p>
+</div>
+</div>
+</div>
+<div class="global-days-display">
+<h4><i class="fas fa-calendar-check"></i> Current Global Withdrawal Days</h4>
+<div class="days-list" id="current-global-days">Loading...</div>
+<div class="days-note">These days apply to all users without custom withdrawal settings</div>
+</div>
+</div>
+<div class="admin-section">
+<h3><i class="fas fa-history"></i> Recent Withdrawals</h3>
+<div id="recent-withdrawals">Loading...</div>
+</div>
+</div>
+
+<div id="globalSettings" class="tab-content"></div>
+<div id="users" class="tab-content"></div>
+<div id="withdrawals" class="tab-content"></div>
+<div id="withdrawalReport" class="tab-content"></div>
+<div id="coupons" class="tab-content"></div>
+<div id="whatsapp" class="tab-content"></div>
+
+<!-- Withdrawal Settings Modal -->
+<div class="modal fade" id="withdrawalSettingsModal" tabindex="-1">
+<div class="modal-dialog modal-lg">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title">User Settings for <span id="modal-username"></span></h5>
+<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body" id="withdrawal-settings-content">
+<!-- Will be populated by JS -->
+</div>
+<div class="modal-footer">
+<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+<button onclick="saveWithdrawalSettings()" class="btn btn-primary" id="save-settings-btn">
+<i class="fas fa-save"></i> Save Changes
+</button>
+</div>
+</div>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ================================ GLOBAL VARIABLES ================================
+let currentUserData = null;
+let withdrawalReportData = null;
+let selectedUserId = null;
+let globalWithdrawalDays = [];
+let withdrawalSettings = {
+withdrawal_restricted: false,
+custom_withdrawal_days: [],
+withdrawal_limit: 0,
+is_admin: false,
+username: ''
+};
+
+// ================================ UTILITY FUNCTIONS ================================
+function showMessage(text, type = 'info', elementId = 'coupon-message') {
+const el = document.getElementById(elementId);
+el.textContent = text;
+el.className = `message ${type}`;
+el.classList.remove('hidden');
+setTimeout(() => el.classList.add('hidden'), 5000);
+}
+function showAlert(message, type = 'info') {
+alert(`[${type.toUpperCase()}] ${message}`);
+}
+function formatCurrency(amount) {
+return '₦' + parseFloat(amount || 0).toLocaleString('en-US', {
+minimumFractionDigits: 2,
+maximumFractionDigits: 2
+});
+}
+function formatNumber(num) {
+return parseFloat(num || 0).toLocaleString('en-US', {
+minimumFractionDigits: 0,
+maximumFractionDigits: 0
+});
+}
+
+// ================================ AUTH FUNCTIONS ================================
+function adminLogout() {
+fetch('/api/auth/logout', {
+method: 'POST',
+credentials: 'include'
+}).then(() => {
+window.location.href = '/';
+});
+}
+async function fetchData(endpoint) {
+const res = await fetch(endpoint, { credentials: 'include' });
+if (!res.ok) {
+if (res.status === 401) {
+adminLogout();
+throw new Error('Unauthorized');
+}
+throw new Error(`HTTP ${res.status}`);
+}
+return await res.json();
+}
+async function postData(endpoint, data) {
+const res = await fetch(endpoint, {
+method: 'POST',
+credentials: 'include',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify(data)
+});
+if (!res.ok) {
+if (res.status === 401) {
+adminLogout();
+throw new Error('Unauthorized');
+}
+throw new Error(`HTTP ${res.status}`);
+}
+return await res.json();
+}
+async function putData(endpoint, data) {
+const res = await fetch(endpoint, {
+method: 'PUT',
+credentials: 'include',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify(data)
+});
+if (!res.ok) {
+if (res.status === 401) {
+adminLogout();
+throw new Error('Unauthorized');
+}
+throw new Error(`HTTP ${res.status}`);
+}
+return await res.json();
+}
+
+// ================================ TIKTOK DAILY FUNCTIONS ================================
+async function setTikTokDaily() {
+const link = document.getElementById('tiktok-link-input').value.trim();
+if (!link) {
+showMessage('Please enter a TikTok link', 'error', 'tiktok-message');
+return;
+}
+if (!link.startsWith('https://www.tiktok.com/@')) {
+showMessage('Link must start with https://www.tiktok.com/@', 'error', 'tiktok-message');
+return;
+}
+try {
+const res = await postData('/api/admin/tiktok/set-daily', { tiktok_link: link });
+if (res.success) {
+showMessage('TikTok task set successfully!', 'success', 'tiktok-message');
+loadTikTokDailyTab();
+document.getElementById('tiktok-link-input').value = '';
+} else {
+showMessage(res.message || 'Failed to set TikTok task', 'error', 'tiktok-message');
+}
+} catch (err) {
+showMessage('Network error', 'error', 'tiktok-message');
+}
+}
+
+async function loadTikTokDailyTab() {
+try {
+const currentRes = await fetchData('/api/admin/tiktok/get-daily');
+const historyRes = await fetchData('/api/admin/tiktok/history');
+if (currentRes.success) {
+const currentEl = document.getElementById('current-tiktok-display');
+if (currentRes.task) {
+currentEl.innerHTML = `
+<p><strong>Active since:</strong> ${new Date(currentRes.task.date).toLocaleDateString()}</p>
+<p><strong>Link:</strong> <a href="${currentRes.task.tiktok_link}" target="_blank">${currentRes.task.tiktok_link}</a></p>
+<p><strong>Reward:</strong> ₦${currentRes.task.reward_amount}</p>
+`;
+} else {
+currentEl.innerHTML = '<p>No TikTok task set for today.</p>';
+}
+}
+if (historyRes.success) {
+const historyEl = document.getElementById('tiktok-history-list');
+if (historyRes.history && historyRes.history.length > 0) {
+historyEl.innerHTML = historyRes.history.map(item => `
+<div class="tiktok-history-item">
+<strong>${new Date(item.date).toLocaleDateString()}</strong><br/>
+<a href="${item.tiktok_link}" target="_blank">${item.tiktok_link}</a><br/>
+Reward: ₦${item.reward_amount}
+</div>
+`).join('');
+} else {
+historyEl.innerHTML = '<p>No history found.</p>';
+}
+}
+} catch (err) {
+console.error('Failed to load TikTok ', err);
+document.getElementById('current-tiktok-display').innerHTML = '<p>Error loading current task</p>';
+document.getElementById('tiktok-history-list').innerHTML = '<p>Error loading history</p>';
+}
+}
+
+// ================================ TAB FUNCTIONS ================================
+function showTab(tabId) {
+document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+document.getElementById(tabId).classList.add('active');
+document.querySelector(`[onclick="showTab('${tabId}')"]`).classList.add('active');
+switch(tabId) {
+case 'dashboard': loadDashboard(); break;
+case 'globalSettings': loadGlobalWithdrawalDays(); break;
+case 'tiktokDaily': loadTikTokDailyTab(); break;
+case 'users': loadUsers(); break;
+case 'withdrawals': loadWithdrawals(); break;
+case 'withdrawalReport': loadWithdrawalReport(); break;
+case 'settings': loadSettings(); break;
+case 'coupons': loadCouponStats(); break;
+case 'whatsapp': loadWhatsAppNumbers(); break;
+}
+}
+
+// ================================ DASHBOARD FUNCTIONS ================================
+async function loadDashboard() {
+try {
+const [usersRes, txRes] = await Promise.all([
+fetchData('/api/admin/users'),
+fetchData('/api/admin/transactions')
+]);
+if (usersRes.success) {
+const totalUsers = usersRes.users.length;
+const totalBalance = usersRes.users.reduce((sum, user) => sum + user.balance, 0);
+document.getElementById('total-users-count').textContent = formatNumber(totalUsers);
+document.getElementById('total-balance').textContent = formatCurrency(totalBalance);
+document.getElementById('today-date').textContent = new Date().getDate();
+}
+if (txRes.success) {
+const pending = txRes.transactions.filter(tx => tx.status === 'PENDING');
+document.getElementById('pending-withdrawals-count').textContent = pending.length;
+renderRecentWithdrawals(txRes.transactions.slice(0, 10));
+}
+loadGlobalWithdrawalDays(true);
+} catch (err) {
+console.error('Failed to load dashboard:', err);
+}
+}
+function renderRecentWithdrawals(transactions) {
+const container = document.getElementById('recent-withdrawals');
+if (!transactions.length) {
+container.innerHTML = '<p>No recent transactions.</p>';
+return;
+}
+container.innerHTML = `
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>User ID</th>
+<th>Amount</th>
+<th>Status</th>
+<th>Date</th>
+</tr>
+</thead>
+<tbody>
+${transactions.map(tx => `
+<tr>
+<td>${tx.id}</td>
+<td>${tx.user_id}</td>
+<td>${formatCurrency(tx.amount)}</td>
+<td>
+<span class="badge ${tx.status === 'COMPLETED' ? 'badge-success' :
+tx.status === 'PENDING' ? 'badge-warning' : 'badge-danger'}">
+${tx.status}
+</span>
+</td>
+<td>${new Date(tx.timestamp).toLocaleDateString()}</td>
+</tr>
+`).join('')}
+</tbody>
+</table>
+</div>
+`;
+}
+
+// ================================ GLOBAL WITHDRAWAL DAYS ================================
+async function loadGlobalWithdrawalDays(dashboardOnly = false) {
+try {
+const res = await fetchData('/api/admin/global-withdrawal-days');
+if (res.success) {
+globalWithdrawalDays = res.days || [7, 14, 25, 30];
+}
+} catch (err) {
+console.error('Failed to load global withdrawal days:', err);
+globalWithdrawalDays = [7, 14, 25, 30];
+}
+updateGlobalDaysDisplay();
+if (!dashboardOnly && document.getElementById('globalSettings').innerHTML === '') {
+renderGlobalSettingsTab();
+}
+}
+function updateGlobalDaysDisplay() {
+const sortedDays = [...globalWithdrawalDays].sort((a, b) => a - b);
+const daysText = sortedDays.length > 0 ? sortedDays.join(', ') : 'Default (7, 14, 25, 30)';
+const dashboardEl = document.getElementById('current-global-days');
+if (dashboardEl) dashboardEl.textContent = daysText;
+}
+function renderGlobalSettingsTab() {
+const tab = document.getElementById('globalSettings');
+tab.innerHTML = `
+<div class="admin-section">
+<h3><i class="fas fa-globe"></i> Global Withdrawal Settings</h3>
+<p style="color: #a0a0c0; margin-bottom: 20px;">
+Set the default withdrawal days for all users. Users with custom settings will not be affected.
+</p>
+<div class="global-days-display">
+<h4><i class="fas fa-calendar-alt"></i> Current Global Withdrawal Days</h4>
+<div class="days-list" id="global-days-current">Loading...</div>
+<div class="days-note">All users without custom settings can withdraw on these days</div>
+</div>
+<div class="mb-4">
+<label class="form-label fw-bold" style="color: #00eeff; font-size: 16px; margin-bottom: 10px;">
+<i class="fas fa-edit"></i> Select Global Withdrawal Days (1-31)
+</label>
+<div class="form-text mb-2" style="color: #a0a0c0;">
+Select which days of the month users can make withdrawals. These apply to all users without custom settings.
+</div>
+<div class="day-selector" id="global-day-selector">
+<!-- Generated by JS -->
+</div>
+<div class="mt-3">
+<button onclick="selectAllGlobalDays()" class="btn btn-sm" style="background: #00eeff; color: #000;">
+<i class="fas fa-check-square"></i> Select All Days
+</button>
+<button onclick="clearAllGlobalDays()" class="btn btn-sm" style="background: #ff5252;">
+<i class="fas fa-times-circle"></i> Clear All Days
+</button>
+<button onclick="setDefaultGlobalDays()" class="btn btn-sm" style="background: #ff9800;">
+<i class="fas fa-undo"></i> Reset to Default (7, 14, 25, 30)
+</button>
+</div>
+</div>
+<button onclick="saveGlobalWithdrawalDays()" class="btn btn-primary" style="background: #00c853; padding: 12px 24px; font-size: 16px;">
+<i class="fas fa-save"></i> Save Global Withdrawal Days
+</button>
+<div id="global-settings-message" class="message hidden"></div>
+<div class="mt-4" style="background: #151528; padding: 15px; border-radius: 8px; border-left: 3px solid #00eeff;">
+<h5 style="color: #7b61ff;"><i class="fas fa-info-circle"></i> Important Notes</h5>
+<ul style="color: #a0a0c0; margin: 10px 0 0 20px; line-height: 1.8;">
+<li>These days will be used as the default for all new users</li>
+<li>Existing users without custom settings will use these days</li>
+<li>Users with custom withdrawal day settings will NOT be affected</li>
+<li>If no days are selected, the system will use default days: 7, 14, 25, 30</li>
+</ul>
+</div>
+</div>
+`;
+loadGlobalWithdrawalDays(false);
+renderGlobalDaySelector();
+}
+function renderGlobalDaySelector() {
+const selector = document.getElementById('global-day-selector');
+if (!selector) return;
+selector.innerHTML = '';
+for (let day = 1; day <= 31; day++) {
+const isChecked = globalWithdrawalDays.includes(day);
+selector.innerHTML += `
+<div class="day-checkbox">
+<input type="checkbox" id="global-day-${day}" ${isChecked ? 'checked' : ''}
+onchange="toggleGlobalDay(${day}, this.checked)">
+<label for="global-day-${day}">${day}</label>
+</div>
+`;
+}
+document.getElementById('global-days-current').textContent = globalWithdrawalDays.sort((a, b) => a - b).join(', ') || 'Default (7, 14, 25, 30)';
+}
+function toggleGlobalDay(day, isChecked) {
+if (isChecked) {
+if (!globalWithdrawalDays.includes(day)) globalWithdrawalDays.push(day);
+} else {
+globalWithdrawalDays = globalWithdrawalDays.filter(d => d !== day);
+}
+}
+function selectAllGlobalDays() {
+globalWithdrawalDays = Array.from({length: 31}, (_, i) => i + 1);
+renderGlobalDaySelector();
+}
+function clearAllGlobalDays() {
+globalWithdrawalDays = [];
+renderGlobalDaySelector();
+}
+function setDefaultGlobalDays() {
+globalWithdrawalDays = [7, 14, 25, 30];
+renderGlobalDaySelector();
+}
+async function saveGlobalWithdrawalDays() {
+if (globalWithdrawalDays.length === 0) {
+if (!confirm('No days selected. This will use default days (7, 14, 25, 30). Continue?')) {
+return;
+}
+globalWithdrawalDays = [7, 14, 25, 30];
+}
+try {
+const result = await postData('/api/admin/global-withdrawal-days', { days: globalWithdrawalDays });
+if (result.success) {
+showMessage('Global withdrawal days updated!', 'success', 'global-settings-message');
+updateGlobalDaysDisplay();
+renderGlobalDaySelector();
+} else {
+showMessage(result.message || 'Failed to save', 'error', 'global-settings-message');
+}
+} catch (err) {
+console.error('Save error:', err);
+showMessage('Failed to save global withdrawal days', 'error', 'global-settings-message');
+}
+}
+
+// ================================ STUB FUNCTIONS FOR OTHER TABS ================================
+async function loadUsers() {
+if (document.getElementById('users').innerHTML === '') {
+document.getElementById('users').innerHTML = `
+<div class="admin-section">
+<h3><i class="fas fa-users"></i> User Management</h3>
+<div class="mb-3">
+<input type="text" id="user-search" placeholder="Search users by username or ID..."
+onkeyup="searchUsers()" style="max-width: 300px;">
+</div>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Username</th>
+<th>Balance</th>
+<th>Withdrawal Status</th>
+<th>Withdrawal Limit</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody id="user-list">
+<tr><td colspan="6" class="text-center">Loading users...</td></tr>
+</tbody>
+</table>
+</div>
+<div id="user-pagination" class="mt-3"></div>
+</div>
+`;
+}
+try {
+const usersRes = await fetchData('/api/admin/users');
+if (usersRes.success) {
+renderUserList(usersRes.users);
+}
+} catch (err) {
+console.error('Failed to load users:', err);
+document.getElementById('user-list').innerHTML = '<tr><td colspan="6" class="text-center">Error loading users</td></tr>';
+}
+}
+function renderUserList(users) {
+const tbody = document.getElementById('user-list');
+if (!users.length) {
+tbody.innerHTML = '<tr><td colspan="6" class="text-center">No users found</td></tr>';
+return;
+}
+tbody.innerHTML = users.map(user => {
+const withdrawalStatus = user.withdrawal_restricted ?
+'<span class="badge badge-danger">Restricted</span>' :
+'<span class="badge badge-success">Allowed</span>';
+const withdrawalLimit = user.withdrawal_limit > 0 ?
+formatCurrency(user.withdrawal_limit) :
+'<span class="text-muted">No Limit</span>';
+const isFlexiaAdmin = user.username === 'flexiaadmin';
+const adminBadge = user.is_admin ?
+(isFlexiaAdmin ?
+'<span class="badge badge-primary">Original Admin</span>' :
+'<button onclick="toggleAdminStatus('+user.id+', true, \''+user.username+'\')" class="btn btn-sm btn-warning">Demote</button>') :
+(!isFlexiaAdmin ?
+'<button onclick="toggleAdminStatus('+user.id+', false, \''+user.username+'\')" class="btn btn-sm btn-info">Promote</button>' :
+'');
+return `
+<tr>
+<td>${user.id}</td>
+<td>${user.username} ${adminBadge}</td>
+<td>${formatCurrency(user.balance)}</td>
+<td>${withdrawalStatus}</td>
+<td>${withdrawalLimit}</td>
+<td>
+<button onclick="openWithdrawalSettings(${user.id}, '${user.username}', ${user.balance}, ${user.is_admin})"
+class="btn btn-sm btn-outline-primary">
+<i class="fas fa-cog"></i> Settings
+</button>
+${isFlexiaAdmin ? '' : `
+<button onclick="deleteUser(${user.id})"
+class="btn btn-sm btn-outline-danger ms-1">
+<i class="fas fa-trash"></i>
+</button>
+`}
+</td>
+</tr>
+`;
+}).join('');
+}
+async function toggleAdminStatus(userId, isCurrentlyAdmin, username) {
+if (username === 'flexiaadmin') {
+showAlert('Cannot modify original admin', 'error');
+return;
+}
+if (!confirm(`Are you sure you want to ${isCurrentlyAdmin ? 'remove admin rights from' : 'make'} ${username}?`)) {
+return;
+}
+try {
+const res = await postData(`/api/admin/user/${userId}/toggle-admin`);
+if (res.success) {
+showAlert(res.message, 'success');
+loadUsers();
+} else {
+showAlert(res.message, 'error');
+}
+} catch (err) {
+showAlert('Failed to update admin status', 'error');
+}
+}
+function searchUsers() {
+const searchTerm = document.getElementById('user-search').value.toLowerCase();
+const rows = document.getElementById('user-list').getElementsByTagName('tr');
+for (let row of rows) {
+const text = row.textContent.toLowerCase();
+row.style.display = text.includes(searchTerm) ? '' : 'none';
+}
+}
+async function deleteUser(userId) {
+if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+return;
+}
+try {
+const res = await fetch(`/api/admin/user/${userId}`, {
+method: 'DELETE',
+credentials: 'include'
+});
+const data = await res.json();
+if (data.success) {
+showMessage('User deleted successfully', 'success');
+loadUsers();
+} else {
+showMessage(data.message, 'error');
+}
+} catch (err) {
+console.error('Delete error:', err);
+showMessage('Failed to delete user', 'error');
+}
+}
+async function openWithdrawalSettings(userId, username, balance, isAdmin = false) {
+alert('User settings modal requires backend implementation.');
+}
+
+// ================================ LOAD WITHDRAWALS ================================
+async function loadWithdrawals() {
+if (document.getElementById('withdrawals').innerHTML === '') {
+document.getElementById('withdrawals').innerHTML = `
+<div class="admin-section">
+<h3><i class="fas fa-money-bill-wave"></i> Pending Withdrawals</h3>
+<div id="pending-withdrawals-list">Loading...</div>
+</div>
+<div class="admin-section">
+<h3><i class="fas fa-history"></i> Recent Transactions</h3>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>User</th>
+<th>Amount</th>
+<th>Status</th>
+<th>Date</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody id="all-transactions">
+<tr><td colspan="6" class="text-center">Loading...</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+`;
+}
+try {
+const txRes = await fetchData('/api/admin/transactions');
+if (txRes.success) {
+renderPendingWithdrawals(txRes.transactions);
+renderAllTransactions(txRes.transactions);
+}
+} catch (err) {
+console.error('Load withdrawals error:', err);
+}
+}
+function renderPendingWithdrawals(transactions) {
+const pending = transactions.filter(tx => tx.status === 'PENDING');
+const container = document.getElementById('pending-withdrawals-list');
+if (!pending.length) {
+container.innerHTML = '<p>No pending withdrawals.</p>';
+return;
+}
+container.innerHTML = pending.map(tx => {
+const details = typeof tx.details === 'string' ? JSON.parse(tx.details) : tx.details;
+return `
+<div class="withdrawal-item">
+<div><strong>Transaction ID:</strong> ${tx.id}</div>
+<div><strong>User ID:</strong> ${tx.user_id}</div>
+<div><strong>Amount:</strong> ${formatCurrency(tx.amount)}</div>
+<div><strong>Bank:</strong> ${details.bank_code || 'N/A'}</div>
+<div><strong>Account:</strong> ${details.account_number || 'N/A'}</div>
+<div><strong>Date:</strong> ${new Date(tx.timestamp).toLocaleString()}</div>
+<div style="margin-top: 8px;">
+<button onclick="processWithdrawal('${tx.id}', 'approve')"
+style="background:#00c853;">
+<i class="fas fa-check"></i> Approve
+</button>
+<button onclick="processWithdrawal('${tx.id}', 'reject')"
+style="background:#c62828; margin-left: 8px;">
+<i class="fas fa-times"></i> Reject
+</button>
+</div>
+</div>
+`;
+}).join('');
+}
+function renderAllTransactions(transactions) {
+const tbody = document.getElementById('all-transactions');
+if (!transactions.length) {
+tbody.innerHTML = '<tr><td colspan="6" class="text-center">No transactions</td></tr>';
+return;
+}
+tbody.innerHTML = transactions.slice(0, 50).map(tx => {
+const details = typeof tx.details === 'string' ? JSON.parse(tx.details) : tx.details;
+return `
+<tr>
+<td>${tx.id.substring(0, 8)}...</td>
+<td>${tx.user_id}</td>
+<td>${formatCurrency(tx.amount)}</td>
+<td>
+<span class="badge ${tx.status === 'COMPLETED' ? 'badge-success' :
+tx.status === 'PENDING' ? 'badge-warning' : 'badge-danger'}">
+${tx.status}
+</span>
+</td>
+<td>${new Date(tx.timestamp).toLocaleDateString()}</td>
+<td>
+${tx.status === 'PENDING' ? `
+<button onclick="processWithdrawal('${tx.id}', 'approve')"
+class="btn btn-sm btn-success">
+<i class="fas fa-check"></i>
+</button>
+<button onclick="processWithdrawal('${tx.id}', 'reject')"
+class="btn btn-sm btn-danger ms-1">
+<i class="fas fa-times"></i>
+</button>
+` : '—'}
+</td>
+</tr>
+`;
+}).join('');
+}
+async function processWithdrawal(txId, action) {
+if (!confirm(`Are you sure you want to ${action} this withdrawal?`)) return;
+try {
+const data = await postData('/api/admin/approve-withdrawal', {
+transaction_id: txId,
+action: action
+});
+if (data.success) {
+showMessage(`Withdrawal ${action}ed`, 'success');
+loadWithdrawals();
+loadDashboard();
+} else {
+showMessage(data.message, 'error');
+}
+} catch (err) {
+console.error('Process withdrawal error:', err);
+showMessage('Failed to process withdrawal', 'error');
+}
+}
+
+// ================================ WITHDRAWAL REPORT ================================
+async function loadWithdrawalReport() {
+if (document.getElementById('withdrawalReport').innerHTML === '') {
+document.getElementById('withdrawalReport').innerHTML = `
+<div class="admin-section">
+<h3><i class="fas fa-chart-bar"></i> Withdrawal Status Report</h3>
+<div class="row mb-4">
+<div class="col-md-3 mb-3">
+<div class="stats-card">
+<h3 id="report-total-users">—</h3>
+<p>Total Users</p>
+</div>
+</div>
+<div class="col-md-3 mb-3">
+<div class="stats-card">
+<h3 id="report-can-withdraw">—</h3>
+<p>Can Withdraw Today</p>
+</div>
+</div>
+<div class="col-md-3 mb-3">
+<div class="stats-card">
+<h3 id="report-restricted">—</h3>
+<p>Restricted Users</p>
+</div>
+</div>
+<div class="col-md-3 mb-3">
+<div class="stats-card">
+<h3 id="report-today">—</h3>
+<p>Today's Date</p>
+</div>
+</div>
+</div>
+<div class="mb-4">
+<button onclick="loadWithdrawalReport()" class="btn btn-primary">
+<i class="fas fa-sync-alt"></i> Refresh Report
+</button>
+</div>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Username</th>
+<th>Balance</th>
+<th>Withdrawal Status</th>
+<th>Limit</th>
+<th>Withdrawal Days</th>
+<th>Has PIN</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody id="withdrawal-report-users">
+<tr><td colspan="8" class="text-center">Loading report...</td></tr>
+</tbody>
+</table>
+</div>
+<div id="no-report-data" class="text-center py-5" style="display: none;">
+<i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+<p class="text-muted">No withdrawal data available. Click Refresh to load.</p>
+</div>
+</div>
+`;
+}
+try {
+const reportRes = await fetchData('/api/admin/withdrawal-status-report');
+if (reportRes.success) {
+withdrawalReportData = reportRes;
+renderWithdrawalReport(reportRes);
+}
+} catch (err) {
+console.error('Load report error:', err);
+}
+}
+function renderWithdrawalReport(report) {
+document.getElementById('report-total-users').textContent = formatNumber(report.total_users);
+document.getElementById('report-can-withdraw').textContent = formatNumber(report.users_withdrawal_today);
+document.getElementById('report-restricted').textContent = formatNumber(report.users_restricted);
+document.getElementById('report-today').textContent = report.today;
+const tbody = document.getElementById('withdrawal-report-users');
+const noDataDiv = document.getElementById('no-report-data');
+if (!report.users || report.users.length === 0) {
+tbody.innerHTML = '';
+noDataDiv.style.display = 'block';
+return;
+}
+noDataDiv.style.display = 'none';
+tbody.innerHTML = report.users.map(user => {
+let statusBadge, statusText;
+if (user.withdrawal_restricted) {
+statusBadge = 'badge-danger';
+statusText = 'Restricted';
+} else if (user.can_withdraw_today) {
+statusBadge = 'badge-success';
+statusText = 'Allowed Today';
+} else {
+statusBadge = 'badge-warning';
+statusText = 'Not Today';
+}
+const withdrawalDays = user.custom_withdrawal_days && user.custom_withdrawal_days.length > 0 ?
+user.custom_withdrawal_days.sort((a, b) => a - b).join(', ') : 'Default';
+return `
+<tr>
+<td>${user.id}</td>
+<td>${user.username}</td>
+<td>${formatCurrency(user.balance)}</td>
+<td>
+<span class="badge ${statusBadge}">${statusText}</span>
+</td>
+<td>${user.withdrawal_limit > 0 ? formatCurrency(user.withdrawal_limit) : 'No Limit'}</td>
+<td><small>${withdrawalDays}</small></td>
+<td>
+<i class="fas ${user.has_withdrawal_pin ? 'fa-check text-success' : 'fa-times text-danger'}"></i>
+</td>
+<td>
+<button onclick="openWithdrawalSettings(${user.id}, '${user.username}', ${user.balance})"
+class="btn btn-sm btn-outline-primary">
+<i class="fas fa-edit"></i> Edit
+</button>
+</td>
+</tr>
+`;
+}).join('');
+}
+
+// ================================ SETTINGS ================================
+async function loadSettings() {
+if (document.getElementById('settings').innerHTML === '') {
+return;
+}
+try {
+const settingsRes = await fetchData('/api/admin/settings');
+if (settingsRes.success) {
+const s = settingsRes.settings;
+document.getElementById('whatsapp-link').value = s.whatsapp_link || '';
+document.getElementById('telegram-link').value = s.telegram_link || '';
+document.getElementById('facebook-link').value = s.facebook_link || '';
+}
+// Registration status loading REMOVED
+} catch (err) {
+console.error('Load settings error:', err);
+}
+}
+async function saveSocialLinks() {
+const data = {
+whatsapp_link: document.getElementById('whatsapp-link').value.trim(),
+telegram_link: document.getElementById('telegram-link').value.trim(),
+facebook_link: document.getElementById('facebook-link').value.trim()
+};
+try {
+const result = await postData('/api/admin/settings', data);
+if (result.success) {
+showMessage('Social links updated!', 'success', 'social-message');
+} else {
+showMessage('Failed to save links.', 'error', 'social-message');
+}
+} catch (err) {
+console.error('Save links error:', err);
+showMessage('Network error.', 'error', 'social-message');
+}
+}
+async function changeAdminPassword() {
+const current = document.getElementById('current-password').value;
+const newPass = document.getElementById('new-password').value;
+const confirm = document.getElementById('confirm-password').value;
+if (!current || !newPass || !confirm) {
+showMessage('All fields required', 'error', 'password-message');
+return;
+}
+if (newPass.length < 8) {
+showMessage('Password must be at least 8 chars', 'error', 'password-message');
+return;
+}
+if (newPass !== confirm) {
+showMessage('Passwords do not match', 'error', 'password-message');
+return;
+}
+try {
+const result = await postData('/api/admin/change-password', {
+current_password: current,
+new_password: newPass
+});
+if (result.success) {
+showMessage('Password changed!', 'success', 'password-message');
+document.getElementById('current-password').value = '';
+document.getElementById('new-password').value = '';
+document.getElementById('confirm-password').value = '';
+} else {
+showMessage(result.message, 'error', 'password-message');
+}
+} catch (err) {
+console.error('Change password error:', err);
+showMessage('Failed to change password', 'error', 'password-message');
+}
+}
+
+// ================================ COUPONS ================================
+async function loadCouponStats() {
+if (document.getElementById('coupons').innerHTML === '') {
+document.getElementById('coupons').innerHTML = `
+<div class="admin-section">
+<h3><i class="fas fa-ticket-alt"></i> Coupon Management</h3>
+<div class="mb-3">
+<p>Coupon Stats: <span id="coupon-stats">Loading...</span></p>
+</div>
+<div class="mb-3">
+<button onclick="loadCouponStats()"><i class="fas fa-sync"></i> Refresh Stats</button>
+<button onclick="resetCoupons()" style="background:#d32f2f">
+<i class="fas fa-undo"></i> Reset Used Coupons
+</button>
+<button onclick="deleteAllCoupons()" style="background:#c62828">
+<i class="fas fa-trash"></i> Delete All Coupons
+</button>
+</div>
+<div class="mb-3">
+<label>Add New Coupons (one per line)</label>
+<textarea id="new-coupons" placeholder="Enter one coupon per line (e.g., FLEX123)" rows="4"></textarea>
+</div>
+<button onclick="addCoupons()"><i class="fas fa-plus"></i> Add Coupons</button>
+<div id="coupon-message" class="message hidden"></div>
+</div>
+`;
+}
+try {
+const res = await fetchData('/api/admin/coupons');
+if (res.success) {
+const { total, available, used } = res.stats;
+document.getElementById('coupon-stats').textContent =
+`${total} total (${available} available, ${used} used)`;
+}
+} catch (err) { console.error(err); }
+}
+async function resetCoupons() {
+if (!confirm('Reset all used coupons to available?')) return;
+try {
+const data = await postData('/api/admin/coupons/reset-used');
+showMessage(data.message, data.success ? 'success' : 'error', 'coupon-message');
+loadCouponStats();
+} catch (err) { showMessage('Failed to reset coupons', 'error', 'coupon-message'); }
+}
+async function deleteAllCoupons() {
+if (!confirm('Delete ALL coupons permanently?')) return;
+try {
+const data = await postData('/api/admin/coupons/delete', { codes: [] });
+showMessage(data.message, data.success ? 'success' : 'error', 'coupon-message');
+loadCouponStats();
+} catch (err) { showMessage('Failed to delete coupons', 'error', 'coupon-message'); }
+}
+async function addCoupons() {
+const textarea = document.getElementById('new-coupons');
+const codes = textarea.value
+.split('\n')
+.map(c => c.trim().toUpperCase())
+.filter(c => c.length >= 4);
+if (codes.length === 0) {
+showMessage('Enter at least one valid coupon code', 'error', 'coupon-message');
+return;
+}
+try {
+const data = await postData('/api/admin/coupons/add', { codes });
+showMessage(data.message, data.success ? 'success' : 'error', 'coupon-message');
+textarea.value = '';
+loadCouponStats();
+} catch (err) { showMessage('Failed to add coupons', 'error', 'coupon-message'); }
+}
+
+// ================================ WHATSAPP ================================
+async function loadWhatsAppNumbers() {
+if (document.getElementById('whatsapp').innerHTML === '') {
+document.getElementById('whatsapp').innerHTML = `
+<div class="admin-section">
+<h3><i class="fab fa-whatsapp"></i> WhatsApp Numbers for Coupons</h3>
+<div class="mb-3">
+<p>Users will contact these numbers for coupons.</p>
+</div>
+<div class="row mb-3">
+<div class="col-md-8">
+<input type="text" id="new-whatsapp-number" placeholder="e.g., 2348123456789" />
+</div>
+<div class="col-md-4">
+<button onclick="addWhatsAppNumber()" class="w-100">
+<i class="fas fa-plus"></i> Add Number
+</button>
+</div>
+</div>
+<div id="whatsapp-numbers-list">Loading numbers...</div>
+</div>
+`;
+}
+try {
+const res = await fetchData('/api/admin/whatsapp-numbers');
+if (res.success) {
+const list = document.getElementById('whatsapp-numbers-list');
+if (res.numbers.length === 0) {
+list.innerHTML = '<p>No WhatsApp numbers configured.</p>';
+return;
+}
+list.innerHTML = res.numbers.map(num => `
+<div class="whatsapp-number-item">
+<span><strong>${num.label || 'Agent'}:</strong> ${num.number}</span>
+<button onclick="deleteWhatsAppNumber(${num.id})" style="background:#c62828;">
+<i class="fas fa-trash"></i> Remove
+</button>
+</div>
+`).join('');
+}
+} catch (err) { console.error(err); }
+}
+async function addWhatsAppNumber() {
+const input = document.getElementById('new-whatsapp-number');
+const number = input.value.trim();
+if (!number || !/^\d+$/.test(number) || !number.startsWith('234')) {
+showMessage('Enter a valid Nigerian number starting with 234', 'error');
+return;
+}
+try {
+const data = await postData('/api/admin/whatsapp-numbers', { number });
+showMessage(data.message, data.success ? 'success' : 'error');
+input.value = '';
+loadWhatsAppNumbers();
+} catch (err) { showMessage('Failed to add number', 'error'); }
+}
+async function deleteWhatsAppNumber(id) {
+if (!confirm('Remove this WhatsApp number?')) return;
+try {
+const res = await fetch(`/api/admin/whatsapp-numbers/${id}`, {
+method: 'DELETE',
+credentials: 'include'
+});
+const data = await res.json();
+showMessage(data.message, data.success ? 'success' : 'error');
+loadWhatsAppNumbers();
+} catch (err) { showMessage('Failed to delete number', 'error'); }
+}
+
+// ================================ INIT ================================
+document.addEventListener('DOMContentLoaded', () => {
+fetchData('/api/user/profile')
+.then(data => {
+if (!data.success || !data.user.is_admin) {
+window.location.href = '/';
+}
+currentUserData = data.user;
+loadDashboard();
+})
+.catch(() => window.location.href = '/');
+
+// Initialize all tabs that are empty
+if (document.getElementById('globalSettings').innerHTML === '') loadGlobalWithdrawalDays(false);
+});
+</script>
+</body>
+</html>

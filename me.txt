@@ -1,0 +1,19 @@
+flexia-platform/
+│
+├── backend/
+│   ├── app.py              
+│   ├── coupon.txt             
+│   └── requirements.txt      
+├── frontend/
+│   ├── index.html             
+│   ├── admin.html             
+│   ├── receipt.html           
+│   ├── achievements.html    
+│   ├── snake.html             # Snake game
+│   ├── coin-flip.html         
+│   ├── plinko.html            # Plinko game
+│   ├── service-worker.js      # PWA caching
+│   └── manifest.json          # PWA manifest
+│
+├── render.yaml            
+└── .gitignore             

@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Withdrawal Receipt - FLEXIA</title>
+  <!-- CORRECTED: Updated logo paths -->
+  <link rel="icon" type="image/x-icon" href="logo/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="logo/flexia-logo.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="logo/flexia-logo.png">
+  <link rel="apple-touch-icon" href="logo/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.json">
+  <!-- Fonts & CSS -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Rajdhani', sans-serif;
+    }
+    body {
+      background: #0A0A1F;
+      color: #F0F0F0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .header {
+      background: #050510;
+      padding: 15px 20px;
+      border-bottom: 2px solid #8000FF;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo-icon {
+      width: 35px;
+      height: 35px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .logo-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .header-text {
+      display: flex;
+      flex-direction: column;
+    }
+    .app-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, #00EEFF, #7B61FF);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .back-btn {
+      background: transparent;
+      border: none;
+      color: #8000FF;
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+    .back-btn:hover {
+      background: rgba(128, 0, 255, 0.2);
+      color: #00EEFF;
+    }
+    .main-content {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow: auto;
+    }
+    #history-toggle {
+      background: rgba(128, 0, 255, 0.2);
+      border: 2px solid #8000FF;
+      color: #8000FF;
+      padding: 8px 15px;
+      border-radius: 20px;
+      cursor: pointer;
+      margin-bottom: 20px;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+    #history-toggle:hover {
+      background: rgba(128, 0, 255, 0.3);
+      transform: translateY(-2px);
+    }
+    #receipt-container {
+      width: 100%;
+      max-width: 500px;
+    }
+    .receipt {
+      background: #151535;
+      border: 2px solid #8000FF;
+      border-radius: 15px;
+      padding: 25px;
+      box-shadow: 0 10px 30px rgba(128, 0, 255, 0.4);
+      margin-bottom: 20px;
+    }
+    .receipt-header {
+      text-align: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #8000FF;
+    }
+    .receipt-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #7B61FF;
+      margin-bottom: 5px;
+      font-family: 'Orbitron', sans-serif;
+    }
+    .receipt-subtitle {
+      color: #00EEFF;
+      font-size: 0.9rem;
+    }
+    .receipt-details {
+      margin-bottom: 20px;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #252545;
+    }
+    .detail-label {
+      color: #A0A0B5;
+      font-weight: 500;
+    }
+    .detail-value {
+      color: #00EEFF;
+      font-weight: 600;
+      text-align: right;
+    }
+    .amount-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #00FF55;
+      text-align: right;
+    }
+    .receipt-footer {
+      text-align: center;
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 2px solid #8000FF;
+      color: #A0A0B5;
+      font-size: 0.8rem;
+    }
+    .action-buttons {
+      display: flex;
+      gap: 15px;
+      margin-top: 20px;
+      width: 100%;
+      max-width: 300px;
+    }
+    .action-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .download-btn {
+      background: linear-gradient(45deg, #8000FF, #00CCFF);
+      color: #0A0A1F;
+    }
+    .dashboard-btn {
+      background: linear-gradient(45deg, #00CCFF, #8000FF);
+      color: #0A0A1F;
+    }
+    .action-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(128, 0, 255, 0.4);
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #8000FF;
+    }
+    .no-data {
+      text-align: center;
+      padding: 40px;
+      color: #A0A0B5;
+    }
+    .history-list {
+      width: 100%;
+      max-width: 500px;
+    }
+    .history-item {
+      background: #151535;
+      border: 1px solid #252545;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .history-item:hover {
+      border-color: #8000FF;
+      background: #1A1A40;
+    }
+    .history-item-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .history-amount {
+      font-weight: bold;
+      color: #00FF55;
+    }
+    .history-status {
+      font-size: 0.8rem;
+      padding: 3px 8px;
+      border-radius: 10px;
+    }
+    .status-pending {
+      background: rgba(255, 165, 0, 0.2);
+      color: #FFA500;
+      border: 1px solid #FFA500;
+    }
+    .status-completed {
+      background: rgba(0, 255, 85, 0.2);
+      color: #00FF55;
+      border: 1px solid #00FF55;
+    }
+    .status-rejected {
+      background: rgba(255, 0, 85, 0.2);
+      color: #FF0055;
+      border: 1px solid #FF0055;
+    }
+    @media (max-width: 500px) {
+      .header {
+        padding: 12px 15px;
+      }
+      .app-title {
+        font-size: 1.2rem;
+      }
+      .receipt {
+        padding: 20px 15px;
+      }
+      .receipt-title {
+        font-size: 1.5rem;
+      }
+      .detail-row {
+        flex-direction: column;
+        gap: 5px;
+      }
+      .detail-value, .amount-value {
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <button class="back-btn" onclick="goBack()">
+      <i class="fas fa-arrow-left"></i>
+    </button>
+    <div class="logo-container">
+      <div class="logo-icon">
+        <img src="logo/flexia-logo.png" alt="FLEXIA">
+      </div>
+      <div class="header-text">
+        <div class="app-title">FLEXIA</div>
+        <div class="app-subtitle">Withdrawal Receipt</div>
+      </div>
+    </div>
+    <div style="width: 35px;"></div> <!-- Spacer for alignment -->
+  </div>
+  
+  <div class="main-content">
+    <button id="history-toggle" onclick="toggleHistory()">View All History</button>
+    
+    <div id="receipt-container">
+      <!-- Receipt will be loaded here -->
+      <div class="loading">Loading receipt...</div>
+    </div>
+    
+    <div class="action-buttons">
+      <button class="action-btn download-btn" onclick="downloadReceipt()">
+        <i class="fas fa-download"></i> Save Receipt
+      </button>
+      <button class="action-btn dashboard-btn" onclick="goToDashboard()">
+        <i class="fas fa-home"></i> Dashboard
+      </button>
+    </div>
+  </div>
+  
+  <script>
+    // ==================== BANK MAPPING ====================
+    let bankMap = {};
+    
+    async function loadBanks() {
+      try {
+        const res = await fetch('/api/admin/banks');
+        const data = await res.json();
+        if (data.success) {
+          data.banks.forEach(bank => {
+            bankMap[bank.code] = bank.name;
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load banks:', err);
+      }
+    }
+    
+    // ==================== RECEIPT FORMATTING ====================
+    function formatDate(isoString) {
+      const date = new Date(isoString);
+      return date.toLocaleDateString('en-NG', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+    
+    function getBankName(code) {
+      return bankMap[code] || 'Unknown Bank';
+    }
+    
+    function createReceiptHTML(tx) {
+      const details = typeof tx.details === 'string' ? JSON.parse(tx.details) : tx.details;
+      const amount = parseFloat(tx.amount);
+      const statusClass = tx.status.toLowerCase();
+      
+      return `
+        <div class="receipt" id="receipt-${tx.id}">
+          <div class="receipt-header">
+            <div class="receipt-title">WITHDRAWAL RECEIPT</div>
+            <div class="receipt-subtitle">Transaction ID: ${tx.id}</div>
+          </div>
+          <div class="receipt-details">
+            <div class="detail-row">
+              <span class="detail-label">Amount</span>
+              <span class="amount-value">₦${amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Status</span>
+              <span class="detail-value status-badge status-${statusClass}">${tx.status}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Date & Time</span>
+              <span class="detail-value">${formatDate(tx.timestamp)}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Bank</span>
+              <span class="detail-value">${getBankName(details.bank_code)}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Account Number</span>
+              <span class="detail-value">${details.account_number}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Account Name</span>
+              <span class="detail-value">${details.account_name || 'N/A'}</span>
+            </div>
+          </div>
+          <div class="receipt-footer">
+            <p>Thank you for using FLEXIA</p>
+            <p>Secure • Reliable • Fast</p>
+          </div>
+        </div>
+      `;
+    }
+    
+    // ==================== HISTORY VIEW ====================
+    function createHistoryHTML(transactions) {
+      if (!transactions.length) {
+        return '<div class="no-data">No withdrawal history found.</div>';
+      }
+      
+      let html = '<div class="history-list">';
+      transactions.forEach(tx => {
+        const amount = parseFloat(tx.amount);
+        const statusClass = tx.status.toLowerCase();
+        html += `
+          <div class="history-item" onclick="showSingleReceipt('${tx.id}')">
+            <div class="history-item-header">
+              <span class="history-amount">₦${amount.toLocaleString()}</span>
+              <span class="history-status status-${statusClass}">${tx.status}</span>
+            </div>
+            <div>ID: ${tx.id}</div>
+            <div>${formatDate(tx.timestamp)}</div>
+          </div>
+        `;
+      });
+      html += '</div>';
+      return html;
+    }
+    
+    // ==================== NAVIGATION ====================
+    function goBack() {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('history') === 'true') {
+        showSingleReceipt();
+      } else {
+        window.location.href = 'index.html';
+      }
+    }
+    
+    function goToDashboard() {
+      window.location.href = 'index.html';
+    }
+    
+    function toggleHistory() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const isHistory = urlParams.get('history') === 'true';
+      
+      if (isHistory) {
+        // Switch to single receipt view
+        window.history.replaceState({}, '', 'receipt.html');
+        document.getElementById('history-toggle').textContent = 'View All History';
+        showSingleReceipt();
+      } else {
+        // Switch to history view
+        window.history.replaceState({}, '', 'receipt.html?history=true');
+        document.getElementById('history-toggle').textContent = 'View Single Receipt';
+        loadHistory();
+      }
+    }
+    
+    function showSingleReceipt(txId = null) {
+      loadSingleReceipt(txId);
+    }
+    
+    // ==================== LOADING FUNCTIONS ====================
+    async function loadSingleReceipt(txId = null) {
+      try {
+        const res = await fetch('/api/user/profile');
+        const data = await res.json();
+        
+        if (!data.success) {
+          window.location.href = 'index.html';
+          return;
+        }
+        
+        const transactions = data.user.transactions.filter(t => t.type === 'WITHDRAWAL');
+        let targetTx;
+        
+        if (txId) {
+          targetTx = transactions.find(t => t.id === txId);
+        } else {
+          // Show most recent withdrawal
+          targetTx = transactions[transactions.length - 1];
+        }
+        
+        if (targetTx) {
+          document.getElementById('receipt-container').innerHTML = createReceiptHTML(targetTx);
+        } else {
+          document.getElementById('receipt-container').innerHTML = '<div class="no-data">No withdrawal transactions found.</div>';
+        }
+      } catch (err) {
+        console.error('Failed to load receipt:', err);
+        document.getElementById('receipt-container').innerHTML = '<div class="no-data">Failed to load receipt.</div>';
+      }
+    }
+    
+    async function loadHistory() {
+      try {
+        const res = await fetch('/api/user/profile');
+        const data = await res.json();
+        
+        if (!data.success) {
+          window.location.href = 'index.html';
+          return;
+        }
+        
+        const transactions = data.user.transactions
+          .filter(t => t.type === 'WITHDRAWAL')
+          .reverse(); // Show newest first
+        
+        document.getElementById('receipt-container').innerHTML = createHistoryHTML(transactions);
+      } catch (err) {
+        console.error('Failed to load history:', err);
+        document.getElementById('receipt-container').innerHTML = '<div class="no-data">Failed to load history.</div>';
+      }
+    }
+    
+    // ==================== DOWNLOAD FUNCTIONALITY ====================
+    async function downloadReceipt() {
+      const receiptDiv = document.querySelector('.receipt');
+      if (!receiptDiv) {
+        alert('No receipt to download');
+        return;
+      }
+      
+      try {
+        // Load html2canvas if not already loaded
+        if (typeof html2canvas === 'undefined') {
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://html2canvas.hertzen.com/dist/html2canvas.min.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+        }
+        
+        const canvas = await html2canvas(receiptDiv, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: null
+        });
+        
+        const link = document.createElement('a');
+        link.download = `flexia-receipt-${receiptDiv.id}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } catch (err) {
+        console.error('Download failed:', err);
+        alert('Failed to download receipt. Please try again.');
+      }
+    }
+    
+    // ==================== INITIALIZATION ====================
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadBanks();
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      const isHistory = urlParams.get('history') === 'true';
+      
+      if (isHistory) {
+        document.getElementById('history-toggle').textContent = 'View Single Receipt';
+        loadHistory();
+      } else {
+        document.getElementById('history-toggle').textContent = 'View All History';
+        loadSingleReceipt();
+      }
+    });
+  </script>
+</body>
+</html>
