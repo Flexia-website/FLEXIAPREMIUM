@@ -836,7 +836,7 @@ def login():
     if not rate_limit(login_attempts, ip, max_per_min=5):
         return jsonify({"success": False, "message": "Too many login attempts. Try again later."}), 429
     data = request.get_json()
-    if not 
+    if not data:
         return jsonify({"success": False, "message": "No data provided"}), 400
     identifier = sanitize_input(data.get('username', '').strip().lower())
     password = data.get('password', '')
