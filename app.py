@@ -734,7 +734,7 @@ def register():
             return jsonify({"success": False, "message": "Database error"}), 500
     try:
         cursor.execute(f'UPDATE coupons SET status = {ph} WHERE code = {ph}', ("USED", coupon_code))
-        import time.
+        import time
         timestamp = int(time.time())
         user_referral_code = f"{username[:3].upper()}{timestamp % 10000:04d}"
         game_stats = json.dumps({
