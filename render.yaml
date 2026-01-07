@@ -1,0 +1,18 @@
+# render.yaml
+services:
+- type: web
+  name: flexiapremiumng
+  env: python
+  region: oregon
+  plan: free
+  buildCommand: pip install -r backend/requirements.txt
+  startCommand: cd backend && gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+  healthCheckPath: /api/health
+  envVars:
+  - key: ENV
+    value: production
+  - key: PORT
+    value: "10000"
+  - key: PYTHONUNBUFFERED
+    value: "1"
+  autoDeploy: true
