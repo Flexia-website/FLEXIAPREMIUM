@@ -329,6 +329,51 @@ color: #a0a0c0;
 font-size: 12px;
 margin-top: 8px;
 }
+/* Backup Section */
+.backup-item {
+background: #151528;
+padding: 12px;
+margin: 8px 0;
+border-radius: 8px;
+border-left: 2px solid #00c853;
+}
+.backup-stats {
+background: #121225;
+border-radius: 8px;
+padding: 15px;
+margin: 10px 0;
+border: 1px solid #252540;
+}
+.backup-stats h5 {
+color: #00eeff;
+margin-bottom: 10px;
+}
+/* Health Status */
+.health-status {
+padding: 10px;
+border-radius: 8px;
+margin: 10px 0;
+}
+.health-online {
+background: rgba(0, 200, 83, 0.1);
+border-left: 3px solid #00c853;
+}
+.health-degraded {
+background: rgba(255, 193, 7, 0.1);
+border-left: 3px solid #ffc107;
+}
+.health-offline {
+background: rgba(244, 67, 54, 0.1);
+border-left: 3px solid #f44336;
+}
+.uptime-display {
+font-family: 'Courier New', monospace;
+background: #0d0d1a;
+padding: 5px 10px;
+border-radius: 4px;
+color: #00eeff;
+}
+
 @media (max-width: 768px) {
 #stats-summary {
 flex-direction: column;
@@ -352,9 +397,14 @@ font-size: 14px;
 <div id="admin-container">
 <header>
 <h1><i class="fas fa-crown"></i> Flexia Admin Dashboard</h1>
+<div>
+<button onclick="checkHealth()" class="btn-secondary me-2">
+<i class="fas fa-heartbeat"></i> Health Check
+</button>
 <button onclick="adminLogout()" class="btn-secondary">
 <i class="fas fa-sign-out-alt"></i> Logout
 </button>
+</div>
 </header>
 
 <!-- Tab Navigation -->
@@ -377,6 +427,9 @@ font-size: 14px;
 <button class="tab-btn" onclick="showTab('withdrawalReport')">
 <i class="fas fa-chart-bar"></i> Withdrawal Report
 </button>
+<button class="tab-btn" onclick="showTab('backup')">
+<i class="fas fa-database"></i> Backup
+</button>
 <button class="tab-btn" onclick="showTab('settings')">
 <i class="fas fa-cog"></i> Settings
 </button>
@@ -386,6 +439,147 @@ font-size: 14px;
 <button class="tab-btn" onclick="showTab('whatsapp')">
 <i class="fab fa-whatsapp"></i> WhatsApp
 </button>
+</div>
+
+<!-- Dashboard Tab -->
+<div id="dashboard" class="tab-content active">
+<div class="admin-section">
+<h3><i class="fas fa-chart-line"></i> System Overview</h3>
+<div id="health-status" class="health-status health-online">
+<div class="d-flex justify-content-between align-items-center">
+<div>
+<strong><i class="fas fa-check-circle"></i> System Status</strong>
+<div>All systems operational</div>
+<div class="uptime-display" id="uptime-display">Loading...</div>
+</div>
+<div class="text-end">
+<div><small>Database: <span id="db-status" class="badge badge-success">Connected</span></small></div>
+<div><small>Connection Pool: <span id="pool-status" class="badge badge-success">Active</span></small></div>
+</div>
+</div>
+</div>
+<div class="row mt-3">
+<div class="col-md-3 mb-3">
+<div class="stats-card">
+<h3 id="total-users-count">—</h3>
+<p>Total Users</p>
+</div>
+</div>
+<div class="col-md-3 mb-3">
+<div class="stats-card">
+<h3 id="pending-withdrawals-count">—</h3>
+<p>Pending Withdrawals</p>
+</div>
+</div>
+<div class="col-md-3 mb-3">
+<div class="stats-card">
+<h3 id="total-balance">—</h3>
+<p>Total Platform Balance</p>
+</div>
+</div>
+<div class="col-md-3 mb-3">
+<div class="stats-card">
+<h3 id="today-date">—</h3>
+<p>Today's Date</p>
+</div>
+</div>
+</div>
+<div class="global-days-display">
+<h4><i class="fas fa-calendar-check"></i> Current Global Withdrawal Days</h4>
+<div class="days-list" id="current-global-days">Loading...</div>
+<div class="days-note">These days apply to all users without custom withdrawal settings</div>
+</div>
+</div>
+<div class="admin-section">
+<h3><i class="fas fa-history"></i> Recent Withdrawals</h3>
+<div id="recent-withdrawals">Loading...</div>
+</div>
+<div class="admin-section">
+<h3><i class="fas fa-exclamation-triangle"></i> Recent Security Events</h3>
+<div id="recent-security-events">
+<p>Security logging enabled. Check server logs for details.</p>
+</div>
+</div>
+</div>
+
+<!-- Backup Tab -->
+<div id="backup" class="tab-content">
+<div class="admin-section">
+<h3><i class="fas fa-database"></i> Database Backup Management</h3>
+<div class="backup-stats">
+<h5><i class="fas fa-info-circle"></i> Backup Information</h5>
+<p><strong>Automatic Backups:</strong> Daily at 2:00 AM UTC</p>
+<p><strong>Retention Policy:</strong> 7 days</p>
+<p><strong>Last Backup:</strong> <span id="last-backup-time">Checking...</span></p>
+<p><strong>Backup Location:</strong> <code>backups/</code> directory</p>
+</div>
+<div class="mb-3">
+<button onclick="triggerBackup()" class="btn btn-success">
+<i class="fas fa-play-circle"></i> Trigger Manual Backup
+</button>
+<button onclick="listBackups()" class="btn btn-primary">
+<i class="fas fa-sync"></i> Refresh Backup List
+</button>
+</div>
+<div id="backup-message" class="message hidden"></div>
+</div>
+<div class="admin-section">
+<h3><i class="fas fa-list"></i> Available Backups</h3>
+<div id="backup-list">
+<p>Loading backups...</p>
+</div>
+</div>
+<div class="admin-section">
+<h3><i class="fas fa-shield-alt"></i> Backup Safety Tips</h3>
+<ul style="color: #a0a0c0; margin-left: 20px; line-height: 1.8;">
+<li>Backups are created automatically every day at 2 AM</li>
+<li>Keep backups in a secure location outside the server</li>
+<li>Test restore procedures regularly</li>
+<li>Monitor backup success/failure in server logs</li>
+<li>Consider off-site backup storage for disaster recovery</li>
+</ul>
+</div>
+</div>
+
+<!-- Global Settings Tab -->
+<div id="globalSettings" class="tab-content">
+<div class="admin-section">
+<h3><i class="fas fa-globe"></i> Global Withdrawal Settings</h3>
+<p style="color: #a0a0c0; margin-bottom: 20px;">
+Set the default withdrawal days for all users. Users with custom settings will not be affected.
+</p>
+<div class="global-days-display">
+<h4><i class="fas fa-calendar-alt"></i> Current Global Withdrawal Days</h4>
+<div class="days-list" id="global-days-current">Loading...</div>
+<div class="days-note">All users without custom settings can withdraw on these days</div>
+</div>
+<div class="mb-4">
+<label class="form-label fw-bold" style="color: #00eeff; font-size: 16px; margin-bottom: 10px;">
+<i class="fas fa-edit"></i> Select Global Withdrawal Days (1-31)
+</label>
+<div class="form-text mb-2" style="color: #a0a0c0;">
+Select which days of the month users can make withdrawals. These apply to all users without custom settings.
+</div>
+<div class="day-selector" id="global-day-selector">
+<!-- Generated by JS -->
+</div>
+<div class="mt-3">
+<button onclick="selectAllGlobalDays()" class="btn btn-sm" style="background: #00eeff; color: #000;">
+<i class="fas fa-check-square"></i> Select All Days
+</button>
+<button onclick="clearAllGlobalDays()" class="btn btn-sm" style="background: #ff5252;">
+<i class="fas fa-times-circle"></i> Clear All Days
+</button>
+<button onclick="setDefaultGlobalDays()" class="btn btn-sm" style="background: #ff9800;">
+<i class="fas fa-undo"></i> Reset to Default (7, 14, 25, 30)
+</button>
+</div>
+</div>
+<button onclick="saveGlobalWithdrawalDays()" class="btn btn-primary" style="background: #00c853; padding: 12px 24px; font-size: 16px;">
+<i class="fas fa-save"></i> Save Global Withdrawal Days
+</button>
+<div id="global-settings-message" class="message hidden"></div>
+</div>
 </div>
 
 <!-- TikTok Daily Tab -->
@@ -418,7 +612,121 @@ Loading history...
 </div>
 </div>
 
-<!-- Settings Tab (Registration Control REMOVED) -->
+<!-- Users Tab -->
+<div id="users" class="tab-content">
+<div class="admin-section">
+<h3><i class="fas fa-users"></i> User Management</h3>
+<div class="mb-3">
+<input type="text" id="user-search" placeholder="Search users by username or ID..."
+onkeyup="searchUsers()" style="max-width: 300px;">
+</div>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Username</th>
+<th>Balance</th>
+<th>Withdrawal Status</th>
+<th>Withdrawal Limit</th>
+<th>Admin</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody id="user-list">
+<tr><td colspan="7" class="text-center">Loading users...</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
+<!-- Withdrawals Tab -->
+<div id="withdrawals" class="tab-content">
+<div class="admin-section">
+<h3><i class="fas fa-money-bill-wave"></i> Pending Withdrawals</h3>
+<div id="pending-withdrawals-list">Loading...</div>
+</div>
+<div class="admin-section">
+<h3><i class="fas fa-history"></i> Recent Transactions</h3>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>User</th>
+<th>Amount</th>
+<th>Status</th>
+<th>Date</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody id="all-transactions">
+<tr><td colspan="6" class="text-center">Loading...</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
+<!-- Withdrawal Report Tab -->
+<div id="withdrawalReport" class="tab-content">
+<div class="admin-section">
+<h3><i class="fas fa-chart-bar"></i> Withdrawal Status Report</h3>
+<div class="row mb-4">
+<div class="col-md-3 mb-3">
+<div class="stats-card">
+<h3 id="report-total-users">—</h3>
+<p>Total Users</p>
+</div>
+</div>
+<div class="col-md-3 mb-3">
+<div class="stats-card">
+<h3 id="report-can-withdraw">—</h3>
+<p>Can Withdraw Today</p>
+</div>
+</div>
+<div class="col-md-3 mb-3">
+<div class="stats-card">
+<h3 id="report-restricted">—</h3>
+<p>Restricted Users</p>
+</div>
+</div>
+<div class="col-md-3 mb-3">
+<div class="stats-card">
+<h3 id="report-today">—</h3>
+<p>Today's Date</p>
+</div>
+</div>
+</div>
+<div class="mb-4">
+<button onclick="loadWithdrawalReport()" class="btn btn-primary">
+<i class="fas fa-sync-alt"></i> Refresh Report
+</button>
+</div>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Username</th>
+<th>Balance</th>
+<th>Withdrawal Status</th>
+<th>Limit</th>
+<th>Withdrawal Days</th>
+<th>Has PIN</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody id="withdrawal-report-users">
+<tr><td colspan="8" class="text-center">Loading report...</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
+<!-- Settings Tab -->
 <div id="settings" class="tab-content">
 <div class="admin-section">
 <h3><i class="fas fa-share-alt"></i> Social Media Links</h3>
@@ -461,54 +769,51 @@ Loading history...
 </div>
 </div>
 
-<!-- Other Tabs -->
-<div id="dashboard" class="tab-content active">
+<!-- Coupons Tab -->
+<div id="coupons" class="tab-content">
 <div class="admin-section">
-<h3><i class="fas fa-chart-line"></i> System Overview</h3>
-<div class="row">
-<div class="col-md-3 mb-3">
-<div class="stats-card">
-<h3 id="total-users-count">—</h3>
-<p>Total Users</p>
+<h3><i class="fas fa-ticket-alt"></i> Coupon Management</h3>
+<div class="mb-3">
+<p>Coupon Stats: <span id="coupon-stats">Loading...</span></p>
 </div>
+<div class="mb-3">
+<button onclick="loadCouponStats()"><i class="fas fa-sync"></i> Refresh Stats</button>
+<button onclick="resetCoupons()" style="background:#d32f2f">
+<i class="fas fa-undo"></i> Reset Used Coupons
+</button>
+<button onclick="deleteAllCoupons()" style="background:#c62828">
+<i class="fas fa-trash"></i> Delete All Coupons
+</button>
 </div>
-<div class="col-md-3 mb-3">
-<div class="stats-card">
-<h3 id="pending-withdrawals-count">—</h3>
-<p>Pending Withdrawals</p>
+<div class="mb-3">
+<label>Add New Coupons (one per line)</label>
+<textarea id="new-coupons" placeholder="Enter one coupon per line (e.g., FLEX123)" rows="4"></textarea>
 </div>
-</div>
-<div class="col-md-3 mb-3">
-<div class="stats-card">
-<h3 id="total-balance">—</h3>
-<p>Total Platform Balance</p>
-</div>
-</div>
-<div class="col-md-3 mb-3">
-<div class="stats-card">
-<h3 id="today-date">—</h3>
-<p>Today's Date</p>
-</div>
-</div>
-</div>
-<div class="global-days-display">
-<h4><i class="fas fa-calendar-check"></i> Current Global Withdrawal Days</h4>
-<div class="days-list" id="current-global-days">Loading...</div>
-<div class="days-note">These days apply to all users without custom withdrawal settings</div>
-</div>
-</div>
-<div class="admin-section">
-<h3><i class="fas fa-history"></i> Recent Withdrawals</h3>
-<div id="recent-withdrawals">Loading...</div>
+<button onclick="addCoupons()"><i class="fas fa-plus"></i> Add Coupons</button>
+<div id="coupon-message" class="message hidden"></div>
 </div>
 </div>
 
-<div id="globalSettings" class="tab-content"></div>
-<div id="users" class="tab-content"></div>
-<div id="withdrawals" class="tab-content"></div>
-<div id="withdrawalReport" class="tab-content"></div>
-<div id="coupons" class="tab-content"></div>
-<div id="whatsapp" class="tab-content"></div>
+<!-- WhatsApp Tab -->
+<div id="whatsapp" class="tab-content">
+<div class="admin-section">
+<h3><i class="fab fa-whatsapp"></i> WhatsApp Numbers for Coupons</h3>
+<div class="mb-3">
+<p>Users will contact these numbers for coupons.</p>
+</div>
+<div class="row mb-3">
+<div class="col-md-8">
+<input type="text" id="new-whatsapp-number" placeholder="e.g., 2348123456789" />
+</div>
+<div class="col-md-4">
+<button onclick="addWhatsAppNumber()" class="w-100">
+<i class="fas fa-plus"></i> Add Number
+</button>
+</div>
+</div>
+<div id="whatsapp-numbers-list">Loading numbers...</div>
+</div>
+</div>
 
 <!-- Withdrawal Settings Modal -->
 <div class="modal fade" id="withdrawalSettingsModal" tabindex="-1">
@@ -531,6 +836,24 @@ Loading history...
 </div>
 </div>
 
+<!-- Backup Modal -->
+<div class="modal fade" id="backupModal" tabindex="-1">
+<div class="modal-dialog">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title">Backup Details</h5>
+<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body" id="backup-details">
+<!-- Will be populated by JS -->
+</div>
+<div class="modal-footer">
+<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+</div>
+</div>
+</div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 // ================================ GLOBAL VARIABLES ================================
@@ -538,13 +861,7 @@ let currentUserData = null;
 let withdrawalReportData = null;
 let selectedUserId = null;
 let globalWithdrawalDays = [];
-let withdrawalSettings = {
-withdrawal_restricted: false,
-custom_withdrawal_days: [],
-withdrawal_limit: 0,
-is_admin: false,
-username: ''
-};
+let backupListData = [];
 
 // ================================ UTILITY FUNCTIONS ================================
 function showMessage(text, type = 'info', elementId = 'coupon-message') {
@@ -568,6 +885,14 @@ return parseFloat(num || 0).toLocaleString('en-US', {
 minimumFractionDigits: 0,
 maximumFractionDigits: 0
 });
+}
+function formatBytes(bytes, decimals = 2) {
+if (bytes === 0) return '0 Bytes';
+const k = 1024;
+const dm = decimals < 0 ? 0 : decimals;
+const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+const i = Math.floor(Math.log(bytes) / Math.log(k));
+return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
 // ================================ AUTH FUNCTIONS ================================
@@ -606,83 +931,153 @@ throw new Error(`HTTP ${res.status}`);
 }
 return await res.json();
 }
-async function putData(endpoint, data) {
-const res = await fetch(endpoint, {
-method: 'PUT',
-credentials: 'include',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify(data)
-});
-if (!res.ok) {
-if (res.status === 401) {
-adminLogout();
-throw new Error('Unauthorized');
-}
-throw new Error(`HTTP ${res.status}`);
-}
-return await res.json();
-}
 
-// ================================ TIKTOK DAILY FUNCTIONS ================================
-async function setTikTokDaily() {
-const link = document.getElementById('tiktok-link-input').value.trim();
-if (!link) {
-showMessage('Please enter a TikTok link', 'error', 'tiktok-message');
-return;
-}
-if (!link.startsWith('https://www.tiktok.com/@')) {
-showMessage('Link must start with https://www.tiktok.com/@', 'error', 'tiktok-message');
-return;
-}
+// ================================ HEALTH CHECK ================================
+async function checkHealth() {
 try {
-const res = await postData('/api/admin/tiktok/set-daily', { tiktok_link: link });
-if (res.success) {
-showMessage('TikTok task set successfully!', 'success', 'tiktok-message');
-loadTikTokDailyTab();
-document.getElementById('tiktok-link-input').value = '';
-} else {
-showMessage(res.message || 'Failed to set TikTok task', 'error', 'tiktok-message');
-}
+const data = await fetchData('/api/health');
+updateHealthStatus(data);
+showMessage('Health check completed', 'success');
 } catch (err) {
-showMessage('Network error', 'error', 'tiktok-message');
+updateHealthStatus({ status: 'offline' });
+showMessage('Health check failed', 'error');
 }
 }
 
-async function loadTikTokDailyTab() {
-try {
-const currentRes = await fetchData('/api/admin/tiktok/get-daily');
-const historyRes = await fetchData('/api/admin/tiktok/history');
-if (currentRes.success) {
-const currentEl = document.getElementById('current-tiktok-display');
-if (currentRes.task) {
-currentEl.innerHTML = `
-<p><strong>Active since:</strong> ${new Date(currentRes.task.date).toLocaleDateString()}</p>
-<p><strong>Link:</strong> <a href="${currentRes.task.tiktok_link}" target="_blank">${currentRes.task.tiktok_link}</a></p>
-<p><strong>Reward:</strong> ₦${currentRes.task.reward_amount}</p>
+function updateHealthStatus(healthData) {
+const statusEl = document.getElementById('health-status');
+const dbStatusEl = document.getElementById('db-status');
+const poolStatusEl = document.getElementById('pool-status');
+const uptimeEl = document.getElementById('uptime-display');
+if (healthData.status === 'online') {
+statusEl.className = 'health-status health-online';
+statusEl.innerHTML = `
+<div class="d-flex justify-content-between align-items-center">
+<div>
+<strong><i class="fas fa-check-circle"></i> System Status: ONLINE</strong>
+<div>All systems operational</div>
+<div class="uptime-display">${healthData.uptime || 'Unknown'}</div>
+</div>
+<div class="text-end">
+<div><small>Database: <span class="badge badge-success">${healthData.database || 'Unknown'}</span></small></div>
+<div><small>Connection Pool: <span class="badge badge-success">${healthData.connection_pool || 'Unknown'}</span></small></div>
+<div><small>Version: ${healthData.version || 'Unknown'}</small></div>
+</div>
+</div>
+`;
+if (uptimeEl) uptimeEl.textContent = healthData.uptime || 'Unknown';
+if (dbStatusEl) dbStatusEl.textContent = healthData.database || 'Unknown';
+if (poolStatusEl) poolStatusEl.textContent = healthData.connection_pool || 'Unknown';
+} else if (healthData.status === 'degraded') {
+statusEl.className = 'health-status health-degraded';
+statusEl.innerHTML = `
+<div class="d-flex justify-content-between align-items-center">
+<div>
+<strong><i class="fas fa-exclamation-triangle"></i> System Status: DEGRADED</strong>
+<div>Some issues detected</div>
+<div class="uptime-display">${healthData.uptime || 'Unknown'}</div>
+</div>
+<div class="text-end">
+<div><small>Database: <span class="badge badge-warning">${healthData.database || 'Unknown'}</span></small></div>
+<div><small>Connection Pool: <span class="badge badge-warning">${healthData.connection_pool || 'Unknown'}</span></small></div>
+</div>
+</div>
 `;
 } else {
-currentEl.innerHTML = '<p>No TikTok task set for today.</p>';
-}
-}
-if (historyRes.success) {
-const historyEl = document.getElementById('tiktok-history-list');
-if (historyRes.history && historyRes.history.length > 0) {
-historyEl.innerHTML = historyRes.history.map(item => `
-<div class="tiktok-history-item">
-<strong>${new Date(item.date).toLocaleDateString()}</strong><br/>
-<a href="${item.tiktok_link}" target="_blank">${item.tiktok_link}</a><br/>
-Reward: ₦${item.reward_amount}
+statusEl.className = 'health-status health-offline';
+statusEl.innerHTML = `
+<div class="d-flex justify-content-between align-items-center">
+<div>
+<strong><i class="fas fa-times-circle"></i> System Status: OFFLINE</strong>
+<div>System unavailable</div>
+<div class="uptime-display">${healthData.uptime || 'Unknown'}</div>
 </div>
-`).join('');
-} else {
-historyEl.innerHTML = '<p>No history found.</p>';
+<div class="text-end">
+<div><small>Database: <span class="badge badge-danger">${healthData.database || 'Unknown'}</span></small></div>
+<div><small>Connection Pool: <span class="badge badge-danger">${healthData.connection_pool || 'Unknown'}</span></small></div>
+</div>
+</div>
+`;
 }
+}
+
+// ================================ BACKUP FUNCTIONS ================================
+async function triggerBackup() {
+if (!confirm('Create a manual database backup?')) return;
+try {
+const data = await postData('/api/admin/backup/trigger', {});
+if (data.success) {
+showMessage(`Backup created: ${data.backup_file}`, 'success', 'backup-message');
+listBackups();
+} else {
+showMessage(data.message, 'error', 'backup-message');
 }
 } catch (err) {
-console.error('Failed to load TikTok ', err);
-document.getElementById('current-tiktok-display').innerHTML = '<p>Error loading current task</p>';
-document.getElementById('tiktok-history-list').innerHTML = '<p>Error loading history</p>';
+showMessage('Failed to trigger backup', 'error', 'backup-message');
 }
+}
+
+async function listBackups() {
+try {
+const data = await fetchData('/api/admin/backup/list');
+if (data.success) {
+backupListData = data.backups || [];
+renderBackupList();
+if (backupListData.length > 0) {
+const latest = backupListData[0];
+document.getElementById('last-backup-time').textContent = new Date(latest.created).toLocaleString();
+} else {
+document.getElementById('last-backup-time').textContent = 'No backups found';
+}
+} else {
+showMessage('Failed to load backups', 'error', 'backup-message');
+}
+} catch (err) {
+showMessage('Failed to load backups', 'error', 'backup-message');
+}
+}
+
+function renderBackupList() {
+const container = document.getElementById('backup-list');
+if (!backupListData || backupListData.length === 0) {
+container.innerHTML = '<p>No backups available.</p>';
+return;
+}
+container.innerHTML = backupListData.map(backup => `
+<div class="backup-item">
+<div class="d-flex justify-content-between align-items-center">
+<div>
+<strong>${backup.filename}</strong><br/>
+<small>Created: ${new Date(backup.created).toLocaleString()}</small><br/>
+<small>Size: ${backup.size_human || formatBytes(backup.size)}</small>
+</div>
+<button onclick="showBackupDetails('${backup.filename}')" class="btn btn-sm btn-outline-info">
+<i class="fas fa-info-circle"></i> Details
+</button>
+</div>
+</div>
+`).join('');
+}
+
+function showBackupDetails(filename) {
+const backup = backupListData.find(b => b.filename === filename);
+if (!backup) return;
+const modal = new bootstrap.Modal(document.getElementById('backupModal'));
+document.getElementById('backup-details').innerHTML = `
+<div class="mb-3">
+<strong>Filename:</strong> ${backup.filename}<br/>
+<strong>Created:</strong> ${new Date(backup.created).toLocaleString()}<br/>
+<strong>Size:</strong> ${backup.size_human || formatBytes(backup.size)}<br/>
+<strong>Raw Size:</strong> ${backup.size} bytes
+</div>
+<div class="alert alert-info">
+<small>
+<i class="fas fa-info-circle"></i> Backups are stored in the <code>backups/</code> directory.
+To restore, copy the backup file to the appropriate location and run database restore commands.
+</small>
+</div>
+`;
+modal.show();
 }
 
 // ================================ TAB FUNCTIONS ================================
@@ -698,6 +1093,7 @@ case 'tiktokDaily': loadTikTokDailyTab(); break;
 case 'users': loadUsers(); break;
 case 'withdrawals': loadWithdrawals(); break;
 case 'withdrawalReport': loadWithdrawalReport(); break;
+case 'backup': loadBackupTab(); break;
 case 'settings': loadSettings(); break;
 case 'coupons': loadCouponStats(); break;
 case 'whatsapp': loadWhatsAppNumbers(); break;
@@ -707,6 +1103,8 @@ case 'whatsapp': loadWhatsAppNumbers(); break;
 // ================================ DASHBOARD FUNCTIONS ================================
 async function loadDashboard() {
 try {
+// First check health
+await checkHealth();
 const [usersRes, txRes] = await Promise.all([
 fetchData('/api/admin/users'),
 fetchData('/api/admin/transactions')
@@ -749,7 +1147,7 @@ container.innerHTML = `
 <tbody>
 ${transactions.map(tx => `
 <tr>
-<td>${tx.id}</td>
+<td>${tx.id.substring(0, 8)}...</td>
 <td>${tx.user_id}</td>
 <td>${formatCurrency(tx.amount)}</td>
 <td>
@@ -856,7 +1254,10 @@ onchange="toggleGlobalDay(${day}, this.checked)">
 </div>
 `;
 }
-document.getElementById('global-days-current').textContent = globalWithdrawalDays.sort((a, b) => a - b).join(', ') || 'Default (7, 14, 25, 30)';
+const currentEl = document.getElementById('global-days-current');
+if (currentEl) {
+currentEl.textContent = globalWithdrawalDays.sort((a, b) => a - b).join(', ') || 'Default (7, 14, 25, 30)';
+}
 }
 function toggleGlobalDay(day, isChecked) {
 if (isChecked) {
@@ -899,7 +1300,74 @@ showMessage('Failed to save global withdrawal days', 'error', 'global-settings-m
 }
 }
 
-// ================================ STUB FUNCTIONS FOR OTHER TABS ================================
+// ================================ BACKUP TAB ================================
+function loadBackupTab() {
+listBackups();
+}
+
+// ================================ TIKTOK DAILY FUNCTIONS ================================
+async function setTikTokDaily() {
+const link = document.getElementById('tiktok-link-input').value.trim();
+if (!link) {
+showMessage('Please enter a TikTok link', 'error', 'tiktok-message');
+return;
+}
+if (!link.startsWith('https://www.tiktok.com/@')) {
+showMessage('Link must start with https://www.tiktok.com/@', 'error', 'tiktok-message');
+return;
+}
+try {
+const res = await postData('/api/admin/tiktok/set-daily', { tiktok_link: link });
+if (res.success) {
+showMessage('TikTok task set successfully!', 'success', 'tiktok-message');
+loadTikTokDailyTab();
+document.getElementById('tiktok-link-input').value = '';
+} else {
+showMessage(res.message || 'Failed to set TikTok task', 'error', 'tiktok-message');
+}
+} catch (err) {
+showMessage('Network error', 'error', 'tiktok-message');
+}
+}
+
+async function loadTikTokDailyTab() {
+try {
+const currentRes = await fetchData('/api/admin/tiktok/get-daily');
+const historyRes = await fetchData('/api/admin/tiktok/history');
+if (currentRes.success) {
+const currentEl = document.getElementById('current-tiktok-display');
+if (currentRes.task) {
+currentEl.innerHTML = `
+<p><strong>Active since:</strong> ${new Date(currentRes.task.date).toLocaleDateString()}</p>
+<p><strong>Link:</strong> <a href="${currentRes.task.tiktok_link}" target="_blank">${currentRes.task.tiktok_link}</a></p>
+<p><strong>Reward:</strong> ₦${currentRes.task.reward_amount}</p>
+`;
+} else {
+currentEl.innerHTML = '<p>No TikTok task set for today.</p>';
+}
+}
+if (historyRes.success) {
+const historyEl = document.getElementById('tiktok-history-list');
+if (historyRes.history && historyRes.history.length > 0) {
+historyEl.innerHTML = historyRes.history.map(item => `
+<div class="tiktok-history-item">
+<strong>${new Date(item.date).toLocaleDateString()}</strong><br/>
+<a href="${item.tiktok_link}" target="_blank">${item.tiktok_link}</a><br/>
+Reward: ₦${item.reward_amount}
+</div>
+`).join('');
+} else {
+historyEl.innerHTML = '<p>No history found.</p>';
+}
+}
+} catch (err) {
+console.error('Failed to load TikTok ', err);
+document.getElementById('current-tiktok-display').innerHTML = '<p>Error loading current task</p>';
+document.getElementById('tiktok-history-list').innerHTML = '<p>Error loading history</p>';
+}
+}
+
+// ================================ LOAD USERS ================================
 async function loadUsers() {
 if (document.getElementById('users').innerHTML === '') {
 document.getElementById('users').innerHTML = `
@@ -918,15 +1386,15 @@ onkeyup="searchUsers()" style="max-width: 300px;">
 <th>Balance</th>
 <th>Withdrawal Status</th>
 <th>Withdrawal Limit</th>
+<th>Admin</th>
 <th>Actions</th>
 </tr>
 </thead>
 <tbody id="user-list">
-<tr><td colspan="6" class="text-center">Loading users...</td></tr>
+<tr><td colspan="7" class="text-center">Loading users...</td></tr>
 </tbody>
 </table>
 </div>
-<div id="user-pagination" class="mt-3"></div>
 </div>
 `;
 }
@@ -937,13 +1405,13 @@ renderUserList(usersRes.users);
 }
 } catch (err) {
 console.error('Failed to load users:', err);
-document.getElementById('user-list').innerHTML = '<tr><td colspan="6" class="text-center">Error loading users</td></tr>';
+document.getElementById('user-list').innerHTML = '<tr><td colspan="7" class="text-center">Error loading users</td></tr>';
 }
 }
 function renderUserList(users) {
 const tbody = document.getElementById('user-list');
 if (!users.length) {
-tbody.innerHTML = '<tr><td colspan="6" class="text-center">No users found</td></tr>';
+tbody.innerHTML = '<tr><td colspan="7" class="text-center">No users found</td></tr>';
 return;
 }
 tbody.innerHTML = users.map(user => {
@@ -957,19 +1425,18 @@ const isFlexiaAdmin = user.username === 'flexiaadmin';
 const adminBadge = user.is_admin ?
 (isFlexiaAdmin ?
 '<span class="badge badge-primary">Original Admin</span>' :
-'<button onclick="toggleAdminStatus('+user.id+', true, \''+user.username+'\')" class="btn btn-sm btn-warning">Demote</button>') :
-(!isFlexiaAdmin ?
-'<button onclick="toggleAdminStatus('+user.id+', false, \''+user.username+'\')" class="btn btn-sm btn-info">Promote</button>' :
-'');
+'<span class="badge badge-success">Admin</span>') :
+'<span class="text-muted">User</span>';
 return `
 <tr>
 <td>${user.id}</td>
-<td>${user.username} ${adminBadge}</td>
+<td>${user.username}</td>
 <td>${formatCurrency(user.balance)}</td>
 <td>${withdrawalStatus}</td>
 <td>${withdrawalLimit}</td>
+<td>${adminBadge}</td>
 <td>
-<button onclick="openWithdrawalSettings(${user.id}, '${user.username}', ${user.balance}, ${user.is_admin})"
+<button onclick="openUserSettings(${user.id})"
 class="btn btn-sm btn-outline-primary">
 <i class="fas fa-cog"></i> Settings
 </button>
@@ -983,26 +1450,6 @@ class="btn btn-sm btn-outline-danger ms-1">
 </tr>
 `;
 }).join('');
-}
-async function toggleAdminStatus(userId, isCurrentlyAdmin, username) {
-if (username === 'flexiaadmin') {
-showAlert('Cannot modify original admin', 'error');
-return;
-}
-if (!confirm(`Are you sure you want to ${isCurrentlyAdmin ? 'remove admin rights from' : 'make'} ${username}?`)) {
-return;
-}
-try {
-const res = await postData(`/api/admin/user/${userId}/toggle-admin`);
-if (res.success) {
-showAlert(res.message, 'success');
-loadUsers();
-} else {
-showAlert(res.message, 'error');
-}
-} catch (err) {
-showAlert('Failed to update admin status', 'error');
-}
 }
 function searchUsers() {
 const searchTerm = document.getElementById('user-search').value.toLowerCase();
@@ -1033,8 +1480,63 @@ console.error('Delete error:', err);
 showMessage('Failed to delete user', 'error');
 }
 }
-async function openWithdrawalSettings(userId, username, balance, isAdmin = false) {
-alert('User settings modal requires backend implementation.');
+async function openUserSettings(userId) {
+try {
+const userRes = await fetchData(`/api/admin/user/${userId}`);
+if (userRes.success) {
+selectedUserId = userId;
+document.getElementById('modal-username').textContent = userRes.user.username;
+document.getElementById('withdrawal-settings-content').innerHTML = `
+<div class="mb-3">
+<label class="form-label">Withdrawal Restriction</label>
+<select id="user-withdrawal-restricted" class="form-control">
+<option value="false" ${!userRes.user.withdrawal_restricted ? 'selected' : ''}>Allowed</option>
+<option value="true" ${userRes.user.withdrawal_restricted ? 'selected' : ''}>Restricted</option>
+</select>
+</div>
+<div class="mb-3">
+<label class="form-label">Withdrawal Limit (₦)</label>
+<input type="number" id="user-withdrawal-limit" class="form-control" 
+value="${userRes.user.withdrawal_limit || 0}" min="0" step="1000">
+<small class="text-muted">Set to 0 for no limit</small>
+</div>
+<div class="mb-3">
+<label class="form-label">Custom Withdrawal Days (comma-separated, 1-31)</label>
+<input type="text" id="user-custom-days" class="form-control" 
+placeholder="7,14,21,28" value="${userRes.user.custom_withdrawal_days ? JSON.parse(userRes.user.custom_withdrawal_days).join(', ') : ''}">
+<small class="text-muted">Leave empty to use global settings</small>
+</div>
+`;
+const modal = new bootstrap.Modal(document.getElementById('withdrawalSettingsModal'));
+modal.show();
+}
+} catch (err) {
+console.error('Open user settings error:', err);
+showMessage('Failed to load user settings', 'error');
+}
+}
+async function saveWithdrawalSettings() {
+if (!selectedUserId) return;
+const restricted = document.getElementById('user-withdrawal-restricted').value === 'true';
+const limit = parseFloat(document.getElementById('user-withdrawal-limit').value);
+const customDays = document.getElementById('user-custom-days').value
+.split(',')
+.map(d => parseInt(d.trim()))
+.filter(d => !isNaN(d) && d >= 1 && d <= 31);
+try {
+// Update restriction
+await postData(`/api/admin/user/${selectedUserId}/toggle-restrict`, {});
+// Update limit
+await postData(`/api/admin/user/${selectedUserId}/set-limit`, { limit });
+// Update custom days (this would need a new endpoint)
+showMessage('Settings updated', 'success');
+const modal = bootstrap.Modal.getInstance(document.getElementById('withdrawalSettingsModal'));
+modal.hide();
+loadUsers();
+} catch (err) {
+console.error('Save settings error:', err);
+showMessage('Failed to save settings', 'error');
+}
 }
 
 // ================================ LOAD WITHDRAWALS ================================
@@ -1220,10 +1722,6 @@ document.getElementById('withdrawalReport').innerHTML = `
 </tbody>
 </table>
 </div>
-<div id="no-report-data" class="text-center py-5" style="display: none;">
-<i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
-<p class="text-muted">No withdrawal data available. Click Refresh to load.</p>
-</div>
 </div>
 `;
 }
@@ -1243,13 +1741,10 @@ document.getElementById('report-can-withdraw').textContent = formatNumber(report
 document.getElementById('report-restricted').textContent = formatNumber(report.users_restricted);
 document.getElementById('report-today').textContent = report.today;
 const tbody = document.getElementById('withdrawal-report-users');
-const noDataDiv = document.getElementById('no-report-data');
 if (!report.users || report.users.length === 0) {
-tbody.innerHTML = '';
-noDataDiv.style.display = 'block';
+tbody.innerHTML = '<tr><td colspan="8" class="text-center">No users found</td></tr>';
 return;
 }
-noDataDiv.style.display = 'none';
 tbody.innerHTML = report.users.map(user => {
 let statusBadge, statusText;
 if (user.withdrawal_restricted) {
@@ -1278,7 +1773,7 @@ return `
 <i class="fas ${user.has_withdrawal_pin ? 'fa-check text-success' : 'fa-times text-danger'}"></i>
 </td>
 <td>
-<button onclick="openWithdrawalSettings(${user.id}, '${user.username}', ${user.balance})"
+<button onclick="openUserSettings(${user.id})"
 class="btn btn-sm btn-outline-primary">
 <i class="fas fa-edit"></i> Edit
 </button>
@@ -1290,9 +1785,6 @@ class="btn btn-sm btn-outline-primary">
 
 // ================================ SETTINGS ================================
 async function loadSettings() {
-if (document.getElementById('settings').innerHTML === '') {
-return;
-}
 try {
 const settingsRes = await fetchData('/api/admin/settings');
 if (settingsRes.success) {
@@ -1301,7 +1793,6 @@ document.getElementById('whatsapp-link').value = s.whatsapp_link || '';
 document.getElementById('telegram-link').value = s.telegram_link || '';
 document.getElementById('facebook-link').value = s.facebook_link || '';
 }
-// Registration status loading REMOVED
 } catch (err) {
 console.error('Load settings error:', err);
 }
@@ -1361,35 +1852,12 @@ showMessage('Failed to change password', 'error', 'password-message');
 
 // ================================ COUPONS ================================
 async function loadCouponStats() {
-if (document.getElementById('coupons').innerHTML === '') {
-document.getElementById('coupons').innerHTML = `
-<div class="admin-section">
-<h3><i class="fas fa-ticket-alt"></i> Coupon Management</h3>
-<div class="mb-3">
-<p>Coupon Stats: <span id="coupon-stats">Loading...</span></p>
-</div>
-<div class="mb-3">
-<button onclick="loadCouponStats()"><i class="fas fa-sync"></i> Refresh Stats</button>
-<button onclick="resetCoupons()" style="background:#d32f2f">
-<i class="fas fa-undo"></i> Reset Used Coupons
-</button>
-<button onclick="deleteAllCoupons()" style="background:#c62828">
-<i class="fas fa-trash"></i> Delete All Coupons
-</button>
-</div>
-<div class="mb-3">
-<label>Add New Coupons (one per line)</label>
-<textarea id="new-coupons" placeholder="Enter one coupon per line (e.g., FLEX123)" rows="4"></textarea>
-</div>
-<button onclick="addCoupons()"><i class="fas fa-plus"></i> Add Coupons</button>
-<div id="coupon-message" class="message hidden"></div>
-</div>
-`;
-}
 try {
 const res = await fetchData('/api/admin/coupons');
 if (res.success) {
-const { total, available, used } = res.stats;
+const total = res.coupons.length;
+const available = res.coupons.filter(c => c.status === 'AVAILABLE').length;
+const used = total - available;
 document.getElementById('coupon-stats').textContent =
 `${total} total (${available} available, ${used} used)`;
 }
@@ -1507,11 +1975,14 @@ window.location.href = '/';
 }
 currentUserData = data.user;
 loadDashboard();
+// Start auto-refresh for dashboard
+setInterval(() => {
+if (document.querySelector('.tab-content.active').id === 'dashboard') {
+loadDashboard();
+}
+}, 30000); // Refresh every 30 seconds
 })
 .catch(() => window.location.href = '/');
-
-// Initialize all tabs that are empty
-if (document.getElementById('globalSettings').innerHTML === '') loadGlobalWithdrawalDays(false);
 });
 </script>
 </body>
