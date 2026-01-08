@@ -1,5 +1,5 @@
-# backend/app.py - COMPLETE PRODUCTION VERSION v11.0
-# FLEXIA Platform - ALL ADMIN FIXES APPLIED + COMPLETE ENDPOINTS
+# backend/app.py - FIXED PRODUCTION VERSION v11.1
+# FLEXIA Platform - ALL FIXES APPLIED + COMPLETE ENDPOINTS
 
 import os
 import json
@@ -864,14 +864,21 @@ def is_withdrawal_day(user_id=None):
         return_db_connection(conn)
 
 def grant_achievement_rewards(user_id):
+    """Calculate and grant achievement rewards - FIXED VERSION"""
+    app.logger.info(f"Granting achievement rewards for user {user_id}")
+    
+    # Get a fresh connection for this function ONLY
     conn = get_db()
     cursor = conn.cursor()
     ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+    
     try:
+        # Get user data
         cursor.execute(f'SELECT balance, game_stats, referral_code, points FROM users WHERE id = {ph}', (user_id,))
         row = cursor.fetchone()
         if not row:
-            return_db_connection(conn)
+            cursor.close()
+            conn.close()
             return None
         
         balance = float(row[0]) if row[0] else 0
@@ -881,15 +888,18 @@ def grant_achievement_rewards(user_id):
         
         game_stats = json.loads(game_stats_str)
         
+        # Get referrals count
         cursor.execute(f'SELECT COUNT(*) FROM users WHERE referred_by = {ph}', (referral_code,))
         referrals = cursor.fetchone()[0]
         
+        # Get transaction counts
         cursor.execute(f'SELECT COUNT(*) FROM transactions WHERE user_id = {ph}', (user_id,))
         total_tx = cursor.fetchone()[0]
         
         cursor.execute(f"SELECT COUNT(*) FROM transactions WHERE user_id = {ph} AND type = 'WITHDRAWAL'", (user_id,))
         total_withdrawals = cursor.fetchone()[0]
         
+        # Get today's games
         today = datetime.utcnow().date()
         cursor.execute(f'SELECT COUNT(*) FROM game_plays WHERE user_id = {ph} AND play_date = {ph}', (user_id, today))
         games_today = cursor.fetchone()[0]
@@ -897,11 +907,13 @@ def grant_achievement_rewards(user_id):
         cursor.execute(f'SELECT COUNT(*) FROM game_plays WHERE user_id = {ph}', (user_id,))
         total_games = cursor.fetchone()[0]
         
+        # Extract game stats
         snake_high = game_stats.get('snake', {}).get('high_score', 0)
         coin_streak = game_stats.get('coin_flip', {}).get('current_streak', 0)
         coin_total = game_stats.get('coin_flip', {}).get('wins', 0) + game_stats.get('coin_flip', {}).get('losses', 0)
         plinko_wins = game_stats.get('plinko', {}).get('total_wins', 0)
 
+        # Define achievements
         achievements = [
             {"unlocked": total_games >= 1, "reward": 500, "points": 10},
             {"unlocked": total_games >= 50, "reward": 5000, "points": 50},
@@ -924,15 +936,19 @@ def grant_achievement_rewards(user_id):
         total_reward = sum(ach["reward"] for ach in achievements if ach["unlocked"])
         total_points = sum(ach["points"] for ach in achievements if ach["unlocked"])
         
+        # Only update if there are new points
         if total_points <= current_points:
-            return_db_connection(conn)
+            cursor.close()
+            conn.close()
             return balance
 
         new_balance = balance + total_reward
         
+        # Update user balance and points
         cursor.execute(f'UPDATE users SET balance = {ph}, points = {ph} WHERE id = {ph}', 
                        (new_balance, total_points, user_id))
         
+        # Record achievement transaction if reward > 0
         if total_reward > 0:
             tx_id = f"ACH-{secrets.token_hex(8)}"
             cursor.execute(f'''
@@ -944,12 +960,21 @@ def grant_achievement_rewards(user_id):
             ))
         
         conn.commit()
-        return_db_connection(conn)
+        app.logger.info(f"Granted achievement rewards to user {user_id}: ₦{total_reward}, {total_points} points")
+        
+        cursor.close()
+        conn.close()
         return new_balance
         
     except Exception as e:
-        app.logger.error(f"Achievement grant error: {e}")
-        return_db_connection(conn)
+        app.logger.error(f"Achievement grant error for user {user_id}: {e}")
+        app.logger.error(traceback.format_exc())
+        try:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        except:
+            pass
         return None
 
 def cleanup_old_tiktok_tasks():
@@ -1066,7 +1091,7 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "uptime": get_uptime(),
             "database": db_status,
-            "version": "11.0",
+            "version": "11.1",
             "stats": {
                 "total_users": user_count,
                 "pending_withdrawals": pending_withdrawals
@@ -1086,7 +1111,7 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "database": f"error: {str(e)}",
             "uptime": get_uptime(),
-            "version": "11.0"
+            "version": "11.1"
         }), 503
 
 # ======================= BACKUP ENDPOINTS =======================
@@ -1312,7 +1337,8 @@ def login():
                        (datetime.utcnow().isoformat(), user['id']))
         conn.commit()
         
-        grant_achievement_rewards(user['id'])
+        # ✅ FIXED: Remove grant_achievement_rewards call to prevent database conflicts
+        # grant_achievement_rewards(user['id'])  # REMOVED
         
         resp = jsonify({
             "success": True,
@@ -1361,7 +1387,8 @@ def get_user_profile():
     if not user:
         return jsonify({"success": False, "message": "Not authenticated"}), 401
     
-    grant_achievement_rewards(user['id'])
+    # ✅ FIXED: Remove grant_achievement_rewards call to prevent database conflicts
+    # grant_achievement_rewards(user['id'])  # REMOVED
     
     conn = get_db()
     cursor = conn.cursor()
@@ -1587,6 +1614,25 @@ def report_snake():
     if not can_play_today(user['id'], 'snake', max_plays=20):
         return jsonify({"success": False, "message": "Max 20 plays per day"}), 403
     
+    # 🔥 ADDED: Check for duplicate recent claims (within 3 seconds)
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+        SELECT COUNT(*) FROM transactions 
+        WHERE user_id = %s AND type = 'SNAKE_REWARD' 
+        AND timestamp > %s
+        ''', (user['id'], (datetime.utcnow() - timedelta(seconds=3)).isoformat()))
+        recent_claims = cursor.fetchone()[0]
+        
+        if recent_claims > 0:
+            app.logger.warning(f"Duplicate snake claim attempt from user {user['id']}")
+            return jsonify({"success": False, "message": "Please wait before claiming again"}), 429
+    except Exception as e:
+        app.logger.error(f"Duplicate check error: {e}")
+    finally:
+        return_db_connection(conn)
+    
     reward = apples * CONFIG.SNAKE_REWARD
     conn = get_db()
     cursor = conn.cursor()
@@ -1612,15 +1658,29 @@ def report_snake():
         # Record game play
         record_game_play(user['id'], 'snake')
         
+        # 🔥 ADDED: Record the transaction to prevent duplicates
+        tx_id = f"SNK-{int(time.time())}-{secrets.token_hex(4)}"
+        cursor.execute('''
+        INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ''', (
+            tx_id, user['id'], 'SNAKE_REWARD', reward, 'COMPLETED',
+            json.dumps({"game": "snake", "apples": apples}),
+            datetime.utcnow().isoformat()
+        ))
+        
         conn.commit()
-        grant_achievement_rewards(user['id'])
+        
+        # ✅ FIXED: Remove grant_achievement_rewards call to prevent database conflicts
+        # grant_achievement_rewards(user['id'])  # REMOVED
         
         app.logger.info(f"User {user['username']} played snake: {apples} apples, reward: {reward}")
         
         return jsonify({
             "success": True,
             "reward": reward,
-            "new_balance": new_balance
+            "new_balance": new_balance,
+            "transaction_id": tx_id  # Send transaction ID back
         })
         
     except Exception as e:
@@ -1681,8 +1741,22 @@ def report_coinflip():
         # Record game play
         record_game_play(user['id'], 'coinflip')
         
+        # Record transaction
+        tx_id = f"COIN-{int(time.time())}-{secrets.token_hex(4)}"
+        cursor.execute('''
+        INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ''', (
+            tx_id, user['id'], 'COINFLIP_REWARD' if won else 'COINFLIP_LOSS', 
+            payout if won else -bet, 'COMPLETED',
+            json.dumps({"game": "coinflip", "bet": bet, "won": won}),
+            datetime.utcnow().isoformat()
+        ))
+        
         conn.commit()
-        grant_achievement_rewards(user['id'])
+        
+        # ✅ FIXED: Remove grant_achievement_rewards call to prevent database conflicts
+        # grant_achievement_rewards(user['id'])  # REMOVED
         
         app.logger.info(f"User {user['username']} played coinflip: bet {bet}, won: {won}, payout: {payout}")
         
@@ -1753,8 +1827,22 @@ def report_plinko():
         # Record game play
         record_game_play(user['id'], 'plinko')
         
+        # Record transaction
+        tx_id = f"PLK-{int(time.time())}-{secrets.token_hex(4)}"
+        cursor.execute('''
+        INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ''', (
+            tx_id, user['id'], 'PLINKO_WIN' if win > bet else 'PLINKO_LOSS', 
+            win - bet, 'COMPLETED',
+            json.dumps({"game": "plinko", "bet": bet, "multiplier": multiplier, "win": win}),
+            datetime.utcnow().isoformat()
+        ))
+        
         conn.commit()
-        grant_achievement_rewards(user['id'])
+        
+        # ✅ FIXED: Remove grant_achievement_rewards call to prevent database conflicts
+        # grant_achievement_rewards(user['id'])  # REMOVED
         
         app.logger.info(f"User {user['username']} played plinko: bet {bet}, multiplier: {multiplier}, win: {win}")
         
@@ -1806,8 +1894,21 @@ def report_spin():
         # Record game play
         record_game_play(user['id'], 'spin')
         
+        # Record transaction
+        tx_id = f"SPIN-{int(time.time())}-{secrets.token_hex(4)}"
+        cursor.execute('''
+        INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ''', (
+            tx_id, user['id'], 'SPIN_REWARD', reward, 'COMPLETED',
+            json.dumps({"game": "spin", "reward": reward}),
+            datetime.utcnow().isoformat()
+        ))
+        
         conn.commit()
-        grant_achievement_rewards(user['id'])
+        
+        # ✅ FIXED: Remove grant_achievement_rewards call to prevent database conflicts
+        # grant_achievement_rewards(user['id'])  # REMOVED
         
         app.logger.info(f"User {user['username']} played spin: reward: {reward}")
         
@@ -1934,6 +2035,13 @@ def get_achievements():
         unlocked_achievements = sum(1 for a in achievements_data if a['unlocked'])
         total_points = sum(a['points'] for a in achievements_data if a['unlocked'])
         
+        # ✅ FIXED: Grant achievement rewards when achievements are viewed
+        if unlocked_achievements > 0:
+            granted_balance = grant_achievement_rewards(user['id'])
+            if granted_balance:
+                # Update balance in response
+                balance = granted_balance
+        
         return jsonify({
             "success": True,
             "stats": {
@@ -1941,7 +2049,8 @@ def get_achievements():
                 "unlocked": unlocked_achievements,
                 "points": total_points
             },
-            "achievements": achievements_data
+            "achievements": achievements_data,
+            "current_balance": balance
         })
         
     except Exception as e:
@@ -2029,7 +2138,9 @@ def follow_tiktok_daily():
         ''', (tx_id, user['id'], 'TIKTOK_DAILY', reward, 'COMPLETED', datetime.utcnow().isoformat()))
         
         conn.commit()
-        grant_achievement_rewards(user['id'])
+        
+        # ✅ FIXED: Remove grant_achievement_rewards call to prevent database conflicts
+        # grant_achievement_rewards(user['id'])  # REMOVED
         
         app.logger.info(f"User {user['username']} claimed TikTok daily: reward: {reward}")
         
@@ -2710,7 +2821,9 @@ def claim_referral_bonus():
                        (new_balance, total_bonus, user['id']))
         
         conn.commit()
-        grant_achievement_rewards(user['id'])
+        
+        # ✅ FIXED: Remove grant_achievement_rewards call to prevent database conflicts
+        # grant_achievement_rewards(user['id'])  # REMOVED
         
         app.logger.info(f"User {user['username']} claimed referral bonus: {unclaimed}")
         
@@ -2799,7 +2912,9 @@ def withdraw():
         ))
         
         conn.commit()
-        grant_achievement_rewards(user['id'])
+        
+        # ✅ FIXED: Remove grant_achievement_rewards call to prevent database conflicts
+        # grant_achievement_rewards(user['id'])  # REMOVED
         
         app.logger.info(f"User {user['username']} requested withdrawal: {amount} to {bank_code}:{account_number}")
         
@@ -3235,7 +3350,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug = os.getenv('ENV') != 'production'
     
-    app.logger.info(f"🚀 Starting Flexia Platform v11.0 on port {port} (debug: {debug})")
+    app.logger.info(f"🚀 Starting Flexia Platform v11.1 on port {port} (debug: {debug})")
     app.logger.info(f"📁 Frontend directory: {CONFIG.FRONTEND_DIR}")
     app.logger.info(f"🔐 Secret key set: {'Yes' if CONFIG.SECRET_KEY else 'No'}")
     app.logger.info(f"🗄️  Database: {'PostgreSQL' if os.environ.get('DATABASE_URL') else 'SQLite'}")
@@ -3243,4 +3358,6 @@ if __name__ == '__main__':
     app.logger.info(f"📊 Structured logging: Enabled")
     app.logger.info(f"💾 Database connection pool: {'Enabled' if db_pool else 'Disabled'}")
     app.logger.info(f"💾 Automatic backups: Enabled (daily at 2 AM UTC)")
-    app.logger.info(f"✅ ALL ADMIN ENDPOINTS FIXED: Complete admin dashboard support")
+    app.logger.info(f"✅ ALL FIXES APPLIED: Database connection issues, duplicate claims, achievements")
+    
+    app.run(host='0.0.0.0', port=port, debug=debug)
