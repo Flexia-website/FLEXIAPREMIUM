@@ -1,5 +1,5 @@
-# backend/app.py - FIXED REWARD CLAIMING VERSION v12.0
-# FLEXIA Platform - ALL REWARD CLAIMING FIXES APPLIED
+# backend/app.py - ULTIMATE VERSION 12.1
+# FLEXIA Platform - ALL FIXES + ALL ENDPOINTS
 
 import os
 import json
@@ -1194,7 +1194,7 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "uptime": get_uptime(),
             "database": db_status,
-            "version": "12.0",
+            "version": "12.1",
             "stats": {
                 "total_users": user_count,
                 "pending_withdrawals": pending_withdrawals
@@ -1214,7 +1214,7 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "database": f"error: {str(e)}",
             "uptime": get_uptime(),
-            "version": "12.0"
+            "version": "12.1"
         }), 503
 
 # ======================= BACKUP ENDPOINTS =======================
@@ -1241,6 +1241,37 @@ def trigger_backup():
         return jsonify({
             "success": False,
             "message": f"Backup error: {str(e)}"
+        }), 500
+
+@app.route('/api/admin/backup/list', methods=['GET'])
+@require_admin
+def list_backups():
+    """List all available backups"""
+    try:
+        if not os.path.exists('backups'):
+            return jsonify({"success": True, "backups": []})
+        
+        backups = []
+        for filename in sorted(os.listdir('backups'), reverse=True):
+            filepath = os.path.join('backups', filename)
+            if os.path.isfile(filepath):
+                stat = os.stat(filepath)
+                backups.append({
+                    "filename": filename,
+                    "size": stat.st_size,
+                    "created": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                    "size_human": f"{stat.st_size / 1024 / 1024:.2f} MB"
+                })
+        
+        return jsonify({
+            "success": True,
+            "backups": backups
+        })
+    except Exception as e:
+        app.logger.error(f"List backups error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error listing backups: {str(e)}"
         }), 500
 
 # ======================= AUTH ENDPOINTS =======================
@@ -2289,6 +2320,64 @@ def admin_set_tiktok_daily():
     finally:
         return_db_connection(conn)
 
+@app.route('/api/admin/tiktok/get-daily', methods=['GET'])
+@require_admin
+def admin_get_tiktok_daily():
+    today = datetime.utcnow().date().isoformat()
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('SELECT date, tiktok_link, reward_amount FROM tiktok_daily WHERE date = %s', (today,))
+        row = cursor.fetchone()
+        
+        if row:
+            task = {
+                'date': row[0],
+                'tiktok_link': row[1],
+                'reward_amount': float(row[2]) if row[2] else CONFIG.TIKTOK_REWARD
+            }
+            return jsonify({"success": True, "task": task})
+        else:
+            return jsonify({"success": False, "message": "No TikTok task set for today"})
+            
+    except Exception as e:
+        app.logger.error(f"Get TikTok daily error: {e}")
+        return jsonify({"success": False, "message": "Failed to get task"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/tiktok/history', methods=['GET'])
+@require_admin
+def admin_get_tiktok_history():
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('''
+        SELECT date, tiktok_link, reward_amount 
+        FROM tiktok_daily 
+        WHERE date >= %s 
+        ORDER BY date DESC 
+        LIMIT 7
+        ''', ((datetime.utcnow().date() - timedelta(days=7)).isoformat(),))
+        
+        history = []
+        for row in cursor.fetchall():
+            history.append({
+                'date': row[0],
+                'tiktok_link': row[1],
+                'reward_amount': float(row[2]) if row[2] else CONFIG.TIKTOK_REWARD
+            })
+        
+        return jsonify({"success": True, "history": history})
+        
+    except Exception as e:
+        app.logger.error(f"Get TikTok history error: {e}")
+        return jsonify({"success": False, "message": "Failed to load history"}), 500
+    finally:
+        return_db_connection(conn)
+
 # ======================= ADMIN WITHDRAWAL DAYS =======================
 @app.route('/api/admin/global-withdrawal-days', methods=['GET'])
 @require_admin
@@ -2334,6 +2423,586 @@ def admin_set_global_withdrawal_days():
         app.logger.error(f"Set global withdrawal days error: {e}")
         conn.rollback()
         return jsonify({"success": False, "message": "Failed to update"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ======================= ADMIN USER CUSTOM WITHDRAWAL DAYS =======================
+@app.route('/api/admin/user/<int:user_id>/set-custom-days', methods=['POST'])
+@require_admin
+def admin_set_user_custom_days(user_id):
+    """Set custom withdrawal days for a specific user"""
+    data = request.get_json()
+    days = data.get('days', [])
+    
+    if not isinstance(days, list):
+        return jsonify({"success": False, "message": "Invalid days format"}), 400
+    
+    # Validate days (1-31)
+    valid_days = [day for day in days if isinstance(day, int) and 1 <= day <= 31]
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if user exists
+        cursor.execute('SELECT username FROM users WHERE id = %s', (user_id,))
+        if not cursor.fetchone():
+            return jsonify({"success": False, "message": "User not found"}), 404
+        
+        cursor.execute('UPDATE users SET custom_withdrawal_days = %s WHERE id = %s',
+                       (json.dumps(valid_days) if valid_days else None, user_id))
+        conn.commit()
+        
+        app.logger.info(f"Admin set custom withdrawal days for user {user_id}: {valid_days}")
+        return jsonify({"success": True, "message": "Custom withdrawal days updated"})
+        
+    except Exception as e:
+        app.logger.error(f"Set user custom days error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to update"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ======================= ADMIN USER SET LIMIT =======================
+@app.route('/api/admin/user/<int:user_id>/set-limit', methods=['POST'])
+@require_admin
+def admin_set_user_limit(user_id):
+    data = request.get_json()
+    limit = data.get('limit', 0)
+    
+    if limit < 0:
+        return jsonify({"success": False, "message": "Invalid limit"}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if user exists
+        cursor.execute('SELECT username FROM users WHERE id = %s', (user_id,))
+        user_row = cursor.fetchone()
+        if not user_row:
+            return jsonify({"success": False, "message": "User not found"}), 404
+        
+        cursor.execute('UPDATE users SET withdrawal_limit = %s WHERE id = %s', (limit, user_id))
+        conn.commit()
+        
+        app.logger.info(f"Admin set withdrawal limit for user {user_id} to: {limit}")
+        return jsonify({"success": True, "message": "Limit updated"})
+    except Exception as e:
+        app.logger.error(f"Set limit error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to update"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ======================= ADMIN WITHDRAWAL APPROVAL =======================
+@app.route('/api/admin/approve-withdrawal', methods=['POST'])
+@require_admin
+def admin_approve_withdrawal():
+    data = request.get_json()
+    transaction_id = data.get('transaction_id')
+    action = data.get('action', '').upper()
+    
+    if not transaction_id or action not in ['APPROVE', 'REJECT']:
+        return jsonify({"success": False, "message": "Invalid request"}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Get transaction details
+        cursor.execute('SELECT user_id, amount, status FROM transactions WHERE id = %s', (transaction_id,))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"success": False, "message": "Transaction not found"}), 404
+        
+        user_id, amount, current_status = row[0], float(row[1]), row[2]
+        
+        if current_status != 'PENDING':
+            return jsonify({"success": False, "message": f"Transaction already {current_status}"}), 400
+        
+        new_status = 'COMPLETED' if action == 'APPROVE' else 'FAILED'
+        
+        # If rejecting, refund the amount to user balance
+        if action == 'REJECT':
+            cursor.execute('SELECT balance FROM users WHERE id = %s', (user_id,))
+            user_row = cursor.fetchone()
+            if user_row:
+                current_balance = float(user_row[0]) if user_row[0] else 0
+                new_balance = current_balance + amount
+                cursor.execute('UPDATE users SET balance = %s WHERE id = %s', (new_balance, user_id))
+        
+        # Update transaction status
+        cursor.execute('UPDATE transactions SET status = %s WHERE id = %s', (new_status, transaction_id))
+        
+        conn.commit()
+        
+        app.logger.info(f"Admin {action}d withdrawal {transaction_id} for user {user_id}, amount: {amount}")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Withdrawal {action.lower()}ed successfully",
+            "status": new_status
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Approve withdrawal error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": f"Failed to process: {str(e)}"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ======================= ADMIN WITHDRAWAL STATUS REPORT =======================
+@app.route('/api/admin/withdrawal-status-report', methods=['GET'])
+@require_admin
+def admin_withdrawal_status_report():
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Get all users
+        cursor.execute('''
+        SELECT id, username, balance, withdrawal_restricted, custom_withdrawal_days, 
+               withdrawal_limit, withdrawal_pin
+        FROM users
+        ORDER BY id
+        ''')
+        
+        users = []
+        total_users = 0
+        users_withdrawal_today = 0
+        users_restricted = 0
+        
+        today_day = datetime.utcnow().day
+        global_days = get_global_withdrawal_days()
+        
+        for row in cursor.fetchall():
+            total_users += 1
+            
+            user_id = row[0]
+            username = row[1]
+            balance = float(row[2]) if row[2] else 0
+            withdrawal_restricted = bool(row[3])
+            custom_days_str = row[4] if row[4] else ''
+            withdrawal_limit = float(row[5]) if row[5] else 0
+            has_withdrawal_pin = bool(row[6])
+            
+            if withdrawal_restricted:
+                users_restricted += 1
+                can_withdraw_today = False
+            else:
+                if custom_days_str:
+                    try:
+                        custom_days = json.loads(custom_days_str)
+                        can_withdraw_today = today_day in custom_days
+                    except:
+                        can_withdraw_today = today_day in global_days
+                else:
+                    can_withdraw_today = today_day in global_days
+            
+            if can_withdraw_today:
+                users_withdrawal_today += 1
+            
+            users.append({
+                'id': user_id,
+                'username': username,
+                'balance': balance,
+                'withdrawal_restricted': withdrawal_restricted,
+                'custom_withdrawal_days': json.loads(custom_days_str) if custom_days_str else [],
+                'withdrawal_limit': withdrawal_limit,
+                'has_withdrawal_pin': has_withdrawal_pin,
+                'can_withdraw_today': can_withdraw_today
+            })
+        
+        return jsonify({
+            "success": True,
+            "today": datetime.utcnow().strftime("%d %B %Y"),
+            "total_users": total_users,
+            "users_withdrawal_today": users_withdrawal_today,
+            "users_restricted": users_restricted,
+            "global_withdrawal_days": global_days,
+            "users": users
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Withdrawal status report error: {e}")
+        return jsonify({"success": False, "message": "Failed to generate report"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ======================= ADMIN TOGGLE USER ADMIN STATUS =======================
+@app.route('/api/admin/user/<int:user_id>/toggle-admin', methods=['POST'])
+@require_admin
+def admin_toggle_user_admin(user_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if trying to modify original admin
+        cursor.execute('SELECT username, is_admin FROM users WHERE id = %s', (user_id,))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"success": False, "message": "User not found"}), 404
+        
+        username = row[0]
+        is_currently_admin = bool(row[1])
+        
+        if username == 'flexiaadmin':
+            return jsonify({"success": False, "message": "Cannot modify original admin"}), 403
+        
+        new_admin_status = not is_currently_admin
+        
+        cursor.execute('UPDATE users SET is_admin = %s WHERE id = %s', (new_admin_status, user_id))
+        conn.commit()
+        
+        action = "promoted to admin" if new_admin_status else "demoted from admin"
+        app.logger.info(f"Admin toggled user {username} ({user_id}) admin status to: {new_admin_status}")
+        
+        return jsonify({
+            "success": True,
+            "message": f"User {username} {action}",
+            "is_admin": new_admin_status
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Toggle admin error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to update admin status"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ======================= ADMIN DELETE USER =======================
+@app.route('/api/admin/user/<int:user_id>', methods=['DELETE'])
+@require_admin
+def admin_delete_user(user_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if trying to delete original admin
+        cursor.execute('SELECT username FROM users WHERE id = %s', (user_id,))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"success": False, "message": "User not found"}), 404
+        
+        username = row[0]
+        
+        if username == 'flexiaadmin':
+            return jsonify({"success": False, "message": "Cannot delete original admin"}), 403
+        
+        # Delete user's transactions
+        cursor.execute('DELETE FROM transactions WHERE user_id = %s', (user_id,))
+        # Delete user's game plays
+        cursor.execute('DELETE FROM game_plays WHERE user_id = %s', (user_id,))
+        # Delete user
+        cursor.execute('DELETE FROM users WHERE id = %s', (user_id,))
+        
+        conn.commit()
+        
+        app.logger.warning(f"Admin deleted user: {username} (ID: {user_id})")
+        
+        return jsonify({
+            "success": True,
+            "message": f"User {username} deleted successfully"
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Delete user error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to delete user"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ======================= ADMIN COUPON MANAGEMENT =======================
+@app.route('/api/admin/coupons', methods=['GET'])
+@require_admin
+def admin_get_coupons():
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('SELECT code, status FROM coupons ORDER BY code')
+        coupons = []
+        for row in cursor.fetchall():
+            coupons.append({
+                'code': row[0],
+                'status': row[1]
+            })
+        return jsonify({"success": True, "coupons": coupons})
+    except Exception as e:
+        app.logger.error(f"Admin coupons error: {e}")
+        return jsonify({"success": False, "message": "Failed to load coupons"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/coupons/reset-used', methods=['POST'])
+@require_admin
+def admin_reset_used_coupons():
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("UPDATE coupons SET status = 'AVAILABLE' WHERE status = 'USED'")
+        updated_count = cursor.rowcount
+        
+        conn.commit()
+        
+        app.logger.info(f"Admin reset {updated_count} used coupons to available")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Reset {updated_count} used coupons to available"
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Reset coupons error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to reset coupons"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/coupons/delete', methods=['POST'])
+@require_admin
+def admin_delete_all_coupons():
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('DELETE FROM coupons')
+        deleted_count = cursor.rowcount
+        
+        conn.commit()
+        
+        app.logger.warning(f"Admin deleted all {deleted_count} coupons")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Deleted all {deleted_count} coupons"
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Delete all coupons error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to delete coupons"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/coupons/add', methods=['POST'])
+@require_admin
+def admin_add_bulk_coupons():
+    data = request.get_json()
+    codes = data.get('codes', [])
+    
+    if not isinstance(codes, list):
+        return jsonify({"success": False, "message": "Invalid codes format"}), 400
+    
+    # Clean and validate codes
+    valid_codes = []
+    for code in codes:
+        clean_code = sanitize_input(str(code).strip().upper())
+        if clean_code and len(clean_code) >= 4:
+            valid_codes.append(clean_code)
+    
+    if not valid_codes:
+        return jsonify({"success": False, "message": "No valid coupon codes provided"}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        added_count = 0
+        for code in valid_codes:
+            try:
+                cursor.execute('INSERT INTO coupons (code, status) VALUES (%s, %s) ON CONFLICT (code) DO NOTHING', 
+                             (code, 'AVAILABLE'))
+                if cursor.rowcount > 0:
+                    added_count += 1
+            except:
+                continue
+        
+        conn.commit()
+        
+        app.logger.info(f"Admin added {added_count} new coupon codes")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Added {added_count} new coupon codes",
+            "added": added_count
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Add bulk coupons error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to add coupons"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/coupons/load-file', methods=['POST'])
+@require_admin
+def admin_load_coupons_from_file():
+    try:
+        if not os.path.exists(CONFIG.COUPON_FILE):
+            return jsonify({"success": False, "message": "coupon.txt file not found"}), 404
+        
+        with open(CONFIG.COUPON_FILE, 'r') as f:
+            codes = [line.strip().upper() for line in f if line.strip()]
+        
+        if not codes:
+            return jsonify({"success": False, "message": "No coupons in file"}), 400
+        
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        loaded = 0
+        for code in codes:
+            try:
+                cursor.execute('INSERT INTO coupons (code, status) VALUES (%s, %s) ON CONFLICT (code) DO NOTHING', 
+                             (code, 'AVAILABLE'))
+                loaded += 1
+            except:
+                continue
+        
+        conn.commit()
+        return_db_connection(conn)
+        
+        app.logger.info(f"Admin loaded {loaded} coupons from file")
+        
+        return jsonify({
+            "success": True, 
+            "message": f"Loaded {loaded} coupons from file",
+            "count": loaded
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Load coupons from file error: {e}")
+        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
+
+@app.route('/api/admin/coupons/<code>/delete', methods=['DELETE'])
+@require_admin
+def admin_delete_coupon(code):
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('DELETE FROM coupons WHERE code = %s', (code,))
+        conn.commit()
+        if cursor.rowcount == 0:
+            return jsonify({"success": False, "message": "Coupon not found"}), 404
+        
+        app.logger.info(f"Admin deleted coupon: {code}")
+        
+        return jsonify({"success": True, "message": "Coupon deleted"})
+    except Exception as e:
+        app.logger.error(f"Delete coupon error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to delete"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ======================= ADMIN WHATSAPP NUMBERS =======================
+@app.route('/api/admin/whatsapp-numbers', methods=['GET'])
+@require_admin
+def admin_get_whatsapp_numbers():
+    """Admin: Get all WhatsApp numbers"""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('SELECT id, number, label, is_active, created_at FROM whatsapp_numbers ORDER BY created_at DESC')
+        numbers = []
+        for row in cursor.fetchall():
+            num = {
+                'id': row[0],
+                'number': row[1],
+                'label': row[2],
+                'is_active': bool(row[3]),
+                'created_at': row[4]
+            }
+            numbers.append(num)
+        return jsonify({"success": True, "numbers": numbers})
+    except Exception as e:
+        app.logger.error(f"Admin WhatsApp numbers error: {e}")
+        return jsonify({"success": False, "message": "Failed to load numbers"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/whatsapp-numbers', methods=['POST'])
+@require_admin
+def admin_add_whatsapp_number():
+    """Admin: Add new WhatsApp number"""
+    data = request.get_json()
+    number = sanitize_input(data.get('number', ''))
+    label = sanitize_input(data.get('label', ''))
+    
+    if not number or len(number) < 10:
+        return jsonify({"success": False, "message": "Valid phone number required"}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('INSERT INTO whatsapp_numbers (number, label, is_active, created_at) VALUES (%s, %s, %s, %s)',
+                       (number, label, True, datetime.utcnow().isoformat()))
+        conn.commit()
+        
+        app.logger.info(f"Admin added WhatsApp number: {number} ({label})")
+        
+        return jsonify({"success": True, "message": "WhatsApp number added"})
+    except Exception as e:
+        app.logger.error(f"Add WhatsApp number error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to add number"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/whatsapp-numbers/<int:number_id>/toggle', methods=['POST'])
+@require_admin
+def admin_toggle_whatsapp_number(number_id):
+    """Admin: Toggle WhatsApp number active status"""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('SELECT is_active FROM whatsapp_numbers WHERE id = %s', (number_id,))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"success": False, "message": "Number not found"}), 404
+        
+        current = bool(row[0])
+        new_value = not current
+        cursor.execute('UPDATE whatsapp_numbers SET is_active = %s WHERE id = %s', (new_value, number_id))
+        conn.commit()
+        
+        app.logger.info(f"Admin toggled WhatsApp number {number_id} active status to: {new_value}")
+        
+        return jsonify({"success": True, "is_active": new_value})
+    except Exception as e:
+        app.logger.error(f"Toggle WhatsApp number error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to toggle"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/whatsapp-numbers/<int:number_id>', methods=['DELETE'])
+@require_admin
+def admin_delete_whatsapp_number(number_id):
+    """Admin: Delete WhatsApp number"""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('DELETE FROM whatsapp_numbers WHERE id = %s', (number_id,))
+        conn.commit()
+        if cursor.rowcount == 0:
+            return jsonify({"success": False, "message": "Number not found"}), 404
+        
+        app.logger.info(f"Admin deleted WhatsApp number ID: {number_id}")
+        
+        return jsonify({"success": True, "message": "Number deleted"})
+    except Exception as e:
+        app.logger.error(f"Delete WhatsApp number error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to delete"}), 500
     finally:
         return_db_connection(conn)
 
@@ -2541,6 +3210,26 @@ def admin_get_users():
     finally:
         return_db_connection(conn)
 
+@app.route('/api/admin/user/<int:user_id>', methods=['GET'])
+@require_admin
+def admin_get_user(user_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"success": False, "message": "User not found"}), 404
+        
+        user = row_to_dict(cursor, row)
+        return jsonify({"success": True, "user": user})
+    except Exception as e:
+        app.logger.error(f"Admin get user error: {e}")
+        return jsonify({"success": False, "message": "Failed to load user"}), 500
+    finally:
+        return_db_connection(conn)
+
 @app.route('/api/admin/user/<int:user_id>/toggle-restrict', methods=['POST'])
 @require_admin
 def admin_toggle_user_restrict(user_id):
@@ -2641,6 +3330,32 @@ def admin_get_transactions():
     except Exception as e:
         app.logger.error(f"Admin transactions error: {e}")
         return jsonify({"success": False, "message": "Failed to load transactions"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/transaction/<tx_id>/update', methods=['POST'])
+@require_admin
+def admin_update_transaction(tx_id):
+    data = request.get_json()
+    status = data.get('status')
+    
+    if status not in ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED']:
+        return jsonify({"success": False, "message": "Invalid status"}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('UPDATE transactions SET status = %s WHERE id = %s', (status, tx_id))
+        conn.commit()
+        
+        app.logger.info(f"Admin updated transaction {tx_id} status to: {status}")
+        
+        return jsonify({"success": True, "message": "Transaction updated"})
+    except Exception as e:
+        app.logger.error(f"Update transaction error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to update"}), 500
     finally:
         return_db_connection(conn)
 
@@ -2774,7 +3489,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug = os.getenv('ENV') != 'production'
     
-    app.logger.info(f"🚀 Starting Flexia Platform v12.0 on port {port} (debug: {debug})")
+    app.logger.info(f"🚀 Starting Flexia Platform ULTIMATE v12.1 on port {port} (debug: {debug})")
     app.logger.info(f"📁 Frontend directory: {CONFIG.FRONTEND_DIR}")
     app.logger.info(f"🔐 Secret key set: {'Yes' if CONFIG.SECRET_KEY else 'No'}")
     app.logger.info(f"🗄️  Database: {'PostgreSQL' if os.environ.get('DATABASE_URL') else 'SQLite'}")
@@ -2782,8 +3497,8 @@ if __name__ == '__main__':
     app.logger.info(f"📊 Structured logging: Enabled")
     app.logger.info(f"💾 Database connection pool: {'Enabled' if db_pool else 'Disabled'}")
     app.logger.info(f"💾 Automatic backups: Enabled (daily at 2 AM UTC)")
-    app.logger.info(f"✅ ALL FIXES APPLIED: Reward claiming fixed, duplicate prevention added")
-    app.logger.info(f"✅ Database indexes created for performance")
-    app.logger.info(f"✅ Achievement rewards auto-grant on login and game plays")
+    app.logger.info(f"✅ ALL FIXES APPLIED: Duplicate prevention, achievements, database indexes")
+    app.logger.info(f"✅ ALL ENDPOINTS INCLUDED: Complete admin functionality")
+    app.logger.info(f"✅ VERSION 12.1: The ultimate production-ready version")
     
     app.run(host='0.0.0.0', port=port, debug=debug)
