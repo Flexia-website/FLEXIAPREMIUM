@@ -232,30 +232,43 @@ body {
 .dashboard-btn:active {
   transform: scale(0.95);
 }
+
+/* 🔥 FIXED: Button states */
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  animation: none !important;
+}
+
+.action-btn.processing {
+  background: linear-gradient(45deg, #555555, #777777) !important;
+  animation: none !important;
+}
+
+.action-btn.success {
+  background: linear-gradient(45deg, #00FF55, #00CCFF) !important;
+  animation: success 0.5s ease-in-out !important;
+}
+
+.action-btn.error {
+  background: linear-gradient(45deg, #FF5555, #FF8800) !important;
+  animation: shake 0.5s ease-in-out !important;
+}
+
 @keyframes pulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.05); }
 }
+
 @keyframes glow {
   0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 204, 0.5); }
   50% { box-shadow: 0 0 20px rgba(0, 255, 204, 0.8); }
 }
 
-/* 🔥 ADDED: Button disabled styles */
-.action-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none !important;
-}
-
-.action-btn.processing {
-  animation: none;
-  background: linear-gradient(45deg, #555555, #777777);
-}
-
 @keyframes success {
   0% { transform: scale(1); }
-  50% { transform: scale(1.05); background: linear-gradient(45deg, #00FF55, #00CCFF); }
+  50% { transform: scale(1.05); }
   100% { transform: scale(1); }
 }
 
@@ -263,6 +276,21 @@ body {
   0%, 100% { transform: translateX(0); }
   10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
   20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+/* Debug info */
+.debug-info {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: rgba(0,0,0,0.8);
+  color: white;
+  padding: 10px;
+  border-radius: 5px;
+  z-index: 9999;
+  max-width: 300px;
+  font-size: 12px;
+  display: none;
 }
 
 @media (max-width: 768px) {
@@ -387,7 +415,7 @@ canvas {
 <div class="controls-row">
   <div class="controls-panel">
     <div class="action-buttons">
-      <button class="action-btn pulse" onclick="startGame()">
+      <button class="action-btn pulse" onclick="startGame()" id="start-btn">
         <i class="fas fa-play"></i> START GAME
       </button>
       <button class="action-btn glow" onclick="submitScore()" id="claim-btn">
@@ -401,11 +429,17 @@ canvas {
     </button>
   </div>
 </div>
+
+<!-- Debug Info -->
+<div class="debug-info" id="debug-info"></div>
+
 <script>
+// ======================= GAME VARIABLES =======================
 const canvas = document.getElementById('game-board');
 const ctx = canvas.getContext('2d');
 const gridSize = 20;
 const tileCount = canvas.width / gridSize;
+
 let snake = [];
 let food = {};
 let score = 0;
@@ -416,28 +450,51 @@ let highScore = 0;
 let gamesPlayed = 0;
 let totalEarned = 0;
 let currentGameEarnings = 0;
-let isClaiming = false; // 🔥 ADDED: Prevent double-click
 const EARNINGS_PER_APPLE = 200;
 
+// 🔥 FIXED: Prevent double-clicking
+let isClaiming = false;
+let isProcessing = false;
+
+// ======================= USER PROFILE =======================
 async function loadUserProfile() {
   try {
-    const res = await fetch('/api/user/profile');
-    const data = await res.json();
+    console.log('Loading user profile...');
+    const response = await fetch('/api/user/profile', {
+      method: 'GET',
+      credentials: 'include'
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('Profile data:', data);
+    
     if (data.success) {
       const stats = data.user.game_stats?.snake || {};
       highScore = stats.high_score || 0;
+      totalEarned = parseFloat(data.user.balance) || 0;
+      
+      // Update UI
       document.getElementById('high-score').textContent = highScore;
-      totalEarned = data.user.balance || 0;
       document.getElementById('total-earned').textContent = `₦${totalEarned.toLocaleString()}`;
+      
+      console.log('Profile loaded successfully');
+      return data.user;
     } else {
+      console.error('Profile load failed:', data.message);
       window.location.href = 'index.html';
     }
-  } catch (e) {
-    console.error('Profile load failed:', e);
+  } catch (error) {
+    console.error('Profile load failed:', error);
+    showDebug('Error loading profile: ' + error.message);
     window.location.href = 'index.html';
   }
 }
 
+// ======================= GAME FUNCTIONS =======================
 function initGame() {
   snake = [{x: 10, y: 10}];
   generateFood();
@@ -452,18 +509,24 @@ function generateFood() {
     x: Math.floor(Math.random() * tileCount),
     y: Math.floor(Math.random() * tileCount)
   };
+  
+  // Make sure food doesn't spawn on snake
   for (let segment of snake) {
     if (segment.x === food.x && segment.y === food.y) {
       generateFood();
       return;
     }
   }
-  food.golden = Math.random() < 0.1;
+  
+  food.golden = Math.random() < 0.1; // 10% chance for golden apple
 }
 
 function drawGame() {
+  // Clear canvas
   ctx.fillStyle = '#151535';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Draw grid
   ctx.strokeStyle = 'rgba(128, 0, 255, 0.1)';
   ctx.lineWidth = 1;
   for (let x = 0; x < tileCount; x++) {
@@ -471,22 +534,31 @@ function drawGame() {
       ctx.strokeRect(x * gridSize, y * gridSize, gridSize, gridSize);
     }
   }
+  
+  // Draw snake
   for (let i = 0; i < snake.length; i++) {
     const segment = snake[i];
-    if (i === 0) {
+    
+    if (i === 0) { // Head
       ctx.fillStyle = '#00FFCC';
       ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize - 2, gridSize - 2);
+      
+      // Draw eyes
       ctx.fillStyle = '#0A0A1F';
       ctx.fillRect(segment.x * gridSize + 5, segment.y * gridSize + 5, 4, 4);
       ctx.fillRect(segment.x * gridSize + 11, segment.y * gridSize + 5, 4, 4);
-    } else {
+    } else { // Body
       const intensity = 1 - (i / snake.length) * 0.5;
       ctx.fillStyle = `rgba(0, 255, 204, ${intensity})`;
       ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize - 2, gridSize - 2);
     }
   }
+  
+  // Draw food with pulse effect
   const pulse = Math.sin(Date.now() / 200) * 2;
+  
   if (food.golden) {
+    // Golden apple
     ctx.fillStyle = '#FFD700';
     ctx.beginPath();
     ctx.arc(
@@ -497,6 +569,8 @@ function drawGame() {
       2 * Math.PI
     );
     ctx.fill();
+    
+    // Golden apple highlight
     ctx.fillStyle = '#FFFFE0';
     ctx.beginPath();
     ctx.ellipse(
@@ -510,6 +584,7 @@ function drawGame() {
     );
     ctx.fill();
   } else {
+    // Red apple
     ctx.fillStyle = '#FF0055';
     ctx.beginPath();
     ctx.arc(
@@ -521,48 +596,72 @@ function drawGame() {
     );
     ctx.fill();
   }
+  
   // Draw stem
   ctx.fillStyle = '#8B4513';
   ctx.fillRect(food.x * gridSize + 8, food.y * gridSize - 2, 2, 4);
+  
   // Draw leaf
   ctx.fillStyle = '#00FF55';
   ctx.beginPath();
-  ctx.ellipse(food.x * gridSize + 10, food.y * gridSize - 1, 3, 2, Math.PI / 4, 0, 2 * Math.PI);
+  ctx.ellipse(
+    food.x * gridSize + 10,
+    food.y * gridSize - 1,
+    3,
+    2,
+    Math.PI / 4,
+    0,
+    2 * Math.PI
+  );
   ctx.fill();
 }
 
 function updateGame() {
   if (!gameRunning) return;
+  
+  // Move snake head
   const head = {x: snake[0].x, y: snake[0].y};
+  
   switch(direction) {
     case 'up': head.y--; break;
     case 'down': head.y++; break;
     case 'left': head.x--; break;
     case 'right': head.x++; break;
   }
+  
+  // Check wall collision
   if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
     gameOver();
     return;
   }
+  
+  // Check self collision
   for (let i = 1; i < snake.length; i++) {
     if (head.x === snake[i].x && head.y === snake[i].y) {
       gameOver();
       return;
     }
   }
+  
+  // Move snake
   snake.unshift(head);
+  
+  // Check food collision
   if (head.x === food.x && head.y === food.y) {
     const appleValue = food.golden ? EARNINGS_PER_APPLE * 2 : EARNINGS_PER_APPLE;
     score += 10;
     currentGameEarnings += appleValue;
     generateFood();
     updateDisplay();
+    
+    // Visual feedback
     const scoreEl = document.getElementById('score');
     scoreEl.style.transform = 'scale(1.1)';
     setTimeout(() => scoreEl.style.transform = 'scale(1)', 200);
   } else {
-    snake.pop();
+    snake.pop(); // Remove tail if no food eaten
   }
+  
   drawGame();
 }
 
@@ -571,10 +670,26 @@ function gameOver() {
   clearInterval(gameLoop);
   gamesPlayed++;
   document.getElementById('games-played').textContent = gamesPlayed;
+  
   if (score > highScore) {
     highScore = score;
     document.getElementById('high-score').textContent = highScore;
   }
+  
+  // Enable claim button
+  const claimBtn = document.getElementById('claim-btn');
+  const apples = Math.floor(score / 10);
+  
+  if (apples > 0) {
+    claimBtn.disabled = false;
+    claimBtn.classList.add('glow');
+    claimBtn.innerHTML = `<i class="fas fa-trophy"></i> CLAIM ₦${currentGameEarnings}`;
+  } else {
+    claimBtn.disabled = true;
+    claimBtn.classList.remove('glow');
+    claimBtn.innerHTML = '<i class="fas fa-trophy"></i> CLAIM REWARD';
+  }
+  
   setTimeout(() => {
     alert(`Game Over! 🎮\nScore: ${score}\nApples Eaten: ${Math.floor(score / 10)}\nEarnings: ₦${currentGameEarnings}`);
   }, 500);
@@ -582,12 +697,29 @@ function gameOver() {
 
 function startGame() {
   if (gameRunning) return;
-  initGame();
-  gameRunning = true;
-  gameLoop = setInterval(updateGame, 120);
+  
+  const startBtn = document.getElementById('start-btn');
+  startBtn.disabled = true;
+  startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> STARTING...';
+  
+  setTimeout(() => {
+    initGame();
+    gameRunning = true;
+    gameLoop = setInterval(updateGame, 120);
+    
+    startBtn.disabled = false;
+    startBtn.innerHTML = '<i class="fas fa-play"></i> START GAME';
+    
+    // Disable claim button during game
+    const claimBtn = document.getElementById('claim-btn');
+    claimBtn.disabled = true;
+    claimBtn.classList.remove('glow');
+    claimBtn.innerHTML = '<i class="fas fa-trophy"></i> CLAIM REWARD';
+  }, 500);
 }
 
 function changeDirection(newDirection) {
+  // Prevent reversing into self
   if (
     (newDirection === 'up' && direction !== 'down') ||
     (newDirection === 'down' && direction !== 'up') ||
@@ -605,15 +737,18 @@ function updateDisplay() {
   document.getElementById('live-earnings').textContent = `₦${currentGameEarnings}`;
 }
 
+// ======================= REWARD CLAIMING =======================
 async function submitScore() {
-  // 🔥 ADDED: Prevent multiple clicks
-  if (isClaiming) {
+  // 🔥 FIXED: Prevent multiple clicks
+  if (isClaiming || isProcessing) {
+    console.log('Already processing, please wait...');
     return;
   }
   
   const apples = Math.floor(score / 10);
+  
   if (apples <= 0) {
-    alert('Play the game first!');
+    alert('No apples to claim! Play the game first.');
     return;
   }
   
@@ -623,64 +758,141 @@ async function submitScore() {
     return;
   }
   
-  const claimBtn = document.getElementById('claim-btn');
-  claimBtn.disabled = true;
-  claimBtn.classList.add('processing');
-  claimBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PROCESSING...';
   isClaiming = true;
+  isProcessing = true;
+  
+  const claimBtn = document.getElementById('claim-btn');
+  const originalText = claimBtn.innerHTML;
+  const originalClass = claimBtn.className;
   
   try {
-    const res = await fetch('/api/games/snake/report', {
+    // Show processing state
+    claimBtn.disabled = true;
+    claimBtn.classList.remove('glow');
+    claimBtn.classList.add('processing');
+    claimBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PROCESSING...';
+    
+    console.log(`Claiming reward for ${apples} apples...`);
+    showDebug(`Claiming ₦${currentGameEarnings} for ${apples} apples...`);
+    
+    // Make API call
+    const response = await fetch('/api/games/snake/report', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apples_eaten: apples }),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ 
+        apples_eaten: apples,
+        timestamp: Date.now()
+      }),
       credentials: 'include'
     });
     
-    if (!res.ok) {
-      throw new Error(`HTTP error! status: ${res.status}`);
+    console.log('Response status:', response.status);
+    console.log('Response headers:', response.headers);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API Error Response:', errorText);
+      throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
     }
     
-    const data = await res.json();
+    const data = await response.json();
+    console.log('API Success Response:', data);
     
     if (data.success) {
-      totalEarned += data.reward;
+      // SUCCESS - Update UI
+      totalEarned = parseFloat(data.new_balance);
       document.getElementById('total-earned').textContent = `₦${totalEarned.toLocaleString()}`;
       
       // Show success animation
       claimBtn.classList.remove('processing');
-      claimBtn.style.animation = 'success 0.5s ease-in-out';
-      claimBtn.innerHTML = '<i class="fas fa-check"></i> CLAIMED!';
+      claimBtn.classList.add('success');
+      claimBtn.innerHTML = `<i class="fas fa-check"></i> CLAIMED! ₦${data.reward}`;
       
+      showDebug(`✅ Success! Claimed ₦${data.reward}, New Balance: ₦${data.new_balance}`);
+      
+      // Show success message
       setTimeout(() => {
-        claimBtn.style.animation = '';
-        claimBtn.innerHTML = '<i class="fas fa-trophy"></i> CLAIM REWARD';
-      }, 2000);
+        alert(`✅ Success!\n\nApples: ${apples}\nReward: ₦${data.reward}\nNew Balance: ₦${totalEarned.toLocaleString()}`);
+      }, 300);
       
-      alert(`✅ Reward claimed!\nEarnings: ₦${data.reward}`);
-      initGame();
+      // Reset game
+      score = 0;
+      currentGameEarnings = 0;
+      updateDisplay();
+      
+      // Restore button after 3 seconds
+      setTimeout(() => {
+        claimBtn.classList.remove('success');
+        claimBtn.className = originalClass;
+        claimBtn.innerHTML = originalText;
+        claimBtn.disabled = false;
+        
+        isClaiming = false;
+        isProcessing = false;
+        
+        // Reload user profile to get updated balance
+        loadUserProfile();
+      }, 3000);
+      
     } else {
-      // Show error animation
-      claimBtn.style.animation = 'shake 0.5s ease-in-out';
+      // API returned error
+      claimBtn.classList.remove('processing');
+      claimBtn.classList.add('error');
+      claimBtn.innerHTML = '<i class="fas fa-times"></i> FAILED';
+      
+      showDebug(`❌ API Error: ${data.message || 'Unknown error'}`);
+      
       setTimeout(() => {
-        claimBtn.style.animation = '';
-      }, 500);
+        claimBtn.classList.remove('error');
+        claimBtn.className = originalClass;
+        claimBtn.innerHTML = originalText;
+        claimBtn.disabled = false;
+        
+        isClaiming = false;
+        isProcessing = false;
+      }, 2000);
       
       alert('❌ ' + (data.message || 'Failed to claim reward. Please try again.'));
     }
+    
   } catch (error) {
-    console.error('Error submitting score:', error);
-    alert('❌ Network error. Please check your connection and try again.');
-  } finally {
-    // 🔥 ADDED: Re-enable button after 3 seconds to prevent double-click
+    console.error('Claim error:', error);
+    
+    claimBtn.classList.remove('processing');
+    claimBtn.classList.add('error');
+    claimBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ERROR';
+    
+    showDebug(`❌ Network Error: ${error.message}`);
+    
     setTimeout(() => {
+      claimBtn.classList.remove('error');
+      claimBtn.className = originalClass;
+      claimBtn.innerHTML = originalText;
       claimBtn.disabled = false;
-      claimBtn.classList.remove('processing');
+      
       isClaiming = false;
-    }, 3000);
+      isProcessing = false;
+    }, 2000);
+    
+    alert('❌ Network error. Please check your connection.\n\nError: ' + error.message);
   }
 }
 
+// ======================= DEBUG FUNCTIONS =======================
+function showDebug(message) {
+  const debugEl = document.getElementById('debug-info');
+  debugEl.innerHTML = `<strong>Debug:</strong> ${message}`;
+  debugEl.style.display = 'block';
+  
+  setTimeout(() => {
+    debugEl.style.display = 'none';
+  }, 5000);
+}
+
+// ======================= EVENT LISTENERS =======================
 document.addEventListener('keydown', (e) => {
   switch(e.key) {
     case 'ArrowUp': changeDirection('up'); e.preventDefault(); break;
@@ -692,22 +904,21 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// Touch controls for mobile
 let touchStartX = 0;
 let touchStartY = 0;
+
 document.addEventListener('touchstart', (e) => {
   touchStartX = e.touches[0].clientX;
   touchStartY = e.touches[0].clientY;
 }, { passive: true });
-
-document.addEventListener('touchmove', (e) => {
-  e.preventDefault();
-}, { passive: false });
 
 document.addEventListener('touchend', (e) => {
   const touchEndX = e.changedTouches[0].clientX;
   const touchEndY = e.changedTouches[0].clientY;
   const diffX = touchStartX - touchEndX;
   const diffY = touchStartY - touchEndY;
+  
   if (Math.abs(diffX) > 20 || Math.abs(diffY) > 20) {
     if (Math.abs(diffX) > Math.abs(diffY)) {
       if (diffX > 0) changeDirection('left');
@@ -719,16 +930,54 @@ document.addEventListener('touchend', (e) => {
   }
 }, { passive: true });
 
-document.addEventListener('DOMContentLoaded', () => {
-  loadUserProfile();
+// Prevent touchmove default to avoid scrolling
+document.addEventListener('touchmove', (e) => {
+  if (gameRunning) {
+    e.preventDefault();
+  }
+}, { passive: false });
+
+// ======================= INITIALIZATION =======================
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('Snake game initializing...');
+  
+  // Load user profile
+  await loadUserProfile();
+  
+  // Initialize game
   initGame();
-  window.addEventListener('resize', () => {
+  
+  // Set up canvas responsive sizing
+  function resizeCanvas() {
     const container = document.querySelector('.game-board-container');
     const maxSize = Math.min(container.clientWidth, container.clientHeight);
+    
     canvas.style.width = `${maxSize}px`;
     canvas.style.height = `${maxSize}px`;
+    
+    // Redraw game
     drawGame();
-  });
+  }
+  
+  // Initial resize
+  resizeCanvas();
+  
+  // Listen for window resize
+  window.addEventListener('resize', resizeCanvas);
+  
+  // Disable claim button initially
+  const claimBtn = document.getElementById('claim-btn');
+  claimBtn.disabled = true;
+  
+  console.log('Snake game initialized successfully!');
+});
+
+// Auto-save high score
+window.addEventListener('beforeunload', () => {
+  if (score > highScore) {
+    // You could send this to the server here if needed
+    console.log('New high score:', score);
+  }
 });
 </script>
 </body>
