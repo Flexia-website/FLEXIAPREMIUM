@@ -1,6 +1,5 @@
-# backend/app.py - ENHANCED COMPLETE VERSION
-# Flexia Platform v10.9 — FULLY FUNCTIONAL WITH ALL IMPROVEMENTS
-# All endpoints, all fixes, production-ready with Security, Reliability, Performance
+# backend/app.py - COMPLETE PRODUCTION VERSION v11.0
+# FLEXIA Platform - ALL ADMIN FIXES APPLIED + COMPLETE ENDPOINTS
 
 import os
 import json
@@ -19,6 +18,8 @@ import time
 import subprocess
 import shutil
 from logging.handlers import RotatingFileHandler
+import psycopg2
+from psycopg2.pool import SimpleConnectionPool
 
 # ======================= CONFIGURATION =======================
 class Config:
@@ -92,7 +93,8 @@ def add_security_headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-XSS-Protection'] = '1; mode=block'
-    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    if os.getenv('ENV') == 'production':
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
     return response
@@ -266,9 +268,6 @@ def init_db_pool():
     
     if os.environ.get('DATABASE_URL'):
         try:
-            import psycopg2
-            from psycopg2.pool import SimpleConnectionPool
-            
             db_pool = SimpleConnectionPool(
                 1,  # min connections
                 20, # max connections
@@ -298,7 +297,6 @@ def get_db():
 def get_db_direct():
     """Get direct database connection (fallback)"""
     if os.environ.get('DATABASE_URL'):
-        import psycopg2
         try:
             parsed = urllib.parse.urlparse(os.environ['DATABASE_URL'])
             conn = psycopg2.connect(
@@ -438,12 +436,46 @@ def require_admin(f):
     return decorated
 
 # ======================= INITIALIZATION =======================
+def add_missing_columns():
+    """Add missing columns if they don't exist"""
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        is_postgres = os.environ.get('DATABASE_URL') is not None
+        
+        if is_postgres:
+            # Check and add last_game_timestamp for PostgreSQL
+            cursor.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name='users' and column_name='last_game_timestamp'
+            """)
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE users ADD COLUMN last_game_timestamp TEXT")
+                app.logger.info("Added missing column: last_game_timestamp to users table")
+        else:
+            # SQLite - check pragma
+            cursor.execute("PRAGMA table_info(users)")
+            columns = [col[1] for col in cursor.fetchall()]
+            
+            if 'last_game_timestamp' not in columns:
+                cursor.execute("ALTER TABLE users ADD COLUMN last_game_timestamp TEXT")
+                app.logger.info("Added missing column: last_game_timestamp to users table")
+        
+        conn.commit()
+        app.logger.info("Database column verification complete")
+    except Exception as e:
+        app.logger.error(f"Error adding missing columns: {e}")
+        conn.rollback()
+    finally:
+        return_db_connection(conn)
+
 def init_db():
     conn = get_db()
     cursor = conn.cursor()
     is_postgres = os.environ.get('DATABASE_URL') is not None
 
-    # Users table
+    # Users table - FIXED WITH ALL COLUMNS
     if is_postgres:
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
@@ -591,7 +623,7 @@ def init_db():
         except Exception as e:
             app.logger.error(f"Error creating table: {e}")
 
-    # Insert default banks
+    # Insert default banks - FIXED
     ph = '%s' if is_postgres else '?'
     cursor.execute('SELECT COUNT(*) as count FROM banks')
     bank_count = cursor.fetchone()
@@ -703,7 +735,7 @@ def init_db():
     whatsapp_count = cursor.fetchone()[0]
     if whatsapp_count == 0:
         cursor.execute(f'INSERT INTO whatsapp_numbers (number, label, is_active, created_at) VALUES ({ph}, {ph}, {ph}, {ph})',
-                       ('2348100000000', 'Primary Seller', True if is_postgres else 1, datetime.utcnow().isoformat()))
+                       ('2348160881049', 'Primary Seller', True if is_postgres else 1, datetime.utcnow().isoformat()))
 
     conn.commit()
     return_db_connection(conn)
@@ -908,8 +940,7 @@ def grant_achievement_rewards(user_id):
             VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
             ''', (
                 tx_id, user_id, 'ACHIEVEMENT_REWARD', total_reward, 'COMPLETED',
-                json.dumps({"source": "auto_grant"}),
-                datetime.utcnow().isoformat()
+                json.dumps({"source": "auto_grant"}), datetime.utcnow().isoformat()
             ))
         
         conn.commit()
@@ -951,6 +982,7 @@ def run_cleanup_scheduler():
 with app.app_context():
     init_db_pool()  # Initialize connection pool
     init_db()       # Initialize database
+    add_missing_columns()  # Add missing columns
     cleanup_old_tiktok_tasks()
     run_cleanup_scheduler()
     run_backup_scheduler()  # Start backup scheduler
@@ -998,45 +1030,6 @@ def db_status():
         app.logger.error(f"DB status error: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-@app.route('/api/debug/registration-test', methods=['POST'])
-def registration_test():
-    data = request.get_json()
-    coupon_code = data.get('coupon_code', '').upper() if data else ''
-    conn = get_db()
-    cursor = conn.cursor()
-    results = {
-        "database_connection": "OK",
-        "coupons_table_exists": False,
-        "coupon_valid": False,
-        "coupon_details": None,
-        "total_coupons": 0,
-        "available_coupons": 0
-    }
-    try:
-        if os.environ.get('DATABASE_URL'):
-            cursor.execute("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'coupons')")
-        else:
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='coupons'")
-        results["coupons_table_exists"] = bool(cursor.fetchone()[0])
-        if results["coupons_table_exists"]:
-            cursor.execute("SELECT COUNT(*) FROM coupons")
-            results["total_coupons"] = cursor.fetchone()[0]
-            cursor.execute("SELECT COUNT(*) FROM coupons WHERE status = 'AVAILABLE'")
-            results["available_coupons"] = cursor.fetchone()[0]
-            if coupon_code:
-                ph = '%s' if os.environ.get('DATABASE_URL') else '?'
-                cursor.execute(f"SELECT code, status FROM coupons WHERE code = {ph}", (coupon_code,))
-                coupon = cursor.fetchone()
-                if coupon:
-                    results["coupon_valid"] = True
-                    results["coupon_details"] = {"code": coupon[0], "status": coupon[1]}
-    except Exception as e:
-        results["error"] = str(e)
-        app.logger.error(f"Registration test error: {str(e)}")
-    finally:
-        return_db_connection(conn)
-    return jsonify(results)
-
 # ======================= ENHANCED HEALTH CHECK =======================
 def get_uptime():
     """Calculate application uptime"""
@@ -1073,7 +1066,7 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "uptime": get_uptime(),
             "database": db_status,
-            "version": "10.9",
+            "version": "11.0",
             "stats": {
                 "total_users": user_count,
                 "pending_withdrawals": pending_withdrawals
@@ -1093,7 +1086,7 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "database": f"error: {str(e)}",
             "uptime": get_uptime(),
-            "version": "10.9"
+            "version": "11.0"
         }), 503
 
 # ======================= BACKUP ENDPOINTS =======================
@@ -1492,6 +1485,43 @@ def change_password():
     finally:
         return_db_connection(conn)
 
+@app.route('/api/admin/change-password', methods=['POST'])
+@require_admin
+def admin_change_password():
+    """Admin: Change their own password"""
+    admin_user = get_current_user()
+    data = request.get_json()
+    current_password = data.get('current_password')
+    new_password = data.get('new_password')
+    
+    if not current_password or not new_password:
+        return jsonify({"success": False, "message": "Both fields required"}), 400
+    
+    if len(new_password) < 8:
+        return jsonify({"success": False, "message": "Password must be at least 8 characters"}), 400
+    
+    # Verify current password
+    if not check_password_hash(admin_user['password'], current_password):
+        return jsonify({"success": False, "message": "Current password is incorrect"}), 403
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('UPDATE users SET password = %s, admin_password_changed = %s WHERE id = %s',
+                       (generate_password_hash(new_password), True, admin_user['id']))
+        conn.commit()
+        
+        app.logger.info(f"Admin {admin_user['username']} changed their password")
+        return jsonify({"success": True, "message": "Password changed successfully"})
+        
+    except Exception as e:
+        app.logger.error(f"Admin password change error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to change password"}), 500
+    finally:
+        return_db_connection(conn)
+
 @app.route('/api/user/set-withdrawal-pin', methods=['POST'])
 @require_auth
 def set_withdrawal_pin():
@@ -1550,7 +1580,7 @@ def report_snake():
     if apples <= 0 or apples > 100:
         return jsonify({"success": False, "message": "Invalid apple count"}), 400
     
-    # Check cooldown (NEW: Prevent fast taps)
+    # Check cooldown
     if not check_game_cooldown(user['id'], 'snake'):
         return jsonify({"success": False, "message": "Please wait before playing again"}), 429
     
@@ -1576,7 +1606,7 @@ def report_snake():
         cursor.execute('UPDATE users SET balance = %s, game_stats = %s WHERE id = %s',
                        (new_balance, json.dumps(game_stats), user['id']))
         
-        # Update last game timestamp (NEW)
+        # Update last game timestamp
         update_last_game_timestamp(user['id'])
         
         # Record game play
@@ -1616,7 +1646,7 @@ def report_coinflip():
     if bet < CONFIG.COIN_FLIP_MIN_BET or bet > 50000 or float(user['balance']) < bet:
         return jsonify({"success": False, "message": "Invalid bet"}), 400
     
-    # Check cooldown (NEW: Prevent fast taps)
+    # Check cooldown
     if not check_game_cooldown(user['id'], 'coinflip'):
         return jsonify({"success": False, "message": "Please wait before playing again"}), 429
     
@@ -1645,7 +1675,7 @@ def report_coinflip():
         cursor.execute('UPDATE users SET balance = %s, game_stats = %s WHERE id = %s',
                        (new_balance, json.dumps(game_stats), user['id']))
         
-        # Update last game timestamp (NEW)
+        # Update last game timestamp
         update_last_game_timestamp(user['id'])
         
         # Record game play
@@ -1688,7 +1718,7 @@ def report_plinko():
     if multiplier not in [0.5, 3, 10]:
         return jsonify({"success": False, "message": "Invalid multiplier"}), 400
     
-    # Check cooldown (NEW: Prevent fast taps)
+    # Check cooldown
     if not check_game_cooldown(user['id'], 'plinko'):
         return jsonify({"success": False, "message": "Please wait before playing again"}), 429
     
@@ -1717,7 +1747,7 @@ def report_plinko():
         cursor.execute('UPDATE users SET balance = %s, game_stats = %s WHERE id = %s',
                        (new_balance, json.dumps(game_stats), user['id']))
         
-        # Update last game timestamp (NEW)
+        # Update last game timestamp
         update_last_game_timestamp(user['id'])
         
         # Record game play
@@ -1756,7 +1786,7 @@ def report_spin():
     if reward not in [0, 50, 100, 200, 500, 1000]:
         return jsonify({"success": False, "message": "Invalid spin reward"}), 400
     
-    # Check cooldown (NEW: Prevent fast taps)
+    # Check cooldown
     if not check_game_cooldown(user['id'], 'spin'):
         return jsonify({"success": False, "message": "Please wait before playing again"}), 429
     
@@ -1770,7 +1800,7 @@ def report_spin():
         new_balance = float(user['balance']) + reward
         cursor.execute('UPDATE users SET balance = %s WHERE id = %s', (new_balance, user['id']))
         
-        # Update last game timestamp (NEW)
+        # Update last game timestamp
         update_last_game_timestamp(user['id'])
         
         # Record game play
@@ -1832,28 +1862,77 @@ def get_achievements():
         coin_total = game_stats.get('coin_flip', {}).get('wins', 0) + game_stats.get('coin_flip', {}).get('losses', 0)
         plinko_wins = game_stats.get('plinko', {}).get('total_wins', 0)
         
-        achievements = [
-            {"id": 1, "title": "First Game", "description": "Play any game once", "reward": 500, "points": 10, "unlocked": total_games >= 1},
-            {"id": 2, "title": "Gamer", "description": "Play 50 games", "reward": 5000, "points": 50, "unlocked": total_games >= 50},
-            {"id": 3, "title": "Game Master", "description": "Play 200 games", "reward": 15000, "points": 150, "unlocked": total_games >= 200},
-            {"id": 4, "title": "Snake Pro", "description": "Snake high score 1000+", "reward": 7500, "points": 75, "unlocked": snake_high >= 1000},
-            {"id": 5, "title": "Lucky Streak", "description": "10+ coin flip win streak", "reward": 10000, "points": 100, "unlocked": coin_streak >= 10},
-            {"id": 6, "title": "Coin Flipper", "description": "100+ coin flips", "reward": 6000, "points": 60, "unlocked": coin_total >= 100},
-            {"id": 7, "title": "Plinko Champion", "description": "50+ Plinko wins", "reward": 8000, "points": 80, "unlocked": plinko_wins >= 50},
-            {"id": 8, "title": "Thousandaire", "description": "Balance ₦1,000+", "reward": 1000, "points": 15, "unlocked": balance >= 1000},
-            {"id": 9, "title": "Millionaire in Progress", "description": "Balance ₦50,000+", "reward": 10000, "points": 100, "unlocked": balance >= 50000},
-            {"id": 10, "title": "High Roller", "description": "Balance ₦200,000+", "reward": 25000, "points": 200, "unlocked": balance >= 200000},
-            {"id": 11, "title": "First Withdrawal", "description": "Make first withdrawal", "reward": 5000, "points": 50, "unlocked": total_withdrawals >= 1},
-            {"id": 12, "title": "Daily Grinder", "description": "Play 5 games in a day", "reward": 3000, "points": 30, "unlocked": games_today >= 5},
-            {"id": 13, "title": "Addicted", "description": "Play 20 games in a day", "reward": 8000, "points": 80, "unlocked": games_today >= 20},
-            {"id": 14, "title": "Referral Starter", "description": "Refer 5 users", "reward": 10000, "points": 100, "unlocked": referrals >= 5},
-            {"id": 15, "title": "Referral Master", "description": "Refer 20 users", "reward": 30000, "points": 300, "unlocked": referrals >= 20},
-            {"id": 16, "title": "Transaction Veteran", "description": "10+ transactions", "reward": 4000, "points": 40, "unlocked": total_tx >= 10}
+        # Define achievements with FULL progress data
+        achievements_data = [
+            {"id": 1, "title": "First Game", "description": "Play any game once", "reward": 500, "points": 10, 
+             "unlocked": total_games >= 1, "category": "gaming", "icon": "fas fa-gamepad",
+             "current_value": total_games, "target_value": 1, "progress_percentage": min(100, (total_games / 1) * 100),
+             "cash_reward": 500},
+            {"id": 2, "title": "Gamer", "description": "Play 50 games", "reward": 5000, "points": 50, 
+             "unlocked": total_games >= 50, "category": "gaming", "icon": "fas fa-gamepad",
+             "current_value": total_games, "target_value": 50, "progress_percentage": min(100, (total_games / 50) * 100),
+             "cash_reward": 5000},
+            {"id": 3, "title": "Game Master", "description": "Play 200 games", "reward": 15000, "points": 150, 
+             "unlocked": total_games >= 200, "category": "gaming", "icon": "fas fa-gamepad",
+             "current_value": total_games, "target_value": 200, "progress_percentage": min(100, (total_games / 200) * 100),
+             "cash_reward": 15000},
+            {"id": 4, "title": "Snake Pro", "description": "Snake high score 1000+", "reward": 7500, "points": 75, 
+             "unlocked": snake_high >= 1000, "category": "gaming", "icon": "fas fa-gamepad",
+             "current_value": snake_high, "target_value": 1000, "progress_percentage": min(100, (snake_high / 1000) * 100),
+             "cash_reward": 7500},
+            {"id": 5, "title": "Lucky Streak", "description": "10+ coin flip win streak", "reward": 10000, "points": 100, 
+             "unlocked": coin_streak >= 10, "category": "gaming", "icon": "fas fa-coins",
+             "current_value": coin_streak, "target_value": 10, "progress_percentage": min(100, (coin_streak / 10) * 100),
+             "cash_reward": 10000},
+            {"id": 6, "title": "Coin Flipper", "description": "100+ coin flips", "reward": 6000, "points": 60, 
+             "unlocked": coin_total >= 100, "category": "gaming", "icon": "fas fa-coins",
+             "current_value": coin_total, "target_value": 100, "progress_percentage": min(100, (coin_total / 100) * 100),
+             "cash_reward": 6000},
+            {"id": 7, "title": "Plinko Champion", "description": "50+ Plinko wins", "reward": 8000, "points": 80, 
+             "unlocked": plinko_wins >= 50, "category": "gaming", "icon": "fas fa-bullseye",
+             "current_value": plinko_wins, "target_value": 50, "progress_percentage": min(100, (plinko_wins / 50) * 100),
+             "cash_reward": 8000},
+            {"id": 8, "title": "Thousandaire", "description": "Balance ₦1,000+", "reward": 1000, "points": 15, 
+             "unlocked": balance >= 1000, "category": "earnings", "icon": "fas fa-money-bill-wave",
+             "current_value": balance, "target_value": 1000, "progress_percentage": min(100, (balance / 1000) * 100),
+             "cash_reward": 1000},
+            {"id": 9, "title": "Millionaire in Progress", "description": "Balance ₦50,000+", "reward": 10000, "points": 100, 
+             "unlocked": balance >= 50000, "category": "earnings", "icon": "fas fa-money-bill-wave",
+             "current_value": balance, "target_value": 50000, "progress_percentage": min(100, (balance / 50000) * 100),
+             "cash_reward": 10000},
+            {"id": 10, "title": "High Roller", "description": "Balance ₦200,000+", "reward": 25000, "points": 200, 
+             "unlocked": balance >= 200000, "category": "earnings", "icon": "fas fa-money-bill-wave",
+             "current_value": balance, "target_value": 200000, "progress_percentage": min(100, (balance / 200000) * 100),
+             "cash_reward": 25000},
+            {"id": 11, "title": "First Withdrawal", "description": "Make first withdrawal", "reward": 5000, "points": 50, 
+             "unlocked": total_withdrawals >= 1, "category": "earnings", "icon": "fas fa-wallet",
+             "current_value": total_withdrawals, "target_value": 1, "progress_percentage": min(100, (total_withdrawals / 1) * 100),
+             "cash_reward": 5000},
+            {"id": 12, "title": "Daily Grinder", "description": "Play 5 games in a day", "reward": 3000, "points": 30, 
+             "unlocked": games_today >= 5, "category": "streaks", "icon": "fas fa-calendar-day",
+             "current_value": games_today, "target_value": 5, "progress_percentage": min(100, (games_today / 5) * 100),
+             "cash_reward": 3000},
+            {"id": 13, "title": "Addicted", "description": "Play 20 games in a day", "reward": 8000, "points": 80, 
+             "unlocked": games_today >= 20, "category": "streaks", "icon": "fas fa-calendar-day",
+             "current_value": games_today, "target_value": 20, "progress_percentage": min(100, (games_today / 20) * 100),
+             "cash_reward": 8000},
+            {"id": 14, "title": "Referral Starter", "description": "Refer 5 users", "reward": 10000, "points": 100, 
+             "unlocked": referrals >= 5, "category": "special", "icon": "fas fa-users",
+             "current_value": referrals, "target_value": 5, "progress_percentage": min(100, (referrals / 5) * 100),
+             "cash_reward": 10000},
+            {"id": 15, "title": "Referral Master", "description": "Refer 20 users", "reward": 30000, "points": 300, 
+             "unlocked": referrals >= 20, "category": "special", "icon": "fas fa-users",
+             "current_value": referrals, "target_value": 20, "progress_percentage": min(100, (referrals / 20) * 100),
+             "cash_reward": 30000},
+            {"id": 16, "title": "Transaction Veteran", "description": "10+ transactions", "reward": 4000, "points": 40, 
+             "unlocked": total_tx >= 10, "category": "special", "icon": "fas fa-exchange-alt",
+             "current_value": total_tx, "target_value": 10, "progress_percentage": min(100, (total_tx / 10) * 100),
+             "cash_reward": 4000}
         ]
         
-        total_achievements = len(achievements)
-        unlocked_achievements = sum(1 for a in achievements if a['unlocked'])
-        total_points = sum(a['points'] for a in achievements if a['unlocked'])
+        total_achievements = len(achievements_data)
+        unlocked_achievements = sum(1 for a in achievements_data if a['unlocked'])
+        total_points = sum(a['points'] for a in achievements_data if a['unlocked'])
         
         return jsonify({
             "success": True,
@@ -1862,7 +1941,7 @@ def get_achievements():
                 "unlocked": unlocked_achievements,
                 "points": total_points
             },
-            "achievements": achievements
+            "achievements": achievements_data
         })
         
     except Exception as e:
@@ -2104,6 +2183,75 @@ def admin_set_global_withdrawal_days():
         return jsonify({"success": True, "message": "Global withdrawal days updated", "days": valid_days})
     except Exception as e:
         app.logger.error(f"Set global withdrawal days error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to update"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ======================= ADMIN USER CUSTOM WITHDRAWAL DAYS =======================
+@app.route('/api/admin/user/<int:user_id>/set-custom-days', methods=['POST'])
+@require_admin
+def admin_set_user_custom_days(user_id):
+    """Set custom withdrawal days for a specific user"""
+    data = request.get_json()
+    days = data.get('days', [])
+    
+    if not isinstance(days, list):
+        return jsonify({"success": False, "message": "Invalid days format"}), 400
+    
+    # Validate days (1-31)
+    valid_days = [day for day in days if isinstance(day, int) and 1 <= day <= 31]
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if user exists
+        cursor.execute('SELECT username FROM users WHERE id = %s', (user_id,))
+        if not cursor.fetchone():
+            return jsonify({"success": False, "message": "User not found"}), 404
+        
+        cursor.execute('UPDATE users SET custom_withdrawal_days = %s WHERE id = %s',
+                       (json.dumps(valid_days) if valid_days else None, user_id))
+        conn.commit()
+        
+        app.logger.info(f"Admin set custom withdrawal days for user {user_id}: {valid_days}")
+        return jsonify({"success": True, "message": "Custom withdrawal days updated"})
+        
+    except Exception as e:
+        app.logger.error(f"Set user custom days error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to update"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ======================= ADMIN USER SET LIMIT =======================
+@app.route('/api/admin/user/<int:user_id>/set-limit', methods=['POST'])
+@require_admin
+def admin_set_user_limit(user_id):
+    data = request.get_json()
+    limit = data.get('limit', 0)
+    
+    if limit < 0:
+        return jsonify({"success": False, "message": "Invalid limit"}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if user exists
+        cursor.execute('SELECT username FROM users WHERE id = %s', (user_id,))
+        user_row = cursor.fetchone()
+        if not user_row:
+            return jsonify({"success": False, "message": "User not found"}), 404
+        
+        cursor.execute('UPDATE users SET withdrawal_limit = %s WHERE id = %s', (limit, user_id))
+        conn.commit()
+        
+        app.logger.info(f"Admin set withdrawal limit for user {user_id} to: {limit}")
+        return jsonify({"success": True, "message": "Limit updated"})
+    except Exception as e:
+        app.logger.error(f"Set limit error: {e}")
         conn.rollback()
         return jsonify({"success": False, "message": "Failed to update"}), 500
     finally:
@@ -2430,6 +2578,113 @@ def admin_add_bulk_coupons():
     finally:
         return_db_connection(conn)
 
+# ======================= ADMIN WHATSAPP NUMBERS =======================
+@app.route('/api/admin/whatsapp-numbers', methods=['GET'])
+@require_admin
+def admin_get_whatsapp_numbers():
+    """Admin: Get all WhatsApp numbers"""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('SELECT id, number, label, is_active, created_at FROM whatsapp_numbers ORDER BY created_at DESC')
+        numbers = []
+        for row in cursor.fetchall():
+            num = {
+                'id': row[0],
+                'number': row[1],
+                'label': row[2],
+                'is_active': bool(row[3]),
+                'created_at': row[4]
+            }
+            numbers.append(num)
+        return jsonify({"success": True, "numbers": numbers})
+    except Exception as e:
+        app.logger.error(f"Admin WhatsApp numbers error: {e}")
+        return jsonify({"success": False, "message": "Failed to load numbers"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/whatsapp-numbers', methods=['POST'])
+@require_admin
+def admin_add_whatsapp_number():
+    """Admin: Add new WhatsApp number"""
+    data = request.get_json()
+    number = sanitize_input(data.get('number', ''))
+    label = sanitize_input(data.get('label', ''))
+    
+    if not number or len(number) < 10:
+        return jsonify({"success": False, "message": "Valid phone number required"}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('INSERT INTO whatsapp_numbers (number, label, is_active, created_at) VALUES (%s, %s, %s, %s)',
+                       (number, label, True, datetime.utcnow().isoformat()))
+        conn.commit()
+        
+        app.logger.info(f"Admin added WhatsApp number: {number} ({label})")
+        
+        return jsonify({"success": True, "message": "WhatsApp number added"})
+    except Exception as e:
+        app.logger.error(f"Add WhatsApp number error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to add number"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/whatsapp-numbers/<int:number_id>/toggle', methods=['POST'])
+@require_admin
+def admin_toggle_whatsapp_number(number_id):
+    """Admin: Toggle WhatsApp number active status"""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('SELECT is_active FROM whatsapp_numbers WHERE id = %s', (number_id,))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"success": False, "message": "Number not found"}), 404
+        
+        current = bool(row[0])
+        new_value = not current
+        cursor.execute('UPDATE whatsapp_numbers SET is_active = %s WHERE id = %s', (new_value, number_id))
+        conn.commit()
+        
+        app.logger.info(f"Admin toggled WhatsApp number {number_id} active status to: {new_value}")
+        
+        return jsonify({"success": True, "is_active": new_value})
+    except Exception as e:
+        app.logger.error(f"Toggle WhatsApp number error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to toggle"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/whatsapp-numbers/<int:number_id>', methods=['DELETE'])
+@require_admin
+def admin_delete_whatsapp_number(number_id):
+    """Admin: Delete WhatsApp number"""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('DELETE FROM whatsapp_numbers WHERE id = %s', (number_id,))
+        conn.commit()
+        if cursor.rowcount == 0:
+            return jsonify({"success": False, "message": "Number not found"}), 404
+        
+        app.logger.info(f"Admin deleted WhatsApp number ID: {number_id}")
+        
+        return jsonify({"success": True, "message": "Number deleted"})
+    except Exception as e:
+        app.logger.error(f"Delete WhatsApp number error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to delete"}), 500
+    finally:
+        return_db_connection(conn)
+
 # ================= REFERRAL ENDPOINTS =================
 @app.route('/api/referral/claim', methods=['POST'])
 @require_auth
@@ -2565,6 +2820,7 @@ def withdraw():
 # ================= WHATSAPP ENDPOINTS =================
 @app.route('/api/whatsapp/numbers', methods=['GET'])
 def get_whatsapp_numbers():
+    """Get active WhatsApp numbers for users"""
     conn = get_db()
     cursor = conn.cursor()
     
@@ -2659,32 +2915,6 @@ def admin_toggle_user_restrict(user_id):
         return jsonify({"success": True, "restricted": new_value})
     except Exception as e:
         app.logger.error(f"Toggle restrict error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to update"}), 500
-    finally:
-        return_db_connection(conn)
-
-@app.route('/api/admin/user/<int:user_id>/set-limit', methods=['POST'])
-@require_admin
-def admin_set_user_limit(user_id):
-    data = request.get_json()
-    limit = data.get('limit', 0)
-    
-    if limit < 0:
-        return jsonify({"success": False, "message": "Invalid limit"}), 400
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('UPDATE users SET withdrawal_limit = %s WHERE id = %s', (limit, user_id))
-        conn.commit()
-        
-        app.logger.info(f"Admin set withdrawal limit for user {user_id} to: {limit}")
-        
-        return jsonify({"success": True, "message": "Limit updated"})
-    except Exception as e:
-        app.logger.error(f"Set limit error: {e}")
         conn.rollback()
         return jsonify({"success": False, "message": "Failed to update"}), 500
     finally:
@@ -2813,32 +3043,6 @@ def admin_get_coupons():
     finally:
         return_db_connection(conn)
 
-@app.route('/api/admin/coupons/add', methods=['POST'])
-@require_admin
-def admin_add_coupon():
-    data = request.get_json()
-    code = sanitize_input(data.get('code', '')).upper()
-    
-    if not code:
-        return jsonify({"success": False, "message": "Coupon code required"}), 400
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('INSERT INTO coupons (code, status) VALUES (%s, %s)', (code, 'AVAILABLE'))
-        conn.commit()
-        
-        app.logger.info(f"Admin added coupon: {code}")
-        
-        return jsonify({"success": True, "message": "Coupon added"})
-    except Exception as e:
-        app.logger.error(f"Add coupon error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to add coupon"}), 500
-    finally:
-        return_db_connection(conn)
-
 @app.route('/api/admin/coupons/load-file', methods=['POST'])
 @require_admin
 def admin_load_coupons_from_file():
@@ -2901,108 +3105,6 @@ def admin_delete_coupon(code):
     finally:
         return_db_connection(conn)
 
-@app.route('/api/admin/whatsapp-numbers', methods=['GET'])
-@require_admin
-def admin_get_whatsapp_numbers():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('SELECT id, number, label, is_active, created_at FROM whatsapp_numbers ORDER BY created_at DESC')
-        numbers = []
-        for row in cursor.fetchall():
-            num = {
-                'id': row[0],
-                'number': row[1],
-                'label': row[2],
-                'is_active': bool(row[3]),
-                'created_at': row[4]
-            }
-            numbers.append(num)
-        return jsonify({"success": True, "numbers": numbers})
-    except Exception as e:
-        app.logger.error(f"Admin WhatsApp numbers error: {e}")
-        return jsonify({"success": False, "message": "Failed to load numbers"}), 500
-    finally:
-        return_db_connection(conn)
-
-@app.route('/api/admin/whatsapp-numbers/add', methods=['POST'])
-@require_admin
-def admin_add_whatsapp_number():
-    data = request.get_json()
-    number = sanitize_input(data.get('number', ''))
-    label = sanitize_input(data.get('label', ''))
-    
-    if not number or len(number) < 10:
-        return jsonify({"success": False, "message": "Valid phone number required"}), 400
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('INSERT INTO whatsapp_numbers (number, label, is_active, created_at) VALUES (%s, %s, %s, %s)',
-                       (number, label, True, datetime.utcnow().isoformat()))
-        conn.commit()
-        
-        app.logger.info(f"Admin added WhatsApp number: {number} ({label})")
-        
-        return jsonify({"success": True, "message": "WhatsApp number added"})
-    except Exception as e:
-        app.logger.error(f"Add WhatsApp number error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to add number"}), 500
-    finally:
-        return_db_connection(conn)
-
-@app.route('/api/admin/whatsapp-numbers/<int:number_id>/toggle', methods=['POST'])
-@require_admin
-def admin_toggle_whatsapp_number(number_id):
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('SELECT is_active FROM whatsapp_numbers WHERE id = %s', (number_id,))
-        row = cursor.fetchone()
-        if not row:
-            return jsonify({"success": False, "message": "Number not found"}), 404
-        
-        current = bool(row[0])
-        new_value = not current
-        cursor.execute('UPDATE whatsapp_numbers SET is_active = %s WHERE id = %s', (new_value, number_id))
-        conn.commit()
-        
-        app.logger.info(f"Admin toggled WhatsApp number {number_id} active status to: {new_value}")
-        
-        return jsonify({"success": True, "is_active": new_value})
-    except Exception as e:
-        app.logger.error(f"Toggle WhatsApp number error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to toggle"}), 500
-    finally:
-        return_db_connection(conn)
-
-@app.route('/api/admin/whatsapp-numbers/<int:number_id>/delete', methods=['DELETE'])
-@require_admin
-def admin_delete_whatsapp_number(number_id):
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('DELETE FROM whatsapp_numbers WHERE id = %s', (number_id,))
-        conn.commit()
-        if cursor.rowcount == 0:
-            return jsonify({"success": False, "message": "Number not found"}), 404
-        
-        app.logger.info(f"Admin deleted WhatsApp number ID: {number_id}")
-        
-        return jsonify({"success": True, "message": "Number deleted"})
-    except Exception as e:
-        app.logger.error(f"Delete WhatsApp number error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to delete"}), 500
-    finally:
-        return_db_connection(conn)
-
 @app.route('/api/admin/settings', methods=['GET'])
 @require_admin
 def admin_get_settings():
@@ -3023,7 +3125,7 @@ def admin_get_settings():
     finally:
         return_db_connection(conn)
 
-@app.route('/api/admin/settings/update', methods=['POST'])
+@app.route('/api/admin/settings', methods=['POST'])
 @require_admin
 def admin_update_settings():
     data = request.get_json()
@@ -3133,7 +3235,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug = os.getenv('ENV') != 'production'
     
-    app.logger.info(f"🚀 Starting Flexia Platform on port {port} (debug: {debug})")
+    app.logger.info(f"🚀 Starting Flexia Platform v11.0 on port {port} (debug: {debug})")
     app.logger.info(f"📁 Frontend directory: {CONFIG.FRONTEND_DIR}")
     app.logger.info(f"🔐 Secret key set: {'Yes' if CONFIG.SECRET_KEY else 'No'}")
     app.logger.info(f"🗄️  Database: {'PostgreSQL' if os.environ.get('DATABASE_URL') else 'SQLite'}")
@@ -3141,5 +3243,6 @@ if __name__ == '__main__':
     app.logger.info(f"📊 Structured logging: Enabled")
     app.logger.info(f"💾 Database connection pool: {'Enabled' if db_pool else 'Disabled'}")
     app.logger.info(f"💾 Automatic backups: Enabled (daily at 2 AM UTC)")
+    app.logger.info(f"✅ ALL ADMIN ENDPOINTS FIXED: Complete admin dashboard support")
     
     app.run(host='0.0.0.0', port=port, debug=debug)
