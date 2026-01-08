@@ -331,11 +331,30 @@
       50% { transform: scale(1.03); box-shadow: 0 0 25px rgba(0, 255, 85, 0.6); }
       100% { transform: scale(1); }
     }
-    /* SVG ICONS */
-    .svg-icon {
-      width: 24px;
-      height: 24px;
-      fill: currentColor;
+    .error-message {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 40px;
+      color: #ff5555;
+    }
+    .error-message i {
+      font-size: 3rem;
+      margin-bottom: 20px;
+    }
+    .error-message .retry-btn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background: #8000ff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+    .error-message .retry-btn:hover {
+      background: #9000ff;
+      transform: translateY(-2px);
     }
     @media (max-width: 768px) {
       .header { flex-direction: column; text-align: center; }
@@ -427,128 +446,317 @@
   <script>
     let currentUser = null;
     let currentBalance = 0;
+    let apiBaseURL = window.location.origin;
 
+    // ✅ Check if user is authenticated
+    async function checkAuth() {
+      try {
+        const res = await fetch(`${apiBaseURL}/api/user/profile`, { 
+          credentials: 'include',
+          headers: { 
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (res.status === 401) {
+          console.log('User not authenticated');
+          return null;
+        }
+        
+        if (!res.ok) {
+          console.error(`API responded with status: ${res.status}`);
+          return null;
+        }
+        
+        const data = await res.json();
+        console.log('Auth response:', data);
+        return data.success ? data.user : null;
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        return null;
+      }
+    }
+
+    // ✅ Load user profile and balance
     async function loadUserProfile() {
       try {
-        const res = await fetch('/api/user/profile', { credentials: 'include' });
-        const data = await res.json();
-        if (data.success) {
-          currentUser = data.user;
-          currentBalance = parseFloat(data.user.balance);
-          document.getElementById('username').textContent = data.user.username;
-          document.getElementById('balance').textContent = data.user.balance.toFixed(2);
-          return data.user;
-        } else {
-          window.location.href = 'index.html';
+        document.getElementById('loading-message').innerHTML = `
+          <div class="spinner"></div>
+          <p>Checking authentication...</p>
+        `;
+
+        const user = await checkAuth();
+        
+        if (!user) {
+          console.warn('No user found, redirecting to login');
+          setTimeout(() => {
+            window.location.href = 'index.html';
+          }, 1500);
+          return null;
         }
-      } catch (e) {
-        console.error('Profile load failed:', e);
-        window.location.href = 'index.html';
+        
+        currentUser = user;
+        currentBalance = parseFloat(user.balance) || 0;
+        
+        // Update UI
+        document.getElementById('username').textContent = user.username || 'User';
+        document.getElementById('balance').textContent = currentBalance.toFixed(2);
+        
+        console.log('User loaded:', user.username);
+        return user;
+        
+      } catch (error) {
+        console.error('Profile load error:', error);
+        showError('Failed to load profile. Please try again.');
+        return null;
       }
     }
 
+    // ✅ Load achievements from API
     async function loadAchievements() {
       try {
-        const res = await fetch('/api/achievements', { credentials: 'include' });
+        document.getElementById('loading-message').innerHTML = `
+          <div class="spinner"></div>
+          <p>Loading achievements...</p>
+        `;
+
+        const res = await fetch(`${apiBaseURL}/api/achievements`, { 
+          credentials: 'include',
+          headers: { 
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (res.status === 401) {
+          showError('Please login to view achievements');
+          setTimeout(() => window.location.href = 'index.html', 2000);
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error(`API responded with status: ${res.status}`);
+        }
+
         const data = await res.json();
-        if (data.success) {
-          document.getElementById('total-achievements').textContent = data.stats.total;
-          document.getElementById('unlocked-achievements').textContent = data.stats.unlocked;
-          document.getElementById('achievement-points').textContent = data.stats.points;
+        console.log('Achievements response:', data);
+
+        if (!data.success) {
+          showError(data.message || 'Failed to load achievements');
+          return;
+        }
+
+        // Update stats
+        document.getElementById('total-achievements').textContent = data.stats.total || 0;
+        document.getElementById('unlocked-achievements').textContent = data.stats.unlocked || 0;
+        document.getElementById('achievement-points').textContent = data.stats.points || 0;
+
+        // Render achievements
+        if (data.achievements && data.achievements.length > 0) {
           renderAchievements(data.achievements);
           
-          // ✅ Auto-refresh balance to reflect auto-claimed rewards
-          if (currentUser) {
-            const freshProfile = await fetch('/api/user/profile', { credentials: 'include' });
-            const freshData = await freshProfile.json();
-            if (freshData.success) {
-              const newBalance = parseFloat(freshData.user.balance);
-              if (newBalance !== currentBalance) {
-                currentBalance = newBalance;
-                const balanceEl = document.getElementById('balance');
-                balanceEl.textContent = newBalance.toFixed(2);
-                balanceEl.style.transition = 'color 0.4s, transform 0.4s';
-                balanceEl.style.color = '#00FF55';
-                balanceEl.style.transform = 'scale(1.05)';
-                setTimeout(() => {
-                  balanceEl.style.color = '';
-                  balanceEl.style.transform = '';
-                }, 1000);
-              }
-            }
-          }
+          // ✅ Auto-refresh balance to show new rewards
+          await refreshBalance();
         } else {
-          showError('Failed to load achievements');
+          showNoAchievements();
         }
-      } catch (e) {
-        console.error('Achievements API error:', e);
-        showError('Network error. Please check your connection.');
+
+      } catch (error) {
+        console.error('Achievements API error:', error);
+        showError('Network error. Please check your connection and try again.');
       }
     }
 
+    // ✅ Refresh user balance
+    async function refreshBalance() {
+      try {
+        const res = await fetch(`${apiBaseURL}/api/user/profile`, { 
+          credentials: 'include',
+          headers: { 'Accept': 'application/json' }
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            const newBalance = parseFloat(data.user.balance) || 0;
+            const balanceEl = document.getElementById('balance');
+            
+            if (newBalance !== currentBalance) {
+              // Show animation for balance increase
+              balanceEl.textContent = newBalance.toFixed(2);
+              balanceEl.style.transition = 'color 0.4s, transform 0.4s';
+              balanceEl.style.color = '#00FF55';
+              balanceEl.style.transform = 'scale(1.05)';
+              
+              setTimeout(() => {
+                balanceEl.style.color = '';
+                balanceEl.style.transform = '';
+              }, 1000);
+              
+              currentBalance = newBalance;
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Balance refresh failed:', error);
+      }
+    }
+
+    // ✅ Show error message
     function showError(message) {
-      document.getElementById('achievements-grid').innerHTML = `
-        <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #ff5555;">
-          <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 20px;"></i>
+      const grid = document.getElementById('achievements-grid');
+      grid.innerHTML = `
+        <div class="error-message">
+          <i class="fas fa-exclamation-triangle"></i>
           <h3>${message}</h3>
+          <button class="retry-btn" onclick="init()">
+            <i class="fas fa-redo"></i> Try Again
+          </button>
         </div>
       `;
     }
 
+    // ✅ Show when no achievements available
+    function showNoAchievements() {
+      const grid = document.getElementById('achievements-grid');
+      grid.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #a0a0b5;">
+          <i class="fas fa-trophy" style="font-size: 3rem; margin-bottom: 20px; color: #8000ff;"></i>
+          <h3>No Achievements Yet</h3>
+          <p>Start playing games to earn achievements!</p>
+        </div>
+      `;
+    }
+
+    // ✅ Render achievements grid
     function renderAchievements(achievements) {
       const grid = document.getElementById('achievements-grid');
       grid.innerHTML = '';
+      
       achievements.forEach(ach => {
         const card = document.createElement('div');
         card.className = `achievement-card ${ach.unlocked ? 'unlocked' : ''}`;
-        card.dataset.category = ach.category;
+        card.dataset.category = ach.category || 'gaming';
+        
+        // Add animation for unlocked achievements
         if (ach.unlocked) {
           card.style.animation = 'pulse 1.5s ease-in-out';
         }
+        
+        // Format progress percentage
+        const progressPercentage = Math.min(100, Math.round(ach.progress_percentage || 0));
+        
         card.innerHTML = `
           <div class="achievement-icon">
-            <i class="${ach.icon}"></i>
+            <i class="${ach.icon || 'fas fa-trophy'}"></i>
           </div>
           <div class="achievement-info">
-            <h4>${ach.title}</h4>
-            <p>${ach.description}</p>
+            <h4>${ach.title || 'Achievement'}</h4>
+            <p>${ach.description || 'Complete this achievement to earn rewards'}</p>
             <div class="achievement-progress">
               <div class="progress-bar">
-                <div class="progress-fill" style="width: ${ach.progress_percentage}%"></div>
+                <div class="progress-fill" style="width: ${progressPercentage}%"></div>
               </div>
-              <span class="progress-text">${ach.current_value}/${ach.target_value} (${Math.round(ach.progress_percentage)}%)</span>
+              <span class="progress-text">
+                ${ach.current_value || 0}/${ach.target_value || 100} 
+                (${progressPercentage}%)
+              </span>
             </div>
             <div class="achievement-reward">
-              <span class="reward-points">+${ach.points} pts</span>
-              <span class="reward-cash">+₦${ach.cash_reward.toLocaleString()}</span>
+              <span class="reward-points">
+                <i class="fas fa-star"></i> +${ach.points || 0} pts
+              </span>
+              <span class="reward-cash">
+                <i class="fas fa-money-bill-wave"></i> +₦${(ach.cash_reward || 0).toLocaleString()}
+              </span>
             </div>
           </div>
           ${ach.unlocked ? '<div class="unlocked-badge"><i class="fas fa-check"></i></div>' : ''}
         `;
+        
         grid.appendChild(card);
       });
+      
+      // Hide loading message
+      document.getElementById('loading-message').style.display = 'none';
     }
 
+    // ✅ Setup category filter
     function setupCategoryFilter() {
       document.querySelectorAll('.category-btn').forEach(btn => {
         btn.addEventListener('click', () => {
+          // Update active button
           document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
+          
           const category = btn.dataset.category;
-          document.querySelectorAll('.achievement-card').forEach(card => {
-            card.style.display = (category === 'all' || card.dataset.category === category) ? 'flex' : 'none';
+          const cards = document.querySelectorAll('.achievement-card');
+          
+          // Filter cards
+          cards.forEach(card => {
+            if (category === 'all' || card.dataset.category === category) {
+              card.style.display = 'flex';
+            } else {
+              card.style.display = 'none';
+            }
           });
         });
       });
     }
 
+    // ✅ Initialize the page
     async function init() {
-      await loadUserProfile();
-      await loadAchievements();
-      setupCategoryFilter();
+      try {
+        console.log('Initializing achievements page...');
+        
+        // Load user profile first
+        const user = await loadUserProfile();
+        
+        if (user) {
+          // Then load achievements
+          await loadAchievements();
+          
+          // Setup filters
+          setupCategoryFilter();
+          
+          console.log('Page initialized successfully');
+        }
+        
+      } catch (error) {
+        console.error('Initialization error:', error);
+        showError('Failed to initialize page. Please refresh.');
+      }
     }
 
-    document.addEventListener('DOMContentLoaded', init);
+    // ✅ Auto-refresh achievements every 30 seconds
+    function startAutoRefresh() {
+      setInterval(async () => {
+        try {
+          await loadAchievements();
+        } catch (error) {
+          console.warn('Auto-refresh failed:', error);
+        }
+      }, 30000); // 30 seconds
+    }
+
+    // ✅ Start when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      init();
+      
+      // Start auto-refresh after 5 seconds
+      setTimeout(startAutoRefresh, 5000);
+    });
+
+    // ✅ Handle offline/online events
+    window.addEventListener('online', () => {
+      console.log('Connection restored');
+      init();
+    });
+
+    window.addEventListener('offline', () => {
+      showError('You are offline. Please check your internet connection.');
+    });
   </script>
 </body>
 </html>
