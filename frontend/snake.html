@@ -240,6 +240,31 @@ body {
   0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 204, 0.5); }
   50% { box-shadow: 0 0 20px rgba(0, 255, 204, 0.8); }
 }
+
+/* 🔥 ADDED: Button disabled styles */
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.action-btn.processing {
+  animation: none;
+  background: linear-gradient(45deg, #555555, #777777);
+}
+
+@keyframes success {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); background: linear-gradient(45deg, #00FF55, #00CCFF); }
+  100% { transform: scale(1); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
 @media (max-width: 768px) {
   .game-row {
     flex-direction: column;
@@ -365,7 +390,7 @@ canvas {
       <button class="action-btn pulse" onclick="startGame()">
         <i class="fas fa-play"></i> START GAME
       </button>
-      <button class="action-btn glow" onclick="submitScore()">
+      <button class="action-btn glow" onclick="submitScore()" id="claim-btn">
         <i class="fas fa-trophy"></i> CLAIM REWARD
       </button>
     </div>
@@ -391,6 +416,7 @@ let highScore = 0;
 let gamesPlayed = 0;
 let totalEarned = 0;
 let currentGameEarnings = 0;
+let isClaiming = false; // 🔥 ADDED: Prevent double-click
 const EARNINGS_PER_APPLE = 200;
 
 async function loadUserProfile() {
@@ -401,6 +427,8 @@ async function loadUserProfile() {
       const stats = data.user.game_stats?.snake || {};
       highScore = stats.high_score || 0;
       document.getElementById('high-score').textContent = highScore;
+      totalEarned = data.user.balance || 0;
+      document.getElementById('total-earned').textContent = `₦${totalEarned.toLocaleString()}`;
     } else {
       window.location.href = 'index.html';
     }
@@ -578,26 +606,78 @@ function updateDisplay() {
 }
 
 async function submitScore() {
+  // 🔥 ADDED: Prevent multiple clicks
+  if (isClaiming) {
+    return;
+  }
+  
   const apples = Math.floor(score / 10);
   if (apples <= 0) {
     alert('Play the game first!');
     return;
   }
-  const res = await fetch('/api/games/snake/report', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ apples_eaten: apples }),
-    credentials: 'include'
-  });
-  const data = await res.json();
-  if (data.success) {
-    totalEarned += data.reward;
-    document.getElementById('total-earned').textContent = `₦${totalEarned.toLocaleString()}`;
-    alert(`✅ Reward claimed!\nEarnings: ₦${data.reward}`);
-    initGame();
-    if (!gameRunning) startGame();
-  } else {
-    alert('❌ ' + (data.message || 'You can only play Snake 20 times per day.'));
+  
+  // Check if game is still running
+  if (gameRunning) {
+    alert('⚠️ Please finish the game first!');
+    return;
+  }
+  
+  const claimBtn = document.getElementById('claim-btn');
+  claimBtn.disabled = true;
+  claimBtn.classList.add('processing');
+  claimBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PROCESSING...';
+  isClaiming = true;
+  
+  try {
+    const res = await fetch('/api/games/snake/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apples_eaten: apples }),
+      credentials: 'include'
+    });
+    
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    
+    const data = await res.json();
+    
+    if (data.success) {
+      totalEarned += data.reward;
+      document.getElementById('total-earned').textContent = `₦${totalEarned.toLocaleString()}`;
+      
+      // Show success animation
+      claimBtn.classList.remove('processing');
+      claimBtn.style.animation = 'success 0.5s ease-in-out';
+      claimBtn.innerHTML = '<i class="fas fa-check"></i> CLAIMED!';
+      
+      setTimeout(() => {
+        claimBtn.style.animation = '';
+        claimBtn.innerHTML = '<i class="fas fa-trophy"></i> CLAIM REWARD';
+      }, 2000);
+      
+      alert(`✅ Reward claimed!\nEarnings: ₦${data.reward}`);
+      initGame();
+    } else {
+      // Show error animation
+      claimBtn.style.animation = 'shake 0.5s ease-in-out';
+      setTimeout(() => {
+        claimBtn.style.animation = '';
+      }, 500);
+      
+      alert('❌ ' + (data.message || 'Failed to claim reward. Please try again.'));
+    }
+  } catch (error) {
+    console.error('Error submitting score:', error);
+    alert('❌ Network error. Please check your connection and try again.');
+  } finally {
+    // 🔥 ADDED: Re-enable button after 3 seconds to prevent double-click
+    setTimeout(() => {
+      claimBtn.disabled = false;
+      claimBtn.classList.remove('processing');
+      isClaiming = false;
+    }, 3000);
   }
 }
 
