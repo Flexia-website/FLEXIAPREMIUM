@@ -4,13 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Snake Mine - FLEXIA</title>
-<!-- CORRECTED: Updated logo paths -->
 <link rel="icon" type="image/x-icon" href="logo/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="logo/flexia-logo.png">
 <link rel="icon" type="image/png" sizes="16x16" href="logo/flexia-logo.png">
 <link rel="apple-touch-icon" href="logo/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<!-- Fonts & CSS -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 * {
@@ -30,6 +28,9 @@ body {
   color: #FFFFFF;
   display: flex;
   flex-direction: column;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .header {
   background: #0A0A1F;
@@ -233,24 +234,21 @@ body {
   transform: scale(0.95);
 }
 
-/* 🔥 FIXED: Button states */
+/* Button states */
 .action-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none !important;
   animation: none !important;
 }
-
 .action-btn.processing {
   background: linear-gradient(45deg, #555555, #777777) !important;
   animation: none !important;
 }
-
 .action-btn.success {
   background: linear-gradient(45deg, #00FF55, #00CCFF) !important;
   animation: success 0.5s ease-in-out !important;
 }
-
 .action-btn.error {
   background: linear-gradient(45deg, #FF5555, #FF8800) !important;
   animation: shake 0.5s ease-in-out !important;
@@ -260,37 +258,79 @@ body {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.05); }
 }
-
 @keyframes glow {
   0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 204, 0.5); }
   50% { box-shadow: 0 0 20px rgba(0, 255, 204, 0.8); }
 }
-
 @keyframes success {
   0% { transform: scale(1); }
   50% { transform: scale(1.05); }
   100% { transform: scale(1); }
 }
-
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
   20%, 40%, 60%, 80% { transform: translateX(5px); }
 }
 
-/* Debug info */
-.debug-info {
+/* Game Over Modal */
+.game-over-modal {
   position: fixed;
-  top: 10px;
-  right: 10px;
-  background: rgba(0,0,0,0.8);
-  color: white;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+.modal-content {
+  background: #0A0A1F;
+  border: 3px solid #8000FF;
+  border-radius: 15px;
+  padding: 30px;
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+}
+.modal-content h2 {
+  color: #00FFCC;
+  margin-bottom: 20px;
+}
+.modal-stats {
+  margin: 20px 0;
+}
+.modal-stat {
+  display: flex;
+  justify-content: space-between;
+  margin: 10px 0;
   padding: 10px;
-  border-radius: 5px;
-  z-index: 9999;
-  max-width: 300px;
-  font-size: 12px;
-  display: none;
+  background: rgba(128, 0, 255, 0.1);
+  border-radius: 8px;
+}
+.modal-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+.modal-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.primary-btn {
+  background: linear-gradient(45deg, #8000FF, #00CCFF);
+  color: #0A0A1F;
+}
+.secondary-btn {
+  background: #2a2a4a;
+  color: #FFFFFF;
+  border: 1px solid #8000FF;
 }
 
 @media (max-width: 768px) {
@@ -349,16 +389,6 @@ body {
 .hidden {
   display: none !important;
 }
-html, body {
-  overscroll-behavior: none;
-}
-#game-board {
-  user-select: none;
-  -webkit-user-select: none;
-}
-canvas {
-  display: block;
-}
 </style>
 </head>
 <body>
@@ -373,6 +403,7 @@ canvas {
     </div>
   </div>
 </div>
+
 <div class="main-content">
   <div class="game-row">
     <div class="game-panel">
@@ -412,26 +443,53 @@ canvas {
     </div>
   </div>
 </div>
+
 <div class="controls-row">
   <div class="controls-panel">
     <div class="action-buttons">
       <button class="action-btn pulse" onclick="startGame()" id="start-btn">
         <i class="fas fa-play"></i> START GAME
       </button>
-      <button class="action-btn glow" onclick="submitScore()" id="claim-btn">
+      <button class="action-btn glow" onclick="submitScore()" id="claim-btn" disabled>
         <i class="fas fa-trophy"></i> CLAIM REWARD
       </button>
     </div>
   </div>
   <div class="dashboard-panel">
-    <button class="dashboard-btn" onclick="window.location.href='index.html'">
+    <button class="dashboard-btn" onclick="goBackToDashboard()">
       <i class="fas fa-arrow-left"></i> BACK TO DASHBOARD
     </button>
   </div>
 </div>
 
-<!-- Debug Info -->
-<div class="debug-info" id="debug-info"></div>
+<!-- Game Over Modal -->
+<div id="game-over-modal" class="game-over-modal hidden">
+  <div class="modal-content">
+    <h2><i class="fas fa-gamepad"></i> GAME OVER</h2>
+    <div class="modal-stats">
+      <div class="modal-stat">
+        <span>Score:</span>
+        <span id="modal-score">0</span>
+      </div>
+      <div class="modal-stat">
+        <span>Apples Eaten:</span>
+        <span id="modal-apples">0</span>
+      </div>
+      <div class="modal-stat">
+        <span>Reward:</span>
+        <span id="modal-reward">₦0</span>
+      </div>
+    </div>
+    <div class="modal-buttons">
+      <button class="modal-btn primary-btn" onclick="playAgain()">
+        <i class="fas fa-redo"></i> PLAY AGAIN
+      </button>
+      <button class="modal-btn secondary-btn" onclick="closeModal()">
+        <i class="fas fa-times"></i> CLOSE
+      </button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ======================= GAME VARIABLES =======================
@@ -448,50 +506,28 @@ let gameRunning = false;
 let gameLoop;
 let highScore = 0;
 let gamesPlayed = 0;
-let totalEarned = 0;
 let currentGameEarnings = 0;
 const EARNINGS_PER_APPLE = 200;
 
-// 🔥 FIXED: Prevent double-clicking
+// Game state management
 let isClaiming = false;
-let isProcessing = false;
+let currentBalance = 0;
 
-// ======================= USER PROFILE =======================
-async function loadUserProfile() {
-  try {
-    console.log('Loading user profile...');
-    const response = await fetch('/api/user/profile', {
-      method: 'GET',
-      credentials: 'include'
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    console.log('Profile data:', data);
-    
-    if (data.success) {
-      const stats = data.user.game_stats?.snake || {};
-      highScore = stats.high_score || 0;
-      totalEarned = parseFloat(data.user.balance) || 0;
-      
-      // Update UI
-      document.getElementById('high-score').textContent = highScore;
-      document.getElementById('total-earned').textContent = `₦${totalEarned.toLocaleString()}`;
-      
-      console.log('Profile loaded successfully');
-      return data.user;
-    } else {
-      console.error('Profile load failed:', data.message);
-      window.location.href = 'index.html';
-    }
-  } catch (error) {
-    console.error('Profile load failed:', error);
-    showDebug('Error loading profile: ' + error.message);
-    window.location.href = 'index.html';
+// ======================= UTILITY FUNCTIONS =======================
+function showMessage(text, type = 'info') {
+  alert(`[${type.toUpperCase()}] ${text}`);
+}
+
+function goBackToDashboard() {
+  if (gameRunning) {
+    if (!confirm('Game is running. Are you sure you want to quit?')) return;
+    clearInterval(gameLoop);
   }
+  window.location.href = 'index.html';
+}
+
+function closeModal() {
+  document.getElementById('game-over-modal').classList.add('hidden');
 }
 
 // ======================= GAME FUNCTIONS =======================
@@ -565,20 +601,6 @@ function drawGame() {
       food.x * gridSize + gridSize / 2,
       food.y * gridSize + gridSize / 2,
       (gridSize - 4) / 2 + pulse,
-      0,
-      2 * Math.PI
-    );
-    ctx.fill();
-    
-    // Golden apple highlight
-    ctx.fillStyle = '#FFFFE0';
-    ctx.beginPath();
-    ctx.ellipse(
-      food.x * gridSize + gridSize / 2 - 3,
-      food.y * gridSize + gridSize / 2 - 3,
-      3 + pulse/2,
-      2 + pulse/2,
-      Math.PI / 4,
       0,
       2 * Math.PI
     );
@@ -676,10 +698,17 @@ function gameOver() {
     document.getElementById('high-score').textContent = highScore;
   }
   
-  // Enable claim button
-  const claimBtn = document.getElementById('claim-btn');
+  // Update modal
   const apples = Math.floor(score / 10);
+  document.getElementById('modal-score').textContent = score;
+  document.getElementById('modal-apples').textContent = apples;
+  document.getElementById('modal-reward').textContent = `₦${currentGameEarnings}`;
   
+  // Show modal
+  document.getElementById('game-over-modal').classList.remove('hidden');
+  
+  // Enable claim button if there are apples
+  const claimBtn = document.getElementById('claim-btn');
   if (apples > 0) {
     claimBtn.disabled = false;
     claimBtn.classList.add('glow');
@@ -689,10 +718,6 @@ function gameOver() {
     claimBtn.classList.remove('glow');
     claimBtn.innerHTML = '<i class="fas fa-trophy"></i> CLAIM REWARD';
   }
-  
-  setTimeout(() => {
-    alert(`Game Over! 🎮\nScore: ${score}\nApples Eaten: ${Math.floor(score / 10)}\nEarnings: ₦${currentGameEarnings}`);
-  }, 500);
 }
 
 function startGame() {
@@ -718,8 +743,12 @@ function startGame() {
   }, 500);
 }
 
+function playAgain() {
+  closeModal();
+  startGame();
+}
+
 function changeDirection(newDirection) {
-  // Prevent reversing into self
   if (
     (newDirection === 'up' && direction !== 'down') ||
     (newDirection === 'down' && direction !== 'up') ||
@@ -739,31 +768,28 @@ function updateDisplay() {
 
 // ======================= REWARD CLAIMING =======================
 async function submitScore() {
-  // 🔥 FIXED: Prevent multiple clicks
-  if (isClaiming || isProcessing) {
-    console.log('Already processing, please wait...');
+  if (isClaiming) {
+    showMessage('Please wait, another claim is in progress', 'error');
     return;
   }
   
   const apples = Math.floor(score / 10);
   
   if (apples <= 0) {
-    alert('No apples to claim! Play the game first.');
+    showMessage('No apples to claim! Play the game first.', 'error');
     return;
   }
   
   // Check if game is still running
   if (gameRunning) {
-    alert('⚠️ Please finish the game first!');
+    showMessage('Please finish the game first!', 'error');
     return;
   }
   
   isClaiming = true;
-  isProcessing = true;
   
   const claimBtn = document.getElementById('claim-btn');
   const originalText = claimBtn.innerHTML;
-  const originalClass = claimBtn.className;
   
   try {
     // Show processing state
@@ -772,90 +798,65 @@ async function submitScore() {
     claimBtn.classList.add('processing');
     claimBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PROCESSING...';
     
-    console.log(`Claiming reward for ${apples} apples...`);
-    showDebug(`Claiming ₦${currentGameEarnings} for ${apples} apples...`);
-    
-    // Make API call
-    const response = await fetch('/api/games/snake/report', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({ 
-        apples_eaten: apples,
-        timestamp: Date.now()
-      }),
-      credentials: 'include'
-    });
-    
-    console.log('Response status:', response.status);
-    console.log('Response headers:', response.headers);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('API Error Response:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+    // Check daily limit first
+    try {
+      const limitCheck = await window.checkDailyLimit('snake');
+      if (!limitCheck.can_play) {
+        throw new Error(`Daily limit reached! You've played ${limitCheck.played_today} times today (max: ${limitCheck.max_per_day})`);
+      }
+    } catch (limitError) {
+      showMessage(limitError.message, 'error');
+      throw limitError;
     }
     
-    const data = await response.json();
-    console.log('API Success Response:', data);
+    // Claim reward using global function
+    const result = await window.reportGameResult('snake', { apples: apples });
     
-    if (data.success) {
-      // SUCCESS - Update UI
-      totalEarned = parseFloat(data.new_balance);
-      document.getElementById('total-earned').textContent = `₦${totalEarned.toLocaleString()}`;
+    if (result.success) {
+      // Update balance
+      if (window.updateBalance) {
+        window.updateBalance(result.new_balance);
+      } else {
+        document.getElementById('total-earned').textContent = `₦${result.new_balance.toLocaleString()}`;
+      }
       
       // Show success animation
       claimBtn.classList.remove('processing');
       claimBtn.classList.add('success');
-      claimBtn.innerHTML = `<i class="fas fa-check"></i> CLAIMED! ₦${data.reward}`;
-      
-      showDebug(`✅ Success! Claimed ₦${data.reward}, New Balance: ₦${data.new_balance}`);
+      claimBtn.innerHTML = `<i class="fas fa-check"></i> CLAIMED! ₦${result.reward}`;
       
       // Show success message
-      setTimeout(() => {
-        alert(`✅ Success!\n\nApples: ${apples}\nReward: ₦${data.reward}\nNew Balance: ₦${totalEarned.toLocaleString()}`);
-      }, 300);
+      showMessage(`✅ Success! Claimed ₦${result.reward} for ${apples} apples`, 'success');
       
       // Reset game
       score = 0;
       currentGameEarnings = 0;
       updateDisplay();
       
+      // Close modal
+      closeModal();
+      
       // Restore button after 3 seconds
       setTimeout(() => {
         claimBtn.classList.remove('success');
-        claimBtn.className = originalClass;
         claimBtn.innerHTML = originalText;
         claimBtn.disabled = false;
-        
         isClaiming = false;
-        isProcessing = false;
-        
-        // Reload user profile to get updated balance
-        loadUserProfile();
       }, 3000);
       
     } else {
-      // API returned error
       claimBtn.classList.remove('processing');
       claimBtn.classList.add('error');
       claimBtn.innerHTML = '<i class="fas fa-times"></i> FAILED';
       
-      showDebug(`❌ API Error: ${data.message || 'Unknown error'}`);
+      showMessage(result.message, 'error');
       
       setTimeout(() => {
         claimBtn.classList.remove('error');
-        claimBtn.className = originalClass;
         claimBtn.innerHTML = originalText;
         claimBtn.disabled = false;
-        
         isClaiming = false;
-        isProcessing = false;
       }, 2000);
-      
-      alert('❌ ' + (data.message || 'Failed to claim reward. Please try again.'));
     }
     
   } catch (error) {
@@ -865,31 +866,47 @@ async function submitScore() {
     claimBtn.classList.add('error');
     claimBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ERROR';
     
-    showDebug(`❌ Network Error: ${error.message}`);
+    showMessage(error.message || 'Network error. Please try again.', 'error');
     
     setTimeout(() => {
       claimBtn.classList.remove('error');
-      claimBtn.className = originalClass;
       claimBtn.innerHTML = originalText;
       claimBtn.disabled = false;
-      
       isClaiming = false;
-      isProcessing = false;
     }, 2000);
-    
-    alert('❌ Network error. Please check your connection.\n\nError: ' + error.message);
   }
 }
 
-// ======================= DEBUG FUNCTIONS =======================
-function showDebug(message) {
-  const debugEl = document.getElementById('debug-info');
-  debugEl.innerHTML = `<strong>Debug:</strong> ${message}`;
-  debugEl.style.display = 'block';
-  
-  setTimeout(() => {
-    debugEl.style.display = 'none';
-  }, 5000);
+// ======================= LOAD USER PROFILE =======================
+async function loadUserProfile() {
+  try {
+    const res = await fetch('/api/user/profile', { credentials: 'include' });
+    if (!res.ok) {
+      if (res.status === 401) {
+        window.location.href = 'index.html';
+        return;
+      }
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    
+    const data = await res.json();
+    if (data.success) {
+      currentBalance = parseFloat(data.user.balance) || 0;
+      const stats = data.user.game_stats?.snake || {};
+      highScore = stats.high_score || 0;
+      
+      document.getElementById('total-earned').textContent = `₦${currentBalance.toLocaleString()}`;
+      document.getElementById('high-score').textContent = highScore;
+      
+      return data.user;
+    } else {
+      window.location.href = 'index.html';
+    }
+  } catch (error) {
+    console.error('Profile load error:', error);
+    showMessage('Failed to load profile. Please refresh.', 'error');
+    setTimeout(() => window.location.href = 'index.html', 3000);
+  }
 }
 
 // ======================= EVENT LISTENERS =======================
@@ -900,7 +917,7 @@ document.addEventListener('keydown', (e) => {
     case 'ArrowLeft': changeDirection('left'); e.preventDefault(); break;
     case 'ArrowRight': changeDirection('right'); e.preventDefault(); break;
     case ' ': startGame(); e.preventDefault(); break;
-    case 'Escape': window.location.href = 'index.html'; e.preventDefault(); break;
+    case 'Escape': goBackToDashboard(); e.preventDefault(); break;
   }
 });
 
@@ -939,8 +956,6 @@ document.addEventListener('touchmove', (e) => {
 
 // ======================= INITIALIZATION =======================
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('Snake game initializing...');
-  
   // Load user profile
   await loadUserProfile();
   
@@ -950,6 +965,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Set up canvas responsive sizing
   function resizeCanvas() {
     const container = document.querySelector('.game-board-container');
+    if (!container) return;
+    
     const maxSize = Math.min(container.clientWidth, container.clientHeight);
     
     canvas.style.width = `${maxSize}px`;
@@ -968,14 +985,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Disable claim button initially
   const claimBtn = document.getElementById('claim-btn');
   claimBtn.disabled = true;
-  
-  console.log('Snake game initialized successfully!');
 });
 
 // Auto-save high score
 window.addEventListener('beforeunload', () => {
   if (score > highScore) {
-    // You could send this to the server here if needed
     console.log('New high score:', score);
   }
 });
