@@ -4,13 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Coin Flip - FLEXIA</title>
-<!-- CORRECTED: Updated logo paths -->
 <link rel="icon" type="image/x-icon" href="logo/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="logo/flexia-logo.png">
 <link rel="icon" type="image/png" sizes="16x16" href="logo/flexia-logo.png">
 <link rel="apple-touch-icon" href="logo/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<!-- Fonts & CSS -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 * {
@@ -285,7 +283,6 @@ box-shadow: 0 0 10px #00FF55;
 background: #FF0055;
 box-shadow: 0 0 10px #FF0055;
 }
-/* Message container */
 .message {
 padding: 10px 15px;
 border-radius: 8px;
@@ -448,8 +445,6 @@ let betAmount = 100;
 let isFlipping = false;
 let winningStreak = [];
 let userBalance = 0;
-let playsToday = 0;
-let maxPlays = 50;
 
 // DOM elements
 const flipBtn = document.getElementById('flip-btn');
@@ -565,7 +560,6 @@ showMessage('Flipping coin...', 'info');
 const bet = betAmount;
 const coinResult = Math.random() > 0.5 ? 'heads' : 'tails';
 const win = (userChoice === coinResult);
-const payout = win ? bet * 2 : 0;
 
 // Animate coin
 const coin = document.getElementById('coin-3d');
@@ -579,28 +573,21 @@ coin.classList.remove('coin-tossing');
 shadow.classList.remove('shadow-pulsing');
 
 try {
-// Report to backend
-const res = await fetch('/api/games/coinflip/report', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({ 
-bet: bet, 
-won: win,
-timestamp: Date.now()
-}),
-credentials: 'include'
-});
-
-if (!res.ok) {
-const errorData = await res.json().catch(() => ({}));
-throw new Error(errorData.message || `HTTP error! status: ${res.status}`);
+// Check daily limit first
+const limitCheck = await window.checkDailyLimit('coinflip');
+if (!limitCheck.can_play) {
+throw new Error(`Daily limit reached! You've played ${limitCheck.played_today} times today (max: ${limitCheck.max_per_day})`);
 }
 
-const data = await res.json();
+// Report to backend using global function
+const result = await window.reportGameResult('coinflip', { 
+bet: bet, 
+won: win
+});
 
-if (data.success) {
+if (result.success) {
 // Update user balance
-userBalance = parseFloat(data.new_balance) || (userBalance + (win ? bet : -bet));
+userBalance = parseFloat(result.new_balance) || (userBalance + (win ? bet : -bet));
 document.getElementById('balance').textContent = `₦${userBalance.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
 
 // Update streak
@@ -611,12 +598,16 @@ winningStreak.shift();
 updateWinningStreak();
 
 // Show result
-showResult(win, coinResult, bet, payout, data.message);
+showResult(win, coinResult, bet, result.payout, result.message);
+
+// Update global balance if function exists
+if (window.updateBalance) {
+window.updateBalance(result.new_balance);
+}
 
 } else {
 // Handle API error (daily limit, etc.)
-showMessage('❌ ' + (data.message || 'Failed to process coin flip'), 'error');
-resetGameState();
+throw new Error(result.message || 'Failed to process coin flip');
 }
 
 } catch (error) {
@@ -721,7 +712,6 @@ streakContainer.appendChild(streakCount);
 
 // Reset game state after error
 function resetGameState() {
-// Reset choice
 userChoice = null;
 document.getElementById('heads-btn').classList.remove('active');
 document.getElementById('tails-btn').classList.remove('active');
