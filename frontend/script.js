@@ -1,8 +1,7 @@
 // ================================
-// FLEXIA Frontend Logic v12.0 — COMPLETE WITH ALL FEATURES
+// FLEXIA Frontend Logic v11.0 — FULLY UPDATED FOR BACKEND 12.2
 // ✅ Safe Game Claims ✅ Daily Limits ✅ Achievement Claims
 // ✅ 1-Second Cooldown ✅ Balance Updates ✅ Error Handling
-// ✅ Navigation ✅ Session Management ✅ Input Validation
 // ================================
 
 //========== CONFIGURATION========
@@ -13,72 +12,7 @@ const CONFIG = {
   SNAKE_REWARD: 200,
   COIN_FLIP_MIN_BET: 100,
   PLINKO_MIN_BET: 100,
-  CLAIM_COOLDOWN: 1000, // 1 second
-  BALANCE_REFRESH_INTERVAL: 30000, // 30 seconds
-  SESSION_CHECK_INTERVAL: 300000 // 5 minutes
-};
-
-//========== VALIDATORS ==========
-const Validators = {
-  validateEmail: (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
-  validatePhone: (phone) => /^234\d{10}$/.test(phone),
-  validateUsername: (username) => /^[a-zA-Z0-9_]{3,20}$/.test(username),
-  validatePin: (pin) => /^\d{4,6}$/.test(pin),
-  validatePassword: (password) => password.length >= 6,
-  validateAmount: (amount) => !isNaN(amount) && amount > 0,
-  validateBankAccount: (account) => /^\d{10,}$/.test(account)
-};
-
-//========== LOADER MANAGER ==========
-const Loader = {
-  show: function(elementId) {
-    const el = document.getElementById(elementId);
-    if (el) {
-      const originalHTML = el.innerHTML;
-      el.setAttribute('data-original-content', originalHTML);
-      el.innerHTML = '<div class="spinner"></div>';
-      el.style.opacity = '0.7';
-      el.disabled = true;
-    }
-  },
-  
-  hide: function(elementId) {
-    const el = document.getElementById(elementId);
-    if (el) {
-      const originalContent = el.getAttribute('data-original-content');
-      if (originalContent) {
-        el.innerHTML = originalContent;
-      }
-      el.style.opacity = '1';
-      el.disabled = false;
-    }
-  },
-  
-  showGlobal: function() {
-    const loader = document.createElement('div');
-    loader.id = 'global-loader';
-    loader.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 30, 0.8);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 99999;
-    `;
-    loader.innerHTML = '<div class="spinner large"></div>';
-    document.body.appendChild(loader);
-  },
-  
-  hideGlobal: function() {
-    const loader = document.getElementById('global-loader');
-    if (loader) {
-      loader.remove();
-    }
-  }
+  CLAIM_COOLDOWN: 1000 // 1 second
 };
 
 //========== CORE APP==========
@@ -86,161 +20,41 @@ const App = {
   currentUser: null,
   balanceVisible: true,
   lastBalanceUpdate: 0,
-  currentScreen: 'home',
   
   init: async function () {
-    this.setupCSS();
     await this.checkAuth();
-    this.setupEventListeners();
-    this.setupNetworkMonitoring();
-    this.setupSessionMonitor();
-    
     if (document.getElementById('app-screen')) {
       await Profile.load();
       await Banking.loadBanks();
       this.setupTheme();
-      this.setupNavigation();
-      this.handleReferralParam();
-      this.setupPasswordToggles();
-      
-      // Start auto-refresh
-      setInterval(() => this.refreshBalance(), CONFIG.BALANCE_REFRESH_INTERVAL);
-    }
-  },
-  
-  setupCSS: function() {
-    if (!document.getElementById('dynamic-css')) {
-      const style = document.createElement('style');
-      style.id = 'dynamic-css';
-      style.textContent = `
-        .spinner {
-          border: 3px solid rgba(255,255,255,0.3);
-          border-radius: 50%;
-          border-top: 3px solid #8000FF;
-          width: 24px;
-          height: 24px;
-          animation: spin 1s linear infinite;
-          margin: 0 auto;
-        }
-        
-        .spinner.large {
-          width: 50px;
-          height: 50px;
-          border-width: 5px;
-        }
-        
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        
-        .password-toggle {
-          position: absolute;
-          right: 15px;
-          top: 50%;
-          transform: translateY(-50%);
-          cursor: pointer;
-          color: #8000FF;
-          z-index: 10;
-        }
-        
-        .nav-item.active {
-          background: rgba(128, 0, 255, 0.2);
-          border-left: 3px solid #8000FF;
-        }
-        
-        .app-screen {
-          transition: opacity 0.3s ease;
-        }
-        
-        .input-with-icon {
-          position: relative;
-        }
-        
-        .input-with-icon input {
-          padding-right: 40px;
-          width: 100%;
-        }
-        
-        #error-fallback {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          background: #ff5252;
-          color: white;
-          padding: 10px;
-          text-align: center;
-          z-index: 99999;
-          animation: slideDown 0.3s ease-out;
-        }
-        
-        @keyframes slideDown {
-          from { transform: translateY(-100%); }
-          to { transform: translateY(0); }
-        }
-        
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
-          to { opacity: 1; transform: translateX(-50%) translateY(0); }
-        }
-        
-        @keyframes slideOut {
-          from { opacity: 1; transform: translateX(-50%) translateY(0); }
-          to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
-        }
-        
-        .network-status {
-          position: fixed;
-          bottom: 10px;
-          right: 10px;
-          width: 12px;
-          height: 12px;
-          border-radius: 50%;
-          z-index: 1000;
-        }
-        
-        .network-status.online {
-          background: #00FF55;
-          box-shadow: 0 0 10px #00FF55;
-        }
-        
-        .network-status.offline {
-          background: #FF0055;
-          box-shadow: 0 0 10px #FF0055;
-        }
-      `;
-      document.head.appendChild(style);
     }
   },
   
   checkAuth: async function () {
     try {
-      Loader.showGlobal();
       const res = await fetch('/api/user/profile');
       const data = await res.json();
-      
       if (data.success) {
         this.currentUser = data.user;
         this.showAppScreen();
-        this.refreshBalance(true);
-        this.updateWelcomeMessage(data.user.username);
-        this.setupNetworkStatus();
+        this.refreshBalance();
+        document.getElementById('welcome-text').textContent = `Welcome, ${data.user.username}!`;
+        document.getElementById('user-avatar').textContent = data.user.username.charAt(0).toUpperCase();
+        if (data.user.ui_theme === 'dark') {
+          document.body.classList.add('dark-mode');
+        }
       } else {
         this.showAuthScreen();
       }
     } catch (err) {
       console.error('Auth check failed:', err);
       this.showAuthScreen();
-    } finally {
-      Loader.hideGlobal();
     }
   },
   
   showAppScreen: function () {
     document.getElementById('auth-screen').classList.add('hidden');
     document.getElementById('app-screen').classList.remove('hidden');
-    this.navigateTo('home');
   },
   
   showAuthScreen: function () {
@@ -252,18 +66,17 @@ const App = {
     if (!this.currentUser) return;
     
     const now = Date.now();
+    // Only update balance if 5 seconds have passed since last update
     if (!force && (now - this.lastBalanceUpdate) < 5000) {
       return;
     }
     
     const display = document.getElementById('balance-display');
     if (display) {
-      display.textContent = this.balanceVisible 
-        ? `₦${this.currentUser.balance.toLocaleString(undefined, { 
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2 
-          })}`
-        : '••••••••';
+      display.textContent = this.currentUser.balance.toLocaleString(undefined, { 
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2 
+      });
     }
     
     const withdrawBalance = document.getElementById('withdraw-balance');
@@ -289,7 +102,12 @@ const App = {
   
   toggleBalance: function () {
     this.balanceVisible = !this.balanceVisible;
-    this.refreshBalance(true);
+    const display = document.getElementById('balance-display');
+    if (display) {
+      display.textContent = this.balanceVisible
+        ? this.currentUser.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })
+        : '••••••••';
+    }
   },
   
   showModal: function (modalId) {
@@ -302,6 +120,7 @@ const App = {
   },
   
   showMessage: function (text, type = 'info', duration = 5000) {
+    // Create message element
     const messageEl = document.createElement('div');
     messageEl.className = `global-message ${type}`;
     messageEl.style.cssText = `
@@ -312,7 +131,6 @@ const App = {
       padding: 15px 25px;
       background: ${type === 'success' ? 'rgba(0, 255, 85, 0.9)' : 
                    type === 'error' ? 'rgba(255, 0, 85, 0.9)' : 
-                   type === 'warning' ? 'rgba(255, 204, 0, 0.9)' :
                    'rgba(0, 204, 255, 0.9)'};
       color: white;
       border-radius: 8px;
@@ -326,6 +144,7 @@ const App = {
     messageEl.textContent = text;
     document.body.appendChild(messageEl);
     
+    // Remove after duration
     setTimeout(() => {
       messageEl.style.animation = 'slideOut 0.3s ease-out';
       setTimeout(() => {
@@ -340,7 +159,6 @@ const App = {
     document.body.classList.toggle('dark-mode');
     const isDark = document.body.classList.contains('dark-mode');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    
     fetch('/api/user/set-theme', {
       method: 'POST',
       credentials: 'include',
@@ -354,200 +172,22 @@ const App = {
     if (savedTheme === 'dark') {
       document.body.classList.add('dark-mode');
     }
-  },
-  
-  setupNavigation: function () {
-    document.querySelectorAll('.nav-item').forEach(item => {
-      item.addEventListener('click', (e) => {
-        e.preventDefault();
-        const target = item.dataset.target;
-        if (target) {
-          this.navigateTo(target);
-        }
-      });
-    });
-  },
-  
-  navigateTo: function (screenId) {
-    // Hide all screens
-    document.querySelectorAll('.app-screen').forEach(screen => {
-      screen.classList.add('hidden');
-    });
-    
-    // Show target screen
-    const targetScreen = document.getElementById(screenId + '-screen');
-    if (targetScreen) {
-      targetScreen.classList.remove('hidden');
-      this.currentScreen = screenId;
-    }
-    
-    // Update active nav
-    document.querySelectorAll('.nav-item').forEach(nav => {
-      nav.classList.remove('active');
-      if (nav.dataset.target === screenId) {
-        nav.classList.add('active');
-      }
-    });
-  },
-  
-  updateWelcomeMessage: function (username) {
-    const welcomeText = document.getElementById('welcome-text');
-    const userAvatar = document.getElementById('user-avatar');
-    
-    if (welcomeText) {
-      welcomeText.textContent = `Welcome, ${username}!`;
-    }
-    
-    if (userAvatar) {
-      userAvatar.textContent = username.charAt(0).toUpperCase();
-    }
-  },
-  
-  handleReferralParam: function () {
-    const urlParams = new URLSearchParams(window.location.search);
-    const refCode = urlParams.get('ref');
-    const referralInput = document.getElementById('reg-referral');
-    
-    if (refCode && referralInput) {
-      referralInput.value = refCode;
-      this.showMessage(`Referral code ${refCode} auto-filled!`, 'success');
-    }
-  },
-  
-  setupPasswordToggles: function () {
-    document.querySelectorAll('.password-toggle').forEach(toggle => {
-      toggle.addEventListener('click', function() {
-        const input = this.previousElementSibling;
-        if (input.type === 'password') {
-          input.type = 'text';
-          this.classList.remove('fa-eye');
-          this.classList.add('fa-eye-slash');
-        } else {
-          input.type = 'password';
-          this.classList.remove('fa-eye-slash');
-          this.classList.add('fa-eye');
-        }
-      });
-    });
-  },
-  
-  setupEventListeners: function () {
-    // Balance toggle
-    const balanceToggle = document.getElementById('balance-toggle');
-    if (balanceToggle) {
-      balanceToggle.addEventListener('click', () => this.toggleBalance());
-    }
-    
-    // Close modals on outside click
-    document.addEventListener('click', (e) => {
-      if (e.target.classList.contains('modal')) {
-        e.target.classList.add('hidden');
-      }
-    });
-    
-    // Close modals with escape key
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        document.querySelectorAll('.modal').forEach(modal => {
-          modal.classList.add('hidden');
-        });
-      }
-    });
-  },
-  
-  setupNetworkMonitoring: function () {
-    window.addEventListener('online', () => {
-      this.showMessage('Connection restored', 'success');
-      this.refreshBalance(true);
-      this.updateNetworkStatus(true);
-    });
-    
-    window.addEventListener('offline', () => {
-      this.showMessage('No internet connection', 'error');
-      this.updateNetworkStatus(false);
-    });
-    
-    // Initial status
-    this.updateNetworkStatus(navigator.onLine);
-  },
-  
-  setupNetworkStatus: function () {
-    if (!document.getElementById('network-status')) {
-      const statusEl = document.createElement('div');
-      statusEl.id = 'network-status';
-      statusEl.className = 'network-status';
-      document.body.appendChild(statusEl);
-    }
-  },
-  
-  updateNetworkStatus: function (isOnline) {
-    const statusEl = document.getElementById('network-status');
-    if (statusEl) {
-      statusEl.className = `network-status ${isOnline ? 'online' : 'offline'}`;
-    }
-  },
-  
-  setupSessionMonitor: function () {
-    setInterval(async () => {
-      try {
-        const res = await fetch('/api/user/check-session', { 
-          credentials: 'include',
-          headers: { 'Cache-Control': 'no-cache' }
-        });
-        
-        if (!res.ok) {
-          this.showMessage('Session expired. Please login again.', 'warning');
-          setTimeout(() => {
-            this.logout();
-          }, 3000);
-        }
-      } catch (e) {
-        // Silent fail for network errors
-      }
-    }, CONFIG.SESSION_CHECK_INTERVAL);
-  },
-  
-  logout: async function () {
-    try {
-      await fetch('/api/auth/logout', { 
-        method: 'POST', 
-        credentials: 'include' 
-      });
-    } catch (e) {
-      console.warn('Logout endpoint failed');
-    }
-    
-    // Clear cookies
-    document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax' +
-      (window.location.protocol === 'https:' ? '; secure' : '');
-    
-    window.location.href = '/';
   }
 };
 
-//========== ERROR HANDLER ==========
-window.addEventListener('error', (event) => {
-  console.error('Global error:', event.error);
-  
-  if (!document.getElementById('error-fallback')) {
-    const fallback = document.createElement('div');
-    fallback.id = 'error-fallback';
-    fallback.innerHTML = `
-      <span>Something went wrong. Please refresh the page.</span>
-      <button onclick="location.reload()" style="margin-left: 10px; background: white; color: #ff5252; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer;">
-        Refresh
-      </button>
-    `;
-    document.body.appendChild(fallback);
-    
-    // Auto-remove after 10 seconds
-    setTimeout(() => {
-      if (fallback.parentNode) {
-        fallback.remove();
-      }
-    }, 10000);
+// Add CSS animations for messages
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
   }
-});
+  @keyframes slideOut {
+    from { opacity: 1; transform: translateX(-50%) translateY(0); }
+    to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+  }
+`;
+document.head.appendChild(style);
 
 //========== GAME MANAGER ==========
 const GameManager = {
@@ -590,6 +230,7 @@ const GameManager = {
       throw new Error('Please wait 1 second between claims');
     }
     
+    // Check daily limit
     const limitCheck = await this.checkDailyLimit(gameType);
     if (!limitCheck.can_play) {
       throw new Error(`Daily limit reached! You've played ${limitCheck.played_today} times today (max: ${limitCheck.max_per_day})`);
@@ -642,7 +283,6 @@ const Auth = {
     const identifier = document.getElementById('login-username').value.trim();
     const password = document.getElementById('login-password').value;
     const messageEl = document.getElementById('login-message');
-    const loginBtn = document.getElementById('login-btn');
     
     if (!identifier || !password) {
       messageEl.textContent = 'Please fill all fields';
@@ -651,8 +291,6 @@ const Auth = {
     }
     
     try {
-      Loader.show('login-btn');
-      
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -673,8 +311,6 @@ const Auth = {
     } catch (error) {
       messageEl.textContent = 'Network error. Please try again.';
       messageEl.className = 'message error';
-    } finally {
-      Loader.hide('login-btn');
     }
   },
   
@@ -685,7 +321,6 @@ const Auth = {
     const referral = document.getElementById('reg-referral').value.trim();
     const contact = document.getElementById('reg-contact')?.value.trim() || '';
     const messageEl = document.getElementById('register-message');
-    const registerBtn = document.getElementById('register-btn');
     
     if (!username || !password || !coupon) {
       messageEl.textContent = 'All fields required';
@@ -693,27 +328,28 @@ const Auth = {
       return;
     }
     
-    if (!Validators.validateUsername(username)) {
-      messageEl.textContent = 'Username must be 3-20 characters (letters, numbers, underscore)';
+    if (username.length < 3) {
+      messageEl.textContent = 'Username must be at least 3 characters';
       messageEl.className = 'message error';
       return;
     }
     
-    if (!Validators.validatePassword(password)) {
+    if (password.length < 6) {
       messageEl.textContent = 'Password must be at least 6 characters';
       messageEl.className = 'message error';
       return;
     }
     
-    if (contact && !Validators.validateEmail(contact) && !Validators.validatePhone(contact)) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneRegex = /^234\d{10}$/;
+    
+    if (contact && !emailRegex.test(contact) && !phoneRegex.test(contact)) {
       messageEl.textContent = 'Contact must be valid email or Nigerian phone (234...)';
       messageEl.className = 'message error';
       return;
     }
     
     try {
-      Loader.show('register-btn');
-      
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -732,22 +368,17 @@ const Auth = {
     } catch (error) {
       messageEl.textContent = 'Network error. Please try again.';
       messageEl.className = 'message error';
-    } finally {
-      Loader.hide('register-btn');
     }
   },
   
   buyCoupon: async function () {
     try {
-      Loader.showGlobal();
       const res = await fetch('/api/coupon/whatsapp-numbers');
       const data = await res.json();
       const number = (data.success && data.number) ? data.number.trim() : '2348160881049';
       window.open(`https://wa.me/${number}`, '_blank');
     } catch (error) {
       window.open('https://wa.me/2348160881049', '_blank');
-    } finally {
-      Loader.hideGlobal();
     }
   }
 };
@@ -762,8 +393,6 @@ const Profile = {
   
   load: async function () {
     try {
-      Loader.show('profile-data');
-      
       const res = await fetch('/api/user/profile');
       const data = await res.json();
       if (data.success) {
@@ -789,10 +418,10 @@ const Profile = {
           
           <div class="profile-section">
             <h4><i class="fas fa-image"></i> Profile Picture</h4>
-            <div class="input-with-icon">
-              <input type="text" id="profile-pic-url" placeholder="Enter image URL">
-            </div>
-            <button class="btn-primary" onclick="Profile.setProfilePicture()" style="margin-top:10px;">
+            <input type="text" id="profile-pic-url" placeholder="Enter image URL" 
+                   style="width:100%;padding:8px;margin:5px 0;background:#151535;border:1px solid #8000FF;color:white;border-radius:4px;">
+            <button class="btn-primary" onclick="Profile.setProfilePicture()" 
+                    style="margin-top:10px;">
               <i class="fas fa-upload"></i> Update Picture
             </button>
         `;
@@ -801,7 +430,7 @@ const Profile = {
           html += `
             <div style="margin-top:15px;text-align:center;">
               <img src="${data.user.profile_picture}" 
-                   style="width:100px;height:100px;border-radius:15px;border:3px solid #8000FF;object-fit:cover;">
+                   style="width:100px;height:100px;border-radius:15px;border:3px solid #8000FF;">
             </div>
           `;
         }
@@ -812,8 +441,6 @@ const Profile = {
       console.error('Failed to load profile', err);
       document.getElementById('profile-data').innerHTML = 
         '<p class="error">Failed to load profile. Please try again.</p>';
-    } finally {
-      Loader.hide('profile-data');
     }
   },
   
@@ -825,8 +452,6 @@ const Profile = {
     }
     
     try {
-      Loader.showGlobal();
-      
       const res = await fetch('/api/user/set-profile-picture', {
         method: 'POST',
         credentials: 'include',
@@ -843,8 +468,6 @@ const Profile = {
       }
     } catch (error) {
       App.showMessage('Network error. Please try again.', 'error');
-    } finally {
-      Loader.hideGlobal();
     }
   }
 };
@@ -855,21 +478,17 @@ const Referral = {
     if (!App.currentUser) return;
     
     try {
-      Loader.show('referral-data');
-      
       const res = await fetch('/api/user/profile');
       const data = await res.json();
       
       if (data.success) {
-        const unclaimed = data.referrals?.unclaimed_bonus || 0;
-        const count = data.referrals?.count || 0;
-        
+        const unclaimed = data.referrals.unclaimed_bonus;
         const html = `
           <div class="referral-section">
             <h4><i class="fas fa-users"></i> Your Referral Program</h4>
             <p><strong>Your Referral Code:</strong> <code style="font-size:1.2em;background:#8000FF;padding:5px 10px;border-radius:5px;">${data.user.referral_code}</code></p>
             <p>Share this code to earn <strong>₦${CONFIG.REFERRAL_BONUS.toLocaleString()}</strong> per friend!</p>
-            <p><strong>Referred Users:</strong> ${count}</p>
+            <p><strong>Referred Users:</strong> ${data.referrals.count}</p>
             <p><strong>Unclaimed Bonus:</strong> ₦${unclaimed.toLocaleString()}</p>
             
             ${unclaimed > 0
@@ -882,7 +501,7 @@ const Referral = {
           
           <div class="referral-section" style="margin-top:20px;">
             <h4><i class="fas fa-share-alt"></i> Share Your Link</h4>
-            <div style="background:#151535;padding:10px;border-radius:5px;border:1px solid #8000FF;margin:10px 0;word-break:break-all;">
+            <div style="background:#151535;padding:10px;border-radius:5px;border:1px solid #8000FF;margin:10px 0;">
               ${window.location.origin}/?ref=${data.user.referral_code}
             </div>
             <button class="btn-secondary" onclick="Referral.copyReferralLink('${data.user.referral_code}')" 
@@ -898,8 +517,6 @@ const Referral = {
     } catch (error) {
       console.error('Referral load error:', error);
       App.showMessage('Failed to load referral data', 'error');
-    } finally {
-      Loader.hide('referral-data');
     }
   },
   
@@ -921,8 +538,6 @@ const Referral = {
   
   claimBonuses: async function () {
     try {
-      Loader.showGlobal();
-      
       const res = await fetch('/api/referral/claim', {
         method: 'POST',
         credentials: 'include'
@@ -939,8 +554,6 @@ const Referral = {
       Referral.open(); // Refresh the modal
     } catch (error) {
       App.showMessage('Failed to claim bonus. Please try again.', 'error');
-    } finally {
-      Loader.hideGlobal();
     }
   }
 };
@@ -955,7 +568,16 @@ const Banking = {
       const data = await res.json();
       if (data.success) {
         this.banks = data.banks;
-        this.updateBankSelect();
+        const select = document.getElementById('bank-select');
+        if (select) {
+          select.innerHTML = '<option value="" disabled selected>Select Bank</option>';
+          data.banks.forEach(bank => {
+            const opt = document.createElement('option');
+            opt.value = bank.code;
+            opt.textContent = bank.name;
+            select.appendChild(opt);
+          });
+        }
       } else {
         console.error('Failed to load banks:', data.message);
         this.loadFallbackBanks();
@@ -963,19 +585,6 @@ const Banking = {
     } catch (err) {
       console.error('Error loading banks:', err);
       this.loadFallbackBanks();
-    }
-  },
-  
-  updateBankSelect() {
-    const select = document.getElementById('bank-select');
-    if (select) {
-      select.innerHTML = '<option value="" disabled selected>Select Bank</option>';
-      this.banks.forEach(bank => {
-        const opt = document.createElement('option');
-        opt.value = bank.code;
-        opt.textContent = bank.name;
-        select.appendChild(opt);
-      });
     }
   },
   
@@ -1004,7 +613,16 @@ const Banking = {
     ];
     
     this.banks = fallbackBanks;
-    this.updateBankSelect();
+    const select = document.getElementById('bank-select');
+    if (select) {
+      select.innerHTML = '<option value="" disabled selected>Select Bank</option>';
+      fallbackBanks.forEach(bank => {
+        const opt = document.createElement('option');
+        opt.value = bank.code;
+        opt.textContent = bank.name;
+        select.appendChild(opt);
+      });
+    }
   },
   
   openWithdraw: async function () {
@@ -1044,7 +662,7 @@ const Banking = {
     const accountNumber = document.getElementById('account-number').value.trim();
     const accountName = document.getElementById('account-name-manual').value.trim();
     
-    if (!Validators.validateAmount(amount) || amount < CONFIG.MIN_WITHDRAWAL) {
+    if (!amount || amount < CONFIG.MIN_WITHDRAWAL) {
       App.showMessage(`Minimum withdrawal: ₦${CONFIG.MIN_WITHDRAWAL.toLocaleString()}`, 'error');
       return;
     }
@@ -1054,14 +672,14 @@ const Banking = {
       return;
     }
     
-    if (!bankCode || !Validators.validateBankAccount(accountNumber)) {
-      App.showMessage('Invalid bank account number (must be at least 10 digits).', 'error');
+    if (!bankCode || !accountNumber || accountNumber.length < 10 || isNaN(accountNumber)) {
+      App.showMessage('Invalid bank details.', 'error');
       return;
     }
     
     const pin = prompt('Enter your 4–6 digit withdrawal PIN:');
-    if (!Validators.validatePin(pin)) {
-      App.showMessage('PIN must be 4 to 6 digits.', 'error');
+    if (!pin || !/^\d{4,6}$/.test(pin)) {
+      App.showMessage('Valid PIN required.', 'error');
       return;
     }
     
@@ -1070,8 +688,6 @@ const Banking = {
     msgEl.className = 'message info';
     
     try {
-      Loader.showGlobal();
-      
       const res = await fetch('/api/banking/withdraw', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1097,8 +713,6 @@ const Banking = {
     } catch (error) {
       msgEl.textContent = 'Network error. Please try again.';
       msgEl.className = 'message error';
-    } finally {
-      Loader.hideGlobal();
     }
   }
 };
@@ -1109,13 +723,14 @@ const Achievements = {
     if (!App.currentUser) return;
     
     try {
-      Loader.showGlobal();
-      
       const res = await fetch('/api/achievements');
       const data = await res.json();
       
       if (data.success) {
+        // Store data for claims
         this.achievementsData = data;
+        
+        // Redirect to achievements page
         window.location.href = 'achievements.html';
       } else {
         App.showMessage('Failed to load achievements', 'error');
@@ -1123,15 +738,11 @@ const Achievements = {
     } catch (error) {
       console.error('Achievements error:', error);
       App.showMessage('Failed to load achievements', 'error');
-    } finally {
-      Loader.hideGlobal();
     }
   },
   
   claimAllRewards: async function () {
     try {
-      Loader.showGlobal();
-      
       const res = await fetch('/api/achievements/claim', {
         method: 'POST',
         credentials: 'include',
@@ -1147,8 +758,6 @@ const Achievements = {
       }
     } catch (error) {
       App.showMessage('Network error. Please try again.', 'error');
-    } finally {
-      Loader.hideGlobal();
     }
   }
 };
@@ -1260,8 +869,6 @@ const Games = {
     msgEl.className = 'message';
     
     try {
-      Loader.show('tiktok-content');
-      
       const res = await fetch('/api/games/tiktok/daily', {
         credentials: 'include'
       });
@@ -1326,8 +933,6 @@ const Games = {
       `;
       document.querySelector('.action-buttons').style.display = 'none';
       App.showModal('tiktok-modal');
-    } finally {
-      Loader.hide('tiktok-content');
     }
   },
   
@@ -1581,8 +1186,6 @@ const Settings = {
     if (!App.currentUser) return;
     
     try {
-      Loader.show('settings-data');
-      
       const res = await fetch('/api/user/profile');
       const data = await res.json();
       if (!data.success) {
@@ -1665,12 +1268,49 @@ const Settings = {
       `;
       
       document.getElementById('settings-data').innerHTML = html;
+      
+      // Add social link styles
+      if (!document.getElementById('social-style')) {
+        const style = document.createElement('style');
+        style.id = 'social-style';
+        style.textContent = `
+          .social-link {
+            display: inline-block;
+            margin: 5px 0;
+            padding: 8px 15px;
+            background: rgba(30,30,69,0.8);
+            border: 1px solid #8000FF;
+            border-radius: 8px;
+            color: #8000FF;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+          }
+          .social-link:hover {
+            background: rgba(128,0,255,0.2);
+            transform: translateY(-2px);
+          }
+          .settings-section {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #252540;
+          }
+          .settings-section:last-child {
+            border-bottom: none;
+          }
+          .small-text {
+            font-size: 0.8rem;
+            color: #A0A0B5;
+            margin: 10px 0;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
       App.showModal('settings-modal');
     } catch (error) {
       console.error('Settings error:', error);
       App.showMessage('Failed to load settings', 'error');
-    } finally {
-      Loader.hide('settings-data');
     }
   },
   
@@ -1679,7 +1319,7 @@ const Settings = {
     if (isChange) {
       currentPin = prompt('Enter your CURRENT 4-6 digit Withdrawal PIN:');
       if (!currentPin) return;
-      if (!Validators.validatePin(currentPin)) {
+      if (!/^\d{4,6}$/.test(currentPin)) {
         App.showMessage('Current PIN must be 4 to 6 digits.', 'error');
         return;
       }
@@ -1704,7 +1344,7 @@ const Settings = {
     }
     
     const newPin = prompt('Enter your NEW 4-6 digit Withdrawal PIN:');
-    if (!Validators.validatePin(newPin)) {
+    if (!newPin || !/^\d{4,6}$/.test(newPin)) {
       App.showMessage('New PIN must be 4 to 6 digits.', 'error');
       return;
     }
@@ -1744,7 +1384,7 @@ const Settings = {
     if (!oldPass) return;
     
     const newPass = prompt("Enter a new password (min 6 characters):");
-    if (!Validators.validatePassword(newPass)) {
+    if (!newPass || newPass.length < 6) {
       App.showMessage("Password must be at least 6 characters.", "error");
       return;
     }
@@ -1779,12 +1419,19 @@ const Settings = {
     if (!confirm('Are you sure you want to logout?')) return;
     
     try {
-      await App.logout();
+      await fetch('/api/auth/logout', { 
+        method: 'POST', 
+        credentials: 'include' 
+      });
     } catch (e) {
-      console.error('Logout error:', e);
-      // Force redirect anyway
-      window.location.href = '/';
+      console.warn('Logout endpoint failed');
     }
+    
+    // Clear cookies
+    document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax' +
+      (window.location.protocol === 'https:' ? '; secure' : '');
+    
+    window.location.href = '/';
   }
 };
 
@@ -1835,22 +1482,4 @@ window.showMessage = function(message, type = 'info') {
 
 window.updateBalance = function(newBalance) {
   App.updateBalance(newBalance);
-};
-
-window.showLoader = function(elementId) {
-  Loader.show(elementId);
-};
-
-window.hideLoader = function(elementId) {
-  Loader.hide(elementId);
-};
-
-window.showGlobalLoader = function() {
-  Loader.showGlobal();
-};
-
-window.hideGlobalLoader = function() {
-  Loader.hideGlobal();
-};
-
-window.validators = Validators;
+}; 
