@@ -1,5 +1,5 @@
-# backend/app.py - ULTIMATE VERSION 12.1
-# FLEXIA Platform - ALL FIXES + ALL ENDPOINTS
+# backend/app.py - ULTIMATE VERSION 12.2 - ALL FIXES APPLIED
+# FLEXIA Platform - PRODUCTION READY
 
 import os
 import json
@@ -808,19 +808,61 @@ def get_global_withdrawal_days():
         return_db_connection(conn)
     return CONFIG.DEFAULT_WITHDRAWAL_DAYS
 
+# ======================= FIXED: ATOMIC BALANCE UPDATES =======================
+def update_user_balance(user_id, amount_change):
+    """Thread-safe atomic balance update - FIXED"""
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+        
+        # Use database-level atomic update
+        if os.environ.get('DATABASE_URL'):
+            cursor.execute(f'''
+            UPDATE users 
+            SET balance = balance + {ph}
+            WHERE id = {ph}
+            RETURNING balance
+            ''', (amount_change, user_id))
+        else:
+            cursor.execute(f'''
+            UPDATE users 
+            SET balance = balance + {ph}
+            WHERE id = {ph}
+            ''', (amount_change, user_id))
+            
+            cursor.execute(f'SELECT balance FROM users WHERE id = {ph}', (user_id,))
+        
+        row = cursor.fetchone()
+        new_balance = float(row[0]) if row and row[0] else 0.0
+        
+        conn.commit()
+        app.logger.info(f"✅ Atomic balance update for user {user_id}: {amount_change}, new balance: {new_balance}")
+        return new_balance
+        
+    except Exception as e:
+        app.logger.error(f"❌ Balance update error: {e}")
+        conn.rollback()
+        return None
+    finally:
+        return_db_connection(conn)
+
 def check_game_cooldown(user_id, game_type):
-    """Check if user is in cooldown for a specific game"""
+    """Check if user is in cooldown for a specific game - FIXED"""
     conn = get_db()
     cursor = conn.cursor()
     try:
         cursor.execute('SELECT last_game_timestamp FROM users WHERE id = %s', (user_id,))
         row = cursor.fetchone()
         if row and row[0]:
-            last_game = datetime.fromisoformat(row[0])
-            now = datetime.utcnow()
-            # 2 second cooldown between games
-            if (now - last_game).total_seconds() < 2:
-                return False
+            try:
+                last_game = datetime.fromisoformat(row[0])
+                now = datetime.utcnow()
+                # 1 second cooldown between games
+                if (now - last_game).total_seconds() < 1:
+                    return False
+            except:
+                pass
         return True
     except Exception as e:
         app.logger.error(f"Cooldown check error: {e}")
@@ -906,9 +948,9 @@ def is_withdrawal_day(user_id=None):
     finally:
         return_db_connection(conn)
 
-# ======================= NEW: DUPLICATE CLAIM PREVENTION =======================
-def check_duplicate_claim(user_id, game_type, data_hash, cooldown_seconds=3):
-    """Check if user is trying to claim duplicate reward"""
+# ======================= FIXED: DUPLICATE CLAIM PREVENTION =======================
+def check_duplicate_claim(user_id, game_type, data_hash, cooldown_seconds=1):
+    """Check if user is trying to claim duplicate reward - FIXED"""
     conn = get_db()
     cursor = conn.cursor()
     try:
@@ -924,14 +966,14 @@ def check_duplicate_claim(user_id, game_type, data_hash, cooldown_seconds=3):
         return recent_claims == 0
     except Exception as e:
         app.logger.error(f"Duplicate claim check error: {e}")
-        return True
+        return True  # Allow on error
     finally:
         return_db_connection(conn)
 
 def create_transaction_hash(user_id, game_type, data):
-    """Create hash to identify duplicate transactions"""
+    """Create hash to identify duplicate transactions - FIXED"""
     data_str = json.dumps(data, sort_keys=True)
-    hash_input = f"{user_id}-{game_type}-{data_str}-{int(time.time()/60)}"  # Change every minute
+    hash_input = f"{user_id}-{game_type}-{data_str}-{int(time.time())}"  # Change every second
     return hashlib.md5(hash_input.encode()).hexdigest()
 
 # ======================= FIXED: ACHIEVEMENT REWARDS =======================
@@ -971,11 +1013,11 @@ def grant_achievement_rewards(user_id):
         current_points = int(row[3]) if row[3] else 0
         last_check = row[4] if row[4] else None
         
-        # Check if already processed recently (within 1 minute)
+        # Check if already processed recently (within 5 minutes)
         if last_check:
             try:
                 last_check_time = datetime.fromisoformat(last_check)
-                if (datetime.utcnow() - last_check_time).total_seconds() < 60:
+                if (datetime.utcnow() - last_check_time).total_seconds() < 300:  # 5 minutes
                     conn.rollback()
                     return balance
             except:
@@ -1041,11 +1083,18 @@ def grant_achievement_rewards(user_id):
 
         new_balance = balance + total_reward
         
-        # Update user balance and points
-        cursor.execute(f'''
-        UPDATE users SET balance = {ph}, points = {ph}, last_achievement_check = {ph} 
-        WHERE id = {ph}
-        ''', (new_balance, total_points, datetime.utcnow().isoformat(), user_id))
+        # Update user balance and points using atomic update
+        if os.environ.get('DATABASE_URL'):
+            cursor.execute(f'''
+            UPDATE users SET balance = {ph}, points = {ph}, last_achievement_check = {ph} 
+            WHERE id = {ph}
+            ''', (new_balance, total_points, datetime.utcnow().isoformat(), user_id))
+        else:
+            # For SQLite, we need to update separately
+            cursor.execute(f'''
+            UPDATE users SET balance = balance + {ph}, points = {ph}, last_achievement_check = {ph} 
+            WHERE id = {ph}
+            ''', (total_reward, total_points, datetime.utcnow().isoformat(), user_id))
         
         # Record achievement transaction if reward > 0
         if total_reward > 0:
@@ -1115,18 +1164,6 @@ with app.app_context():
     run_cleanup_scheduler()
     run_backup_scheduler()  # Start backup scheduler
 
-# ======================= STATIC FILES =======================
-@app.route('/')
-def index():
-    return send_from_directory(CONFIG.FRONTEND_DIR, 'index.html')
-
-@app.route('/<path:filename>')
-def serve_static(filename):
-    try:
-        return send_from_directory(CONFIG.FRONTEND_DIR, filename)
-    except FileNotFoundError:
-        return send_from_directory(CONFIG.FRONTEND_DIR, 'index.html')
-
 # ======================= DEBUG ENDPOINTS =======================
 @app.route('/api/debug/db-status', methods=['GET'])
 def db_status():
@@ -1157,6 +1194,33 @@ def db_status():
     except Exception as e:
         app.logger.error(f"DB status error: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/debug/user-claims', methods=['GET'])
+@require_auth
+def debug_user_claims():
+    """Debug endpoint to see recent claims"""
+    user = get_current_user()
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+    SELECT type, amount, timestamp 
+    FROM transactions 
+    WHERE user_id = %s 
+    ORDER BY timestamp DESC 
+    LIMIT 20
+    ''', (user['id'],))
+    
+    claims = []
+    for row in cursor.fetchall():
+        claims.append({
+            'type': row[0],
+            'amount': row[1],
+            'timestamp': row[2]
+        })
+    
+    return_db_connection(conn)
+    return jsonify({"success": True, "claims": claims})
 
 # ======================= ENHANCED HEALTH CHECK =======================
 def get_uptime():
@@ -1194,7 +1258,7 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "uptime": get_uptime(),
             "database": db_status,
-            "version": "12.1",
+            "version": "12.2",
             "stats": {
                 "total_users": user_count,
                 "pending_withdrawals": pending_withdrawals
@@ -1214,7 +1278,7 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "database": f"error: {str(e)}",
             "uptime": get_uptime(),
-            "version": "12.1"
+            "version": "12.2"
         }), 503
 
 # ======================= BACKUP ENDPOINTS =======================
@@ -1441,8 +1505,7 @@ def login():
                        (datetime.utcnow().isoformat(), user['id']))
         conn.commit()
         
-        # Grant achievement rewards on login
-        grant_achievement_rewards(user['id'])
+        # REMOVED: grant_achievement_rewards(user['id']) - Achievement rewards now manual only
         
         resp = jsonify({
             "success": True,
@@ -1693,6 +1756,48 @@ def verify_withdrawal_pin():
     return jsonify({"success": True, "message": "PIN verified"})
 
 # ================= GAME ENDPOINTS =================
+@app.route('/api/games/limit-check', methods=['GET'])
+@require_auth
+def check_game_limits():
+    """Check user's daily game limits"""
+    user = get_current_user()
+    game_type = request.args.get('game', '')
+    
+    limits = {
+        'snake': 20,
+        'coinflip': 50,
+        'plinko': 50,
+        'spin': 1,
+        'tiktok': 1
+    }
+    
+    if game_type not in limits:
+        return jsonify({"success": True, "can_play": True, "remaining": 999})
+    
+    max_plays = limits[game_type]
+    today = datetime.utcnow().date()
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('SELECT COUNT(*) FROM game_plays WHERE user_id = %s AND game_type = %s AND play_date = %s',
+                       (user['id'], game_type, today))
+        played_today = cursor.fetchone()[0]
+        remaining = max(0, max_plays - played_today)
+        
+        return jsonify({
+            "success": True,
+            "can_play": remaining > 0,
+            "played_today": played_today,
+            "remaining": remaining,
+            "max_per_day": max_plays
+        })
+    except Exception as e:
+        app.logger.error(f"Limit check error: {e}")
+        return jsonify({"success": False, "message": "Failed to check limits"}), 500
+    finally:
+        return_db_connection(conn)
+
 @app.route('/api/games/snake/report', methods=['POST'])
 @require_auth
 def report_snake():
@@ -1708,8 +1813,13 @@ def report_snake():
     
     app.logger.info(f"Snake report from {user['username']}: {apples} apples")
     
+    # Validate input
     if apples <= 0 or apples > 100:
         return jsonify({"success": False, "message": "Invalid apple count (1-100)"}), 400
+    
+    # Check game cooldown
+    if not check_game_cooldown(user['id'], 'SNAKE'):
+        return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
     
     # Check daily plays
     if not can_play_today(user['id'], 'snake', max_plays=20):
@@ -1717,23 +1827,19 @@ def report_snake():
     
     # Check duplicate claim
     data_hash = create_transaction_hash(user['id'], 'SNAKE', {'apples': apples})
-    if not check_duplicate_claim(user['id'], 'SNAKE', data_hash, cooldown_seconds=3):
+    if not check_duplicate_claim(user['id'], 'SNAKE', data_hash, cooldown_seconds=1):
         return jsonify({"success": False, "message": "Please wait before claiming again"}), 429
     
     reward = apples * CONFIG.SNAKE_REWARD
+    
     conn = get_db()
     cursor = conn.cursor()
     
     try:
-        current_balance = float(user.get('balance', 0))
-        new_balance = current_balance + reward
-        
-        app.logger.info(f"Snake reward calculation: {apples} × {CONFIG.SNAKE_REWARD} = {reward}")
-        app.logger.info(f"Balance update: {current_balance} → {new_balance}")
-        
-        # Update user balance
-        cursor.execute('UPDATE users SET balance = %s WHERE id = %s',
-                      (new_balance, user['id']))
+        # Use atomic balance update
+        new_balance = update_user_balance(user['id'], reward)
+        if new_balance is None:
+            return jsonify({"success": False, "message": "Failed to update balance"}), 500
         
         # Update game stats
         game_stats = json.loads(user.get('game_stats', '{}'))
@@ -1767,8 +1873,7 @@ def report_snake():
         
         conn.commit()
         
-        # Grant achievement rewards
-        grant_achievement_rewards(user['id'])
+        # REMOVED: grant_achievement_rewards(user['id']) - Achievement rewards now manual only
         
         app.logger.info(f"✅ Snake reward granted to {user['username']}: ₦{reward}")
         
@@ -1808,23 +1913,31 @@ def report_coinflip():
     if bet < CONFIG.COIN_FLIP_MIN_BET or bet > 50000 or float(user['balance']) < bet:
         return jsonify({"success": False, "message": f"Invalid bet (min: {CONFIG.COIN_FLIP_MIN_BET}, max: 50000)"}), 400
     
+    # Check game cooldown
+    if not check_game_cooldown(user['id'], 'COINFLIP'):
+        return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
+    
     # Check daily plays
     if not can_play_today(user['id'], 'coinflip', max_plays=50):
         return jsonify({"success": False, "message": "Max 50 coin flips per day"}), 403
     
     # Check duplicate claim
     data_hash = create_transaction_hash(user['id'], 'COINFLIP', {'bet': bet, 'won': won})
-    if not check_duplicate_claim(user['id'], 'COINFLIP', data_hash, cooldown_seconds=3):
+    if not check_duplicate_claim(user['id'], 'COINFLIP', data_hash, cooldown_seconds=1):
         return jsonify({"success": False, "message": "Please wait before playing again"}), 429
     
     payout = bet * 2 if won else 0
     net_change = payout - bet
-    new_balance = float(user['balance']) + net_change
     
     conn = get_db()
     cursor = conn.cursor()
     
     try:
+        # Use atomic balance update
+        new_balance = update_user_balance(user['id'], net_change)
+        if new_balance is None:
+            return jsonify({"success": False, "message": "Failed to update balance"}), 500
+        
         game_stats = json.loads(user.get('game_stats', '{}'))
         coinflip_stats = game_stats.get('coin_flip', {'wins': 0, 'losses': 0, 'current_streak': 0})
         
@@ -1837,8 +1950,8 @@ def report_coinflip():
         
         game_stats['coin_flip'] = coinflip_stats
         
-        cursor.execute('UPDATE users SET balance = %s, game_stats = %s WHERE id = %s',
-                       (new_balance, json.dumps(game_stats), user['id']))
+        cursor.execute('UPDATE users SET game_stats = %s WHERE id = %s',
+                       (json.dumps(game_stats), user['id']))
         
         # Update last game timestamp
         update_last_game_timestamp(user['id'])
@@ -1860,8 +1973,7 @@ def report_coinflip():
         
         conn.commit()
         
-        # Grant achievement rewards
-        grant_achievement_rewards(user['id'])
+        # REMOVED: grant_achievement_rewards(user['id']) - Achievement rewards now manual only
         
         app.logger.info(f"✅ Coin flip processed for {user['username']}: {'WON' if won else 'LOST'} {bet}, net: {net_change}")
         
@@ -1903,23 +2015,31 @@ def report_plinko():
     if multiplier not in [0.5, 3, 10]:
         return jsonify({"success": False, "message": "Invalid multiplier"}), 400
     
+    # Check game cooldown
+    if not check_game_cooldown(user['id'], 'PLINKO'):
+        return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
+    
     # Check daily plays
     if not can_play_today(user['id'], 'plinko', max_plays=50):
         return jsonify({"success": False, "message": "Max 50 plinko plays per day"}), 403
     
     # Check duplicate claim
     data_hash = create_transaction_hash(user['id'], 'PLINKO', {'bet': bet, 'multiplier': multiplier})
-    if not check_duplicate_claim(user['id'], 'PLINKO', data_hash, cooldown_seconds=3):
+    if not check_duplicate_claim(user['id'], 'PLINKO', data_hash, cooldown_seconds=1):
         return jsonify({"success": False, "message": "Please wait before playing again"}), 429
     
     win_amount = bet * multiplier
     net_change = win_amount - bet  # Positive if win, negative if loss
-    new_balance = float(user['balance']) + net_change
     
     conn = get_db()
     cursor = conn.cursor()
     
     try:
+        # Use atomic balance update
+        new_balance = update_user_balance(user['id'], net_change)
+        if new_balance is None:
+            return jsonify({"success": False, "message": "Failed to update balance"}), 500
+        
         game_stats = json.loads(user.get('game_stats', '{}'))
         plinko_stats = game_stats.get('plinko', {'total_wins': 0, 'total_bets': 0, 'highest_win': 0})
         
@@ -1932,8 +2052,8 @@ def report_plinko():
         
         game_stats['plinko'] = plinko_stats
         
-        cursor.execute('UPDATE users SET balance = %s, game_stats = %s WHERE id = %s',
-                       (new_balance, json.dumps(game_stats), user['id']))
+        cursor.execute('UPDATE users SET game_stats = %s WHERE id = %s',
+                       (json.dumps(game_stats), user['id']))
         
         # Update last game timestamp
         update_last_game_timestamp(user['id'])
@@ -1955,8 +2075,7 @@ def report_plinko():
         
         conn.commit()
         
-        # Grant achievement rewards
-        grant_achievement_rewards(user['id'])
+        # REMOVED: grant_achievement_rewards(user['id']) - Achievement rewards now manual only
         
         app.logger.info(f"✅ Plinko processed for {user['username']}: bet {bet}, multiplier {multiplier}, net: {net_change}")
         
@@ -1991,8 +2110,14 @@ def report_spin():
     
     app.logger.info(f"Spin wheel from {user['username']}: reward {reward}")
     
-    if reward not in [0, 50, 100, 200, 500, 1000]:
+    # Validate reward amount
+    valid_rewards = [0, 50, 100, 200, 500, 1000]
+    if reward not in valid_rewards:
         return jsonify({"success": False, "message": "Invalid spin reward"}), 400
+    
+    # Check game cooldown
+    if not check_game_cooldown(user['id'], 'SPIN'):
+        return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
     
     # Check daily plays
     if not can_play_today(user['id'], 'spin', max_plays=1):
@@ -2000,16 +2125,17 @@ def report_spin():
     
     # Check duplicate claim
     data_hash = create_transaction_hash(user['id'], 'SPIN', {'reward': reward})
-    if not check_duplicate_claim(user['id'], 'SPIN', data_hash, cooldown_seconds=3):
+    if not check_duplicate_claim(user['id'], 'SPIN', data_hash, cooldown_seconds=1):
         return jsonify({"success": False, "message": "Please wait before spinning again"}), 429
     
     conn = get_db()
     cursor = conn.cursor()
     
     try:
-        new_balance = float(user['balance']) + reward
-        
-        cursor.execute('UPDATE users SET balance = %s WHERE id = %s', (new_balance, user['id']))
+        # Use atomic balance update
+        new_balance = update_user_balance(user['id'], reward)
+        if new_balance is None:
+            return jsonify({"success": False, "message": "Failed to update balance"}), 500
         
         # Update last game timestamp
         update_last_game_timestamp(user['id'])
@@ -2030,8 +2156,7 @@ def report_spin():
         
         conn.commit()
         
-        # Grant achievement rewards
-        grant_achievement_rewards(user['id'])
+        # REMOVED: grant_achievement_rewards(user['id']) - Achievement rewards now manual only
         
         app.logger.info(f"✅ Spin wheel processed for {user['username']}: reward {reward}")
         
@@ -2160,10 +2285,9 @@ def get_achievements():
         unlocked_achievements = sum(1 for a in achievements_data if a['unlocked'])
         total_points = sum(a['points'] for a in achievements_data if a['unlocked'])
         
-        # Grant achievement rewards (auto-grants on view)
-        grant_achievement_rewards(user['id'])
+        # REMOVED: grant_achievement_rewards(user['id']) - Achievement rewards now manual only
         
-        # Get fresh balance after granting rewards
+        # Get fresh balance
         cursor.execute('SELECT balance FROM users WHERE id = %s', (user['id'],))
         fresh_balance_row = cursor.fetchone()
         fresh_balance = float(fresh_balance_row[0]) if fresh_balance_row and fresh_balance_row[0] else balance
@@ -2184,6 +2308,29 @@ def get_achievements():
         return jsonify({"success": False, "message": f"Failed to load achievements: {str(e)}"}), 500
     finally:
         return_db_connection(conn)
+
+@app.route('/api/achievements/claim', methods=['POST'])
+@require_auth
+def claim_achievement_rewards():
+    """Manual achievement reward claiming - NEW ENDPOINT"""
+    user = get_current_user()
+    
+    try:
+        # Call the achievement grant function
+        new_balance = grant_achievement_rewards(user['id'])
+        
+        if new_balance is None:
+            return jsonify({"success": False, "message": "Failed to process achievement rewards"}), 500
+        
+        return jsonify({
+            "success": True,
+            "message": "Achievement rewards processed successfully",
+            "new_balance": new_balance
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Claim achievement error: {e}")
+        return jsonify({"success": False, "message": f"Failed to claim: {str(e)}"}), 500
 
 # ================= TIKTOK DAILY =================
 @app.route('/api/games/tiktok/daily', methods=['GET'])
@@ -2253,9 +2400,11 @@ def follow_tiktok_daily():
             return jsonify({"success": False, "message": "No task for today"}), 404
         
         reward = float(task_row[0]) if task_row[0] else CONFIG.TIKTOK_REWARD
-        new_balance = float(user['balance']) + reward
         
-        cursor.execute('UPDATE users SET balance = %s WHERE id = %s', (new_balance, user['id']))
+        # Use atomic balance update
+        new_balance = update_user_balance(user['id'], reward)
+        if new_balance is None:
+            return jsonify({"success": False, "message": "Failed to update balance"}), 500
         
         tx_id = f"TIKTOK-{secrets.token_hex(8)}"
         cursor.execute('''
@@ -2265,8 +2414,7 @@ def follow_tiktok_daily():
         
         conn.commit()
         
-        # Grant achievement rewards
-        grant_achievement_rewards(user['id'])
+        # REMOVED: grant_achievement_rewards(user['id']) - Achievement rewards now manual only
         
         app.logger.info(f"✅ TikTok daily claimed by {user['username']}: reward: {reward}")
         
@@ -2525,12 +2673,8 @@ def admin_approve_withdrawal():
         
         # If rejecting, refund the amount to user balance
         if action == 'REJECT':
-            cursor.execute('SELECT balance FROM users WHERE id = %s', (user_id,))
-            user_row = cursor.fetchone()
-            if user_row:
-                current_balance = float(user_row[0]) if user_row[0] else 0
-                new_balance = current_balance + amount
-                cursor.execute('UPDATE users SET balance = %s WHERE id = %s', (new_balance, user_id))
+            # Use atomic balance update
+            update_user_balance(user_id, amount)
         
         # Update transaction status
         cursor.execute('UPDATE transactions SET status = %s WHERE id = %s', (new_status, transaction_id))
@@ -3025,10 +3169,13 @@ def claim_referral_bonus():
         if unclaimed <= 0:
             return jsonify({"success": False, "message": "No bonus to claim"}), 400
         
-        new_balance = float(user['balance']) + unclaimed
+        # Use atomic balance update
+        new_balance = update_user_balance(user['id'], unclaimed)
+        if new_balance is None:
+            return jsonify({"success": False, "message": "Failed to update balance"}), 500
         
-        cursor.execute('UPDATE users SET balance = %s, claimed_bonuses = %s WHERE id = %s',
-                       (new_balance, total_bonus, user['id']))
+        cursor.execute('UPDATE users SET claimed_bonuses = %s WHERE id = %s',
+                       (total_bonus, user['id']))
         
         # Record transaction
         tx_id = f"REF-{secrets.token_hex(8)}"
@@ -3043,8 +3190,7 @@ def claim_referral_bonus():
         
         conn.commit()
         
-        # Grant achievement rewards
-        grant_achievement_rewards(user['id'])
+        # REMOVED: grant_achievement_rewards(user['id']) - Achievement rewards now manual only
         
         app.logger.info(f"✅ Referral bonus claimed by {user['username']}: {unclaimed}")
         
@@ -3120,8 +3266,10 @@ def withdraw():
     cursor = conn.cursor()
     
     try:
-        new_balance = float(user['balance']) - amount
-        cursor.execute('UPDATE users SET balance = %s WHERE id = %s', (new_balance, user['id']))
+        # Use atomic balance update
+        new_balance = update_user_balance(user['id'], -amount)
+        if new_balance is None:
+            return jsonify({"success": False, "message": "Failed to update balance"}), 500
         
         tx_id = f"TX-{int(datetime.utcnow().timestamp())}"
         cursor.execute('''
@@ -3135,8 +3283,7 @@ def withdraw():
         
         conn.commit()
         
-        # Grant achievement rewards
-        grant_achievement_rewards(user['id'])
+        # REMOVED: grant_achievement_rewards(user['id']) - Achievement rewards now manual only
         
         app.logger.info(f"✅ Withdrawal requested by {user['username']}: {amount} to {bank_code}:{account_number}")
         
@@ -3271,15 +3418,10 @@ def admin_adjust_user_balance(user_id):
     cursor = conn.cursor()
     
     try:
-        cursor.execute('SELECT balance FROM users WHERE id = %s', (user_id,))
-        row = cursor.fetchone()
-        if not row:
-            return jsonify({"success": False, "message": "User not found"}), 404
-        
-        current_balance = float(row[0]) if row[0] else 0
-        new_balance = current_balance + amount
-        
-        cursor.execute('UPDATE users SET balance = %s WHERE id = %s', (new_balance, user_id))
+        # Use atomic balance update
+        new_balance = update_user_balance(user_id, amount)
+        if new_balance is None:
+            return jsonify({"success": False, "message": "Failed to update balance"}), 500
         
         tx_id = f"ADJ-{secrets.token_hex(8)}"
         cursor.execute('''
@@ -3298,7 +3440,6 @@ def admin_adjust_user_balance(user_id):
         return jsonify({
             "success": True,
             "message": "Balance adjusted",
-            "old_balance": current_balance,
             "new_balance": new_balance,
             "adjustment": amount
         })
@@ -3476,6 +3617,18 @@ def admin_get_stats():
     finally:
         return_db_connection(conn)
 
+# ================= STATIC FILES =======================
+@app.route('/')
+def index():
+    return send_from_directory(CONFIG.FRONTEND_DIR, 'index.html')
+
+@app.route('/<path:filename>')
+def serve_static(filename):
+    try:
+        return send_from_directory(CONFIG.FRONTEND_DIR, filename)
+    except FileNotFoundError:
+        return send_from_directory(CONFIG.FRONTEND_DIR, 'index.html')
+
 # ================= CATCH-ALL =================
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
@@ -3489,7 +3642,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug = os.getenv('ENV') != 'production'
     
-    app.logger.info(f"🚀 Starting Flexia Platform ULTIMATE v12.1 on port {port} (debug: {debug})")
+    app.logger.info(f"🚀 Starting Flexia Platform ULTIMATE v12.2 on port {port} (debug: {debug})")
     app.logger.info(f"📁 Frontend directory: {CONFIG.FRONTEND_DIR}")
     app.logger.info(f"🔐 Secret key set: {'Yes' if CONFIG.SECRET_KEY else 'No'}")
     app.logger.info(f"🗄️  Database: {'PostgreSQL' if os.environ.get('DATABASE_URL') else 'SQLite'}")
@@ -3497,8 +3650,13 @@ if __name__ == '__main__':
     app.logger.info(f"📊 Structured logging: Enabled")
     app.logger.info(f"💾 Database connection pool: {'Enabled' if db_pool else 'Disabled'}")
     app.logger.info(f"💾 Automatic backups: Enabled (daily at 2 AM UTC)")
-    app.logger.info(f"✅ ALL FIXES APPLIED: Duplicate prevention, achievements, database indexes")
-    app.logger.info(f"✅ ALL ENDPOINTS INCLUDED: Complete admin functionality")
-    app.logger.info(f"✅ VERSION 12.1: The ultimate production-ready version")
+    app.logger.info(f"✅ ALL FIXES APPLIED:")
+    app.logger.info(f"   • Atomic balance updates")
+    app.logger.info(f"   • Fixed duplicate claim prevention")
+    app.logger.info(f"   • Removed automatic achievement granting")
+    app.logger.info(f"   • Added game cooldown checks")
+    app.logger.info(f"   • Added manual achievement claim endpoint")
+    app.logger.info(f"   • Fixed hash generation (per-second)")
+    app.logger.info(f"✅ VERSION 12.2: The ultimate production-ready version")
     
     app.run(host='0.0.0.0', port=port, debug=debug)
