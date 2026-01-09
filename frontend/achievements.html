@@ -149,6 +149,53 @@
       text-transform: uppercase;
       letter-spacing: 1px;
     }
+    
+    /* CLAIM BUTTON */
+    .claim-section {
+      background: linear-gradient(135deg, rgba(128, 0, 255, 0.1), rgba(0, 204, 255, 0.1));
+      border: 2px solid #00ff55;
+      border-radius: 12px;
+      padding: 25px;
+      margin: 30px 0;
+      text-align: center;
+    }
+    .claim-section h3 {
+      color: #00ff55;
+      margin-bottom: 15px;
+      font-size: 1.4rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .claim-btn {
+      background: linear-gradient(45deg, #00ff55, #00ccff);
+      border: none;
+      border-radius: 10px;
+      color: #0a0a1a;
+      padding: 15px 30px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .claim-btn:hover:not(:disabled) {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(0, 255, 85, 0.3);
+    }
+    .claim-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+    .claim-btn.processing {
+      background: linear-gradient(45deg, #555555, #777777);
+    }
+    
     .achievement-categories {
       display: flex;
       gap: 10px;
@@ -293,29 +340,35 @@
     .reward-cash {
       color: #00ff55;
     }
-    .rewards-section {
-      background: #181830;
-      border-radius: 16px;
-      padding: 25px;
-      margin-top: 40px;
-      border: 2px solid #8000ff;
+    
+    /* MESSAGES */
+    .message {
+      padding: 15px;
+      border-radius: 10px;
+      margin: 15px 0;
+      font-size: 0.95rem;
+      display: none;
       text-align: center;
     }
-    .rewards-section h3 {
+    .message.success {
+      background: rgba(0, 255, 85, 0.1);
+      border: 1px solid #00ff55;
+      color: #00ff55;
+      display: block;
+    }
+    .message.error {
+      background: rgba(255, 0, 85, 0.1);
+      border: 1px solid #ff0055;
+      color: #ff5555;
+      display: block;
+    }
+    .message.info {
+      background: rgba(0, 204, 255, 0.1);
+      border: 1px solid #00ccff;
       color: #00ccff;
-      margin-bottom: 15px;
-      font-size: 1.4rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
+      display: block;
     }
-    .rewards-section p {
-      color: #a0a0b5;
-      max-width: 600px;
-      margin: 0 auto;
-      line-height: 1.6;
-    }
+    
     .footer {
       text-align: center;
       padding: 20px;
@@ -363,33 +416,12 @@
       50% { transform: scale(1.1); color: #00ff55; }
       100% { transform: scale(1); color: #00ffcc; }
     }
-    /* SVG ICONS */
-    .svg-icon {
-      width: 24px;
-      height: 24px;
-      fill: currentColor;
-    }
-    /* Error/Success Messages */
-    .message {
-      padding: 10px 15px;
-      border-radius: 8px;
-      margin: 10px 0;
-      font-size: 0.9rem;
-    }
-    .message.success {
-      background: rgba(0, 255, 85, 0.1);
-      border: 1px solid #00ff55;
-      color: #00ff55;
-    }
-    .message.error {
-      background: rgba(255, 0, 85, 0.1);
-      border: 1px solid #ff0055;
-      color: #ff5555;
-    }
+    
     /* Balance Update Animation */
     .balance-update {
       animation: balanceUpdate 1s ease-in-out;
     }
+    
     @media (max-width: 768px) {
       .header { flex-direction: column; text-align: center; }
       .user-info { text-align: center; }
@@ -421,8 +453,8 @@
 
     <nav class="nav-menu">
       <a href="index.html" class="nav-btn"><i class="fas fa-home"></i> Home</a>
-      <a href="snake-game.html" class="nav-btn"><i class="fas fa-gamepad"></i> Snake</a>
-      <a href="coin-flip.html" class="nav-btn"><i class="fas fa-coins"></i> Coin Flip</a>
+      <a href="snake.html" class="nav-btn"><i class="fas fa-gamepad"></i> Snake</a>
+      <a href="coinflip.html" class="nav-btn"><i class="fas fa-coins"></i> Coin Flip</a>
       <a href="plinko.html" class="nav-btn"><i class="fas fa-bullseye"></i> Plinko</a>
       <a href="achievements.html" class="nav-btn active"><i class="fas fa-trophy"></i> Achievements</a>
     </nav>
@@ -448,7 +480,19 @@
         </div>
 
         <!-- Success/Error Messages -->
-        <div id="message-container" style="margin-bottom: 20px;"></div>
+        <div id="message-container"></div>
+        
+        <!-- MANUAL CLAIM SECTION -->
+        <div class="claim-section">
+          <h3><i class="fas fa-gift"></i> Claim Achievement Rewards</h3>
+          <p>Click the button below to manually claim your achievement rewards. Rewards will be added directly to your balance.</p>
+          <button class="claim-btn" id="claim-rewards-btn" onclick="claimAchievementRewards()">
+            <i class="fas fa-coins"></i> CLAIM ALL REWARDS
+          </button>
+          <p style="margin-top: 10px; font-size: 0.85rem; color: #a0a0b5;">
+            <i class="fas fa-info-circle"></i> Achievement rewards are no longer automatic. You must claim them manually.
+          </p>
+        </div>
 
         <div class="achievement-categories">
           <button class="category-btn active" data-category="all">All Achievements</button>
@@ -464,14 +508,6 @@
             <p>Loading your achievements...</p>
           </div>
         </div>
-      </div>
-
-      <div class="rewards-section">
-        <h3><i class="fas fa-gift"></i> Achievement Rewards</h3>
-        <p>Rewards are automatically added to your balance when you unlock achievements! Check your updated balance above.</p>
-        <p class="small-text" style="margin-top: 10px; font-size: 0.9rem; color: #00ffcc;">
-          <i class="fas fa-sync-alt"></i> Achievements auto-update every 60 seconds
-        </p>
       </div>
     </main>
 
@@ -491,6 +527,7 @@
     let newAchievements = [];
     let autoRefreshInterval = null;
     let isLoading = false;
+    let isClaiming = false;
 
     // Show message function
     function showMessage(message, type = 'info') {
@@ -622,19 +659,7 @@
             const newBalance = parseFloat(data.current_balance);
             if (newBalance !== currentBalance) {
               currentBalance = newBalance;
-              const balanceEl = document.getElementById('balance');
-              balanceEl.textContent = newBalance.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-              });
-              balanceEl.classList.add('balance-update');
-              setTimeout(() => {
-                balanceEl.classList.remove('balance-update');
-              }, 1000);
-              
-              if (newBalance > currentBalance) {
-                showMessage(`💰 Balance updated: +₦${(newBalance - currentBalance).toLocaleString()}`, 'success');
-              }
+              updateBalanceDisplay(newBalance);
             }
           }
           
@@ -675,6 +700,20 @@
       } finally {
         isLoading = false;
       }
+    }
+
+    // Update balance display
+    function updateBalanceDisplay(newBalance) {
+      currentBalance = newBalance;
+      const balanceEl = document.getElementById('balance');
+      balanceEl.textContent = newBalance.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+      balanceEl.classList.add('balance-update');
+      setTimeout(() => {
+        balanceEl.classList.remove('balance-update');
+      }, 1000);
     }
 
     // Render achievements
@@ -723,16 +762,6 @@
           ${isNew ? '<div class="new-badge">NEW</div>' : ''}
         `;
         
-        // Add click effect
-        card.addEventListener('click', () => {
-          if (ach.unlocked) {
-            card.style.transform = 'scale(0.95)';
-            setTimeout(() => {
-              card.style.transform = '';
-            }, 200);
-          }
-        });
-        
         grid.appendChild(card);
       });
     }
@@ -750,6 +779,83 @@
           });
         });
       });
+    }
+
+    // MANUAL ACHIEVEMENT REWARD CLAIMING
+    async function claimAchievementRewards() {
+      if (isClaiming) {
+        showMessage('Please wait, claim is already in progress', 'error');
+        return;
+      }
+      
+      isClaiming = true;
+      const claimBtn = document.getElementById('claim-rewards-btn');
+      const originalText = claimBtn.innerHTML;
+      
+      try {
+        // Update button state
+        claimBtn.disabled = true;
+        claimBtn.classList.add('processing');
+        claimBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CLAIMING...';
+        
+        // Make API call to claim rewards
+        const res = await fetch('/api/achievements/claim', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`HTTP ${res.status}: ${errorText}`);
+        }
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          // Update balance
+          updateBalanceDisplay(data.new_balance);
+          
+          // Show success message
+          showMessage(`✅ Achievement rewards claimed! New balance: ₦${data.new_balance.toLocaleString()}`, 'success');
+          
+          // Update button
+          claimBtn.classList.remove('processing');
+          claimBtn.classList.add('success');
+          claimBtn.innerHTML = '<i class="fas fa-check"></i> REWARDS CLAIMED!';
+          
+          // Reload achievements to update stats
+          setTimeout(() => {
+            loadAchievements();
+          }, 1000);
+          
+          // Reset button after 3 seconds
+          setTimeout(() => {
+            claimBtn.classList.remove('success');
+            claimBtn.innerHTML = originalText;
+            claimBtn.disabled = false;
+            isClaiming = false;
+          }, 3000);
+          
+        } else {
+          throw new Error(data.message || 'Failed to claim rewards');
+        }
+        
+      } catch (error) {
+        console.error('Claim rewards error:', error);
+        
+        // Show error message
+        showMessage('❌ ' + error.message, 'error');
+        
+        // Reset button
+        claimBtn.classList.remove('processing');
+        claimBtn.innerHTML = originalText;
+        claimBtn.disabled = false;
+        isClaiming = false;
+      }
     }
 
     // Auto-refresh achievements every 60 seconds
@@ -780,16 +886,7 @@
           if (data.success) {
             const newBalance = parseFloat(data.user.balance) || 0;
             if (newBalance !== currentBalance) {
-              currentBalance = newBalance;
-              const balanceEl = document.getElementById('balance');
-              balanceEl.textContent = newBalance.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-              });
-              balanceEl.classList.add('balance-update');
-              setTimeout(() => {
-                balanceEl.classList.remove('balance-update');
-              }, 1000);
+              updateBalanceDisplay(newBalance);
             }
           }
         }
