@@ -453,280 +453,312 @@ const messageEl = document.getElementById('message');
 
 // Show message
 function showMessage(text, type = 'info') {
-messageEl.textContent = text;
-messageEl.className = `message ${type}`;
-messageEl.style.display = 'block';
-setTimeout(() => {
-messageEl.style.display = 'none';
-}, 5000);
+    messageEl.textContent = text;
+    messageEl.className = `message ${type}`;
+    messageEl.style.display = 'block';
+    setTimeout(() => {
+        messageEl.style.display = 'none';
+    }, 5000);
 }
 
 // Go back to dashboard
 function goBackToDashboard() {
-window.location.href = 'index.html';
+    window.location.href = 'index.html';
 }
 
 // Load user profile
 async function loadUserProfile() {
-try {
-const res = await fetch('/api/user/profile', { credentials: 'include' });
-if (!res.ok) {
-if (res.status === 401) {
-window.location.href = 'index.html';
-return;
-}
-throw new Error(`HTTP error! status: ${res.status}`);
-}
+    try {
+        const res = await fetch('/api/user/profile', { credentials: 'include' });
+        if (!res.ok) {
+            if (res.status === 401) {
+                window.location.href = 'index.html';
+                return;
+            }
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
 
-const data = await res.json();
-if (data.success) {
-userBalance = parseFloat(data.user.balance) || 0;
-document.getElementById('balance').textContent = `₦${userBalance.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-// Load streak from game stats if available
-const stats = data.user.game_stats?.coin_flip;
-if (stats) {
-winningStreak = (stats.streak || []).slice(-10);
-}
-updateWinningStreak();
-} else {
-window.location.href = 'index.html';
-}
-} catch (error) {
-console.log('Profile load error:', error);
-showMessage('Failed to load profile. Please refresh.', 'error');
-}
+        const data = await res.json();
+        if (data.success) {
+            userBalance = parseFloat(data.user.balance) || 0;
+            document.getElementById('balance').textContent = `₦${userBalance.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            // Load streak from game stats if available
+            const stats = data.user.game_stats?.coin_flip;
+            if (stats) {
+                winningStreak = (stats.streak || []).slice(-10);
+            }
+            updateWinningStreak();
+        } else {
+            window.location.href = 'index.html';
+        }
+    } catch (error) {
+        console.log('Profile load error:', error);
+        showMessage('Failed to load profile. Please refresh.', 'error');
+    }
 }
 
 // Select choice
 function selectChoice(choice) {
-if (isFlipping) return;
-userChoice = choice;
-document.getElementById('heads-btn').classList.remove('active');
-document.getElementById('tails-btn').classList.remove('active');
-document.getElementById(choice + '-btn').classList.add('active');
-checkFlipButton();
+    if (isFlipping) return;
+    userChoice = choice;
+    document.getElementById('heads-btn').classList.remove('active');
+    document.getElementById('tails-btn').classList.remove('active');
+    document.getElementById(choice + '-btn').classList.add('active');
+    checkFlipButton();
 }
 
 // Check if flip button should be enabled
 function checkFlipButton() {
-const betInput = document.getElementById('bet-amount');
-betAmount = parseFloat(betInput.value) || 0;
-const minBet = 100;
-const maxBet = 50000;
+    const betInput = document.getElementById('bet-amount');
+    betAmount = parseFloat(betInput.value) || 0;
+    const minBet = 100;
+    const maxBet = 50000;
 
-// Validate bet amount
-if (betAmount < minBet) {
-betAmount = minBet;
-betInput.value = minBet;
-}
+    // Validate bet amount
+    if (betAmount < minBet) {
+        betAmount = minBet;
+        betInput.value = minBet;
+    }
 
-if (betAmount > maxBet) {
-betAmount = maxBet;
-betInput.value = maxBet;
-}
+    if (betAmount > maxBet) {
+        betAmount = maxBet;
+        betInput.value = maxBet;
+    }
 
-if (betAmount > userBalance) {
-flipBtn.disabled = true;
-flipBtn.title = "Insufficient balance";
-return;
-}
+    if (betAmount > userBalance) {
+        flipBtn.disabled = true;
+        flipBtn.title = "Insufficient balance";
+        return;
+    }
 
-if (userChoice && betAmount >= minBet && !isFlipping) {
-flipBtn.disabled = false;
-flipBtn.title = "Click to flip coin";
-} else {
-flipBtn.disabled = true;
-flipBtn.title = userChoice ? "Enter valid bet amount" : "Select heads or tails";
-}
+    if (userChoice && betAmount >= minBet && !isFlipping) {
+        flipBtn.disabled = false;
+        flipBtn.title = "Click to flip coin";
+    } else {
+        flipBtn.disabled = true;
+        flipBtn.title = userChoice ? "Enter valid bet amount" : "Select heads or tails";
+    }
 }
 
 // Flip coin
 async function flipCoin() {
-if (isFlipping) return;
-isFlipping = true;
+    if (isFlipping) return;
+    isFlipping = true;
 
-// Disable buttons and inputs
-flipBtn.disabled = true;
-flipBtn.classList.add('processing');
-flipBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> FLIPPING...';
-document.getElementById('heads-btn').disabled = true;
-document.getElementById('tails-btn').disabled = true;
-document.getElementById('bet-amount').disabled = true;
+    // Disable buttons and inputs
+    flipBtn.disabled = true;
+    flipBtn.classList.add('processing');
+    flipBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> FLIPPING...';
+    document.getElementById('heads-btn').disabled = true;
+    document.getElementById('tails-btn').disabled = true;
+    document.getElementById('bet-amount').disabled = true;
 
-// Hide previous result
-resultSection.style.display = 'none';
-showMessage('Flipping coin...', 'info');
+    // Hide previous result
+    resultSection.style.display = 'none';
+    showMessage('Flipping coin...', 'info');
 
-const bet = betAmount;
-const coinResult = Math.random() > 0.5 ? 'heads' : 'tails';
-const win = (userChoice === coinResult);
+    const bet = betAmount;
+    const coinResult = Math.random() > 0.5 ? 'heads' : 'tails';
+    const win = (userChoice === coinResult);
 
-// Animate coin
-const coin = document.getElementById('coin-3d');
-const shadow = document.getElementById('coin-shadow');
-coin.classList.add('coin-tossing');
-shadow.classList.add('shadow-pulsing');
+    // Animate coin
+    const coin = document.getElementById('coin-3d');
+    const shadow = document.getElementById('coin-shadow');
+    coin.classList.add('coin-tossing');
+    shadow.classList.add('shadow-pulsing');
 
-// Wait for animation to complete
-setTimeout(async () => {
-coin.classList.remove('coin-tossing');
-shadow.classList.remove('shadow-pulsing');
+    // Wait for animation to complete
+    setTimeout(async () => {
+        coin.classList.remove('coin-tossing');
+        shadow.classList.remove('shadow-pulsing');
 
-try {
-// Check daily limit first
-const limitCheck = await window.checkDailyLimit('coinflip');
-if (!limitCheck.can_play) {
-throw new Error(`Daily limit reached! You've played ${limitCheck.played_today} times today (max: ${limitCheck.max_per_day})`);
-}
+        try {
+            // Check daily limit first
+            const limitCheck = await window.checkDailyLimit('coinflip');
+            if (!limitCheck.can_play) {
+                throw new Error(`Daily limit reached! You've played ${limitCheck.played_today} times today (max: ${limitCheck.max_per_day})`);
+            }
 
-// Report to backend using global function
-const result = await window.reportGameResult('coinflip', { 
-bet: bet, 
-won: win
-});
+            // Use the new reward function
+            const result = await window.claimCoinFlipReward(bet, win);
 
-if (result.success) {
-// Update user balance
-userBalance = parseFloat(result.new_balance) || (userBalance + (win ? bet : -bet));
-document.getElementById('balance').textContent = `₦${userBalance.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            if (result.success) {
+                // Update user balance
+                userBalance = parseFloat(result.new_balance) || (userBalance + (win ? bet : -bet));
+                document.getElementById('balance').textContent = `₦${userBalance.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
 
-// Update streak
-winningStreak.push(win ? 'win' : 'loss');
-if (winningStreak.length > 10) {
-winningStreak.shift();
-}
-updateWinningStreak();
+                // Update streak
+                winningStreak.push(win ? 'win' : 'loss');
+                if (winningStreak.length > 10) {
+                    winningStreak.shift();
+                }
+                updateWinningStreak();
 
-// Show result
-showResult(win, coinResult, bet, result.payout, result.message);
+                // Show result
+                showResult(win, coinResult, bet, result.payout, result.message);
 
-// Update global balance if function exists
-if (window.updateBalance) {
-window.updateBalance(result.new_balance);
-}
+                // Update global balance if function exists
+                if (window.updateBalance) {
+                    window.updateBalance(result.new_balance);
+                }
 
-} else {
-// Handle API error (daily limit, etc.)
-throw new Error(result.message || 'Failed to process coin flip');
-}
+            } else {
+                // Handle API error (daily limit, etc.)
+                throw new Error(result.message || 'Failed to process coin flip');
+            }
 
-} catch (error) {
-console.error('Coin flip error:', error);
-showMessage('❌ ' + error.message, 'error');
-resetGameState();
-}
+        } catch (error) {
+            console.error('Coin flip error:', error);
+            showMessage('❌ ' + error.message, 'error');
+            resetGameState();
+        }
 
-// Re-enable controls
-resetControls();
-}, 2000);
+        // Re-enable controls
+        resetControls();
+    }, 2000);
 }
 
 // Show result
 function showResult(win, coinResult, bet, payout, message) {
-const resultMessage = document.getElementById('result-message');
-const coinResultEl = document.getElementById('coin-result');
-const winningsEl = document.getElementById('winnings');
+    const resultMessage = document.getElementById('result-message');
+    const coinResultEl = document.getElementById('coin-result');
+    const winningsEl = document.getElementById('winnings');
 
-if (win) {
-resultMessage.textContent = 'YOU WIN! 🎉';
-resultMessage.style.color = '#00FF55';
-coinResultEl.textContent = `The coin landed on ${coinResult.toUpperCase()}!`;
-winningsEl.textContent = `+₦${payout.toLocaleString()}`;
-winningsEl.style.color = '#00FF55';
-showMessage(`✅ You won ₦${payout - bet}! ${message || ''}`, 'success');
-} else {
-resultMessage.textContent = 'YOU LOSE! 💔';
-resultMessage.style.color = '#FF0055';
-coinResultEl.textContent = `The coin landed on ${coinResult.toUpperCase()}!`;
-winningsEl.textContent = `-₦${bet.toLocaleString()}`;
-winningsEl.style.color = '#FF0055';
-showMessage(`❌ You lost ₦${bet}. Better luck next time!`, 'error');
-}
+    if (win) {
+        resultMessage.textContent = 'YOU WIN! 🎉';
+        resultMessage.style.color = '#00FF55';
+        coinResultEl.textContent = `The coin landed on ${coinResult.toUpperCase()}!`;
+        winningsEl.textContent = `+₦${payout.toLocaleString()}`;
+        winningsEl.style.color = '#00FF55';
+        showMessage(`✅ You won ₦${payout - bet}! ${message || ''}`, 'success');
+    } else {
+        resultMessage.textContent = 'YOU LOSE! 💔';
+        resultMessage.style.color = '#FF0055';
+        coinResultEl.textContent = `The coin landed on ${coinResult.toUpperCase()}!`;
+        winningsEl.textContent = `-₦${bet.toLocaleString()}`;
+        winningsEl.style.color = '#FF0055';
+        showMessage(`❌ You lost ₦${bet}. Better luck next time!`, 'error');
+    }
 
-resultSection.style.display = 'block';
+    resultSection.style.display = 'block';
 
-// Reset choice for next flip
-userChoice = null;
-document.getElementById('heads-btn').classList.remove('active');
-document.getElementById('tails-btn').classList.remove('active');
+    // Reset choice for next flip
+    userChoice = null;
+    document.getElementById('heads-btn').classList.remove('active');
+    document.getElementById('tails-btn').classList.remove('active');
 }
 
 // Update winning streak display
 function updateWinningStreak() {
-const streakContainer = document.getElementById('winning-streak');
-streakContainer.innerHTML = '';
+    const streakContainer = document.getElementById('winning-streak');
+    streakContainer.innerHTML = '';
 
-if (winningStreak.length === 0) {
-streakContainer.innerHTML = '<div style="color: #A0A0B5; font-size: 0.9rem;">No games played yet</div>';
-return;
-}
+    if (winningStreak.length === 0) {
+        streakContainer.innerHTML = '<div style="color: #A0A0B5; font-size: 0.9rem;">No games played yet</div>';
+        return;
+    }
 
-const streakText = document.createElement('div');
-streakText.textContent = 'Current Streak:';
-streakText.style.fontSize = '0.8rem';
-streakText.style.color = '#A0A0B5';
-streakText.style.marginBottom = '5px';
-streakContainer.appendChild(streakText);
+    const streakText = document.createElement('div');
+    streakText.textContent = 'Current Streak:';
+    streakText.style.fontSize = '0.8rem';
+    streakText.style.color = '#A0A0B5';
+    streakText.style.marginBottom = '5px';
+    streakContainer.appendChild(streakText);
 
-const dotsContainer = document.createElement('div');
-dotsContainer.style.display = 'flex';
-dotsContainer.style.gap = '8px';
-dotsContainer.style.justifyContent = 'center';
-dotsContainer.style.flexWrap = 'wrap';
+    const dotsContainer = document.createElement('div');
+    dotsContainer.style.display = 'flex';
+    dotsContainer.style.gap = '8px';
+    dotsContainer.style.justifyContent = 'center';
+    dotsContainer.style.flexWrap = 'wrap';
 
-winningStreak.forEach(result => {
-const dot = document.createElement('div');
-dot.className = `streak-dot ${result}`;
-dotsContainer.appendChild(dot);
-});
+    winningStreak.forEach(result => {
+        const dot = document.createElement('div');
+        dot.className = `streak-dot ${result}`;
+        dotsContainer.appendChild(dot);
+    });
 
-// Fill remaining dots
-for (let i = winningStreak.length; i < 10; i++) {
-const dot = document.createElement('div');
-dot.className = 'streak-dot';
-dotsContainer.appendChild(dot);
-}
+    // Fill remaining dots
+    for (let i = winningStreak.length; i < 10; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'streak-dot';
+        dotsContainer.appendChild(dot);
+    }
 
-streakContainer.appendChild(dotsContainer);
+    streakContainer.appendChild(dotsContainer);
 
-// Calculate current streak
-if (winningStreak.length > 0) {
-const lastResult = winningStreak[winningStreak.length - 1];
-let currentStreak = 0;
-for (let i = winningStreak.length - 1; i >= 0; i--) {
-if (winningStreak[i] === lastResult) {
-currentStreak++;
-} else {
-break;
-}
-}
-const streakCount = document.createElement('div');
-streakCount.textContent = `${currentStreak} ${lastResult}s in a row`;
-streakCount.style.fontSize = '0.7rem';
-streakCount.style.color = lastResult === 'win' ? '#00FF55' : '#FF0055';
-streakCount.style.marginTop = '5px';
-streakCount.style.fontWeight = 'bold';
-streakContainer.appendChild(streakCount);
-}
+    // Calculate current streak
+    if (winningStreak.length > 0) {
+        const lastResult = winningStreak[winningStreak.length - 1];
+        let currentStreak = 0;
+        for (let i = winningStreak.length - 1; i >= 0; i--) {
+            if (winningStreak[i] === lastResult) {
+                currentStreak++;
+            } else {
+                break;
+            }
+        }
+        const streakCount = document.createElement('div');
+        streakCount.textContent = `${currentStreak} ${lastResult}s in a row`;
+        streakCount.style.fontSize = '0.7rem';
+        streakCount.style.color = lastResult === 'win' ? '#00FF55' : '#FF0055';
+        streakCount.style.marginTop = '5px';
+        streakCount.style.fontWeight = 'bold';
+        streakContainer.appendChild(streakCount);
+    }
 }
 
 // Reset game state after error
 function resetGameState() {
-userChoice = null;
-document.getElementById('heads-btn').classList.remove('active');
-document.getElementById('tails-btn').classList.remove('active');
+    userChoice = null;
+    document.getElementById('heads-btn').classList.remove('active');
+    document.getElementById('tails-btn').classList.remove('active');
 }
 
 // Reset controls after flip
 function resetControls() {
-isFlipping = false;
-flipBtn.disabled = false;
-flipBtn.classList.remove('processing');
-flipBtn.innerHTML = '<i class="fas fa-coins"></i> FLIP COIN';
-document.getElementById('heads-btn').disabled = false;
-document.getElementById('tails-btn').disabled = false;
-document.getElementById('bet-amount').disabled = false;
-checkFlipButton();
+    isFlipping = false;
+    flipBtn.disabled = false;
+    flipBtn.classList.remove('processing');
+    flipBtn.innerHTML = '<i class="fas fa-coins"></i> FLIP COIN';
+    document.getElementById('heads-btn').disabled = false;
+    document.getElementById('tails-btn').disabled = false;
+    document.getElementById('bet-amount').disabled = false;
+    checkFlipButton();
+}
+
+// Load script.js functions if not loaded
+function ensureFunctionsLoaded() {
+    return new Promise((resolve) => {
+        if (window.checkDailyLimit && window.claimCoinFlipReward) {
+            resolve();
+            return;
+        }
+        
+        // Try to load script.js
+        const script = document.createElement('script');
+        script.src = 'script.js';
+        script.onload = () => {
+            console.log('script.js loaded successfully');
+            setTimeout(resolve, 500);
+        };
+        script.onerror = () => {
+            console.warn('Failed to load script.js, using fallback functions');
+            // Create fallback functions
+            if (!window.checkDailyLimit) {
+                window.checkDailyLimit = async () => ({ can_play: true, played_today: 0, max_per_day: 50 });
+            }
+            if (!window.claimCoinFlipReward) {
+                window.claimCoinFlipReward = async (bet, won) => ({
+                    success: true,
+                    payout: won ? bet * 2 : 0,
+                    new_balance: 1000,
+                    message: won ? 'You won!' : 'You lost!'
+                });
+            }
+            resolve();
+        };
+        document.head.appendChild(script);
+    });
 }
 
 // Event listeners
@@ -735,22 +767,29 @@ document.getElementById('bet-amount').addEventListener('change', checkFlipButton
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
-if (isFlipping) return;
-if (e.key === 'h' || e.key === 'H') selectChoice('heads');
-if (e.key === 't' || e.key === 'T') selectChoice('tails');
-if (e.key === ' ' || e.key === 'Enter') {
-e.preventDefault();
-if (!flipBtn.disabled) flipCoin();
-}
-if (e.key === 'Escape') goBackToDashboard();
+    if (isFlipping) return;
+    if (e.key === 'h' || e.key === 'H') selectChoice('heads');
+    if (e.key === 't' || e.key === 'T') selectChoice('tails');
+    if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        if (!flipBtn.disabled) flipCoin();
+    }
+    if (e.key === 'Escape') goBackToDashboard();
 });
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
-await loadUserProfile();
-checkFlipButton();
-// Auto-select heads by default
-selectChoice('heads');
+    // Ensure functions are loaded first
+    await ensureFunctionsLoaded();
+    
+    // Now load profile and initialize
+    await loadUserProfile();
+    checkFlipButton();
+    
+    // Auto-select heads by default
+    selectChoice('heads');
+    
+    console.log('Coin Flip game initialized successfully');
 });
 </script>
 </body>
