@@ -373,7 +373,6 @@ padding: 5px 10px;
 border-radius: 4px;
 color: #00eeff;
 }
-
 @media (max-width: 768px) {
 #stats-summary {
 flex-direction: column;
@@ -406,7 +405,6 @@ font-size: 14px;
 </button>
 </div>
 </header>
-
 <!-- Tab Navigation -->
 <div class="admin-tabs">
 <button class="tab-btn active" onclick="showTab('dashboard')">
@@ -440,7 +438,6 @@ font-size: 14px;
 <i class="fab fa-whatsapp"></i> WhatsApp
 </button>
 </div>
-
 <!-- Dashboard Tab -->
 <div id="dashboard" class="tab-content active">
 <div class="admin-section">
@@ -501,7 +498,6 @@ font-size: 14px;
 </div>
 </div>
 </div>
-
 <!-- Backup Tab -->
 <div id="backup" class="tab-content">
 <div class="admin-section">
@@ -540,7 +536,6 @@ font-size: 14px;
 </ul>
 </div>
 </div>
-
 <!-- Global Settings Tab -->
 <div id="globalSettings" class="tab-content">
 <div class="admin-section">
@@ -581,7 +576,6 @@ Select which days of the month users can make withdrawals. These apply to all us
 <div id="global-settings-message" class="message hidden"></div>
 </div>
 </div>
-
 <!-- TikTok Daily Tab -->
 <div id="tiktokDaily" class="tab-content">
 <div class="admin-section">
@@ -596,14 +590,12 @@ Select which days of the month users can make withdrawals. These apply to all us
 </button>
 <div id="tiktok-message" class="message hidden"></div>
 </div>
-
 <div class="admin-section">
 <h3><i class="fas fa-eye"></i> Current TikTok Task</h3>
 <div id="current-tiktok-display">
 Loading...
 </div>
 </div>
-
 <div class="admin-section">
 <h3><i class="fas fa-history"></i> Recent TikTok Tasks (Last 7 Days)</h3>
 <div id="tiktok-history-list">
@@ -611,7 +603,6 @@ Loading history...
 </div>
 </div>
 </div>
-
 <!-- Users Tab -->
 <div id="users" class="tab-content">
 <div class="admin-section">
@@ -640,7 +631,6 @@ onkeyup="searchUsers()" style="max-width: 300px;">
 </div>
 </div>
 </div>
-
 <!-- Withdrawals Tab -->
 <div id="withdrawals" class="tab-content">
 <div class="admin-section">
@@ -668,7 +658,6 @@ onkeyup="searchUsers()" style="max-width: 300px;">
 </div>
 </div>
 </div>
-
 <!-- Withdrawal Report Tab -->
 <div id="withdrawalReport" class="tab-content">
 <div class="admin-section">
@@ -725,7 +714,6 @@ onkeyup="searchUsers()" style="max-width: 300px;">
 </div>
 </div>
 </div>
-
 <!-- Settings Tab -->
 <div id="settings" class="tab-content">
 <div class="admin-section">
@@ -768,7 +756,6 @@ onkeyup="searchUsers()" style="max-width: 300px;">
 <div id="password-message" class="message hidden"></div>
 </div>
 </div>
-
 <!-- Coupons Tab -->
 <div id="coupons" class="tab-content">
 <div class="admin-section">
@@ -793,7 +780,6 @@ onkeyup="searchUsers()" style="max-width: 300px;">
 <div id="coupon-message" class="message hidden"></div>
 </div>
 </div>
-
 <!-- WhatsApp Tab -->
 <div id="whatsapp" class="tab-content">
 <div class="admin-section">
@@ -814,7 +800,6 @@ onkeyup="searchUsers()" style="max-width: 300px;">
 <div id="whatsapp-numbers-list">Loading numbers...</div>
 </div>
 </div>
-
 <!-- Withdrawal Settings Modal -->
 <div class="modal fade" id="withdrawalSettingsModal" tabindex="-1">
 <div class="modal-dialog modal-lg">
@@ -835,7 +820,33 @@ onkeyup="searchUsers()" style="max-width: 300px;">
 </div>
 </div>
 </div>
-
+<!-- Adjust Balance Modal -->
+<div class="modal fade" id="adjustBalanceModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Adjust Balance for <span id="adjust-username"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label>Amount (Positive = Add, Negative = Deduct)</label>
+          <input type="number" step="100" id="adjust-amount" class="form-control" placeholder="e.g., 50000" />
+        </div>
+        <div class="mb-3">
+          <label>Reason / Note</label>
+          <textarea id="adjust-note" class="form-control" placeholder="e.g., Bonus, Correction..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button onclick="saveBalanceAdjustment()" class="btn btn-success">
+          <i class="fas fa-save"></i> Apply Adjustment
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 <!-- Backup Modal -->
 <div class="modal fade" id="backupModal" tabindex="-1">
 <div class="modal-dialog">
@@ -853,7 +864,6 @@ onkeyup="searchUsers()" style="max-width: 300px;">
 </div>
 </div>
 </div>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 // ================================ GLOBAL VARIABLES ================================
@@ -862,7 +872,7 @@ let withdrawalReportData = null;
 let selectedUserId = null;
 let globalWithdrawalDays = [];
 let backupListData = [];
-
+let adjustUserId = null;
 // ================================ UTILITY FUNCTIONS ================================
 function showMessage(text, type = 'info', elementId = 'coupon-message') {
 const el = document.getElementById(elementId);
@@ -894,7 +904,6 @@ const sizes = ['Bytes', 'KB', 'MB', 'GB'];
 const i = Math.floor(Math.log(bytes) / Math.log(k));
 return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
-
 // ================================ AUTH FUNCTIONS ================================
 function adminLogout() {
 fetch('/api/auth/logout', {
@@ -931,7 +940,6 @@ throw new Error(`HTTP ${res.status}`);
 }
 return await res.json();
 }
-
 // ================================ HEALTH CHECK ================================
 async function checkHealth() {
 try {
@@ -943,7 +951,6 @@ updateHealthStatus({ status: 'offline' });
 showMessage('Health check failed', 'error');
 }
 }
-
 function updateHealthStatus(healthData) {
 const statusEl = document.getElementById('health-status');
 const dbStatusEl = document.getElementById('db-status');
@@ -1000,7 +1007,6 @@ statusEl.innerHTML = `
 `;
 }
 }
-
 // ================================ BACKUP FUNCTIONS ================================
 async function triggerBackup() {
 if (!confirm('Create a manual database backup?')) return;
@@ -1016,7 +1022,6 @@ showMessage(data.message, 'error', 'backup-message');
 showMessage('Failed to trigger backup', 'error', 'backup-message');
 }
 }
-
 async function listBackups() {
 try {
 const data = await fetchData('/api/admin/backup/list');
@@ -1036,7 +1041,6 @@ showMessage('Failed to load backups', 'error', 'backup-message');
 showMessage('Failed to load backups', 'error', 'backup-message');
 }
 }
-
 function renderBackupList() {
 const container = document.getElementById('backup-list');
 if (!backupListData || backupListData.length === 0) {
@@ -1058,7 +1062,6 @@ container.innerHTML = backupListData.map(backup => `
 </div>
 `).join('');
 }
-
 function showBackupDetails(filename) {
 const backup = backupListData.find(b => b.filename === filename);
 if (!backup) return;
@@ -1079,7 +1082,6 @@ To restore, copy the backup file to the appropriate location and run database re
 `;
 modal.show();
 }
-
 // ================================ TAB FUNCTIONS ================================
 function showTab(tabId) {
 document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -1099,7 +1101,6 @@ case 'coupons': loadCouponStats(); break;
 case 'whatsapp': loadWhatsAppNumbers(); break;
 }
 }
-
 // ================================ DASHBOARD FUNCTIONS ================================
 async function loadDashboard() {
 try {
@@ -1164,7 +1165,6 @@ ${tx.status}
 </div>
 `;
 }
-
 // ================================ GLOBAL WITHDRAWAL DAYS ================================
 async function loadGlobalWithdrawalDays(dashboardOnly = false) {
 try {
@@ -1299,12 +1299,10 @@ console.error('Save error:', err);
 showMessage('Failed to save global withdrawal days', 'error', 'global-settings-message');
 }
 }
-
 // ================================ BACKUP TAB ================================
 function loadBackupTab() {
 listBackups();
 }
-
 // ================================ TIKTOK DAILY FUNCTIONS ================================
 async function setTikTokDaily() {
 const link = document.getElementById('tiktok-link-input').value.trim();
@@ -1329,7 +1327,6 @@ showMessage(res.message || 'Failed to set TikTok task', 'error', 'tiktok-message
 showMessage('Network error', 'error', 'tiktok-message');
 }
 }
-
 async function loadTikTokDailyTab() {
 try {
 const currentRes = await fetchData('/api/admin/tiktok/get-daily');
@@ -1366,7 +1363,6 @@ document.getElementById('current-tiktok-display').innerHTML = '<p>Error loading 
 document.getElementById('tiktok-history-list').innerHTML = '<p>Error loading history</p>';
 }
 }
-
 // ================================ LOAD USERS ================================
 async function loadUsers() {
 if (document.getElementById('users').innerHTML === '') {
@@ -1440,6 +1436,22 @@ return `
 class="btn btn-sm btn-outline-primary">
 <i class="fas fa-cog"></i> Settings
 </button>
+<button onclick="openAdjustBalance(${user.id})"
+class="btn btn-sm btn-outline-success ms-1">
+<i class="fas fa-coins"></i> Adjust
+</button>
+${!isFlexiaAdmin && !user.is_admin ? `
+<button onclick="toggleAdminStatus(${user.id})"
+class="btn btn-sm btn-outline-warning ms-1">
+<i class="fas fa-user-shield"></i> Make Admin
+</button>
+` : ''}
+${!isFlexiaAdmin && user.is_admin ? `
+<button onclick="toggleAdminStatus(${user.id})"
+class="btn btn-sm btn-outline-secondary ms-1">
+<i class="fas fa-user"></i> Remove Admin
+</button>
+` : ''}
 ${isFlexiaAdmin ? '' : `
 <button onclick="deleteUser(${user.id})"
 class="btn btn-sm btn-outline-danger ms-1">
@@ -1496,16 +1508,20 @@ document.getElementById('withdrawal-settings-content').innerHTML = `
 </div>
 <div class="mb-3">
 <label class="form-label">Withdrawal Limit (₦)</label>
-<input type="number" id="user-withdrawal-limit" class="form-control" 
+<input type="number" id="user-withdrawal-limit" class="form-control"
 value="${userRes.user.withdrawal_limit || 0}" min="0" step="1000">
 <small class="text-muted">Set to 0 for no limit</small>
 </div>
-<div class="mb-3">
+<div class="input-group">
 <label class="form-label">Custom Withdrawal Days (comma-separated, 1-31)</label>
-<input type="text" id="user-custom-days" class="form-control" 
-placeholder="7,14,21,28" value="${userRes.user.custom_withdrawal_days ? JSON.parse(userRes.user.custom_withdrawal_days).join(', ') : ''}">
-<small class="text-muted">Leave empty to use global settings</small>
+<input type="text" id="user-custom-days" class="form-control"
+placeholder="7,14,21,28 (leave empty for global days)"
+value="${userRes.user.custom_withdrawal_days ? JSON.parse(userRes.user.custom_withdrawal_days).join(', ') : ''}">
+<button class="btn btn-outline-info" type="button" onclick="setDefaultCustomDays()">
+Default
+</button>
 </div>
+<small class="text-muted">Enter comma-separated days (1-31). Empty = use global settings.</small>
 `;
 const modal = new bootstrap.Modal(document.getElementById('withdrawalSettingsModal'));
 modal.show();
@@ -1515,30 +1531,100 @@ console.error('Open user settings error:', err);
 showMessage('Failed to load user settings', 'error');
 }
 }
+function setDefaultCustomDays() {
+document.getElementById('user-custom-days').value = '7,14,25,30';
+}
 async function saveWithdrawalSettings() {
 if (!selectedUserId) return;
 const restricted = document.getElementById('user-withdrawal-restricted').value === 'true';
-const limit = parseFloat(document.getElementById('user-withdrawal-limit').value);
-const customDays = document.getElementById('user-custom-days').value
-.split(',')
-.map(d => parseInt(d.trim()))
-.filter(d => !isNaN(d) && d >= 1 && d <= 31);
+const limit = parseFloat(document.getElementById('user-withdrawal-limit').value) || 0;
+const customDaysInput = document.getElementById('user-custom-days').value;
+const customDays = customDaysInput
+? customDaysInput.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d) && d >= 1 && d <= 31)
+: [];
+
 try {
-// Update restriction
+// Toggle restriction
 await postData(`/api/admin/user/${selectedUserId}/toggle-restrict`, {});
-// Update limit
+// Set limit
 await postData(`/api/admin/user/${selectedUserId}/set-limit`, { limit });
-// Update custom days (this would need a new endpoint)
-showMessage('Settings updated', 'success');
+// Set custom withdrawal days
+await postData(`/api/admin/user/${selectedUserId}/set-custom-days`, { days: customDays });
+
+showMessage('User settings updated!', 'success');
 const modal = bootstrap.Modal.getInstance(document.getElementById('withdrawalSettingsModal'));
 modal.hide();
 loadUsers();
+loadWithdrawalReport(); // Refresh report
 } catch (err) {
 console.error('Save settings error:', err);
 showMessage('Failed to save settings', 'error');
 }
 }
+// ================================ ADJUST BALANCE ================================
+function openAdjustBalance(userId) {
+fetch(`/api/admin/user/${userId}`, { credentials: 'include' })
+.then(res => res.json())
+.then(data => {
+if (data.success) {
+adjustUserId = userId;
+document.getElementById('adjust-username').textContent = data.user.username;
+document.getElementById('adjust-amount').value = '';
+document.getElementById('adjust-note').value = '';
+const modal = new bootstrap.Modal(document.getElementById('adjustBalanceModal'));
+modal.show();
+}
+})
+.catch(err => showMessage('Failed to load user', 'error'));
+}
+async function saveBalanceAdjustment() {
+const amount = parseFloat(document.getElementById('adjust-amount').value);
+const note = document.getElementById('adjust-note').value.trim();
 
+if (isNaN(amount)) {
+showMessage('Please enter a valid amount', 'error');
+return;
+}
+if (!note) {
+showMessage('Please add a note for the adjustment', 'error');
+return;
+}
+
+try {
+const result = await postData(`/api/admin/user/${adjustUserId}/adjust-balance`, {
+amount: amount,
+note: note
+});
+if (result.success) {
+showMessage(`Balance adjusted by ${formatCurrency(amount)}`, 'success');
+const modal = bootstrap.Modal.getInstance(document.getElementById('adjustBalanceModal'));
+modal.hide();
+loadUsers();
+loadDashboard();
+} else {
+showMessage(result.message || 'Failed to adjust balance', 'error');
+}
+} catch (err) {
+console.error('Adjust balance error:', err);
+showMessage('Network error', 'error');
+}
+}
+// ================================ TOGGLE ADMIN STATUS ================================
+async function toggleAdminStatus(userId) {
+if (!confirm('Are you sure you want to change this user\'s admin status?')) return;
+try {
+const result = await postData(`/api/admin/user/${userId}/toggle-admin`);
+if (result.success) {
+showMessage(`User is now ${result.is_admin ? 'an admin' : 'a regular user'}`, 'success');
+loadUsers();
+} else {
+showMessage(result.message, 'error');
+}
+} catch (err) {
+console.error('Toggle admin error:', err);
+showMessage('Failed to update admin status', 'error');
+}
+}
 // ================================ LOAD WITHDRAWALS ================================
 async function loadWithdrawals() {
 if (document.getElementById('withdrawals').innerHTML === '') {
@@ -1665,7 +1751,6 @@ console.error('Process withdrawal error:', err);
 showMessage('Failed to process withdrawal', 'error');
 }
 }
-
 // ================================ WITHDRAWAL REPORT ================================
 async function loadWithdrawalReport() {
 if (document.getElementById('withdrawalReport').innerHTML === '') {
@@ -1782,7 +1867,6 @@ class="btn btn-sm btn-outline-primary">
 `;
 }).join('');
 }
-
 // ================================ SETTINGS ================================
 async function loadSettings() {
 try {
@@ -1849,7 +1933,6 @@ console.error('Change password error:', err);
 showMessage('Failed to change password', 'error', 'password-message');
 }
 }
-
 // ================================ COUPONS ================================
 async function loadCouponStats() {
 try {
@@ -1896,7 +1979,6 @@ textarea.value = '';
 loadCouponStats();
 } catch (err) { showMessage('Failed to add coupons', 'error', 'coupon-message'); }
 }
-
 // ================================ WHATSAPP ================================
 async function loadWhatsAppNumbers() {
 if (document.getElementById('whatsapp').innerHTML === '') {
@@ -1965,7 +2047,6 @@ showMessage(data.message, data.success ? 'success' : 'error');
 loadWhatsAppNumbers();
 } catch (err) { showMessage('Failed to delete number', 'error'); }
 }
-
 // ================================ INIT ================================
 document.addEventListener('DOMContentLoaded', () => {
 fetchData('/api/user/profile')
