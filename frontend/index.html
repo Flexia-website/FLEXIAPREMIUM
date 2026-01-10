@@ -131,29 +131,29 @@
             <section class="activities-section">
                 <h3 class="section-title"><i class="fas fa-gamepad"></i> Earn & Play</h3>
                 <div class="activities-grid">
-                    <!-- FIXED: Changed onclick to openSnakeGame() -->
-                    <div class="activity-card" onclick="openSnakeGame()">
+                    <!-- FIXED: Direct link to game -->
+                    <div class="activity-card" onclick="window.location.href='snake.html'">
                         <div class="card-icon game"><i class="fas fa-gamepad"></i></div>
                         <div class="card-title">Snake Mine</div>
                         <div class="card-subtitle">Eat = ₦200 Each</div>
                         <div class="card-badge free">FREE</div>
                     </div>
-                    <!-- FIXED: Changed onclick to openCoinFlipGame() -->
-                    <div class="activity-card" onclick="openCoinFlipGame()">
+                    <!-- FIXED: Direct link to game -->
+                    <div class="activity-card" onclick="window.location.href='coinflip.html'">
                         <div class="card-icon coin"><i class="fas fa-coins"></i></div>
                         <div class="card-title">Coin Flip</div>
                         <div class="card-subtitle">Bet & Double</div>
                         <div class="card-badge bet">Min: ₦100</div>
                     </div>
-                    <!-- FIXED: Changed onclick to openPlinkoGame() -->
-                    <div class="activity-card" onclick="openPlinkoGame()">
+                    <!-- FIXED: Direct link to game -->
+                    <div class="activity-card" onclick="window.location.href='plinko.html'">
                         <div class="card-icon play"><i class="fas fa-bowling-ball"></i></div>
                         <div class="card-title">Plinko 3D</div>
                         <div class="card-subtitle">Bet & Multiply</div>
                         <div class="card-badge bet">Min: ₦100</div>
                     </div>
-                    <!-- FIXED: Changed onclick to openTikTokGame() -->
-                    <div class="activity-card" onclick="openTikTokGame()">
+                    <!-- FIXED: Updated function name -->
+                    <div class="activity-card" onclick="Games.openTikTok()">
                         <div class="card-icon tiktok"><i class="fab fa-tiktok"></i></div>
                         <div class="card-title">TikTok Follow</div>
                         <div class="card-subtitle">Follow = ₦150</div>
@@ -165,8 +165,8 @@
                         <div class="card-subtitle">₦7,500/Friend</div>
                         <div class="card-badge bonus">Bonus</div>
                     </div>
-                    <!-- FIXED: Changed onclick to openSpinWheelGame() -->
-                    <div class="activity-card" onclick="openSpinWheelGame()">
+                    <!-- FIXED: Updated function name -->
+                    <div class="activity-card" onclick="Games.openSpinWheel()">
                         <div class="card-icon spin"><i class="fas fa-sync-alt"></i></div>
                         <div class="card-title">Daily Spin</div>
                         <div class="card-subtitle">Win Up To ₦1000</div>
@@ -462,27 +462,15 @@
         // Create global functions if they don't exist (as backup)
         if (!window.openSnakeGame) {
             window.openSnakeGame = function() {
-                if (window.Games && Games.openSnake) {
-                    Games.openSnake();
-                } else {
-                    window.location.href = 'snake.html';
-                }
+                window.location.href = 'snake.html';
             };
             
             window.openCoinFlipGame = function() {
-                if (window.Games && Games.openCoinFlip) {
-                    Games.openCoinFlip();
-                } else {
-                    window.location.href = 'coinflip.html';
-                }
+                window.location.href = 'coinflip.html';
             };
             
             window.openPlinkoGame = function() {
-                if (window.Games && Games.openPlinko) {
-                    Games.openPlinko();
-                } else {
-                    window.location.href = 'plinko.html';
-                }
+                window.location.href = 'plinko.html';
             };
             
             window.openTikTokGame = function() {
@@ -501,6 +489,15 @@
                 }
             };
         }
+        
+        // Emergency backup functions
+        window.goBackToDashboard = function() {
+            window.location.href = 'index.html';
+        };
+        
+        window.showMessage = function(message, type = 'info') {
+            alert(`[${type.toUpperCase()}] ${message}`);
+        };
     </script>
 </body>
 </html>
