@@ -1,4 +1,4 @@
-# backend/app.py - ULTIMATE VERSION 12.2 - ALL FIXES APPLIED
+# backend/app.py - ULTIMATE VERSION 12.3 - ACHIEVEMENT FIXES APPLIED
 # FLEXIA Platform - PRODUCTION READY
 
 import os
@@ -446,7 +446,7 @@ def add_missing_columns():
         
         if is_postgres:
             # Check and add missing columns for PostgreSQL
-            columns_to_add = ['last_achievement_check', 'last_game_timestamp']
+            columns_to_add = ['last_achievement_check', 'last_game_timestamp', 'claimed_achievements']
             for column in columns_to_add:
                 cursor.execute(f"""
                 SELECT column_name 
@@ -461,7 +461,7 @@ def add_missing_columns():
             cursor.execute("PRAGMA table_info(users)")
             columns = [col[1] for col in cursor.fetchall()]
             
-            columns_to_add = ['last_achievement_check', 'last_game_timestamp']
+            columns_to_add = ['last_achievement_check', 'last_game_timestamp', 'claimed_achievements']
             for column in columns_to_add:
                 if column not in columns:
                     cursor.execute(f"ALTER TABLE users ADD COLUMN {column} TEXT")
@@ -511,7 +511,7 @@ def init_db():
     cursor = conn.cursor()
     is_postgres = os.environ.get('DATABASE_URL') is not None
 
-    # Users table - FIXED WITH ALL COLUMNS
+    # Users table - FIXED WITH ALL COLUMNS INCLUDING claimed_achievements
     if is_postgres:
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
@@ -536,7 +536,8 @@ def init_db():
             custom_withdrawal_days TEXT,
             withdrawal_limit REAL DEFAULT 0.00,
             last_game_timestamp TEXT,
-            last_achievement_check TEXT
+            last_achievement_check TEXT,
+            claimed_achievements TEXT DEFAULT '[]'  -- NEW COLUMN FOR TRACKING CLAIMED ACHIEVEMENTS
         )
         ''')
     else:
@@ -563,7 +564,8 @@ def init_db():
             custom_withdrawal_days TEXT,
             withdrawal_limit REAL DEFAULT 0.00,
             last_game_timestamp TEXT,
-            last_achievement_check TEXT
+            last_achievement_check TEXT,
+            claimed_achievements TEXT DEFAULT '[]'  -- NEW COLUMN FOR TRACKING CLAIMED ACHIEVEMENTS
         )
         ''')
 
@@ -744,13 +746,14 @@ def init_db():
                 username, password, balance, referral_code, is_admin,
                 created_at, last_login, game_stats, admin_password_changed,
                 withdrawal_pin, contact, profile_picture, ui_theme, 
-                last_game_timestamp, last_achievement_check
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                last_game_timestamp, last_achievement_check, claimed_achievements
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ''', (
                 "flexiaadmin", admin_pass, 500000.00, "ADM0001", True,
                 datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
                 game_stats, False, pin_hash, "", "", "light", 
-                datetime.utcnow().isoformat(), datetime.utcnow().isoformat()
+                datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
+                '[]'  # Empty array for claimed achievements
             ))
         else:
             cursor.execute(f'''
@@ -758,13 +761,14 @@ def init_db():
                 username, password, balance, referral_code, is_admin,
                 created_at, last_login, game_stats, admin_password_changed,
                 withdrawal_pin, contact, profile_picture, ui_theme,
-                last_game_timestamp, last_achievement_check
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                last_game_timestamp, last_achievement_check, claimed_achievements
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 "flexiaadmin", admin_pass, 500000.00, "ADM0001", 1,
                 datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
                 game_stats, 0, pin_hash, "", "", "light",
-                datetime.utcnow().isoformat(), datetime.utcnow().isoformat()
+                datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
+                '[]'  # Empty array for claimed achievements
             ))
         app.logger.warning("\n🚨 FLEXIA ADMIN ACCOUNT CREATED 🚨")
         app.logger.warning("Username: flexiaadmin")
@@ -976,9 +980,9 @@ def create_transaction_hash(user_id, game_type, data):
     hash_input = f"{user_id}-{game_type}-{data_str}-{int(time.time())}"  # Change every second
     return hashlib.md5(hash_input.encode()).hexdigest()
 
-# ======================= FIXED: ACHIEVEMENT REWARDS =======================
+# ======================= FIXED: ACHIEVEMENT REWARDS - ONE TIME ONLY =======================
 def grant_achievement_rewards(user_id):
-    """Thread-safe achievement reward calculation - FIXED"""
+    """Thread-safe achievement reward calculation - ONE TIME ONLY REWARDS"""
     app.logger.info(f"Granting achievement rewards for user {user_id}")
     
     conn = None
@@ -998,7 +1002,8 @@ def grant_achievement_rewards(user_id):
         # Get user data WITH LOCK to prevent concurrent updates
         ph = '%s' if os.environ.get('DATABASE_URL') else '?'
         cursor.execute(f'''
-        SELECT balance, game_stats, referral_code, points, last_achievement_check 
+        SELECT balance, game_stats, referral_code, points, last_achievement_check,
+               claimed_achievements
         FROM users WHERE id = {ph}
         ''', (user_id,))
         
@@ -1012,6 +1017,13 @@ def grant_achievement_rewards(user_id):
         referral_code = row[2] if row[2] else ''
         current_points = int(row[3]) if row[3] else 0
         last_check = row[4] if row[4] else None
+        
+        # Get already claimed achievements
+        claimed_achievements_str = row[5] if len(row) > 5 else '[]'
+        try:
+            claimed_achievements = json.loads(claimed_achievements_str)
+        except:
+            claimed_achievements = []
         
         # Check if already processed recently (within 5 minutes)
         if last_check:
@@ -1050,51 +1062,66 @@ def grant_achievement_rewards(user_id):
         coin_total = game_stats.get('coin_flip', {}).get('wins', 0) + game_stats.get('coin_flip', {}).get('losses', 0)
         plinko_wins = game_stats.get('plinko', {}).get('total_wins', 0)
 
-        # Define achievements
+        # Define achievements with IDs
         achievements = [
-            {"unlocked": total_games >= 1, "reward": 500, "points": 10},
-            {"unlocked": total_games >= 50, "reward": 5000, "points": 50},
-            {"unlocked": total_games >= 200, "reward": 15000, "points": 150},
-            {"unlocked": snake_high >= 1000, "reward": 7500, "points": 75},
-            {"unlocked": coin_streak >= 10, "reward": 10000, "points": 100},
-            {"unlocked": coin_total >= 100, "reward": 6000, "points": 60},
-            {"unlocked": plinko_wins >= 50, "reward": 8000, "points": 80},
-            {"unlocked": balance >= 1000, "reward": 1000, "points": 15},
-            {"unlocked": balance >= 50000, "reward": 10000, "points": 100},
-            {"unlocked": balance >= 200000, "reward": 25000, "points": 200},
-            {"unlocked": total_withdrawals >= 1, "reward": 5000, "points": 50},
-            {"unlocked": games_today >= 5, "reward": 3000, "points": 30},
-            {"unlocked": games_today >= 20, "reward": 8000, "points": 80},
-            {"unlocked": referrals >= 5, "reward": 10000, "points": 100},
-            {"unlocked": referrals >= 20, "reward": 30000, "points": 300},
-            {"unlocked": total_tx >= 10, "reward": 4000, "points": 40}
+            {"id": 1, "unlocked": total_games >= 1, "reward": 500, "points": 10},
+            {"id": 2, "unlocked": total_games >= 50, "reward": 5000, "points": 50},
+            {"id": 3, "unlocked": total_games >= 200, "reward": 15000, "points": 150},
+            {"id": 4, "unlocked": snake_high >= 1000, "reward": 7500, "points": 75},
+            {"id": 5, "unlocked": coin_streak >= 10, "reward": 10000, "points": 100},
+            {"id": 6, "unlocked": coin_total >= 100, "reward": 6000, "points": 60},
+            {"id": 7, "unlocked": plinko_wins >= 50, "reward": 8000, "points": 80},
+            {"id": 8, "unlocked": balance >= 1000, "reward": 1000, "points": 15},
+            {"id": 9, "unlocked": balance >= 50000, "reward": 10000, "points": 100},
+            {"id": 10, "unlocked": balance >= 200000, "reward": 25000, "points": 200},
+            {"id": 11, "unlocked": total_withdrawals >= 1, "reward": 5000, "points": 50},
+            {"id": 12, "unlocked": games_today >= 5, "reward": 3000, "points": 30},
+            {"id": 13, "unlocked": games_today >= 20, "reward": 8000, "points": 80},
+            {"id": 14, "unlocked": referrals >= 5, "reward": 10000, "points": 100},
+            {"id": 15, "unlocked": referrals >= 20, "reward": 30000, "points": 300},
+            {"id": 16, "unlocked": total_tx >= 10, "reward": 4000, "points": 40}
         ]
 
-        total_reward = sum(ach["reward"] for ach in achievements if ach["unlocked"])
-        total_points = sum(ach["points"] for ach in achievements if ach["unlocked"])
+        # Filter out achievements that have already been rewarded
+        new_achievements = []
+        for ach in achievements:
+            if ach["unlocked"] and ach["id"] not in claimed_achievements:
+                new_achievements.append(ach)
         
-        # Only update if there are new points
-        if total_points <= current_points and total_reward == 0:
+        if not new_achievements:
             # Still update last check time
             cursor.execute(f'UPDATE users SET last_achievement_check = {ph} WHERE id = {ph}', 
                           (datetime.utcnow().isoformat(), user_id))
             conn.commit()
             return balance
-
+        
+        total_reward = sum(ach["reward"] for ach in new_achievements)
+        total_points = sum(ach["points"] for ach in new_achievements)
+        
+        # Add the newly rewarded achievement IDs to claimed list
+        new_achievement_ids = [ach["id"] for ach in new_achievements]
+        all_claimed_achievements = claimed_achievements + new_achievement_ids
+        
         new_balance = balance + total_reward
         
         # Update user balance and points using atomic update
         if os.environ.get('DATABASE_URL'):
             cursor.execute(f'''
-            UPDATE users SET balance = {ph}, points = {ph}, last_achievement_check = {ph} 
+            UPDATE users SET balance = {ph}, points = {ph}, 
+            last_achievement_check = {ph}, claimed_achievements = {ph}
             WHERE id = {ph}
-            ''', (new_balance, total_points, datetime.utcnow().isoformat(), user_id))
+            ''', (new_balance, current_points + total_points, 
+                  datetime.utcnow().isoformat(), 
+                  json.dumps(all_claimed_achievements), user_id))
         else:
             # For SQLite, we need to update separately
             cursor.execute(f'''
-            UPDATE users SET balance = balance + {ph}, points = {ph}, last_achievement_check = {ph} 
+            UPDATE users SET balance = balance + {ph}, points = points + {ph}, 
+            last_achievement_check = {ph}, claimed_achievements = {ph}
             WHERE id = {ph}
-            ''', (total_reward, total_points, datetime.utcnow().isoformat(), user_id))
+            ''', (total_reward, total_points, 
+                  datetime.utcnow().isoformat(), 
+                  json.dumps(all_claimed_achievements), user_id))
         
         # Record achievement transaction if reward > 0
         if total_reward > 0:
@@ -1104,12 +1131,12 @@ def grant_achievement_rewards(user_id):
             VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
             ''', (
                 tx_id, user_id, 'ACHIEVEMENT_REWARD', total_reward, 'COMPLETED',
-                json.dumps({"source": "auto_grant", "points": total_points}),
+                json.dumps({"source": "manual_claim", "points": total_points, "achievement_ids": new_achievement_ids}),
                 datetime.utcnow().isoformat()
             ))
         
         conn.commit()
-        app.logger.info(f"✅ Granted achievement rewards to user {user_id}: ₦{total_reward}, {total_points} points")
+        app.logger.info(f"✅ Granted achievement rewards to user {user_id}: ₦{total_reward}, {total_points} points, achievements: {new_achievement_ids}")
         
         return new_balance
         
@@ -1258,7 +1285,7 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "uptime": get_uptime(),
             "database": db_status,
-            "version": "12.2",
+            "version": "12.3",
             "stats": {
                 "total_users": user_count,
                 "pending_withdrawals": pending_withdrawals
@@ -1278,7 +1305,7 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "database": f"error: {str(e)}",
             "uptime": get_uptime(),
-            "version": "12.2"
+            "version": "12.3"
         }), 503
 
 # ======================= BACKUP ENDPOINTS =======================
@@ -1400,21 +1427,24 @@ def register():
         admin_pw_changed = False if is_postgres else 0
         withdrawal_restricted = False if is_postgres else 0
         
+        # NEW: Initialize with empty claimed achievements array
         cursor.execute(f'''
         INSERT INTO users (
             username, password, balance, referral_code, referred_by, is_admin,
             created_at, last_login, game_stats, contact, profile_picture, ui_theme,
             admin_password_changed, withdrawal_pin, withdrawal_restricted, withdrawal_limit, 
-            points, claimed_bonuses, last_game_timestamp, last_achievement_check
+            points, claimed_bonuses, last_game_timestamp, last_achievement_check,
+            claimed_achievements
         ) VALUES (
             {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, 
-            {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}
+            {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}
         )
         ''', (
             username, generate_password_hash(password), 0.00, user_referral_code, referral_code or None, is_admin_value,
             datetime.utcnow().isoformat(), datetime.utcnow().isoformat(), game_stats, contact or "", "", "light",
             admin_pw_changed, None, withdrawal_restricted, 0.00, 0, 0, 
-            datetime.utcnow().isoformat(), datetime.utcnow().isoformat()
+            datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
+            '[]'  # Empty array for claimed achievements
         ))
         
         if is_postgres:
@@ -1587,7 +1617,8 @@ def get_user_profile():
                 "transactions": transactions,
                 "withdrawal_pin": bool(fresh_user.get('withdrawal_pin')),
                 "profile_picture": fresh_user.get('profile_picture', ''),
-                "ui_theme": fresh_user.get('ui_theme', 'light')
+                "ui_theme": fresh_user.get('ui_theme', 'light'),
+                "claimed_achievements": json.loads(fresh_user.get('claimed_achievements', '[]'))  # ADDED
             },
             "referrals": {
                 "count": referrals,
@@ -1873,8 +1904,6 @@ def report_snake():
         
         conn.commit()
         
-        # REMOVED: grant_achievement_rewards(user['id']) - Achievement rewards now manual only
-        
         app.logger.info(f"✅ Snake reward granted to {user['username']}: ₦{reward}")
         
         return jsonify({
@@ -1972,8 +2001,6 @@ def report_coinflip():
         ))
         
         conn.commit()
-        
-        # REMOVED: grant_achievement_rewards(user['id']) - Achievement rewards now manual only
         
         app.logger.info(f"✅ Coin flip processed for {user['username']}: {'WON' if won else 'LOST'} {bet}, net: {net_change}")
         
@@ -2075,8 +2102,6 @@ def report_plinko():
         
         conn.commit()
         
-        # REMOVED: grant_achievement_rewards(user['id']) - Achievement rewards now manual only
-        
         app.logger.info(f"✅ Plinko processed for {user['username']}: bet {bet}, multiplier {multiplier}, net: {net_change}")
         
         return jsonify({
@@ -2156,8 +2181,6 @@ def report_spin():
         
         conn.commit()
         
-        # REMOVED: grant_achievement_rewards(user['id']) - Achievement rewards now manual only
-        
         app.logger.info(f"✅ Spin wheel processed for {user['username']}: reward {reward}")
         
         return jsonify({
@@ -2178,7 +2201,7 @@ def report_spin():
 @app.route('/api/achievements')
 @require_auth
 def get_achievements():
-    """Get user achievements - FIXED"""
+    """Get user achievements - UPDATED with claimed status"""
     user = get_current_user()
     if not user:
         return jsonify({"success": False, "message": "Not authenticated"}), 401
@@ -2189,6 +2212,13 @@ def get_achievements():
     try:
         game_stats = json.loads(user.get('game_stats', '{}'))
         balance = float(user.get('balance', 0))
+        
+        # Get claimed achievements
+        claimed_achievements_str = user.get('claimed_achievements', '[]')
+        try:
+            claimed_achievements = json.loads(claimed_achievements_str)
+        except:
+            claimed_achievements = []
         
         cursor.execute('SELECT COUNT(*) FROM transactions WHERE user_id = %s', (user['id'],))
         total_tx = cursor.fetchone()[0]
@@ -2213,79 +2243,78 @@ def get_achievements():
         coin_total = game_stats.get('coin_flip', {}).get('wins', 0) + game_stats.get('coin_flip', {}).get('losses', 0)
         plinko_wins = game_stats.get('plinko', {}).get('total_wins', 0)
 
-        # Define achievements with FULL progress data
+        # Define achievements with FULL progress data and claimed status
         achievements_data = [
             {"id": 1, "title": "First Game", "description": "Play any game once", "reward": 500, "points": 10, 
              "unlocked": total_games >= 1, "category": "gaming", "icon": "fas fa-gamepad",
              "current_value": total_games, "target_value": 1, "progress_percentage": min(100, (total_games / 1) * 100),
-             "cash_reward": 500},
+             "cash_reward": 500, "claimed": 1 in claimed_achievements},
             {"id": 2, "title": "Gamer", "description": "Play 50 games", "reward": 5000, "points": 50, 
              "unlocked": total_games >= 50, "category": "gaming", "icon": "fas fa-gamepad",
              "current_value": total_games, "target_value": 50, "progress_percentage": min(100, (total_games / 50) * 100),
-             "cash_reward": 5000},
+             "cash_reward": 5000, "claimed": 2 in claimed_achievements},
             {"id": 3, "title": "Game Master", "description": "Play 200 games", "reward": 15000, "points": 150, 
              "unlocked": total_games >= 200, "category": "gaming", "icon": "fas fa-gamepad",
              "current_value": total_games, "target_value": 200, "progress_percentage": min(100, (total_games / 200) * 100),
-             "cash_reward": 15000},
+             "cash_reward": 15000, "claimed": 3 in claimed_achievements},
             {"id": 4, "title": "Snake Pro", "description": "Snake high score 1000+", "reward": 7500, "points": 75, 
              "unlocked": snake_high >= 1000, "category": "gaming", "icon": "fas fa-gamepad",
              "current_value": snake_high, "target_value": 1000, "progress_percentage": min(100, (snake_high / 1000) * 100),
-             "cash_reward": 7500},
+             "cash_reward": 7500, "claimed": 4 in claimed_achievements},
             {"id": 5, "title": "Lucky Streak", "description": "10+ coin flip win streak", "reward": 10000, "points": 100, 
              "unlocked": coin_streak >= 10, "category": "gaming", "icon": "fas fa-coins",
              "current_value": coin_streak, "target_value": 10, "progress_percentage": min(100, (coin_streak / 10) * 100),
-             "cash_reward": 10000},
+             "cash_reward": 10000, "claimed": 5 in claimed_achievements},
             {"id": 6, "title": "Coin Flipper", "description": "100+ coin flips", "reward": 6000, "points": 60, 
              "unlocked": coin_total >= 100, "category": "gaming", "icon": "fas fa-coins",
              "current_value": coin_total, "target_value": 100, "progress_percentage": min(100, (coin_total / 100) * 100),
-             "cash_reward": 6000},
+             "cash_reward": 6000, "claimed": 6 in claimed_achievements},
             {"id": 7, "title": "Plinko Champion", "description": "50+ Plinko wins", "reward": 8000, "points": 80, 
              "unlocked": plinko_wins >= 50, "category": "gaming", "icon": "fas fa-bullseye",
              "current_value": plinko_wins, "target_value": 50, "progress_percentage": min(100, (plinko_wins / 50) * 100),
-             "cash_reward": 8000},
+             "cash_reward": 8000, "claimed": 7 in claimed_achievements},
             {"id": 8, "title": "Thousandaire", "description": "Balance ₦1,000+", "reward": 1000, "points": 15, 
              "unlocked": balance >= 1000, "category": "earnings", "icon": "fas fa-money-bill-wave",
              "current_value": balance, "target_value": 1000, "progress_percentage": min(100, (balance / 1000) * 100),
-             "cash_reward": 1000},
+             "cash_reward": 1000, "claimed": 8 in claimed_achievements},
             {"id": 9, "title": "Millionaire in Progress", "description": "Balance ₦50,000+", "reward": 10000, "points": 100, 
              "unlocked": balance >= 50000, "category": "earnings", "icon": "fas fa-money-bill-wave",
              "current_value": balance, "target_value": 50000, "progress_percentage": min(100, (balance / 50000) * 100),
-             "cash_reward": 10000},
+             "cash_reward": 10000, "claimed": 9 in claimed_achievements},
             {"id": 10, "title": "High Roller", "description": "Balance ₦200,000+", "reward": 25000, "points": 200, 
              "unlocked": balance >= 200000, "category": "earnings", "icon": "fas fa-money-bill-wave",
              "current_value": balance, "target_value": 200000, "progress_percentage": min(100, (balance / 200000) * 100),
-             "cash_reward": 25000},
+             "cash_reward": 25000, "claimed": 10 in claimed_achievements},
             {"id": 11, "title": "First Withdrawal", "description": "Make first withdrawal", "reward": 5000, "points": 50, 
              "unlocked": total_withdrawals >= 1, "category": "earnings", "icon": "fas fa-wallet",
              "current_value": total_withdrawals, "target_value": 1, "progress_percentage": min(100, (total_withdrawals / 1) * 100),
-             "cash_reward": 5000},
+             "cash_reward": 5000, "claimed": 11 in claimed_achievements},
             {"id": 12, "title": "Daily Grinder", "description": "Play 5 games in a day", "reward": 3000, "points": 30, 
              "unlocked": games_today >= 5, "category": "streaks", "icon": "fas fa-calendar-day",
              "current_value": games_today, "target_value": 5, "progress_percentage": min(100, (games_today / 5) * 100),
-             "cash_reward": 3000},
+             "cash_reward": 3000, "claimed": 12 in claimed_achievements},
             {"id": 13, "title": "Addicted", "description": "Play 20 games in a day", "reward": 8000, "points": 80, 
              "unlocked": games_today >= 20, "category": "streaks", "icon": "fas fa-calendar-day",
              "current_value": games_today, "target_value": 20, "progress_percentage": min(100, (games_today / 20) * 100),
-             "cash_reward": 8000},
+             "cash_reward": 8000, "claimed": 13 in claimed_achievements},
             {"id": 14, "title": "Referral Starter", "description": "Refer 5 users", "reward": 10000, "points": 100, 
              "unlocked": referrals >= 5, "category": "special", "icon": "fas fa-users",
              "current_value": referrals, "target_value": 5, "progress_percentage": min(100, (referrals / 5) * 100),
-             "cash_reward": 10000},
+             "cash_reward": 10000, "claimed": 14 in claimed_achievements},
             {"id": 15, "title": "Referral Master", "description": "Refer 20 users", "reward": 30000, "points": 300, 
              "unlocked": referrals >= 20, "category": "special", "icon": "fas fa-users",
              "current_value": referrals, "target_value": 20, "progress_percentage": min(100, (referrals / 20) * 100),
-             "cash_reward": 30000},
+             "cash_reward": 30000, "claimed": 15 in claimed_achievements},
             {"id": 16, "title": "Transaction Veteran", "description": "10+ transactions", "reward": 4000, "points": 40, 
              "unlocked": total_tx >= 10, "category": "special", "icon": "fas fa-exchange-alt",
              "current_value": total_tx, "target_value": 10, "progress_percentage": min(100, (total_tx / 10) * 100),
-             "cash_reward": 4000}
+             "cash_reward": 4000, "claimed": 16 in claimed_achievements}
         ]
         
         total_achievements = len(achievements_data)
         unlocked_achievements = sum(1 for a in achievements_data if a['unlocked'])
+        unlocked_not_claimed = sum(1 for a in achievements_data if a['unlocked'] and not a['claimed'])
         total_points = sum(a['points'] for a in achievements_data if a['unlocked'])
-        
-        # REMOVED: grant_achievement_rewards(user['id']) - Achievement rewards now manual only
         
         # Get fresh balance
         cursor.execute('SELECT balance FROM users WHERE id = %s', (user['id'],))
@@ -2297,10 +2326,12 @@ def get_achievements():
             "stats": {
                 "total": total_achievements,
                 "unlocked": unlocked_achievements,
+                "unlocked_not_claimed": unlocked_not_claimed,
                 "points": total_points
             },
             "achievements": achievements_data,
-            "current_balance": fresh_balance
+            "current_balance": fresh_balance,
+            "has_unclaimed_rewards": unlocked_not_claimed > 0
         })
         
     except Exception as e:
@@ -2312,7 +2343,7 @@ def get_achievements():
 @app.route('/api/achievements/claim', methods=['POST'])
 @require_auth
 def claim_achievement_rewards():
-    """Manual achievement reward claiming - NEW ENDPOINT"""
+    """Manual achievement reward claiming - ONE TIME ONLY REWARDS"""
     user = get_current_user()
     
     try:
@@ -2413,8 +2444,6 @@ def follow_tiktok_daily():
         ''', (tx_id, user['id'], 'TIKTOK_DAILY', reward, 'COMPLETED', datetime.utcnow().isoformat()))
         
         conn.commit()
-        
-        # REMOVED: grant_achievement_rewards(user['id']) - Achievement rewards now manual only
         
         app.logger.info(f"✅ TikTok daily claimed by {user['username']}: reward: {reward}")
         
@@ -3190,8 +3219,6 @@ def claim_referral_bonus():
         
         conn.commit()
         
-        # REMOVED: grant_achievement_rewards(user['id']) - Achievement rewards now manual only
-        
         app.logger.info(f"✅ Referral bonus claimed by {user['username']}: {unclaimed}")
         
         return jsonify({
@@ -3282,8 +3309,6 @@ def withdraw():
         ))
         
         conn.commit()
-        
-        # REMOVED: grant_achievement_rewards(user['id']) - Achievement rewards now manual only
         
         app.logger.info(f"✅ Withdrawal requested by {user['username']}: {amount} to {bank_code}:{account_number}")
         
@@ -3642,7 +3667,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug = os.getenv('ENV') != 'production'
     
-    app.logger.info(f"🚀 Starting Flexia Platform ULTIMATE v12.2 on port {port} (debug: {debug})")
+    app.logger.info(f"🚀 Starting Flexia Platform ULTIMATE v12.3 on port {port} (debug: {debug})")
     app.logger.info(f"📁 Frontend directory: {CONFIG.FRONTEND_DIR}")
     app.logger.info(f"🔐 Secret key set: {'Yes' if CONFIG.SECRET_KEY else 'No'}")
     app.logger.info(f"🗄️  Database: {'PostgreSQL' if os.environ.get('DATABASE_URL') else 'SQLite'}")
@@ -3657,6 +3682,9 @@ if __name__ == '__main__':
     app.logger.info(f"   • Added game cooldown checks")
     app.logger.info(f"   • Added manual achievement claim endpoint")
     app.logger.info(f"   • Fixed hash generation (per-second)")
-    app.logger.info(f"✅ VERSION 12.2: The ultimate production-ready version")
+    app.logger.info(f"   • ✅ ACHIEVEMENT FIX: One-time rewards only")
+    app.logger.info(f"   • ✅ Added claimed_achievements column to track claimed achievements")
+    app.logger.info(f"   • ✅ Each achievement can only be claimed once per user")
+    app.logger.info(f"✅ VERSION 12.3: The ultimate production-ready version with one-time achievement rewards")
     
     app.run(host='0.0.0.0', port=port, debug=debug)
