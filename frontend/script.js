@@ -1,3 +1,4 @@
+// script.js
 // ================================
 // FLEXIA Frontend Logic v11.0 — FULLY UPDATED FOR BACKEND 12.2
 // ✅ Safe Game Claims ✅ Daily Limits ✅ Achievement Claims
@@ -1458,28 +1459,150 @@ document.addEventListener('DOMContentLoaded', () => {
   App.init();
 });
 
-//========== GLOBAL FUNCTIONS FOR GAME PAGES ===========
+// ==================== GLOBAL FUNCTIONS FOR GAME PAGES ====================
+// EXPORT ALL FUNCTIONS TO WINDOW OBJECT
+window.GameManager = GameManager;
+window.App = App;
+window.Games = Games;
+window.Auth = Auth;
+window.Profile = Profile;
+window.Referral = Referral;
+window.Banking = Banking;
+window.Achievements = Achievements;
+window.Settings = Settings;
+
+// Make game navigation functions globally available
+window.openSnakeGame = Games.openSnake;
+window.openCoinFlipGame = Games.openCoinFlip;
+window.openPlinkoGame = Games.openPlinko;
+window.openTikTokGame = Games.openTikTok;
+window.openSpinWheelGame = Games.openSpinWheel;
+
+// Make API functions globally available
+window.checkDailyLimit = async function(gameType) {
+  return await GameManager.checkDailyLimit(gameType);
+};
+
 window.reportGameResult = async function(gameType, data) {
-  switch(gameType) {
-    case 'snake':
-      return await Games.reportSnake(data.apples);
-    case 'coinflip':
-      return await Games.reportCoinFlip(data.bet, data.won);
-    case 'plinko':
-      return await Games.reportPlinko(data.bet, data.multiplier);
-    default:
-      throw new Error('Unknown game type');
+  try {
+    switch(gameType) {
+      case 'snake':
+        return await Games.reportSnake(data.apples);
+      case 'coinflip':
+        return await Games.reportCoinFlip(data.bet, data.won);
+      case 'plinko':
+        return await Games.reportPlinko(data.bet, data.multiplier);
+      default:
+        throw new Error('Unknown game type');
+    }
+  } catch (error) {
+    console.error('Report game result error:', error);
+    return { success: false, message: error.message };
   }
 };
 
-window.checkDailyLimit = async function(gameType) {
-  return await GameManager.checkDailyLimit(gameType);
+window.updateBalance = function(newBalance) {
+  App.updateBalance(newBalance);
 };
 
 window.showMessage = function(message, type = 'info') {
   App.showMessage(message, type);
 };
 
-window.updateBalance = function(newBalance) {
-  App.updateBalance(newBalance);
-}; 
+window.goBackToDashboard = function() {
+  window.location.href = 'index.html';
+};
+
+// ==================== INITIALIZE GLOBAL FUNCTIONS ====================
+// Ensure functions are available even if DOMContentLoaded hasn't fired yet
+if (typeof window.onload === 'function') {
+  const oldOnload = window.onload;
+  window.onload = function() {
+    oldOnload();
+    initGlobalFunctions();
+  };
+} else {
+  window.onload = initGlobalFunctions;
+}
+
+function initGlobalFunctions() {
+  // Double-check all global functions are set
+  if (!window.reportGameResult) {
+    window.reportGameResult = async function(gameType, data) {
+      try {
+        switch(gameType) {
+          case 'snake':
+            return await Games.reportSnake(data.apples);
+          case 'coinflip':
+            return await Games.reportCoinFlip(data.bet, data.won);
+          case 'plinko':
+            return await Games.reportPlinko(data.bet, data.multiplier);
+          default:
+            throw new Error('Unknown game type');
+        }
+      } catch (error) {
+        console.error('Report game result error:', error);
+        return { success: false, message: error.message };
+      }
+    };
+  }
+  
+  if (!window.checkDailyLimit) {
+    window.checkDailyLimit = async function(gameType) {
+      return await GameManager.checkDailyLimit(gameType);
+    };
+  }
+  
+  if (!window.updateBalance) {
+    window.updateBalance = function(newBalance) {
+      App.updateBalance(newBalance);
+    };
+  }
+  
+  if (!window.showMessage) {
+    window.showMessage = function(message, type = 'info') {
+      App.showMessage(message, type);
+    };
+  }
+  
+  if (!window.goBackToDashboard) {
+    window.goBackToDashboard = function() {
+      window.location.href = 'index.html';
+    };
+  }
+  
+  console.log('Global functions initialized successfully');
+}
+
+// Auto-initialize global functions on script load
+(function() {
+  // Set up global functions immediately
+  window.GameManager = GameManager;
+  window.App = App;
+  window.Games = Games;
+  
+  // Quick access functions
+  window.checkDailyLimit = async function(gameType) {
+    return await GameManager.checkDailyLimit(gameType);
+  };
+  
+  window.reportGameResult = async function(gameType, data) {
+    try {
+      switch(gameType) {
+        case 'snake':
+          return await Games.reportSnake(data.apples);
+        case 'coinflip':
+          return await Games.reportCoinFlip(data.bet, data.won);
+        case 'plinko':
+          return await Games.reportPlinko(data.bet, data.multiplier);
+        default:
+          throw new Error('Unknown game type');
+      }
+    } catch (error) {
+      console.error('Report game result error:', error);
+      return { success: false, message: error.message };
+    }
+  };
+  
+  console.log('FLEXIA Script v11.0 loaded - All global functions exported');
+})();
