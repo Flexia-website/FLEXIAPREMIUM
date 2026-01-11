@@ -4,23 +4,399 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Snake Mine - FLEXIA</title>
+<!-- CORRECTED: Updated logo paths -->
 <link rel="icon" type="image/x-icon" href="logo/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="logo/flexia-logo.png">
 <link rel="icon" type="image/png" sizes="16x16" href="logo/flexia-logo.png">
 <link rel="apple-touch-icon" href="logo/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
+<!-- Fonts & CSS -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-/* [Keep all CSS styles from snake1 - they're identical and correct] */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
 }
-/* ... [ALL CSS CODE FROM SNAKE1 REMAINS HERE] ... */
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+body {
+  font-family: 'Arial', sans-serif;
+  background: #000000;
+  color: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+}
+.header {
+  background: #0A0A1F;
+  padding: 12px 16px;
+  border-bottom: 2px solid #8000FF;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+.game-logo {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.game-logo-icon {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(45deg, #8000FF, #00CCFF);
+  border-radius: 12px;
+  color: white;
+  font-weight: bold;
+  font-size: 1.5rem;
+  box-shadow: 0 5px 15px rgba(128, 0, 255, 0.3);
+}
+.header-left h1 {
+  font-size: 1.4rem;
+  color: #8000FF;
+  text-shadow: 0 0 10px rgba(128, 0, 255, 0.6);
+}
+.header-left p {
+  color: #00CCFF;
+  font-size: 0.8rem;
+}
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  overflow: hidden;
+}
+.game-row {
+  display: flex;
+  flex: 1;
+  gap: 12px;
+  min-height: 0;
+}
+.game-panel {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  background: rgba(30, 30, 69, 0.8);
+  border: 2px solid #8000FF;
+  border-radius: 12px;
+  padding: 12px;
+  overflow: hidden;
+}
+.game-board-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+#game-board {
+  border: 3px solid #8000FF;
+  border-radius: 10px;
+  background: #151535;
+  box-shadow: 0 8px 25px rgba(128, 0, 255, 0.3);
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  touch-action: none;
+}
+.scores-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.score-card {
+  background: rgba(30, 30, 69, 0.8);
+  border: 2px solid #8000FF;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+.score-label {
+  font-size: 0.9rem;
+  color: #A0A0B5;
+  margin-bottom: 8px;
+  font-weight: 600;
+  text-align: center;
+}
+.score-value {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #00FFCC;
+  text-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+  text-align: center;
+}
+.mini-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+.mini-stat {
+  text-align: center;
+  padding: 8px;
+  background: rgba(128, 0, 255, 0.1);
+  border-radius: 8px;
+  border: 1px solid #8000FF;
+}
+.mini-label {
+  font-size: 0.7rem;
+  color: #A0A0B5;
+  margin-bottom: 4px;
+}
+.mini-value {
+  font-size: 0.9rem;
+  color: #00FFCC;
+  font-weight: bold;
+}
+.controls-row {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+  min-height: 80px;
+}
+.controls-panel {
+  flex: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.action-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  max-width: 400px;
+}
+.action-btn {
+  background: linear-gradient(45deg, #8000FF, #00CCFF);
+  border: none;
+  border-radius: 10px;
+  color: #0A0A1F;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+  padding: 14px;
+}
+.action-btn:active {
+  transform: scale(0.95);
+}
+.action-btn.pulse {
+  animation: pulse 2s infinite;
+}
+.action-btn.glow {
+  animation: glow 2s infinite;
+}
+.dashboard-panel {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+.dashboard-btn {
+  background: linear-gradient(45deg, #8000FF, #00CCFF);
+  border: none;
+  border-radius: 10px;
+  color: #0A0A1F;
+  padding: 14px 24px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  transition: all 0.2s;
+  width: 100%;
+  max-width: 200px;
+  justify-content: center;
+}
+.dashboard-btn:active {
+  transform: scale(0.95);
+}
+
+/* Button states */
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  animation: none !important;
+}
+.action-btn.processing {
+  background: linear-gradient(45deg, #555555, #777777) !important;
+  animation: none !important;
+}
+.action-btn.success {
+  background: linear-gradient(45deg, #00FF55, #00CCFF) !important;
+  animation: success 0.5s ease-in-out !important;
+}
+.action-btn.error {
+  background: linear-gradient(45deg, #FF5555, #FF8800) !important;
+  animation: shake 0.5s ease-in-out !important;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 204, 0.5); }
+  50% { box-shadow: 0 0 20px rgba(0, 255, 204, 0.8); }
+}
+@keyframes success {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+/* Game Over Modal */
+.game-over-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+.modal-content {
+  background: #0A0A1F;
+  border: 3px solid #8000FF;
+  border-radius: 15px;
+  padding: 30px;
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+}
+.modal-content h2 {
+  color: #00FFCC;
+  margin-bottom: 20px;
+}
+.modal-stats {
+  margin: 20px 0;
+}
+.modal-stat {
+  display: flex;
+  justify-content: space-between;
+  margin: 10px 0;
+  padding: 10px;
+  background: rgba(128, 0, 255, 0.1);
+  border-radius: 8px;
+}
+.modal-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+.modal-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.primary-btn {
+  background: linear-gradient(45deg, #8000FF, #00CCFF);
+  color: #0A0A1F;
+}
+.secondary-btn {
+  background: #2a2a4a;
+  color: #FFFFFF;
+  border: 1px solid #8000FF;
+}
+
+@media (max-width: 768px) {
+  .game-row {
+    flex-direction: column;
+  }
+  .scores-panel {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .score-card {
+    min-width: 48%;
+  }
+  .controls-row {
+    min-height: auto;
+  }
+  .dashboard-panel {
+    align-items: center;
+    justify-content: center;
+  }
+  .dashboard-btn {
+    max-width: none;
+  }
+}
+@media (max-width: 480px) {
+  .header {
+    padding: 10px 12px;
+  }
+  .header-left h1 {
+    font-size: 1.2rem;
+  }
+  .header-left p {
+    font-size: 0.7rem;
+  }
+  .main-content {
+    padding: 8px;
+  }
+  .score-card {
+    padding: 12px;
+  }
+  .score-label {
+    font-size: 0.8rem;
+  }
+  .score-value {
+    font-size: 1.4rem;
+  }
+  .action-btn {
+    font-size: 0.9rem;
+    padding: 10px;
+  }
+  .dashboard-btn {
+    padding: 12px 20px;
+    font-size: 0.9rem;
+  }
+}
 .hidden {
   display: none !important;
+}
+html, body {
+  overscroll-behavior: none;
+}
+#game-board {
+  user-select: none;
+  -webkit-user-select: none;
+}
+canvas {
+  display: block;
 }
 </style>
 </head>
@@ -36,7 +412,6 @@
     </div>
   </div>
 </div>
-
 <div class="main-content">
   <div class="game-row">
     <div class="game-panel">
@@ -76,20 +451,19 @@
     </div>
   </div>
 </div>
-
 <div class="controls-row">
   <div class="controls-panel">
     <div class="action-buttons">
       <button class="action-btn pulse" onclick="startGame()" id="start-btn">
         <i class="fas fa-play"></i> START GAME
       </button>
-      <button class="action-btn glow" onclick="submitScore()" id="claim-btn" disabled>
+      <button class="action-btn glow" onclick="submitScore()" id="claim-btn">
         <i class="fas fa-trophy"></i> CLAIM REWARD
       </button>
     </div>
   </div>
   <div class="dashboard-panel">
-    <button class="dashboard-btn" onclick="goBackToDashboard()">
+    <button class="dashboard-btn" onclick="window.location.href='index.html'">
       <i class="fas fa-arrow-left"></i> BACK TO DASHBOARD
     </button>
   </div>
@@ -125,12 +499,10 @@
 </div>
 
 <script>
-// ======================= GAME VARIABLES =======================
 const canvas = document.getElementById('game-board');
 const ctx = canvas.getContext('2d');
 const gridSize = 20;
 const tileCount = canvas.width / gridSize;
-
 let snake = [];
 let food = {};
 let score = 0;
@@ -139,35 +511,22 @@ let gameRunning = false;
 let gameLoop;
 let highScore = localStorage.getItem('snake_high_score') || 0;
 let gamesPlayed = localStorage.getItem('snake_games_played') || 0;
+let totalEarned = parseFloat(localStorage.getItem('snake_total_earned')) || 0;
 let currentGameEarnings = 0;
 const EARNINGS_PER_APPLE = 200;
-
-// Game state management
 let isClaiming = false;
-let currentBalance = parseFloat(localStorage.getItem('user_balance')) || 0;
 
-// ======================= UTILITY FUNCTIONS =======================
-function showMessage(text, type = 'info') {
-  // Use console for debugging, alert for user messages
-  console.log(`[${type.toUpperCase()}] ${text}`);
-  if (type === 'error' || type === 'success') {
-    alert(text);
+// Load user data
+function loadUserData() {
+  try {
+    document.getElementById('high-score').textContent = highScore;
+    document.getElementById('games-played').textContent = gamesPlayed;
+    document.getElementById('total-earned').textContent = `₦${totalEarned.toLocaleString()}`;
+  } catch (e) {
+    console.log('Using default values');
   }
 }
 
-function goBackToDashboard() {
-  if (gameRunning) {
-    if (!confirm('Game is running. Are you sure you want to quit?')) return;
-    clearInterval(gameLoop);
-  }
-  window.location.href = 'index.html';
-}
-
-function closeModal() {
-  document.getElementById('game-over-modal').classList.add('hidden');
-}
-
-// ======================= GAME FUNCTIONS =======================
 function initGame() {
   snake = [{x: 10, y: 10}];
   generateFood();
@@ -182,20 +541,16 @@ function generateFood() {
     x: Math.floor(Math.random() * tileCount),
     y: Math.floor(Math.random() * tileCount)
   };
-  
-  // Make sure food doesn't spawn on snake
   for (let segment of snake) {
     if (segment.x === food.x && segment.y === food.y) {
       generateFood();
       return;
     }
   }
-  
-  food.golden = Math.random() < 0.1; // 10% chance for golden apple
+  food.golden = Math.random() < 0.1;
 }
 
 function drawGame() {
-  // Clear canvas
   ctx.fillStyle = '#151535';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   
@@ -211,27 +566,22 @@ function drawGame() {
   // Draw snake
   for (let i = 0; i < snake.length; i++) {
     const segment = snake[i];
-    
-    if (i === 0) { // Head
+    if (i === 0) {
       ctx.fillStyle = '#00FFCC';
       ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize - 2, gridSize - 2);
-      
-      // Draw eyes
       ctx.fillStyle = '#0A0A1F';
       ctx.fillRect(segment.x * gridSize + 5, segment.y * gridSize + 5, 4, 4);
       ctx.fillRect(segment.x * gridSize + 11, segment.y * gridSize + 5, 4, 4);
-    } else { // Body
+    } else {
       const intensity = 1 - (i / snake.length) * 0.5;
       ctx.fillStyle = `rgba(0, 255, 204, ${intensity})`;
       ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize - 2, gridSize - 2);
     }
   }
   
-  // Draw food with pulse effect
+  // Draw food
   const pulse = Math.sin(Date.now() / 200) * 2;
-  
   if (food.golden) {
-    // Golden apple
     ctx.fillStyle = '#FFD700';
     ctx.beginPath();
     ctx.arc(
@@ -243,7 +593,6 @@ function drawGame() {
     );
     ctx.fill();
   } else {
-    // Red apple
     ctx.fillStyle = '#FF0055';
     ctx.beginPath();
     ctx.arc(
@@ -278,9 +627,7 @@ function drawGame() {
 function updateGame() {
   if (!gameRunning) return;
   
-  // Move snake head
   const head = {x: snake[0].x, y: snake[0].y};
-  
   switch(direction) {
     case 'up': head.y--; break;
     case 'down': head.y++; break;
@@ -288,13 +635,13 @@ function updateGame() {
     case 'right': head.x++; break;
   }
   
-  // Check wall collision
+  // Wall collision
   if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
     gameOver();
     return;
   }
   
-  // Check self collision
+  // Self collision
   for (let i = 1; i < snake.length; i++) {
     if (head.x === snake[i].x && head.y === snake[i].y) {
       gameOver();
@@ -302,10 +649,9 @@ function updateGame() {
     }
   }
   
-  // Move snake
   snake.unshift(head);
   
-  // Check food collision
+  // Food collision
   if (head.x === food.x && head.y === food.y) {
     const appleValue = food.golden ? EARNINGS_PER_APPLE * 2 : EARNINGS_PER_APPLE;
     score += 10;
@@ -318,7 +664,7 @@ function updateGame() {
     scoreEl.style.transform = 'scale(1.1)';
     setTimeout(() => scoreEl.style.transform = 'scale(1)', 200);
   } else {
-    snake.pop(); // Remove tail if no food eaten
+    snake.pop();
   }
   
   drawGame();
@@ -328,8 +674,6 @@ function gameOver() {
   gameRunning = false;
   clearInterval(gameLoop);
   gamesPlayed++;
-  
-  // Save to localStorage
   localStorage.setItem('snake_games_played', gamesPlayed);
   document.getElementById('games-played').textContent = gamesPlayed;
   
@@ -347,24 +691,13 @@ function gameOver() {
   
   // Show modal
   document.getElementById('game-over-modal').classList.remove('hidden');
-  
-  // Enable claim button if there are apples
-  const claimBtn = document.getElementById('claim-btn');
-  if (apples > 0) {
-    claimBtn.disabled = false;
-    claimBtn.classList.add('glow');
-    claimBtn.innerHTML = `<i class="fas fa-trophy"></i> CLAIM ₦${currentGameEarnings}`;
-  } else {
-    claimBtn.disabled = true;
-    claimBtn.classList.remove('glow');
-    claimBtn.innerHTML = '<i class="fas fa-trophy"></i> CLAIM REWARD';
-  }
 }
 
 function startGame() {
   if (gameRunning) return;
   
   const startBtn = document.getElementById('start-btn');
+  const originalText = startBtn.innerHTML;
   startBtn.disabled = true;
   startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> STARTING...';
   
@@ -374,19 +707,17 @@ function startGame() {
     gameLoop = setInterval(updateGame, 120);
     
     startBtn.disabled = false;
-    startBtn.innerHTML = '<i class="fas fa-play"></i> START GAME';
-    
-    // Disable claim button during game
-    const claimBtn = document.getElementById('claim-btn');
-    claimBtn.disabled = true;
-    claimBtn.classList.remove('glow');
-    claimBtn.innerHTML = '<i class="fas fa-trophy"></i> CLAIM REWARD';
+    startBtn.innerHTML = originalText;
   }, 500);
 }
 
 function playAgain() {
-  closeModal();
+  document.getElementById('game-over-modal').classList.add('hidden');
   startGame();
+}
+
+function closeModal() {
+  document.getElementById('game-over-modal').classList.add('hidden');
 }
 
 function changeDirection(newDirection) {
@@ -407,71 +738,79 @@ function updateDisplay() {
   document.getElementById('live-earnings').textContent = `₦${currentGameEarnings}`;
 }
 
-// ======================= REWARD CLAIMING =======================
 async function submitScore() {
   if (isClaiming) {
-    showMessage('Please wait, another claim is in progress', 'error');
+    alert('Please wait, another claim is in progress');
     return;
   }
   
   const apples = Math.floor(score / 10);
-  
   if (apples <= 0) {
-    showMessage('No apples to claim! Play the game first.', 'error');
+    alert('No apples to claim! Play the game first.');
     return;
   }
   
-  // Check if game is still running
   if (gameRunning) {
-    showMessage('Please finish the game first!', 'error');
+    alert('Please finish the game first!');
     return;
   }
   
   isClaiming = true;
-  
   const claimBtn = document.getElementById('claim-btn');
   const originalText = claimBtn.innerHTML;
   
   try {
-    // Show processing state
     claimBtn.disabled = true;
     claimBtn.classList.remove('glow');
     claimBtn.classList.add('processing');
     claimBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PROCESSING...';
     
-    // SIMULATED API CALL - REPLACE WITH REAL API
+    // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // Calculate reward
+    // Check daily limit (local storage)
+    const today = new Date().toDateString();
+    const lastPlayDate = localStorage.getItem('snake_last_play_date');
+    let dailyPlays = localStorage.getItem('snake_daily_plays') ? parseInt(localStorage.getItem('snake_daily_plays')) : 0;
+    
+    if (lastPlayDate !== today) {
+      dailyPlays = 0;
+      localStorage.setItem('snake_last_play_date', today);
+    }
+    
+    if (dailyPlays >= 20) {
+      throw new Error('Daily limit reached! Max 20 plays per day.');
+    }
+    
+    // Process reward
     const reward = currentGameEarnings;
-    currentBalance += reward;
+    totalEarned += reward;
+    dailyPlays++;
     
-    // Save to localStorage
-    localStorage.setItem('user_balance', currentBalance.toString());
+    // Save to local storage
+    localStorage.setItem('snake_total_earned', totalEarned.toString());
+    localStorage.setItem('snake_daily_plays', dailyPlays.toString());
     
-    // Update display
-    document.getElementById('total-earned').textContent = `₦${currentBalance.toLocaleString()}`;
+    // Update UI
+    document.getElementById('total-earned').textContent = `₦${totalEarned.toLocaleString()}`;
     
-    // Show success animation
     claimBtn.classList.remove('processing');
     claimBtn.classList.add('success');
     claimBtn.innerHTML = `<i class="fas fa-check"></i> CLAIMED! ₦${reward}`;
     
-    // Show success message
-    showMessage(`✅ Success! Claimed ₦${reward} for ${apples} apples`, 'success');
+    alert(`✅ Success! Claimed ₦${reward} for ${apples} apples`);
     
-    // Reset game earnings (but keep score for display)
+    // Reset game
+    score = 0;
     currentGameEarnings = 0;
     updateDisplay();
-    
-    // Close modal
     closeModal();
     
-    // Restore button after 3 seconds
     setTimeout(() => {
       claimBtn.classList.remove('success');
-      claimBtn.disabled = true;
-      claimBtn.innerHTML = '<i class="fas fa-trophy"></i> CLAIM REWARD';
+      claimBtn.disabled = false;
+      claimBtn.classList.add('glow');
+      claimBtn.innerHTML = originalText;
       isClaiming = false;
     }, 3000);
     
@@ -480,63 +819,21 @@ async function submitScore() {
     
     claimBtn.classList.remove('processing');
     claimBtn.classList.add('error');
-    claimBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ERROR';
+    claimBtn.innerHTML = '<i class="fas fa-times"></i> FAILED';
     
-    showMessage('Network error. Please try again.', 'error');
+    alert('❌ ' + error.message);
     
     setTimeout(() => {
       claimBtn.classList.remove('error');
-      claimBtn.innerHTML = originalText;
       claimBtn.disabled = false;
+      claimBtn.classList.add('glow');
+      claimBtn.innerHTML = originalText;
       isClaiming = false;
     }, 2000);
   }
 }
 
-// ======================= LOAD USER PROFILE =======================
-function loadUserProfile() {
-  // Try to load from localStorage first
-  const savedBalance = localStorage.getItem('user_balance');
-  const savedHighScore = localStorage.getItem('snake_high_score');
-  const savedGamesPlayed = localStorage.getItem('snake_games_played');
-  
-  if (savedBalance) {
-    currentBalance = parseFloat(savedBalance);
-    document.getElementById('total-earned').textContent = `₦${currentBalance.toLocaleString()}`;
-  }
-  
-  if (savedHighScore) {
-    highScore = parseInt(savedHighScore);
-    document.getElementById('high-score').textContent = highScore;
-  }
-  
-  if (savedGamesPlayed) {
-    gamesPlayed = parseInt(savedGamesPlayed);
-    document.getElementById('games-played').textContent = gamesPlayed;
-  }
-  
-  // Optional: Uncomment to try real API
-  /*
-  try {
-    const res = await fetch('/api/user/profile', { credentials: 'include' });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success) {
-        currentBalance = parseFloat(data.user.balance) || 0;
-        const stats = data.user.game_stats?.snake || {};
-        highScore = stats.high_score || 0;
-        
-        document.getElementById('total-earned').textContent = `₦${currentBalance.toLocaleString()}`;
-        document.getElementById('high-score').textContent = highScore;
-      }
-    }
-  } catch (error) {
-    console.log('Using local storage instead of API');
-  }
-  */
-}
-
-// ======================= EVENT LISTENERS =======================
+// Event listeners
 document.addEventListener('keydown', (e) => {
   switch(e.key) {
     case 'ArrowUp': changeDirection('up'); e.preventDefault(); break;
@@ -544,14 +841,13 @@ document.addEventListener('keydown', (e) => {
     case 'ArrowLeft': changeDirection('left'); e.preventDefault(); break;
     case 'ArrowRight': changeDirection('right'); e.preventDefault(); break;
     case ' ': startGame(); e.preventDefault(); break;
-    case 'Escape': goBackToDashboard(); e.preventDefault(); break;
+    case 'Escape': window.location.href = 'index.html'; e.preventDefault(); break;
   }
 });
 
-// Touch controls for mobile
+// Touch controls
 let touchStartX = 0;
 let touchStartY = 0;
-
 document.addEventListener('touchstart', (e) => {
   touchStartX = e.touches[0].clientX;
   touchStartY = e.touches[0].clientY;
@@ -574,44 +870,28 @@ document.addEventListener('touchend', (e) => {
   }
 }, { passive: true });
 
-// Prevent touchmove default to avoid scrolling
 document.addEventListener('touchmove', (e) => {
   if (gameRunning) {
     e.preventDefault();
   }
 }, { passive: false });
 
-// ======================= INITIALIZATION =======================
+// Initialize
 document.addEventListener('DOMContentLoaded', () => {
-  // Load user profile from localStorage
-  loadUserProfile();
-  
-  // Initialize game
+  loadUserData();
   initGame();
   
-  // Set up canvas responsive sizing
+  // Canvas responsive sizing
   function resizeCanvas() {
     const container = document.querySelector('.game-board-container');
-    if (!container) return;
-    
     const maxSize = Math.min(container.clientWidth, container.clientHeight);
-    
     canvas.style.width = `${maxSize}px`;
     canvas.style.height = `${maxSize}px`;
-    
-    // Redraw game
     drawGame();
   }
   
-  // Initial resize
   resizeCanvas();
-  
-  // Listen for window resize
   window.addEventListener('resize', resizeCanvas);
-  
-  // Disable claim button initially
-  const claimBtn = document.getElementById('claim-btn');
-  claimBtn.disabled = true;
 });
 </script>
 </body>
