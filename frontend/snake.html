@@ -4,13 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Snake Mine - FLEXIA</title>
-<!-- CORRECTED: Updated logo paths -->
 <link rel="icon" type="image/x-icon" href="logo/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="logo/flexia-logo.png">
 <link rel="icon" type="image/png" sizes="16x16" href="logo/flexia-logo.png">
 <link rel="apple-touch-icon" href="logo/apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<!-- Fonts & CSS -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 * {
@@ -511,20 +509,46 @@ let gameRunning = false;
 let gameLoop;
 let highScore = localStorage.getItem('snake_high_score') || 0;
 let gamesPlayed = localStorage.getItem('snake_games_played') || 0;
-let totalEarned = parseFloat(localStorage.getItem('snake_total_earned')) || 0;
+let totalEarned = 0;
 let currentGameEarnings = 0;
 const EARNINGS_PER_APPLE = 200;
 let isClaiming = false;
 
 // Load user data
-function loadUserData() {
+async function loadUserData() {
   try {
-    document.getElementById('high-score').textContent = highScore;
-    document.getElementById('games-played').textContent = gamesPlayed;
-    document.getElementById('total-earned').textContent = `₦${totalEarned.toLocaleString()}`;
-  } catch (e) {
-    console.log('Using default values');
+    // Try to load real data from API
+    const response = await fetch('/api/user/profile', {
+      credentials: 'include'
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success) {
+        const user = data.user;
+        const stats = user.game_stats || {};
+        const snakeStats = stats.snake || {};
+        
+        highScore = snakeStats.high_score || 0;
+        gamesPlayed = snakeStats.total_score ? Math.floor(snakeStats.total_score / 10) : 0;
+        totalEarned = 0; // This should come from transactions
+        
+        // Get earnings from transactions
+        const transactions = user.transactions || [];
+        for (const tx of transactions) {
+          if (tx.type === 'SNAKE_REWARD') {
+            totalEarned += parseFloat(tx.amount) || 0;
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.log('Using default values:', error);
   }
+  
+  document.getElementById('high-score').textContent = highScore;
+  document.getElementById('games-played').textContent = gamesPlayed;
+  document.getElementById('total-earned').textContent = `₦${totalEarned.toLocaleString()}`;
 }
 
 function initGame() {
@@ -674,7 +698,6 @@ function gameOver() {
   gameRunning = false;
   clearInterval(gameLoop);
   gamesPlayed++;
-  localStorage.setItem('snake_games_played', gamesPlayed);
   document.getElementById('games-played').textContent = gamesPlayed;
   
   if (score > highScore) {
@@ -765,54 +788,48 @@ async function submitScore() {
     claimBtn.classList.add('processing');
     claimBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PROCESSING...';
     
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Call the backend API
+    const response = await fetch('/api/games/snake/report', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({ apples_eaten: apples })
+    });
     
-    // Check daily limit (local storage)
-    const today = new Date().toDateString();
-    const lastPlayDate = localStorage.getItem('snake_last_play_date');
-    let dailyPlays = localStorage.getItem('snake_daily_plays') ? parseInt(localStorage.getItem('snake_daily_plays')) : 0;
+    const result = await response.json();
     
-    if (lastPlayDate !== today) {
-      dailyPlays = 0;
-      localStorage.setItem('snake_last_play_date', today);
+    if (result.success) {
+      // Update UI with API response
+      totalEarned += result.reward;
+      
+      // Update UI
+      document.getElementById('total-earned').textContent = `₦${totalEarned.toLocaleString()}`;
+      
+      claimBtn.classList.remove('processing');
+      claimBtn.classList.add('success');
+      claimBtn.innerHTML = `<i class="fas fa-check"></i> CLAIMED! ₦${result.reward}`;
+      
+      alert(`✅ Success! Claimed ₦${result.reward} for ${apples} apples`);
+      
+      // Reset game
+      score = 0;
+      currentGameEarnings = 0;
+      updateDisplay();
+      closeModal();
+      
+      setTimeout(() => {
+        claimBtn.classList.remove('success');
+        claimBtn.disabled = false;
+        claimBtn.classList.add('glow');
+        claimBtn.innerHTML = originalText;
+        isClaiming = false;
+      }, 3000);
+      
+    } else {
+      throw new Error(result.message);
     }
-    
-    if (dailyPlays >= 20) {
-      throw new Error('Daily limit reached! Max 20 plays per day.');
-    }
-    
-    // Process reward
-    const reward = currentGameEarnings;
-    totalEarned += reward;
-    dailyPlays++;
-    
-    // Save to local storage
-    localStorage.setItem('snake_total_earned', totalEarned.toString());
-    localStorage.setItem('snake_daily_plays', dailyPlays.toString());
-    
-    // Update UI
-    document.getElementById('total-earned').textContent = `₦${totalEarned.toLocaleString()}`;
-    
-    claimBtn.classList.remove('processing');
-    claimBtn.classList.add('success');
-    claimBtn.innerHTML = `<i class="fas fa-check"></i> CLAIMED! ₦${reward}`;
-    
-    alert(`✅ Success! Claimed ₦${reward} for ${apples} apples`);
-    
-    // Reset game
-    score = 0;
-    currentGameEarnings = 0;
-    updateDisplay();
-    closeModal();
-    
-    setTimeout(() => {
-      claimBtn.classList.remove('success');
-      claimBtn.disabled = false;
-      claimBtn.classList.add('glow');
-      claimBtn.innerHTML = originalText;
-      isClaiming = false;
-    }, 3000);
     
   } catch (error) {
     console.error('Claim error:', error);
@@ -893,6 +910,26 @@ document.addEventListener('DOMContentLoaded', () => {
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
 });
+</script>
+
+<!-- Global Functions -->
+<script>
+// Ensure API functions are available
+if (typeof window.claimSnakeReward === 'undefined') {
+  window.claimSnakeReward = async function(apples) {
+    try {
+      const response = await fetch('/api/games/snake/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ apples_eaten: apples })
+      });
+      return await response.json();
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  };
+}
 </script>
 </body>
 </html>
