@@ -1,7 +1,7 @@
 // script.js - FLEXIA Frontend Logic v12.0 - FIXED VERSION
 // ✅ ALL GLOBAL FUNCTIONS WORKING ✅ NO BACKEND CHANGES NEEDED
 
-//========== CONFIGURATION========
+//========== CONFIGURATION ========
 const CONFIG = {
   MIN_WITHDRAWAL: 100000,
   REFERRAL_BONUS: 7500,
@@ -12,7 +12,7 @@ const CONFIG = {
   CLAIM_COOLDOWN: 1000
 };
 
-//========== CORE APP==========
+//========== CORE APP ==========
 const App = {
   currentUser: null,
   balanceVisible: true,
@@ -180,6 +180,40 @@ style.textContent = `
     from { opacity: 1; transform: translateX(-50%) translateY(0); }
     to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
   }
+  
+  .password-container {
+    position: relative;
+    width: 100%;
+  }
+  
+  .password-input {
+    width: 100%;
+    padding-right: 45px;
+  }
+  
+  .password-toggle {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: #A0A0B5;
+    cursor: pointer;
+    font-size: 1.2rem;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: color 0.2s, background 0.2s;
+  }
+  
+  .password-toggle:hover {
+    color: #8000FF;
+    background: rgba(128, 0, 255, 0.1);
+  }
 `;
 document.head.appendChild(style);
 
@@ -211,8 +245,71 @@ const GameManager = {
   }
 };
 
-//========== AUTHENTICATION========
+//========== AUTHENTICATION =========
 const Auth = {
+  // Password toggle function
+  togglePasswordVisibility: function(fieldId) {
+    const passwordField = document.getElementById(fieldId);
+    const toggleBtn = passwordField.nextElementSibling;
+    
+    if (passwordField.type === 'password') {
+      passwordField.type = 'text';
+      toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+      toggleBtn.setAttribute('title', 'Hide password');
+    } else {
+      passwordField.type = 'password';
+      toggleBtn.innerHTML = '<i class="fas fa-eye"></i>';
+      toggleBtn.setAttribute('title', 'Show password');
+    }
+  },
+  
+  // Setup password toggles
+  initPasswordToggles: function() {
+    // Setup login password toggle
+    const loginPasswordField = document.getElementById('login-password');
+    if (loginPasswordField && !loginPasswordField.parentNode?.classList?.contains('password-container')) {
+      const loginContainer = document.createElement('div');
+      loginContainer.className = 'password-container';
+      
+      // Move the input into the container
+      loginPasswordField.parentNode.insertBefore(loginContainer, loginPasswordField);
+      loginContainer.appendChild(loginPasswordField);
+      loginPasswordField.className = 'password-input';
+      
+      // Create toggle button
+      const loginToggle = document.createElement('button');
+      loginToggle.type = 'button';
+      loginToggle.className = 'password-toggle';
+      loginToggle.innerHTML = '<i class="fas fa-eye"></i>';
+      loginToggle.setAttribute('title', 'Show password');
+      loginToggle.setAttribute('aria-label', 'Toggle password visibility');
+      loginToggle.onclick = () => this.togglePasswordVisibility('login-password');
+      loginContainer.appendChild(loginToggle);
+    }
+    
+    // Setup registration password toggle
+    const regPasswordField = document.getElementById('reg-password');
+    if (regPasswordField && !regPasswordField.parentNode?.classList?.contains('password-container')) {
+      const regContainer = document.createElement('div');
+      regContainer.className = 'password-container';
+      
+      // Move the input into the container
+      regPasswordField.parentNode.insertBefore(regContainer, regPasswordField);
+      regContainer.appendChild(regPasswordField);
+      regPasswordField.className = 'password-input';
+      
+      // Create toggle button
+      const regToggle = document.createElement('button');
+      regToggle.type = 'button';
+      regToggle.className = 'password-toggle';
+      regToggle.innerHTML = '<i class="fas fa-eye"></i>';
+      regToggle.setAttribute('title', 'Show password');
+      regToggle.setAttribute('aria-label', 'Toggle password visibility');
+      regToggle.onclick = () => this.togglePasswordVisibility('reg-password');
+      regContainer.appendChild(regToggle);
+    }
+  },
+  
   login: async function () {
     const identifier = document.getElementById('login-username').value.trim();
     const password = document.getElementById('login-password').value;
@@ -241,6 +338,16 @@ const Auth = {
         App.refreshBalance();
         document.getElementById('login-username').value = '';
         document.getElementById('login-password').value = '';
+        // Reset password visibility after login
+        const loginPassword = document.getElementById('login-password');
+        if (loginPassword.type === 'text') {
+          loginPassword.type = 'password';
+          const toggleBtn = loginPassword.nextElementSibling;
+          if (toggleBtn) {
+            toggleBtn.innerHTML = '<i class="fas fa-eye"></i>';
+            toggleBtn.setAttribute('title', 'Show password');
+          }
+        }
       }
     } catch (error) {
       messageEl.textContent = 'Network error. Please try again.';
@@ -288,6 +395,16 @@ const Auth = {
       if (data.success) {
         document.getElementById('login-username').value = username;
         document.getElementById('login-password').value = password;
+        // Reset password visibility after registration
+        const regPassword = document.getElementById('reg-password');
+        if (regPassword.type === 'text') {
+          regPassword.type = 'password';
+          const toggleBtn = regPassword.nextElementSibling;
+          if (toggleBtn) {
+            toggleBtn.innerHTML = '<i class="fas fa-eye"></i>';
+            toggleBtn.setAttribute('title', 'Show password');
+          }
+        }
         document.querySelector('.tab[data-tab="login"]').click();
       }
     } catch (error) {
@@ -308,7 +425,7 @@ const Auth = {
   }
 };
 
-//========== PROFILE=========
+//========== PROFILE =========
 const Profile = {
   open: async function () {
     if (!App.currentUser) return;
@@ -397,7 +514,7 @@ const Profile = {
   }
 };
 
-//========== REFERRALS========
+//========== REFERRALS ========
 const Referral = {
   open: async function () {
     if (!App.currentUser) return;
@@ -482,7 +599,7 @@ const Referral = {
   }
 };
 
-//========== BANKING & WITHDRAWALS=========
+//========== BANKING & WITHDRAWALS =========
 const Banking = {
   banks: [],
   
@@ -1325,6 +1442,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (buyCouponBtn) {
     buyCouponBtn.onclick = () => Auth.buyCoupon();
   }
+  
+  // Initialize password toggles
+  Auth.initPasswordToggles();
   
   App.init();
 });
