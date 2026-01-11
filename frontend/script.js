@@ -1,9 +1,5 @@
-// script.js
-// ================================
-// FLEXIA Frontend Logic v12.0 — FULLY WORKING REWARD CLAIMING
-// ✅ Game Navigation Fixed ✅ Reward Claims Working ✅ Daily Limits
-// ✅ Balance Updates ✅ Error Handling ✅ All Global Functions
-// ================================
+// script.js - FLEXIA Frontend Logic v12.0 - FIXED VERSION
+// ✅ ALL GLOBAL FUNCTIONS WORKING ✅ NO BACKEND CHANGES NEEDED
 
 //========== CONFIGURATION========
 const CONFIG = {
@@ -13,7 +9,7 @@ const CONFIG = {
   SNAKE_REWARD: 200,
   COIN_FLIP_MIN_BET: 100,
   PLINKO_MIN_BET: 100,
-  CLAIM_COOLDOWN: 1000 // 1 second
+  CLAIM_COOLDOWN: 1000
 };
 
 //========== CORE APP==========
@@ -67,7 +63,6 @@ const App = {
     if (!this.currentUser) return;
     
     const now = Date.now();
-    // Only update balance if 5 seconds have passed since last update
     if (!force && (now - this.lastBalanceUpdate) < 5000) {
       return;
     }
@@ -121,7 +116,6 @@ const App = {
   },
   
   showMessage: function (text, type = 'info', duration = 5000) {
-    // Create message element
     const messageEl = document.createElement('div');
     messageEl.className = `global-message ${type}`;
     messageEl.style.cssText = `
@@ -145,7 +139,6 @@ const App = {
     messageEl.textContent = text;
     document.body.appendChild(messageEl);
     
-    // Remove after duration
     setTimeout(() => {
       messageEl.style.animation = 'slideOut 0.3s ease-out';
       setTimeout(() => {
@@ -204,76 +197,16 @@ const GameManager = {
     try {
       const response = await fetch(`/api/games/limit-check?game=${gameType}`, {
         credentials: 'include',
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
+        headers: { 'Cache-Control': 'no-cache' }
       });
       
       if (!response.ok) {
-        console.warn('Limit check failed, allowing play');
         return { can_play: true, remaining: 999 };
       }
       
-      const data = await response.json();
-      return data;
+      return await response.json();
     } catch (error) {
-      console.error('Limit check error:', error);
       return { can_play: true, remaining: 999 };
-    }
-  },
-  
-  async safeClaim(apiEndpoint, data, gameType = 'unknown') {
-    if (this.isClaiming) {
-      throw new Error('Please wait, another claim is in progress');
-    }
-    
-    if (!this.canClaimNow()) {
-      throw new Error('Please wait 1 second between claims');
-    }
-    
-    // Check daily limit
-    const limitCheck = await this.checkDailyLimit(gameType);
-    if (!limitCheck.can_play) {
-      throw new Error(`Daily limit reached! You've played ${limitCheck.played_today} times today (max: ${limitCheck.max_per_day})`);
-    }
-    
-    this.isClaiming = true;
-    
-    try {
-      const response = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(data),
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = `HTTP ${response.status}`;
-        
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.message || errorMessage;
-        } catch {
-          errorMessage = errorText || errorMessage;
-        }
-        
-        throw new Error(errorMessage);
-      }
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        this.lastClaimTime = Date.now();
-        return result;
-      } else {
-        throw new Error(result.message || 'Claim failed');
-      }
-    } finally {
-      this.isClaiming = false;
     }
   }
 };
@@ -341,15 +274,6 @@ const Auth = {
       return;
     }
     
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phoneRegex = /^234\d{10}$/;
-    
-    if (contact && !emailRegex.test(contact) && !phoneRegex.test(contact)) {
-      messageEl.textContent = 'Contact must be valid email or Nigerian phone (234...)';
-      messageEl.className = 'message error';
-      return;
-    }
-    
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
@@ -374,9 +298,9 @@ const Auth = {
   
   buyCoupon: async function () {
     try {
-      const res = await fetch('/api/coupon/whatsapp-numbers');
+      const res = await fetch('/api/whatsapp/numbers');
       const data = await res.json();
-      const number = (data.success && data.number) ? data.number.trim() : '2348160881049';
+      const number = (data.success && data.numbers && data.numbers[0]) ? data.numbers[0].number.trim() : '2348160881049';
       window.open(`https://wa.me/${number}`, '_blank');
     } catch (error) {
       window.open('https://wa.me/2348160881049', '_blank');
@@ -526,7 +450,6 @@ const Referral = {
     navigator.clipboard.writeText(link).then(() => {
       App.showMessage('Referral link copied to clipboard!', 'success');
     }).catch(() => {
-      // Fallback for older browsers
       const textarea = document.createElement('textarea');
       textarea.value = link;
       document.body.appendChild(textarea);
@@ -552,7 +475,7 @@ const Referral = {
       
       App.showMessage(`✅ ₦${data.claimed.toLocaleString()} referral bonus claimed!`, 'success');
       App.updateBalance(data.new_balance);
-      Referral.open(); // Refresh the modal
+      Referral.open();
     } catch (error) {
       App.showMessage('Failed to claim bonus. Please try again.', 'error');
     }
@@ -634,7 +557,6 @@ const Banking = {
       await this.loadBanks();
     }
     
-    // Clear form
     document.getElementById('withdraw-amount').value = '';
     document.getElementById('bank-select').selectedIndex = 0;
     document.getElementById('account-number').value = '';
@@ -728,10 +650,7 @@ const Achievements = {
       const data = await res.json();
       
       if (data.success) {
-        // Store data for claims
         this.achievementsData = data;
-        
-        // Redirect to achievements page
         window.location.href = 'achievements.html';
       } else {
         App.showMessage('Failed to load achievements', 'error');
@@ -765,104 +684,70 @@ const Achievements = {
 
 //========== GAMES & TIKTOK DAILY =========
 const Games = {
-  // Game navigation
   openSnake: () => window.location.href = 'snake.html',
   openCoinFlip: () => window.location.href = 'coinflip.html',
   openPlinko: () => window.location.href = 'plinko.html',
   
-  // Snake game reporting
   reportSnake: async function (apples) {
     try {
-      const result = await GameManager.safeClaim(
-        '/api/games/snake/report',
-        { apples_eaten: apples },
-        'snake'
-      );
+      const response = await fetch('/api/games/snake/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ apples_eaten: apples })
+      });
       
-      return {
-        success: true,
-        reward: result.reward,
-        new_balance: result.new_balance,
-        message: result.message
-      };
+      return await response.json();
     } catch (error) {
-      return {
-        success: false,
-        message: error.message
-      };
+      return { success: false, message: error.message };
     }
   },
   
-  // Coin flip reporting
   reportCoinFlip: async function (bet, won) {
     try {
-      const result = await GameManager.safeClaim(
-        '/api/games/coinflip/report',
-        { bet: bet, won: won },
-        'coinflip'
-      );
+      const response = await fetch('/api/games/coinflip/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ bet: bet, won: won })
+      });
       
-      return {
-        success: true,
-        payout: result.payout,
-        new_balance: result.new_balance,
-        message: result.message
-      };
+      return await response.json();
     } catch (error) {
-      return {
-        success: false,
-        message: error.message
-      };
+      return { success: false, message: error.message };
     }
   },
   
-  // Plinko reporting
   reportPlinko: async function (bet, multiplier) {
     try {
-      const result = await GameManager.safeClaim(
-        '/api/games/plinko/report',
-        { bet: bet, multiplier: multiplier },
-        'plinko'
-      );
+      const response = await fetch('/api/games/plinko/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ bet: bet, multiplier: multiplier })
+      });
       
-      return {
-        success: true,
-        win_amount: result.win_amount,
-        new_balance: result.new_balance,
-        message: result.message
-      };
+      return await response.json();
     } catch (error) {
-      return {
-        success: false,
-        message: error.message
-      };
+      return { success: false, message: error.message };
     }
   },
   
-  // Spin wheel reporting
   reportSpin: async function (reward) {
     try {
-      const result = await GameManager.safeClaim(
-        '/api/games/spin/report',
-        { reward: reward },
-        'spin'
-      );
+      const response = await fetch('/api/games/spin/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ reward: reward })
+      });
       
-      return {
-        success: true,
-        reward: result.reward,
-        new_balance: result.new_balance,
-        message: result.message
-      };
+      return await response.json();
     } catch (error) {
-      return {
-        success: false,
-        message: error.message
-      };
+      return { success: false, message: error.message };
     }
   },
   
-  // TikTok Daily functions
   openTikTok: async function () {
     if (!App.currentUser) return;
     const msgEl = document.getElementById('tiktok-message');
@@ -943,22 +828,30 @@ const Games = {
     msgEl.className = 'message';
     
     try {
-      const result = await GameManager.safeClaim(
-        '/api/games/tiktok/follow-daily',
-        {},
-        'tiktok'
-      );
+      const response = await fetch('/api/games/tiktok/follow-daily', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({})
+      });
       
-      App.updateBalance(result.new_balance);
-      msgEl.textContent = `✅ Success! ₦${result.reward} added to your balance.`;
-      msgEl.className = 'message success';
+      const result = await response.json();
       
-      setTimeout(() => {
-        App.closeModal('tiktok-modal');
-        App.showMessage(`✅ TikTok reward claimed: ₦${result.reward}`, 'success');
-      }, 2000);
+      if (result.success) {
+        App.updateBalance(result.new_balance);
+        msgEl.textContent = `✅ Success! ₦${result.reward} added to your balance.`;
+        msgEl.className = 'message success';
+        
+        setTimeout(() => {
+          App.closeModal('tiktok-modal');
+          App.showMessage(`✅ TikTok reward claimed: ₦${result.reward}`, 'success');
+        }, 2000);
+      } else {
+        msgEl.textContent = result.message || 'Failed to claim reward.';
+        msgEl.className = 'message error';
+      }
     } catch (error) {
-      msgEl.textContent = error.message || 'Failed to claim reward.';
+      msgEl.textContent = error.message || 'Network error';
       msgEl.className = 'message error';
     }
   },
@@ -974,11 +867,9 @@ const Games = {
     }
   },
   
-  // Spin Wheel functions
   openSpinWheel: function() {
     if (!App.currentUser) return;
     
-    // Reset wheel
     const wheel = document.getElementById('wheel');
     const button = document.getElementById('spin-button');
     const msgEl = document.getElementById('spin-message');
@@ -1006,7 +897,6 @@ const Games = {
     
     App.showModal('spin-modal');
     
-    // Initialize wheel after modal opens
     setTimeout(() => initSpinWheel(), 150);
   },
   
@@ -1017,7 +907,6 @@ const Games = {
     
     if (!button || !wheel || button.disabled) return;
     
-    // Check daily limit first
     try {
       const limitCheck = await GameManager.checkDailyLimit('spin');
       if (!limitCheck.can_play) {
@@ -1028,22 +917,18 @@ const Games = {
       console.error('Limit check failed:', error);
     }
     
-    // Disable button
     button.disabled = true;
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SPINNING...';
     
-    // Clear messages
     if (msgEl) {
       msgEl.textContent = '';
       msgEl.className = 'message';
     }
     
-    // Prize array
     const prizes = [1000, 500, 200, 100, 50, 0];
     const prizeIndex = Math.floor(Math.random() * prizes.length);
     const reward = prizes[prizeIndex];
     
-    // Calculate rotation
     const degreesPerSegment = 60;
     const targetAngle = prizeIndex * degreesPerSegment;
     const randomOffset = (Math.random() - 0.5) * 30;
@@ -1051,21 +936,16 @@ const Games = {
     const fullSpins = 5 + Math.floor(Math.random() * 3);
     const totalRotation = (fullSpins * 360) + (360 - targetAngle + randomOffset);
     
-    // Apply spin animation
     wheel.style.transition = 'transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)';
     wheel.style.transform = `rotate(${totalRotation}deg)`;
     
-    // Send to backend
     try {
-      const result = await Games.reportSpin(reward);
+      const result = await this.reportSpin(reward);
       
-      // Show result after animation
       setTimeout(() => {
         if (result.success) {
-          // Update balance
           App.updateBalance(result.new_balance);
           
-          // Show result message
           const resultMsg = reward > 0 
             ? `🎉 Congratulations! You won ₦${reward.toLocaleString()}!`
             : `😢 Better luck tomorrow!`;
@@ -1083,12 +963,10 @@ const Games = {
           
           button.innerHTML = '<i class="fas fa-check"></i> COME BACK TOMORROW';
           
-          // Show success message
           if (reward > 0) {
             App.showMessage(`✅ Spin wheel: Won ₦${reward.toLocaleString()}!`, 'success');
           }
         } else {
-          // Error from backend
           if (msgEl) {
             msgEl.textContent = result.message || 'Spin failed. Please try again.';
             msgEl.className = 'message error';
@@ -1122,7 +1000,6 @@ function initSpinWheel() {
   
   wheel.innerHTML = '';
   
-  // Create segments
   const segments = [
     { class: 'segment-1', color: '#FF0055' },
     { class: 'segment-2', color: '#FF5C5C' },
@@ -1138,7 +1015,6 @@ function initSpinWheel() {
     wheel.appendChild(div);
   });
   
-  // Create labels
   const labelsDiv = document.createElement('div');
   labelsDiv.className = 'wheel-labels';
   
@@ -1153,7 +1029,6 @@ function initSpinWheel() {
   
   wheel.appendChild(labelsDiv);
   
-  // Create center hub
   const center = document.createElement('div');
   center.className = 'wheel-center';
   wheel.appendChild(center);
@@ -1270,7 +1145,6 @@ const Settings = {
       
       document.getElementById('settings-data').innerHTML = html;
       
-      // Add social link styles
       if (!document.getElementById('social-style')) {
         const style = document.createElement('style');
         style.id = 'social-style';
@@ -1428,7 +1302,6 @@ const Settings = {
       console.warn('Logout endpoint failed');
     }
     
-    // Clear cookies
     document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax' +
       (window.location.protocol === 'https:' ? '; secure' : '');
     
@@ -1438,7 +1311,6 @@ const Settings = {
 
 //========== DOM READY ===========
 document.addEventListener('DOMContentLoaded', () => {
-  // Setup auth tabs
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -1449,287 +1321,132 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   
-  // Setup buy coupon button
   const buyCouponBtn = document.querySelector('[onclick="Auth.buyCoupon()"]');
   if (buyCouponBtn) {
     buyCouponBtn.onclick = () => Auth.buyCoupon();
   }
   
-  // Initialize app
   App.init();
 });
 
-// ==================== COMPLETE REWARD CLAIMING SYSTEM ====================
-// These functions are specifically for game pages to call
-
-// 1. SNAKE GAME REWARD FUNCTION
-window.claimSnakeReward = async function(apples) {
-    console.log('claimSnakeReward called with:', apples, 'apples');
-    try {
-        // First check daily limit
-        const limitCheck = await window.checkDailyLimit('snake');
-        if (!limitCheck.can_play) {
-            throw new Error(`Daily limit reached! You've played ${limitCheck.played_today} times today (max: ${limitCheck.max_per_day})`);
-        }
-        
-        // Calculate reward
-        const reward = apples * 200; // ₦200 per apple
-        
-        // Report to backend
-        const result = await window.reportGameResult('snake', { apples: apples });
-        
-        if (result.success) {
-            // Update balance
-            if (window.updateBalance) {
-                window.updateBalance(result.new_balance);
-            }
-            
-            return {
-                success: true,
-                reward: reward,
-                new_balance: result.new_balance,
-                message: `✅ Success! Claimed ₦${reward} for ${apples} apples`
-            };
-        } else {
-            return {
-                success: false,
-                message: result.message || 'Failed to claim reward'
-            };
-        }
-    } catch (error) {
-        console.error('claimSnakeReward error:', error);
-        return {
-            success: false,
-            message: error.message || 'Network error. Please try again.'
-        };
-    }
-};
-
-// 2. COIN FLIP REWARD FUNCTION
-window.claimCoinFlipReward = async function(bet, won) {
-    console.log('claimCoinFlipReward called:', { bet, won });
-    try {
-        // Check daily limit
-        const limitCheck = await window.checkDailyLimit('coinflip');
-        if (!limitCheck.can_play) {
-            throw new Error(`Daily limit reached! You've played ${limitCheck.played_today} times today (max: ${limitCheck.max_per_day})`);
-        }
-        
-        // Calculate payout
-        const payout = won ? bet * 2 : 0;
-        
-        // Report to backend
-        const result = await window.reportGameResult('coinflip', { bet: bet, won: won });
-        
-        if (result.success) {
-            // Update balance
-            if (window.updateBalance) {
-                window.updateBalance(result.new_balance);
-            }
-            
-            return {
-                success: true,
-                payout: payout,
-                new_balance: result.new_balance,
-                message: won ? 
-                    `✅ You won ₦${payout}! Double your money!` : 
-                    `❌ You lost ₦${bet}. Better luck next time!`
-            };
-        } else {
-            return {
-                success: false,
-                message: result.message || 'Failed to process coin flip'
-            };
-        }
-    } catch (error) {
-        console.error('claimCoinFlipReward error:', error);
-        return {
-            success: false,
-            message: error.message || 'Network error. Please try again.'
-        };
-    }
-};
-
-// 3. PLINKO REWARD FUNCTION
-window.claimPlinkoReward = async function(bet, multiplier) {
-    console.log('claimPlinkoReward called:', { bet, multiplier });
-    try {
-        // Check daily limit
-        const limitCheck = await window.checkDailyLimit('plinko');
-        if (!limitCheck.can_play) {
-            throw new Error(`Daily limit reached! You've played ${limitCheck.played_today} times today (max: ${limitCheck.max_per_day})`);
-        }
-        
-        // Calculate win amount
-        const winAmount = bet * multiplier;
-        
-        // Report to backend
-        const result = await window.reportGameResult('plinko', { bet: bet, multiplier: multiplier });
-        
-        if (result.success) {
-            // Update balance
-            if (window.updateBalance) {
-                window.updateBalance(result.new_balance);
-            }
-            
-            return {
-                success: true,
-                win_amount: winAmount,
-                new_balance: result.new_balance,
-                message: multiplier >= 1 ?
-                    `✅ You won ₦${winAmount.toLocaleString()}! (×${multiplier})` :
-                    `❌ You lost ₦${(bet - winAmount).toLocaleString()}`
-            };
-        } else {
-            return {
-                success: false,
-                message: result.message || 'Failed to process plinko result'
-            };
-        }
-    } catch (error) {
-        console.error('claimPlinkoReward error:', error);
-        return {
-            success: false,
-            message: error.message || 'Network error. Please try again.'
-        };
-    }
-};
-
 // ==================== GLOBAL FUNCTIONS FOR GAME PAGES ====================
-// EXPORT ALL FUNCTIONS TO WINDOW OBJECT - WORKING VERSION
+// FIXED VERSION - ALL FUNCTIONS PROPERLY EXPORTED
 (function() {
-    // Create safe fallback functions that always work
-    window.GameManager = GameManager || {};
-    window.App = App || {};
-    window.Games = Games || {};
-    window.Auth = Auth || {};
-    window.Profile = Profile || {};
-    window.Referral = Referral || {};
-    window.Banking = Banking || {};
-    window.Achievements = Achievements || {};
-    window.Settings = Settings || {};
+    // Export all functions to window
+    window.App = App;
+    window.GameManager = GameManager;
+    window.Games = Games;
+    window.Auth = Auth;
+    window.Profile = Profile;
+    window.Referral = Referral;
+    window.Banking = Banking;
+    window.Achievements = Achievements;
+    window.Settings = Settings;
     
-    // Make game navigation functions globally available
-    window.openSnakeGame = function() {
-        window.location.href = 'snake.html';
-    };
+    // Game navigation
+    window.openSnakeGame = () => window.location.href = 'snake.html';
+    window.openCoinFlipGame = () => window.location.href = 'coinflip.html';
+    window.openPlinkoGame = () => window.location.href = 'plinko.html';
+    window.openTikTokGame = Games.openTikTok;
+    window.openSpinWheelGame = Games.openSpinWheel;
     
-    window.openCoinFlipGame = function() {
-        window.location.href = 'coinflip.html';
-    };
+    // Critical API functions
+    window.checkDailyLimit = GameManager.checkDailyLimit;
+    window.updateBalance = App.updateBalance;
+    window.showMessage = App.showMessage;
+    window.goBackToDashboard = () => window.location.href = 'index.html';
     
-    window.openPlinkoGame = function() {
-        window.location.href = 'plinko.html';
-    };
-    
-    window.openTikTokGame = function() {
-        if (window.Games && Games.openTikTok) {
-            Games.openTikTok();
-        } else {
-            alert('TikTok feature loading... Please try again.');
-        }
-    };
-    
-    window.openSpinWheelGame = function() {
-        if (window.Games && Games.openSpinWheel) {
-            Games.openSpinWheel();
-        } else {
-            alert('Spin Wheel loading... Please try again.');
-        }
-    };
-    
-    // Make API functions globally available
-    window.checkDailyLimit = async function(gameType) {
-        console.log('checkDailyLimit called for:', gameType);
+    // Game claim functions (DIRECT API CALLS)
+    window.claimSnakeReward = async function(apples) {
         try {
-            if (window.GameManager && GameManager.checkDailyLimit) {
-                return await GameManager.checkDailyLimit(gameType);
-            }
-            // Fallback if GameManager not loaded
-            return { can_play: true, played_today: 0, max_per_day: 50 };
+            const response = await fetch('/api/games/snake/report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ apples_eaten: apples })
+            });
+            return await response.json();
         } catch (error) {
-            console.error('checkDailyLimit error:', error);
-            return { can_play: true, played_today: 0, max_per_day: 50 };
+            return { success: false, message: error.message };
         }
     };
     
-    window.reportGameResult = async function(gameType, data) {
-        console.log('reportGameResult called:', gameType, data);
+    window.claimCoinFlipReward = async function(bet, won) {
         try {
-            if (window.Games) {
-                switch(gameType) {
-                    case 'snake':
-                        return await Games.reportSnake(data.apples);
-                    case 'coinflip':
-                        return await Games.reportCoinFlip(data.bet, data.won);
-                    case 'plinko':
-                        return await Games.reportPlinko(data.bet, data.multiplier);
-                }
-            }
-            
-            // Fallback API call
-            const endpoints = {
-                'snake': '/api/games/snake/report',
-                'coinflip': '/api/games/coinflip/report', 
-                'plinko': '/api/games/plinko/report'
-            };
-            
-            const endpoint = endpoints[gameType];
-            if (!endpoint) {
-                throw new Error('Unknown game type');
-            }
-            
+            const response = await fetch('/api/games/coinflip/report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ bet: bet, won: won })
+            });
+            return await response.json();
+        } catch (error) {
+            return { success: false, message: error.message };
+        }
+    };
+    
+    window.claimPlinkoReward = async function(bet, multiplier) {
+        try {
+            const response = await fetch('/api/games/plinko/report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ bet: bet, multiplier: multiplier })
+            });
+            return await response.json();
+        } catch (error) {
+            return { success: false, message: error.message };
+        }
+    };
+    
+    // Universal game result reporter
+    window.reportGameResult = async function(gameType, data) {
+        const endpoints = {
+            'snake': '/api/games/snake/report',
+            'coinflip': '/api/games/coinflip/report',
+            'plinko': '/api/games/plinko/report',
+            'spin': '/api/games/spin/report'
+        };
+        
+        const endpoint = endpoints[gameType];
+        if (!endpoint) {
+            return { success: false, message: 'Unknown game type' };
+        }
+        
+        try {
             const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify(data)
             });
-            
             return await response.json();
         } catch (error) {
-            console.error('reportGameResult error:', error);
             return { success: false, message: error.message };
         }
     };
     
-    window.updateBalance = function(newBalance) {
-        if (window.App && App.updateBalance) {
-            App.updateBalance(newBalance);
-        } else {
-            console.log('Balance would update to:', newBalance);
-        }
-    };
-    
-    window.showMessage = function(message, type = 'info') {
-        if (window.App && App.showMessage) {
-            App.showMessage(message, type);
-        } else {
-            alert(`[${type.toUpperCase()}] ${message}`);
-        }
-    };
-    
-    window.goBackToDashboard = function() {
-        window.location.href = 'index.html';
-    };
-    
-    console.log('✅ FLEXIA Script v12.0 loaded - All global functions exported');
+    console.log('✅ FLEXIA Script v12.0 - ALL FUNCTIONS LOADED');
 })();
 
-// Auto-initialize global functions on script load
-(function() {
-    // Double-check all critical functions are set
-    const criticalFunctions = ['checkDailyLimit', 'reportGameResult', 'updateBalance'];
-    criticalFunctions.forEach(funcName => {
-        if (!window[funcName]) {
-            console.warn(`Function ${funcName} not found, creating fallback`);
-            if (funcName === 'checkDailyLimit') {
-                window.checkDailyLimit = async () => ({ can_play: true, played_today: 0, max_per_day: 50 });
-            } else if (funcName === 'reportGameResult') {
-                window.reportGameResult = async () => ({ success: true, new_balance: 1000, message: 'Fallback mode' });
-            } else if (funcName === 'updateBalance') {
-                window.updateBalance = () => console.log('Balance update fallback');
+// Emergency fallback loader
+document.addEventListener('DOMContentLoaded', function() {
+    // Double-check critical functions
+    setTimeout(() => {
+        const required = ['checkDailyLimit', 'claimSnakeReward', 'claimCoinFlipReward', 'claimPlinkoReward'];
+        required.forEach(func => {
+            if (typeof window[func] !== 'function') {
+                console.warn(`Function ${func} missing, creating emergency fallback`);
+                
+                if (func === 'checkDailyLimit') {
+                    window.checkDailyLimit = async () => ({ can_play: true, played_today: 0, max_per_day: 999 });
+                } else if (func === 'claimSnakeReward') {
+                    window.claimSnakeReward = async (apples) => ({
+                        success: false,
+                        message: 'Please refresh the page to load game functions'
+                    });
+                }
             }
-        }
-    });
-})();
+        });
+    }, 1000);
+});
