@@ -439,6 +439,7 @@ Your Balance: <span id="balance">₦0.00</span>
 </div>
 
 <script>
+<script>
 // Game state
 let userChoice = null;
 let betAmount = 100;
@@ -446,12 +447,10 @@ let isFlipping = false;
 let winningStreak = [];
 let userBalance = 0;
 
-// DOM elements
 const flipBtn = document.getElementById('flip-btn');
 const resultSection = document.getElementById('result-section');
 const messageEl = document.getElementById('message');
 
-// Show message
 function showMessage(text, type = 'info') {
     messageEl.textContent = text;
     messageEl.className = `message ${type}`;
@@ -461,12 +460,10 @@ function showMessage(text, type = 'info') {
     }, 5000);
 }
 
-// Go back to dashboard
 function goBackToDashboard() {
     window.location.href = 'index.html';
 }
 
-// Load user profile
 async function loadUserProfile() {
     try {
         const res = await fetch('/api/user/profile', { credentials: 'include' });
@@ -482,7 +479,6 @@ async function loadUserProfile() {
         if (data.success) {
             userBalance = parseFloat(data.user.balance) || 0;
             document.getElementById('balance').textContent = `₦${userBalance.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-            // Load streak from game stats if available
             const stats = data.user.game_stats?.coin_flip;
             if (stats) {
                 winningStreak = (stats.streak || []).slice(-10);
@@ -497,7 +493,6 @@ async function loadUserProfile() {
     }
 }
 
-// Select choice
 function selectChoice(choice) {
     if (isFlipping) return;
     userChoice = choice;
@@ -507,14 +502,12 @@ function selectChoice(choice) {
     checkFlipButton();
 }
 
-// Check if flip button should be enabled
 function checkFlipButton() {
     const betInput = document.getElementById('bet-amount');
     betAmount = parseFloat(betInput.value) || 0;
     const minBet = 100;
     const maxBet = 50000;
 
-    // Validate bet amount
     if (betAmount < minBet) {
         betAmount = minBet;
         betInput.value = minBet;
@@ -540,12 +533,11 @@ function checkFlipButton() {
     }
 }
 
-// Flip coin
+// ==================== FLIP COIN - FIXED ====================
 async function flipCoin() {
     if (isFlipping) return;
     isFlipping = true;
 
-    // Disable buttons and inputs
     flipBtn.disabled = true;
     flipBtn.classList.add('processing');
     flipBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> FLIPPING...';
@@ -553,7 +545,6 @@ async function flipCoin() {
     document.getElementById('tails-btn').disabled = true;
     document.getElementById('bet-amount').disabled = true;
 
-    // Hide previous result
     resultSection.style.display = 'none';
     showMessage('Flipping coin...', 'info');
 
@@ -561,64 +552,54 @@ async function flipCoin() {
     const coinResult = Math.random() > 0.5 ? 'heads' : 'tails';
     const win = (userChoice === coinResult);
 
-    // Animate coin
     const coin = document.getElementById('coin-3d');
     const shadow = document.getElementById('coin-shadow');
     coin.classList.add('coin-tossing');
     shadow.classList.add('shadow-pulsing');
 
-    // Wait for animation to complete
     setTimeout(async () => {
         coin.classList.remove('coin-tossing');
         shadow.classList.remove('shadow-pulsing');
 
         try {
-            // Check daily limit first
-            const limitCheck = await window.checkDailyLimit('coinflip');
-            if (!limitCheck.can_play) {
-                throw new Error(`Daily limit reached! You've played ${limitCheck.played_today} times today (max: ${limitCheck.max_per_day})`);
-            }
+            // DIRECT API CALL - NO DEPENDENCIES
+            const response = await fetch('/api/games/coinflip/report', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({ bet: bet, won: win })
+            });
 
-            // Use the new reward function
-            const result = await window.claimCoinFlipReward(bet, win);
+            const result = await response.json();
 
             if (result.success) {
-                // Update user balance
                 userBalance = parseFloat(result.new_balance) || (userBalance + (win ? bet : -bet));
                 document.getElementById('balance').textContent = `₦${userBalance.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
 
-                // Update streak
                 winningStreak.push(win ? 'win' : 'loss');
                 if (winningStreak.length > 10) {
                     winningStreak.shift();
                 }
                 updateWinningStreak();
 
-                // Show result
                 showResult(win, coinResult, bet, result.payout, result.message);
 
-                // Update global balance if function exists
-                if (window.updateBalance) {
-                    window.updateBalance(result.new_balance);
-                }
-
             } else {
-                // Handle API error (daily limit, etc.)
                 throw new Error(result.message || 'Failed to process coin flip');
             }
 
         } catch (error) {
             console.error('Coin flip error:', error);
             showMessage('❌ ' + error.message, 'error');
-            resetGameState();
         }
 
-        // Re-enable controls
         resetControls();
     }, 2000);
 }
 
-// Show result
 function showResult(win, coinResult, bet, payout, message) {
     const resultMessage = document.getElementById('result-message');
     const coinResultEl = document.getElementById('coin-result');
@@ -642,13 +623,11 @@ function showResult(win, coinResult, bet, payout, message) {
 
     resultSection.style.display = 'block';
 
-    // Reset choice for next flip
     userChoice = null;
     document.getElementById('heads-btn').classList.remove('active');
     document.getElementById('tails-btn').classList.remove('active');
 }
 
-// Update winning streak display
 function updateWinningStreak() {
     const streakContainer = document.getElementById('winning-streak');
     streakContainer.innerHTML = '';
@@ -677,7 +656,6 @@ function updateWinningStreak() {
         dotsContainer.appendChild(dot);
     });
 
-    // Fill remaining dots
     for (let i = winningStreak.length; i < 10; i++) {
         const dot = document.createElement('div');
         dot.className = 'streak-dot';
@@ -686,7 +664,6 @@ function updateWinningStreak() {
 
     streakContainer.appendChild(dotsContainer);
 
-    // Calculate current streak
     if (winningStreak.length > 0) {
         const lastResult = winningStreak[winningStreak.length - 1];
         let currentStreak = 0;
@@ -707,14 +684,12 @@ function updateWinningStreak() {
     }
 }
 
-// Reset game state after error
 function resetGameState() {
     userChoice = null;
     document.getElementById('heads-btn').classList.remove('active');
     document.getElementById('tails-btn').classList.remove('active');
 }
 
-// Reset controls after flip
 function resetControls() {
     isFlipping = false;
     flipBtn.disabled = false;
@@ -726,46 +701,9 @@ function resetControls() {
     checkFlipButton();
 }
 
-// Load script.js functions if not loaded
-function ensureFunctionsLoaded() {
-    return new Promise((resolve) => {
-        if (window.checkDailyLimit && window.claimCoinFlipReward) {
-            resolve();
-            return;
-        }
-        
-        // Try to load script.js
-        const script = document.createElement('script');
-        script.src = 'script.js';
-        script.onload = () => {
-            console.log('script.js loaded successfully');
-            setTimeout(resolve, 500);
-        };
-        script.onerror = () => {
-            console.warn('Failed to load script.js, using fallback functions');
-            // Create fallback functions
-            if (!window.checkDailyLimit) {
-                window.checkDailyLimit = async () => ({ can_play: true, played_today: 0, max_per_day: 50 });
-            }
-            if (!window.claimCoinFlipReward) {
-                window.claimCoinFlipReward = async (bet, won) => ({
-                    success: true,
-                    payout: won ? bet * 2 : 0,
-                    new_balance: 1000,
-                    message: won ? 'You won!' : 'You lost!'
-                });
-            }
-            resolve();
-        };
-        document.head.appendChild(script);
-    });
-}
-
-// Event listeners
 document.getElementById('bet-amount').addEventListener('input', checkFlipButton);
 document.getElementById('bet-amount').addEventListener('change', checkFlipButton);
 
-// Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
     if (isFlipping) return;
     if (e.key === 'h' || e.key === 'H') selectChoice('heads');
@@ -777,16 +715,10 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') goBackToDashboard();
 });
 
-// Initialize
 document.addEventListener('DOMContentLoaded', async () => {
-    // Ensure functions are loaded first
-    await ensureFunctionsLoaded();
-    
-    // Now load profile and initialize
     await loadUserProfile();
     checkFlipButton();
     
-    // Auto-select heads by default
     selectChoice('heads');
     
     console.log('Coin Flip game initialized successfully');
