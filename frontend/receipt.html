@@ -250,6 +250,33 @@
       color: #FF0055;
       border: 1px solid #FF0055;
     }
+    
+    /* Status badge styles for receipt */
+    .status-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .status-pending {
+      background: rgba(255, 165, 0, 0.2);
+      color: #FFA500;
+      border: 1px solid #FFA500;
+    }
+    .status-completed {
+      background: rgba(0, 255, 85, 0.2);
+      color: #00FF55;
+      border: 1px solid #00FF55;
+    }
+    .status-failed {
+      background: rgba(255, 0, 85, 0.2);
+      color: #FF0055;
+      border: 1px solid #FF0055;
+    }
+    
     @media (max-width: 500px) {
       .header {
         padding: 12px 15px;
@@ -311,19 +338,60 @@
   <script>
     // ==================== BANK MAPPING ====================
     let bankMap = {};
-    
+
     async function loadBanks() {
       try {
-        const res = await fetch('/api/admin/banks');
+        const res = await fetch('/api/banking/banks');
         const data = await res.json();
         if (data.success) {
           data.banks.forEach(bank => {
             bankMap[bank.code] = bank.name;
           });
+          console.log('Loaded banks from API:', bankMap);
+        } else {
+          // Load fallback banks
+          loadFallbackBanks();
         }
       } catch (err) {
-        console.error('Failed to load banks:', err);
+        console.error('Failed to load banks from API:', err);
+        // Load fallback banks on error
+        loadFallbackBanks();
       }
+    }
+    
+    function loadFallbackBanks() {
+      const fallbackBanks = [
+        {code: "057", name: "Zenith Bank Plc"},
+        {code: "058", name: "GTBank"},
+        {code: "044", name: "Access Bank"},
+        {code: "033", name: "UBA"},
+        {code: "011", name: "First Bank"},
+        {code: "070", name: "Fidelity Bank"},
+        {code: "050", name: "Ecobank"},
+        {code: "039", name: "Stanbic IBTC"},
+        {code: "214", name: "FCMB"},
+        {code: "232", name: "Sterling Bank"},
+        {code: "032", name: "Union Bank"},
+        {code: "035", name: "Wema Bank"},
+        {code: "082", name: "Keystone Bank"},
+        {code: "215", name: "Unity Bank"},
+        {code: "076", name: "Polaris Bank"},
+        {code: "565", name: "OPay"},
+        {code: "100", name: "PalmPay"},
+        {code: "50211", name: "Kuda Bank"},
+        {code: "566", name: "VBank"},
+        {code: "035A", name: "ALAT by Wema"}
+      ];
+      
+      fallbackBanks.forEach(bank => {
+        bankMap[bank.code] = bank.name;
+      });
+      console.log('Loaded fallback banks:', bankMap);
+    }
+
+    function getBankName(code) {
+      if (!code) return 'Not specified';
+      return bankMap[code] || `Bank (Code: ${code})`;
     }
     
     // ==================== RECEIPT FORMATTING ====================
@@ -338,14 +406,31 @@
       });
     }
     
-    function getBankName(code) {
-      return bankMap[code] || 'Unknown Bank';
-    }
-    
     function createReceiptHTML(tx) {
-      const details = typeof tx.details === 'string' ? JSON.parse(tx.details) : tx.details;
+      console.log('Creating receipt for transaction:', tx);
+      
+      // Parse transaction details
+      let details = {};
+      try {
+        if (typeof tx.details === 'string') {
+          details = JSON.parse(tx.details);
+        } else if (typeof tx.details === 'object') {
+          details = tx.details;
+        }
+      } catch (e) {
+        console.error('Failed to parse transaction details:', e);
+        details = {};
+      }
+      
       const amount = parseFloat(tx.amount);
-      const statusClass = tx.status.toLowerCase();
+      const status = tx.status ? tx.status.toUpperCase() : 'PENDING';
+      const statusClass = status.toLowerCase();
+      
+      // Get bank details
+      const bankCode = details.bank_code || details.bank;
+      const bankName = getBankName(bankCode);
+      const accountNumber = details.account_number || 'N/A';
+      const accountName = details.account_name || 'N/A';
       
       return `
         <div class="receipt" id="receipt-${tx.id}">
@@ -360,7 +445,7 @@
             </div>
             <div class="detail-row">
               <span class="detail-label">Status</span>
-              <span class="detail-value status-badge status-${statusClass}">${tx.status}</span>
+              <span class="detail-value status-badge status-${statusClass}">${status}</span>
             </div>
             <div class="detail-row">
               <span class="detail-label">Date & Time</span>
@@ -368,15 +453,15 @@
             </div>
             <div class="detail-row">
               <span class="detail-label">Bank</span>
-              <span class="detail-value">${getBankName(details.bank_code)}</span>
+              <span class="detail-value">${bankName}</span>
             </div>
             <div class="detail-row">
               <span class="detail-label">Account Number</span>
-              <span class="detail-value">${details.account_number}</span>
+              <span class="detail-value">${accountNumber}</span>
             </div>
             <div class="detail-row">
               <span class="detail-label">Account Name</span>
-              <span class="detail-value">${details.account_name || 'N/A'}</span>
+              <span class="detail-value">${accountName}</span>
             </div>
           </div>
           <div class="receipt-footer">
@@ -389,22 +474,40 @@
     
     // ==================== HISTORY VIEW ====================
     function createHistoryHTML(transactions) {
-      if (!transactions.length) {
+      if (!transactions || transactions.length === 0) {
         return '<div class="no-data">No withdrawal history found.</div>';
       }
       
       let html = '<div class="history-list">';
       transactions.forEach(tx => {
         const amount = parseFloat(tx.amount);
-        const statusClass = tx.status.toLowerCase();
+        const status = tx.status ? tx.status.toUpperCase() : 'PENDING';
+        const statusClass = status.toLowerCase();
+        
+        // Parse details for bank info
+        let details = {};
+        try {
+          if (typeof tx.details === 'string') {
+            details = JSON.parse(tx.details);
+          } else if (typeof tx.details === 'object') {
+            details = tx.details;
+          }
+        } catch (e) {
+          details = {};
+        }
+        
+        const bankCode = details.bank_code || details.bank;
+        const bankName = getBankName(bankCode);
+        
         html += `
           <div class="history-item" onclick="showSingleReceipt('${tx.id}')">
             <div class="history-item-header">
               <span class="history-amount">₦${amount.toLocaleString()}</span>
-              <span class="history-status status-${statusClass}">${tx.status}</span>
+              <span class="history-status status-${statusClass}">${status}</span>
             </div>
-            <div>ID: ${tx.id}</div>
-            <div>${formatDate(tx.timestamp)}</div>
+            <div><strong>Bank:</strong> ${bankName}</div>
+            <div><strong>ID:</strong> ${tx.id}</div>
+            <div><strong>Date:</strong> ${formatDate(tx.timestamp)}</div>
           </div>
         `;
       });
@@ -458,6 +561,11 @@
           return;
         }
         
+        if (!data.user || !data.user.transactions) {
+          document.getElementById('receipt-container').innerHTML = '<div class="no-data">No transactions found.</div>';
+          return;
+        }
+        
         const transactions = data.user.transactions.filter(t => t.type === 'WITHDRAWAL');
         let targetTx;
         
@@ -475,7 +583,7 @@
         }
       } catch (err) {
         console.error('Failed to load receipt:', err);
-        document.getElementById('receipt-container').innerHTML = '<div class="no-data">Failed to load receipt.</div>';
+        document.getElementById('receipt-container').innerHTML = '<div class="no-data">Failed to load receipt. Please try again.</div>';
       }
     }
     
@@ -489,6 +597,11 @@
           return;
         }
         
+        if (!data.user || !data.user.transactions) {
+          document.getElementById('receipt-container').innerHTML = '<div class="no-data">No transactions found.</div>';
+          return;
+        }
+        
         const transactions = data.user.transactions
           .filter(t => t.type === 'WITHDRAWAL')
           .reverse(); // Show newest first
@@ -496,7 +609,7 @@
         document.getElementById('receipt-container').innerHTML = createHistoryHTML(transactions);
       } catch (err) {
         console.error('Failed to load history:', err);
-        document.getElementById('receipt-container').innerHTML = '<div class="no-data">Failed to load history.</div>';
+        document.getElementById('receipt-container').innerHTML = '<div class="no-data">Failed to load history. Please try again.</div>';
       }
     }
     
@@ -523,11 +636,12 @@
         const canvas = await html2canvas(receiptDiv, {
           scale: 2,
           useCORS: true,
-          backgroundColor: null
+          backgroundColor: null,
+          logging: false
         });
         
         const link = document.createElement('a');
-        link.download = `flexia-receipt-${receiptDiv.id}.png`;
+        link.download = `flexia-receipt-${receiptDiv.id.replace('receipt-', '')}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
       } catch (err) {
@@ -538,6 +652,7 @@
     
     // ==================== INITIALIZATION ====================
     document.addEventListener('DOMContentLoaded', async () => {
+      // Load banks first
       await loadBanks();
       
       const urlParams = new URLSearchParams(window.location.search);
