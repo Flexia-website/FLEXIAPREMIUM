@@ -608,20 +608,21 @@
         
         async function submitGameResult(bet, multiplier) {
             try {
-                const res = await fetch(`${API_BASE}/games/plinko/report`, {
+                // DIRECT API CALL - NO DEPENDENCIES
+                const res = await fetch('/api/games/plinko/report', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({ bet, multiplier })
+                    body: JSON.stringify({ bet: bet, multiplier: multiplier })
                 });
-                const data = await res.json();
                 
-                if (data.success) {
-                    balance = data.new_balance;
-                    return { success: true, winAmount: data.win_amount };
-                } else {
-                    return { success: false, message: data.message };
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    return { success: false, message: `HTTP ${res.status}: ${errorText}` };
                 }
+                
+                const data = await res.json();
+                return data;
             } catch (error) {
                 console.error('Error submitting game result:', error);
                 return { success: false, message: 'Network error' };
