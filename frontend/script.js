@@ -189,7 +189,8 @@ style.textContent = `
   
   .password-container input {
     width: 100%;
-    padding-right: 45px !important;
+    padding-left: 45px !important;  /* Space for left padlock icon */
+    padding-right: 45px !important; /* Space for right eye icon */
     box-sizing: border-box !important;
   }
   
@@ -219,8 +220,13 @@ style.textContent = `
   }
   
   .auth-form input {
-    padding: 12px 15px !important;
+    padding: 12px 20px 12px 45px !important; /* Extra left padding for padlock */
     font-size: 1rem !important;
+  }
+  
+  /* Make sure text doesn't overlap with left icon */
+  input[type="password"], input[type="text"] {
+    text-indent: 5px; /* Small indent to move text away from left border */
   }
 `;
 document.head.appendChild(style);
