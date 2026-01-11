@@ -184,23 +184,25 @@ style.textContent = `
   .password-container {
     position: relative;
     width: 100%;
+    margin-bottom: 15px;
   }
   
-  .password-input {
+  .password-container input {
     width: 100%;
-    padding-right: 45px;
+    padding-right: 45px !important;
+    box-sizing: border-box !important;
   }
   
   .password-toggle {
     position: absolute;
-    right: 10px;
+    right: 12px;
     top: 50%;
     transform: translateY(-50%);
     background: transparent;
     border: none;
     color: #A0A0B5;
     cursor: pointer;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     width: 30px;
     height: 30px;
     display: flex;
@@ -208,11 +210,17 @@ style.textContent = `
     justify-content: center;
     border-radius: 4px;
     transition: color 0.2s, background 0.2s;
+    z-index: 10;
   }
   
   .password-toggle:hover {
     color: #8000FF;
     background: rgba(128, 0, 255, 0.1);
+  }
+  
+  .auth-form input {
+    padding: 12px 15px !important;
+    font-size: 1rem !important;
   }
 `;
 document.head.appendChild(style);
@@ -274,7 +282,6 @@ const Auth = {
       // Move the input into the container
       loginPasswordField.parentNode.insertBefore(loginContainer, loginPasswordField);
       loginContainer.appendChild(loginPasswordField);
-      loginPasswordField.className = 'password-input';
       
       // Create toggle button
       const loginToggle = document.createElement('button');
@@ -296,7 +303,6 @@ const Auth = {
       // Move the input into the container
       regPasswordField.parentNode.insertBefore(regContainer, regPasswordField);
       regContainer.appendChild(regPasswordField);
-      regPasswordField.className = 'password-input';
       
       // Create toggle button
       const regToggle = document.createElement('button');
