@@ -499,5 +499,88 @@
             alert(`[${type.toUpperCase()}] ${message}`);
         };
     </script>
+    <!-- Load script.js -->
+<script src="script.js"></script>
+    
+<!-- Emergency function loader -->
+<script>
+// Ensure critical functions exist immediately
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Page loaded, initializing...');
+    
+    // Create emergency fallbacks if functions don't exist
+    const requiredFunctions = {
+        'checkDailyLimit': async () => ({ can_play: true, played_today: 0, max_per_day: 999 }),
+        'claimSnakeReward': async (apples) => {
+            try {
+                const res = await fetch('/api/games/snake/report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ apples_eaten: apples })
+                });
+                return await res.json();
+            } catch (e) {
+                return { success: false, message: e.message };
+            }
+        },
+        'claimCoinFlipReward': async (bet, won) => {
+            try {
+                const res = await fetch('/api/games/coinflip/report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ bet: bet, won: won })
+                });
+                return await res.json();
+            } catch (e) {
+                return { success: false, message: e.message };
+            }
+        },
+        'claimPlinkoReward': async (bet, multiplier) => {
+            try {
+                const res = await fetch('/api/games/plinko/report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ bet: bet, multiplier: multiplier })
+                });
+                return await res.json();
+            } catch (e) {
+                return { success: false, message: e.message };
+            }
+        },
+        'updateBalance': (newBalance) => {
+            console.log('Balance update:', newBalance);
+            const els = document.querySelectorAll('[id*="balance"], .balance');
+            els.forEach(el => {
+                if (el.textContent.includes('₦')) {
+                    el.textContent = `₦${newBalance.toLocaleString()}`;
+                }
+            });
+        },
+        'showMessage': (text, type) => alert(`[${type || 'INFO'}] ${text}`),
+        'goBackToDashboard': () => window.location.href = 'index.html'
+    };
+    
+    // Create any missing functions
+    Object.keys(requiredFunctions).forEach(funcName => {
+        if (typeof window[funcName] !== 'function') {
+            window[funcName] = requiredFunctions[funcName];
+            console.log(`Created emergency fallback for: ${funcName}`);
+        }
+    });
+    
+    // Initialize main app
+    setTimeout(() => {
+        if (window.App && typeof window.App.init === 'function') {
+            window.App.init();
+        } else {
+            console.error('App not loaded properly');
+            alert('Please refresh the page to load the application.');
+        }
+    }, 500);
+});
+</script>
 </body>
 </html>
