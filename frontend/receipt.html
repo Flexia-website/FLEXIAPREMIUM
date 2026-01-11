@@ -4,13 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Withdrawal Receipt - FLEXIA</title>
-  <!-- CORRECTED: Updated logo paths -->
   <link rel="icon" type="image/x-icon" href="logo/favicon.ico">
   <link rel="icon" type="image/png" sizes="32x32" href="logo/flexia-logo.png">
   <link rel="icon" type="image/png" sizes="16x16" href="logo/flexia-logo.png">
   <link rel="apple-touch-icon" href="logo/apple-touch-icon.png">
   <link rel="manifest" href="manifest.json">
-  <!-- Fonts & CSS -->
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -277,6 +275,44 @@
       border: 1px solid #FF0055;
     }
     
+    /* Withdrawal check styles */
+    .withdrawal-check-container {
+      background: #151535;
+      border: 2px solid #8000FF;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px auto;
+      max-width: 500px;
+      text-align: center;
+    }
+    
+    .withdrawal-check-btn {
+      background: linear-gradient(45deg, #8000FF, #00CCFF);
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 15px;
+      transition: all 0.2s;
+    }
+    
+    .withdrawal-check-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(128, 0, 255, 0.4);
+    }
+    
+    .allowed-day {
+      color: #00FF55;
+      font-weight: bold;
+    }
+    
+    .not-allowed-day {
+      color: #FF0055;
+      font-weight: bold;
+    }
+    
     @media (max-width: 500px) {
       .header {
         padding: 12px 15px;
@@ -320,6 +356,18 @@
   <div class="main-content">
     <button id="history-toggle" onclick="toggleHistory()">View All History</button>
     
+    <!-- Withdrawal Check Section (NEW) -->
+    <div id="withdrawal-check" style="display: none;">
+      <div class="withdrawal-check-container">
+        <h3><i class="fas fa-calendar-check"></i> Withdrawal Status</h3>
+        <p id="withdrawal-status-message">Checking withdrawal availability...</p>
+        <p id="withdrawal-days-info"></p>
+        <button class="withdrawal-check-btn" onclick="checkWithdrawalStatus()">
+          <i class="fas fa-sync-alt"></i> Check Again
+        </button>
+      </div>
+    </div>
+    
     <div id="receipt-container">
       <!-- Receipt will be loaded here -->
       <div class="loading">Loading receipt...</div>
@@ -332,10 +380,143 @@
       <button class="action-btn dashboard-btn" onclick="goToDashboard()">
         <i class="fas fa-home"></i> Dashboard
       </button>
+      <button class="action-btn" onclick="checkWithdrawalStatus()" style="background: linear-gradient(45deg, #FF0055, #FF8A00);">
+        <i class="fas fa-calendar-alt"></i> Check Withdrawal
+      </button>
     </div>
   </div>
   
   <script>
+    // ==================== WITHDRAWAL STATUS CHECK ====================
+    async function checkWithdrawalStatus() {
+      const statusEl = document.getElementById('withdrawal-status-message');
+      const daysInfoEl = document.getElementById('withdrawal-days-info');
+      const checkContainer = document.getElementById('withdrawal-check');
+      
+      if (statusEl) statusEl.textContent = 'Checking withdrawal availability...';
+      
+      try {
+        // First check if user is logged in
+        const profileRes = await fetch('/api/user/profile');
+        const profileData = await profileRes.json();
+        
+        if (!profileData.success) {
+          if (statusEl) statusEl.innerHTML = '<span class="not-allowed-day">Please login to check withdrawal status</span>';
+          return;
+        }
+        
+        const today = new Date();
+        const todayDay = today.getDate();
+        const todayMonth = today.toLocaleString('default', { month: 'long' });
+        
+        // Try to get withdrawal days from admin settings
+        try {
+          const settingsRes = await fetch('/api/admin/global-withdrawal-days', {
+            credentials: 'include'
+          });
+          
+          if (settingsRes.ok) {
+            const settingsData = await settingsRes.json();
+            
+            if (settingsData.success) {
+              const withdrawalDays = settingsData.days || [7, 14, 25, 30];
+              const isAllowed = withdrawalDays.includes(todayDay);
+              
+              if (statusEl) {
+                statusEl.innerHTML = isAllowed 
+                  ? `<span class="allowed-day">✅ Withdrawals ARE ALLOWED today (${todayMonth} ${todayDay})</span>`
+                  : `<span class="not-allowed-day">❌ Withdrawals are NOT ALLOWED today (${todayMonth} ${todayDay})</span>`;
+              }
+              
+              if (daysInfoEl) {
+                daysInfoEl.innerHTML = `
+                  <strong>Allowed Withdrawal Days:</strong> ${withdrawalDays.sort((a,b) => a-b).join(', ')}<br>
+                  <small>Today is ${todayMonth} ${todayDay} (Day ${todayDay} of the month)</small>
+                `;
+              }
+              
+              if (checkContainer) checkContainer.style.display = 'block';
+              
+              if (!isAllowed) {
+                // Show error message
+                alert(`Withdrawals only allowed on days: ${withdrawalDays.sort((a,b) => a-b).join(', ')}\nToday is ${todayMonth} ${todayDay} (Day ${todayDay})`);
+              }
+              
+              return;
+            }
+          }
+        } catch (adminError) {
+          console.log('Admin endpoint not accessible, trying alternative...');
+        }
+        
+        // Fallback: Check by attempting a small withdrawal
+        try {
+          const testRes = await fetch('/api/banking/withdraw', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              amount: 100000,
+              bank_code: '057',
+              account_number: '0000000000',
+              account_name: 'Test',
+              pin: '0000'
+            })
+          });
+          
+          const testData = await testRes.json();
+          
+          if (testData.message && testData.message.includes('Withdrawals only on days')) {
+            // Extract days from error message
+            const match = testData.message.match(/days:\s*([\d,\s]+)/);
+            if (match && statusEl) {
+              const daysStr = match[1];
+              statusEl.innerHTML = `<span class="not-allowed-day">❌ Withdrawals are NOT ALLOWED today (${todayMonth} ${todayDay})</span>`;
+              if (daysInfoEl) {
+                daysInfoEl.innerHTML = `
+                  <strong>Allowed Withdrawal Days:</strong> ${daysStr}<br>
+                  <small>Today is ${todayMonth} ${todayDay} (Day ${todayDay} of the month)</small>
+                `;
+              }
+            }
+          } else if (testData.message && testData.message.includes('Min withdrawal')) {
+            // Minimum amount error means withdrawals ARE allowed today
+            if (statusEl) {
+              statusEl.innerHTML = `<span class="allowed-day">✅ Withdrawals ARE ALLOWED today (${todayMonth} ${todayDay})</span>`;
+            }
+            if (daysInfoEl) {
+              daysInfoEl.innerHTML = `
+                <strong>Withdrawals allowed today!</strong><br>
+                <small>Today is ${todayMonth} ${todayDay} (Day ${todayDay} of the month)</small>
+              `;
+            }
+          }
+          
+          if (checkContainer) checkContainer.style.display = 'block';
+          
+        } catch (testError) {
+          // Last fallback - show today's date
+          if (statusEl) {
+            statusEl.innerHTML = `<span class="not-allowed-day">Could not determine withdrawal status</span>`;
+          }
+          if (daysInfoEl) {
+            daysInfoEl.innerHTML = `
+              <strong>Today is:</strong> ${todayMonth} ${todayDay} (Day ${todayDay})<br>
+              <small>Contact admin to check withdrawal days</small>
+            `;
+          }
+          if (checkContainer) checkContainer.style.display = 'block';
+        }
+        
+      } catch (error) {
+        console.error('Withdrawal check error:', error);
+        if (statusEl) {
+          statusEl.innerHTML = '<span class="not-allowed-day">Error checking withdrawal status</span>';
+        }
+        if (checkContainer) checkContainer.style.display = 'block';
+      }
+    }
+    
     // ==================== BANK MAPPING ====================
     let bankMap = {};
 
@@ -349,12 +530,10 @@
           });
           console.log('Loaded banks from API:', bankMap);
         } else {
-          // Load fallback banks
           loadFallbackBanks();
         }
       } catch (err) {
         console.error('Failed to load banks from API:', err);
-        // Load fallback banks on error
         loadFallbackBanks();
       }
     }
@@ -409,7 +588,6 @@
     function createReceiptHTML(tx) {
       console.log('Creating receipt for transaction:', tx);
       
-      // Parse transaction details
       let details = {};
       try {
         if (typeof tx.details === 'string') {
@@ -426,7 +604,6 @@
       const status = tx.status ? tx.status.toUpperCase() : 'PENDING';
       const statusClass = status.toLowerCase();
       
-      // Get bank details
       const bankCode = details.bank_code || details.bank;
       const bankName = getBankName(bankCode);
       const accountNumber = details.account_number || 'N/A';
@@ -484,7 +661,6 @@
         const status = tx.status ? tx.status.toUpperCase() : 'PENDING';
         const statusClass = status.toLowerCase();
         
-        // Parse details for bank info
         let details = {};
         try {
           if (typeof tx.details === 'string') {
@@ -534,12 +710,10 @@
       const isHistory = urlParams.get('history') === 'true';
       
       if (isHistory) {
-        // Switch to single receipt view
         window.history.replaceState({}, '', 'receipt.html');
         document.getElementById('history-toggle').textContent = 'View All History';
         showSingleReceipt();
       } else {
-        // Switch to history view
         window.history.replaceState({}, '', 'receipt.html?history=true');
         document.getElementById('history-toggle').textContent = 'View Single Receipt';
         loadHistory();
@@ -572,7 +746,6 @@
         if (txId) {
           targetTx = transactions.find(t => t.id === txId);
         } else {
-          // Show most recent withdrawal
           targetTx = transactions[transactions.length - 1];
         }
         
@@ -604,7 +777,7 @@
         
         const transactions = data.user.transactions
           .filter(t => t.type === 'WITHDRAWAL')
-          .reverse(); // Show newest first
+          .reverse();
         
         document.getElementById('receipt-container').innerHTML = createHistoryHTML(transactions);
       } catch (err) {
@@ -622,7 +795,6 @@
       }
       
       try {
-        // Load html2canvas if not already loaded
         if (typeof html2canvas === 'undefined') {
           await new Promise((resolve, reject) => {
             const script = document.createElement('script');
@@ -652,7 +824,6 @@
     
     // ==================== INITIALIZATION ====================
     document.addEventListener('DOMContentLoaded', async () => {
-      // Load banks first
       await loadBanks();
       
       const urlParams = new URLSearchParams(window.location.search);
@@ -665,6 +836,9 @@
         document.getElementById('history-toggle').textContent = 'View All History';
         loadSingleReceipt();
       }
+      
+      // Check withdrawal status on page load
+      setTimeout(() => checkWithdrawalStatus(), 1000);
     });
   </script>
 </body>
