@@ -1,5 +1,5 @@
-// script.js - FLEXIA Frontend Logic v12.0 - FIXED VERSION
-// ✅ ALL GLOBAL FUNCTIONS WORKING ✅ NO BACKEND CHANGES NEEDED
+// script.js - FLEXIA Frontend Logic v12.0 - ENHANCED SPIN WHEEL
+// ✅ ALL GLOBAL FUNCTIONS WORKING ✅ ENHANCED VISUALS ✅
 
 //========== CONFIGURATION ========
 const CONFIG = {
@@ -24,6 +24,13 @@ const App = {
       await Profile.load();
       await Banking.loadBanks();
       this.setupTheme();
+      
+      // Initialize spin wheel visuals
+      setTimeout(() => {
+        if (window.Games && typeof Games.enhanceSpinVisuals === 'function') {
+          Games.enhanceSpinVisuals();
+        }
+      }, 1000);
     }
   },
   
@@ -109,6 +116,11 @@ const App = {
   showModal: function (modalId) {
     document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
     document.getElementById(modalId).classList.remove('hidden');
+    
+    // Initialize particles when spin modal opens
+    if (modalId === 'spin-modal' && window.Games && window.Games.createParticles) {
+      setTimeout(() => Games.createParticles(), 100);
+    }
   },
   
   closeModal: function (modalId) {
@@ -1026,7 +1038,12 @@ const Games = {
     
     App.showModal('spin-modal');
     
-    setTimeout(() => initSpinWheel(), 150);
+    // Create particles when modal opens
+    setTimeout(() => {
+      if (this.createParticles) {
+        this.createParticles();
+      }
+    }, 150);
   },
   
   spinWheel: async function() {
@@ -1052,6 +1069,11 @@ const Games = {
     if (msgEl) {
       msgEl.textContent = '';
       msgEl.className = 'message';
+    }
+    
+    // Add spinning glow effect
+    if (this.addSpinGlow) {
+      this.addSpinGlow();
     }
     
     const prizes = [1000, 500, 200, 100, 50, 0];
@@ -1094,6 +1116,16 @@ const Games = {
           
           if (reward > 0) {
             App.showMessage(`✅ Spin wheel: Won ₦${reward.toLocaleString()}!`, 'success');
+            
+            // Show win celebration
+            if (this.createWinCelebration) {
+              this.createWinCelebration(reward);
+            }
+            
+            // Show animated counter
+            if (this.showWinCounter) {
+              this.showWinCounter(reward);
+            }
           }
         } else {
           if (msgEl) {
@@ -1122,67 +1154,120 @@ const Games = {
   }
 };
 
-// ==================== SPIN WHEEL FUNCTIONS ====================
-function initSpinWheel() {
-  const wheel = document.getElementById('wheel');
-  if (!wheel) return;
-  
-  wheel.innerHTML = '';
-  
-  const segments = [
-    { class: 'segment-1', color: '#FF0055' },
-    { class: 'segment-2', color: '#FF5C5C' },
-    { class: 'segment-3', color: '#FFCC00' },
-    { class: 'segment-4', color: '#00FF55' },
-    { class: 'segment-5', color: '#00CCFF' },
-    { class: 'segment-6', color: '#8000FF' }
-  ];
-  
-  segments.forEach(seg => {
-    const div = document.createElement('div');
-    div.className = `wheel-segment ${seg.class}`;
-    wheel.appendChild(div);
-  });
-  
-  const labelsDiv = document.createElement('div');
-  labelsDiv.className = 'wheel-labels';
-  
-  const labels = ['₦1000', '₦500', '₦200', '₦100', '₦50', 'TRY AGAIN'];
-  labels.forEach((label, index) => {
-    const labelDiv = document.createElement('div');
-    labelDiv.className = `wheel-label label-${index + 1}`;
-    labelDiv.textContent = label;
-    labelDiv.style.setProperty('--rotation', index * 60);
-    labelsDiv.appendChild(labelDiv);
-  });
-  
-  wheel.appendChild(labelsDiv);
-  
-  const center = document.createElement('div');
-  center.className = 'wheel-center';
-  wheel.appendChild(center);
-}
+// ==================== SPIN WHEEL VISUAL EFFECTS ====================
 
-// Auto-initialize when modal opens
-document.addEventListener('DOMContentLoaded', function() {
-  const spinModal = document.getElementById('spin-modal');
-  if (spinModal) {
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.attributeName === 'class') {
-          const isVisible = !spinModal.classList.contains('hidden');
-          if (isVisible) {
-            setTimeout(() => initSpinWheel(), 100);
-          }
-        }
-      });
-    });
+Games.enhanceSpinVisuals = function() {
+    console.log('🎨 Enhancing spin wheel visuals...');
     
-    observer.observe(spinModal, { 
-      attributes: true, 
-      attributeFilter: ['class'] 
-    });
-  }
+    // Create particles for background
+    Games.createParticles = () => {
+        const particlesContainer = document.getElementById('spin-particles');
+        if (!particlesContainer) return;
+        
+        particlesContainer.innerHTML = '';
+        
+        for (let i = 0; i < 15; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.cssText = `
+                width: ${2 + Math.random() * 4}px;
+                height: ${2 + Math.random() * 4}px;
+                background: ${['#8000FF', '#00CCFF', '#FF0055', '#00FF55'][Math.floor(Math.random() * 4)]};
+                border-radius: 50%;
+                opacity: ${0.2 + Math.random() * 0.3};
+                animation: floatParticle ${3 + Math.random() * 4}s infinite linear;
+                animation-delay: ${Math.random() * 5}s;
+                top: ${Math.random() * 100}%;
+                left: ${Math.random() * 100}%;
+            `;
+            particlesContainer.appendChild(particle);
+        }
+    };
+    
+    // Create win celebration
+    Games.createWinCelebration = function(amount) {
+        if (amount <= 0) return;
+        
+        const celebration = document.createElement('div');
+        celebration.className = 'win-celebration';
+        celebration.id = 'win-celebration';
+        
+        // Create confetti
+        for (let i = 0; i < 100; i++) {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            confetti.style.cssText = `
+                left: ${Math.random() * 100}%;
+                background: ${['#FF0055', '#00FF55', '#00CCFF', '#FFCC00', '#8000FF'][Math.floor(Math.random() * 5)]};
+                animation: confettiFall ${1 + Math.random() * 2}s ease-in forwards;
+                animation-delay: ${Math.random() * 0.5}s;
+                transform: rotate(${Math.random() * 360}deg);
+            `;
+            celebration.appendChild(confetti);
+        }
+        
+        document.body.appendChild(celebration);
+        
+        // Remove after animation
+        setTimeout(() => {
+            if (celebration.parentNode) {
+                celebration.remove();
+            }
+        }, 3000);
+    };
+    
+    // Add spinning glow effect
+    Games.addSpinGlow = function() {
+        const wheel = document.getElementById('wheel');
+        if (wheel) {
+            wheel.classList.add('spinning-glow');
+            
+            // Remove after spin
+            setTimeout(() => {
+                wheel.classList.remove('spinning-glow');
+            }, 4000);
+        }
+    };
+    
+    // Show animated counter for win amount
+    Games.showWinCounter = function(amount) {
+        if (amount <= 0) return;
+        
+        const resultEl = document.getElementById('spin-result');
+        if (resultEl) {
+            resultEl.innerHTML = `
+                <p class="counter-animation" style="
+                    text-align: center;
+                    margin: 10px 0;
+                    font-size: 2rem;
+                ">
+                    🎉 ₦${amount.toLocaleString()}! 🎉
+                </p>
+                <p style="text-align: center; color: #00FF55; font-weight: 600;">
+                    Added to your balance!
+                </p>
+            `;
+            resultEl.classList.remove('hidden');
+        }
+    };
+    
+    // Initialize particles when modal opens
+    const originalOpenSpinWheel = Games.openSpinWheel;
+    Games.openSpinWheel = function() {
+        originalOpenSpinWheel.call(this);
+        setTimeout(Games.createParticles, 100);
+    };
+    
+    console.log('✅ Spin wheel visual effects enhanced');
+};
+
+// Initialize visuals when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        if (window.Games) {
+            Games.enhanceSpinVisuals();
+        }
+    }, 2000);
 });
 
 //========== SETTINGS & LOGOUT =========
@@ -1462,7 +1547,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==================== GLOBAL FUNCTIONS FOR GAME PAGES ====================
-// FIXED VERSION - ALL FUNCTIONS PROPERLY EXPORTED
+// ENHANCED VERSION - WITH VISUAL EFFECTS
 (function() {
     // Export all functions to window
     window.App = App;
@@ -1558,7 +1643,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    console.log('✅ FLEXIA Script v12.0 - ALL FUNCTIONS LOADED');
+    console.log('✅ FLEXIA Script v12.0 - ENHANCED SPIN WHEEL LOADED');
 })();
 
 // Emergency fallback loader
