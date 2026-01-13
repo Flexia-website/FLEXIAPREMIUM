@@ -38,12 +38,9 @@
                     <input type="text" id="login-username" class="form-input" placeholder="Username" required />
                     <i class="fas fa-user input-icon"></i>
                 </div>
-                <div class="input-group password-container">
+                <div class="input-group">
                     <input type="password" id="login-password" class="form-input" placeholder="Password" required />
                     <i class="fas fa-lock input-icon"></i>
-                    <button type="button" class="password-toggle" onclick="Auth.togglePasswordVisibility('login-password')">
-                        <i class="fas fa-eye"></i>
-                    </button>
                 </div>
                 <button class="btn-primary" onclick="Auth.login()">
                     <i class="fas fa-sign-in-alt"></i> ENTER VAULT
@@ -58,12 +55,9 @@
                     <input type="text" id="reg-username" class="form-input" placeholder="Choose Username" required />
                     <i class="fas fa-user input-icon"></i>
                 </div>
-                <div class="input-group password-container">
+                <div class="input-group">
                     <input type="password" id="reg-password" class="form-input" placeholder="Create Password" required />
                     <i class="fas fa-lock input-icon"></i>
-                    <button type="button" class="password-toggle" onclick="Auth.togglePasswordVisibility('reg-password')">
-                        <i class="fas fa-eye"></i>
-                    </button>
                 </div>
                 <div class="input-group">
                     <input type="text" id="reg-coupon" class="form-input" placeholder="Coupon Code" required />
@@ -137,24 +131,28 @@
             <section class="activities-section">
                 <h3 class="section-title"><i class="fas fa-gamepad"></i> Earn & Play</h3>
                 <div class="activities-grid">
+                    <!-- FIXED: Direct link to game -->
                     <div class="activity-card" onclick="window.location.href='snake.html'">
                         <div class="card-icon game"><i class="fas fa-gamepad"></i></div>
                         <div class="card-title">Snake Mine</div>
                         <div class="card-subtitle">Eat = ₦200 Each</div>
                         <div class="card-badge free">FREE</div>
                     </div>
+                    <!-- FIXED: Direct link to game -->
                     <div class="activity-card" onclick="window.location.href='coinflip.html'">
                         <div class="card-icon coin"><i class="fas fa-coins"></i></div>
                         <div class="card-title">Coin Flip</div>
                         <div class="card-subtitle">Bet & Double</div>
                         <div class="card-badge bet">Min: ₦100</div>
                     </div>
+                    <!-- FIXED: Direct link to game -->
                     <div class="activity-card" onclick="window.location.href='plinko.html'">
                         <div class="card-icon play"><i class="fas fa-bowling-ball"></i></div>
                         <div class="card-title">Plinko 3D</div>
                         <div class="card-subtitle">Bet & Multiply</div>
                         <div class="card-badge bet">Min: ₦100</div>
                     </div>
+                    <!-- FIXED: Updated function name -->
                     <div class="activity-card" onclick="Games.openTikTok()">
                         <div class="card-icon tiktok"><i class="fab fa-tiktok"></i></div>
                         <div class="card-title">TikTok Follow</div>
@@ -167,6 +165,7 @@
                         <div class="card-subtitle">₦7,500/Friend</div>
                         <div class="card-badge bonus">Bonus</div>
                     </div>
+                    <!-- FIXED: Updated function name -->
                     <div class="activity-card" onclick="Games.openSpinWheel()">
                         <div class="card-icon spin"><i class="fas fa-sync-alt"></i></div>
                         <div class="card-title">Daily Spin</div>
@@ -330,7 +329,7 @@
             </div>
         </div>
 
-        <!-- ✅ PERFECTLY SIZED SPIN WHEEL MODAL -->
+        <!-- ✅ FIXED SIZE SPIN WHEEL MODAL -->
         <div id="spin-modal" class="modal hidden">
             <div class="modal-content">
                 <!-- Background Effects -->
@@ -466,6 +465,7 @@
 
     <!-- Enhanced Referral Sharing -->
     <script>
+        // This remains exactly as you had it
         const originalReferralOpen = window.Referral?.open || function() {};
         window.Referral = window.Referral || {};
         Referral.open = function() {
@@ -503,84 +503,130 @@
     <!-- Main App Script -->
     <script src="script.js"></script>
     
-    <!-- Emergency function loader -->
+    <!-- Ensure global functions are available -->
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('FLEXIA Platform Loading...');
+        // Create global functions if they don't exist (as backup)
+        if (!window.openSnakeGame) {
+            window.openSnakeGame = function() {
+                window.location.href = 'snake.html';
+            };
+            
+            window.openCoinFlipGame = function() {
+                window.location.href = 'coinflip.html';
+            };
+            
+            window.openPlinkoGame = function() {
+                window.location.href = 'plinko.html';
+            };
+            
+            window.openTikTokGame = function() {
+                if (window.Games && Games.openTikTok) {
+                    Games.openTikTok();
+                } else {
+                    alert('Please wait for the app to load completely.');
+                }
+            };
+            
+            window.openSpinWheelGame = function() {
+                if (window.Games && Games.openSpinWheel) {
+                    Games.openSpinWheel();
+                } else {
+                    alert('Please wait for the app to load completely.');
+                }
+            };
+        }
         
-        // Create emergency fallbacks if functions don't exist
-        const requiredFunctions = {
-            'checkDailyLimit': async () => ({ can_play: true, played_today: 0, max_per_day: 999 }),
-            'claimSnakeReward': async (apples) => {
-                try {
-                    const res = await fetch('/api/games/snake/report', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
-                        body: JSON.stringify({ apples_eaten: apples })
-                    });
-                    return await res.json();
-                } catch (e) {
-                    return { success: false, message: e.message };
-                }
-            },
-            'claimCoinFlipReward': async (bet, won) => {
-                try {
-                    const res = await fetch('/api/games/coinflip/report', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
-                        body: JSON.stringify({ bet: bet, won: won })
-                    });
-                    return await res.json();
-                } catch (e) {
-                    return { success: false, message: e.message };
-                }
-            },
-            'claimPlinkoReward': async (bet, multiplier) => {
-                try {
-                    const res = await fetch('/api/games/plinko/report', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
-                        body: JSON.stringify({ bet: bet, multiplier: multiplier })
-                    });
-                    return await res.json();
-                } catch (e) {
-                    return { success: false, message: e.message };
-                }
-            },
-            'updateBalance': (newBalance) => {
-                console.log('Balance update:', newBalance);
-                const els = document.querySelectorAll('[id*="balance"], .balance');
-                els.forEach(el => {
-                    if (el.textContent.includes('₦')) {
-                        el.textContent = `₦${newBalance.toLocaleString()}`;
-                    }
-                });
-            },
-            'showMessage': (text, type) => alert(`[${type || 'INFO'}] ${text}`),
-            'goBackToDashboard': () => window.location.href = 'index.html'
+        // Emergency backup functions
+        window.goBackToDashboard = function() {
+            window.location.href = 'index.html';
         };
         
-        // Create any missing functions
-        Object.keys(requiredFunctions).forEach(funcName => {
-            if (typeof window[funcName] !== 'function') {
-                window[funcName] = requiredFunctions[funcName];
-                console.log(`Created emergency fallback for: ${funcName}`);
-            }
-        });
-        
-        // Initialize main app
-        setTimeout(() => {
-            if (window.App && typeof window.App.init === 'function') {
-                window.App.init();
-            } else {
-                console.error('App not loaded properly');
-                alert('Please refresh the page to load the application.');
-            }
-        }, 500);
-    });
+        window.showMessage = function(message, type = 'info') {
+            alert(`[${type.toUpperCase()}] ${message}`);
+        };
     </script>
+    <!-- Load script.js -->
+<script src="script.js"></script>
+    
+<!-- Emergency function loader -->
+<script>
+// Ensure critical functions exist immediately
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Page loaded, initializing...');
+    
+    // Create emergency fallbacks if functions don't exist
+    const requiredFunctions = {
+        'checkDailyLimit': async () => ({ can_play: true, played_today: 0, max_per_day: 999 }),
+        'claimSnakeReward': async (apples) => {
+            try {
+                const res = await fetch('/api/games/snake/report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ apples_eaten: apples })
+                });
+                return await res.json();
+            } catch (e) {
+                return { success: false, message: e.message };
+            }
+        },
+        'claimCoinFlipReward': async (bet, won) => {
+            try {
+                const res = await fetch('/api/games/coinflip/report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ bet: bet, won: won })
+                });
+                return await res.json();
+            } catch (e) {
+                return { success: false, message: e.message };
+            }
+        },
+        'claimPlinkoReward': async (bet, multiplier) => {
+            try {
+                const res = await fetch('/api/games/plinko/report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ bet: bet, multiplier: multiplier })
+                });
+                return await res.json();
+            } catch (e) {
+                return { success: false, message: e.message };
+            }
+        },
+        'updateBalance': (newBalance) => {
+            console.log('Balance update:', newBalance);
+            const els = document.querySelectorAll('[id*="balance"], .balance');
+            els.forEach(el => {
+                if (el.textContent.includes('₦')) {
+                    el.textContent = `₦${newBalance.toLocaleString()}`;
+                }
+            });
+        },
+        'showMessage': (text, type) => alert(`[${type || 'INFO'}] ${text}`),
+        'goBackToDashboard': () => window.location.href = 'index.html'
+    };
+    
+    // Create any missing functions
+    Object.keys(requiredFunctions).forEach(funcName => {
+        if (typeof window[funcName] !== 'function') {
+            window[funcName] = requiredFunctions[funcName];
+            console.log(`Created emergency fallback for: ${funcName}`);
+        }
+    });
+    
+    // Initialize main app
+    setTimeout(() => {
+        if (window.App && typeof window.App.init === 'function') {
+            window.App.init();
+        } else {
+            console.error('App not loaded properly');
+            alert('Please refresh the page to load the application.');
+        }
+    }, 500);
+});
+</script>
 </body>
 </html>
