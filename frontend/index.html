@@ -329,7 +329,7 @@
             </div>
         </div>
 
-        <!-- ✅ ENHANCED SPIN WHEEL MODAL (Premium Version) -->
+        <!-- ✅ FIXED SIZE SPIN WHEEL MODAL -->
         <div id="spin-modal" class="modal hidden">
             <div class="modal-content">
                 <!-- Background Effects -->
@@ -344,7 +344,7 @@
                 <h3 class="modal-title">DAILY SPIN WHEEL</h3>
                 <p class="modal-info">Spin once daily to win amazing rewards!</p>
 
-                <!-- Enhanced Wheel Container -->
+                <!-- Fixed Size Wheel Container -->
                 <div class="wheel-container">
                     <div class="pointer-wrapper">
                         <div id="pointer">
@@ -352,8 +352,8 @@
                         </div>
                     </div>
 
-                    <!-- Enhanced SVG Wheel -->
-                    <svg id="wheel" width="300" height="300" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Fixed Size SVG Wheel -->
+                    <svg id="wheel" width="240" height="240" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
                         <defs>
                             <linearGradient id="goldGrad">
                                 <stop offset="0%" stop-color="#FFD700" />
@@ -368,8 +368,8 @@
                                 <stop offset="100%" stop-color="#0099CC" />
                             </linearGradient>
                             <filter id="glow">
-                                <feGaussianBlur stdDeviation="3" result="blur" />
-                                <feFlood flood-color="#8000FF" flood-opacity="0.8" />
+                                <feGaussianBlur stdDeviation="2" result="blur" />
+                                <feFlood flood-color="#8000FF" flood-opacity="0.6" />
                                 <feComposite in2="blur" operator="in" />
                                 <feMerge>
                                     <feMergeNode />
@@ -377,67 +377,67 @@
                                 </feMerge>
                             </filter>
                             <filter id="shadow">
-                                <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#000000" flood-opacity="0.7" />
+                                <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#000000" flood-opacity="0.6" />
                             </filter>
                         </defs>
                         
                         <!-- Outer glow ring -->
-                        <circle cx="150" cy="150" r="148" fill="none" stroke="url(#goldGrad)" stroke-width="4" opacity="0.3" filter="url(#glow)" />
+                        <circle cx="120" cy="120" r="118" fill="none" stroke="url(#goldGrad)" stroke-width="3" opacity="0.3" filter="url(#glow)" />
                         
                         <!-- Main wheel circle -->
-                        <circle cx="150" cy="150" r="140" fill="url(#purpleGrad)" filter="url(#shadow)" />
+                        <circle cx="120" cy="120" r="110" fill="url(#purpleGrad)" filter="url(#shadow)" />
                         
                         <!-- Segments with alternating colors -->
-                        <path d="M150,150 L150,30 A120,120 0 0,1 204.85,45.15 Z" fill="#8000FF" stroke="#9D00FF" stroke-width="2" opacity="0.9" />
-                        <path d="M150,150 L204.85,45.15 A120,120 0 0,1 254.85,75.15 Z" fill="#00CCFF" stroke="#00AAFF" stroke-width="2" opacity="0.9" />
-                        <path d="M150,150 L254.85,75.15 A120,120 0 0,1 254.85,125.15 Z" fill="#8000FF" stroke="#9D00FF" stroke-width="2" opacity="0.9" />
-                        <path d="M150,150 L254.85,125.15 A120,120 0 0,1 204.85,175.15 Z" fill="#00CCFF" stroke="#00AAFF" stroke-width="2" opacity="0.9" />
-                        <path d="M150,150 L204.85,175.15 A120,120 0 0,1 150,225 Z" fill="#8000FF" stroke="#9D00FF" stroke-width="2" opacity="0.9" />
-                        <path d="M150,150 L150,225 A120,120 0 0,1 95.15,175.15 Z" fill="#00CCFF" stroke="#00AAFF" stroke-width="2" opacity="0.9" />
-                        <path d="M150,150 L95.15,175.15 A120,120 0 0,1 45.15,125.15 Z" fill="#8000FF" stroke="#9D00FF" stroke-width="2" opacity="0.9" />
-                        <path d="M150,150 L45.15,125.15 A120,120 0 0,1 95.15,75.15 Z" fill="#00CCFF" stroke="#00AAFF" stroke-width="2" opacity="0.9" />
+                        <path d="M120,120 L120,30 A90,90 0 0,1 173.85,45.15 Z" fill="#8000FF" stroke="#9D00FF" stroke-width="2" opacity="0.9" />
+                        <path d="M120,120 L173.85,45.15 A90,90 0 0,1 203.85,65.15 Z" fill="#00CCFF" stroke="#00AAFF" stroke-width="2" opacity="0.9" />
+                        <path d="M120,120 L203.85,65.15 A90,90 0 0,1 203.85,105.15 Z" fill="#8000FF" stroke="#9D00FF" stroke-width="2" opacity="0.9" />
+                        <path d="M120,120 L203.85,105.15 A90,90 0 0,1 173.85,145.15 Z" fill="#00CCFF" stroke="#00AAFF" stroke-width="2" opacity="0.9" />
+                        <path d="M120,120 L173.85,145.15 A90,90 0 0,1 120,180 Z" fill="#8000FF" stroke="#9D00FF" stroke-width="2" opacity="0.9" />
+                        <path d="M120,120 L120,180 A90,90 0 0,1 75.15,145.15 Z" fill="#00CCFF" stroke="#00AAFF" stroke-width="2" opacity="0.9" />
+                        <path d="M120,120 L75.15,145.15 A90,90 0 0,1 45.15,105.15 Z" fill="#8000FF" stroke="#9D00FF" stroke-width="2" opacity="0.9" />
+                        <path d="M120,120 L45.15,105.15 A90,90 0 0,1 75.15,65.15 Z" fill="#00CCFF" stroke="#00AAFF" stroke-width="2" opacity="0.9" />
                         
                         <!-- Segment borders -->
-                        <circle cx="150" cy="150" r="130" fill="none" stroke="url(#goldGrad)" stroke-width="2" opacity="0.5" />
+                        <circle cx="120" cy="120" r="100" fill="none" stroke="url(#goldGrad)" stroke-width="2" opacity="0.5" />
                         
-                        <!-- Prize labels -->
+                        <!-- Prize labels (smaller font) -->
                         <g font-family="Orbitron" font-weight="900" text-anchor="middle" fill="white">
-                            <text x="150" y="60" font-size="16" fill="gold" stroke="#000" stroke-width="1">₦1000</text>
-                            <text x="225" y="100" font-size="16" fill="#00FF55" stroke="#000" stroke-width="1">₦500</text>
-                            <text x="225" y="175" font-size="16" fill="#00CCFF" stroke="#000" stroke-width="1">₦200</text>
-                            <text x="150" y="240" font-size="16" fill="#FF0055" stroke="#000" stroke-width="1">₦100</text>
-                            <text x="75" y="175" font-size="16" fill="#FFCC00" stroke="#000" stroke-width="1">₦50</text>
-                            <text x="75" y="100" font-size="14" fill="white" stroke="#000" stroke-width="1">TRY</text>
-                            <text x="75" y="115" font-size="14" fill="white" stroke="#000" stroke-width="1">AGAIN</text>
+                            <text x="120" y="50" font-size="12" fill="gold" stroke="#000" stroke-width="0.8">₦1000</text>
+                            <text x="180" y="80" font-size="12" fill="#00FF55" stroke="#000" stroke-width="0.8">₦500</text>
+                            <text x="180" y="140" font-size="12" fill="#00CCFF" stroke="#000" stroke-width="0.8">₦200</text>
+                            <text x="120" y="190" font-size="12" fill="#FF0055" stroke="#000" stroke-width="0.8">₦100</text>
+                            <text x="60" y="140" font-size="12" fill="#FFCC00" stroke="#000" stroke-width="0.8">₦50</text>
+                            <text x="60" y="80" font-size="10" fill="white" stroke="#000" stroke-width="0.8">TRY</text>
+                            <text x="60" y="92" font-size="10" fill="white" stroke="#000" stroke-width="0.8">AGAIN</text>
                         </g>
                         
                         <!-- Center hub -->
-                        <circle cx="150" cy="150" r="25" fill="url(#goldGrad)" stroke="#FFA500" stroke-width="3" />
-                        <circle cx="150" cy="150" r="15" fill="white" opacity="0.8" />
-                        <circle cx="150" cy="150" r="5" fill="#8000FF" />
+                        <circle cx="120" cy="120" r="20" fill="url(#goldGrad)" stroke="#FFA500" stroke-width="2.5" />
+                        <circle cx="120" cy="120" r="12" fill="white" opacity="0.8" />
+                        <circle cx="120" cy="120" r="4" fill="#8000FF" />
                         
                         <!-- Decorative dots around center -->
-                        <circle cx="190" cy="150" r="2" fill="gold" />
-                        <circle cx="165" cy="175" r="2" fill="gold" />
-                        <circle cx="165" cy="125" r="2" fill="gold" />
-                        <circle cx="150" cy="190" r="2" fill="gold" />
-                        <circle cx="150" cy="110" r="2" fill="gold" />
-                        <circle cx="135" cy="175" r="2" fill="gold" />
-                        <circle cx="135" cy="125" r="2" fill="gold" />
-                        <circle cx="110" cy="150" r="2" fill="gold" />
+                        <circle cx="152" cy="120" r="1.5" fill="gold" />
+                        <circle cx="132" cy="140" r="1.5" fill="gold" />
+                        <circle cx="132" cy="100" r="1.5" fill="gold" />
+                        <circle cx="120" cy="152" r="1.5" fill="gold" />
+                        <circle cx="120" cy="88" r="1.5" fill="gold" />
+                        <circle cx="108" cy="140" r="1.5" fill="gold" />
+                        <circle cx="108" cy="100" r="1.5" fill="gold" />
+                        <circle cx="88" cy="120" r="1.5" fill="gold" />
                         
                         <!-- Sparkle effects -->
                         <g opacity="0.7">
-                            <circle cx="90" cy="90" r="3" fill="#00FFFF">
+                            <circle cx="72" cy="72" r="2" fill="#00FFFF">
                                 <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite" />
                             </circle>
-                            <circle cx="210" cy="90" r="3" fill="#FF00FF">
+                            <circle cx="168" cy="72" r="2" fill="#FF00FF">
                                 <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite" begin="0.5s" />
                             </circle>
-                            <circle cx="210" cy="210" r="3" fill="#00FF00">
+                            <circle cx="168" cy="168" r="2" fill="#00FF00">
                                 <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite" begin="1s" />
                             </circle>
-                            <circle cx="90" cy="210" r="3" fill="#FFFF00">
+                            <circle cx="72" cy="168" r="2" fill="#FFFF00">
                                 <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite" begin="1.5s" />
                             </circle>
                         </g>
@@ -448,8 +448,8 @@
                     <i class="fas fa-sync-alt"></i> SPIN WHEEL
                 </button>
 
-                <div id="spin-result" class="game-result hidden" style="margin-top: 15px; padding: 15px; background: rgba(0,255,85,0.1); border-radius: 8px;">
-                    <p style="margin: 0; font-size: 1.1rem;"></p>
+                <div id="spin-result" class="game-result hidden" style="margin-top: 15px; padding: 12px; background: rgba(0,255,85,0.1); border-radius: 8px;">
+                    <p style="margin: 0; font-size: 1rem;"></p>
                 </div>
 
                 <div class="message" id="spin-message" style="margin-top: 10px;"></div>
