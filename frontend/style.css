@@ -851,9 +851,9 @@ body {
 .modal-content {
   background: var(--bg-card);
   border-radius: var(--border-radius);
-  padding: 30px;
+  padding: 25px;
   width: 100%;
-  max-width: 450px;
+  max-width: 420px; /* Reduced from 450px */
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 0 50px rgba(0, 255, 204, 0.1);
@@ -866,7 +866,7 @@ body {
 .modal-title {
   font-family: var(--font-display);
   color: var(--secondary);
-  margin-bottom: 25px;
+  margin-bottom: 20px; /* Reduced from 25px */
   font-size: 1.5rem;
   text-shadow: 0 0 5px rgba(0, 204, 255, 0.5);
 }
@@ -883,7 +883,7 @@ body {
 }
 
 .btn-close {
-  margin-top: 20px;
+  margin-top: 15px; /* Reduced from 20px */
   background: none;
   border: 1px solid var(--danger);
   padding: 8px 15px;
@@ -1014,20 +1014,20 @@ body {
   to { transform: translateY(0); opacity: 1; }
 }
 
-/* ==================== 8. ENHANCED SPIN WHEEL STYLES ==================== */
+/* ==================== 8. FIXED SIZE SPIN WHEEL STYLES ==================== */
 
-/* Enhanced Wheel Container */
+/* Fixed Size Wheel Container */
 .wheel-container {
   position: relative;
-  width: 320px;
-  height: 320px;
-  margin: 30px auto;
+  width: 260px; /* FIXED: Properly sized */
+  height: 260px; /* FIXED: Properly sized */
+  margin: 15px auto; /* Reduced from 30px */
   background: linear-gradient(135deg, rgba(10, 10, 31, 0.8), rgba(30, 30, 69, 0.9));
-  border-radius: 20px;
-  padding: 10px;
+  border-radius: 16px; /* Reduced from 20px */
+  padding: 8px; /* Reduced from 10px */
   box-shadow: 
-    0 0 60px rgba(128, 0, 255, 0.4),
-    inset 0 0 30px rgba(0, 204, 255, 0.1);
+    0 0 40px rgba(128, 0, 255, 0.3),
+    inset 0 0 20px rgba(0, 204, 255, 0.1);
   border: 2px solid rgba(128, 0, 255, 0.3);
 }
 
@@ -1035,21 +1035,21 @@ body {
 .wheel-container::before {
   content: '';
   position: absolute;
-  top: -5px;
-  left: -5px;
-  right: -5px;
-  bottom: -5px;
-  border: 3px solid transparent;
+  top: -4px; /* Reduced from -5px */
+  left: -4px; /* Reduced from -5px */
+  right: -4px; /* Reduced from -5px */
+  bottom: -4px; /* Reduced from -5px */
+  border: 2px solid transparent; /* Reduced from 3px */
   border-image: linear-gradient(45deg, #8000FF, #00CCFF, #FF0055, #00FF55) 1;
-  border-radius: 25px;
+  border-radius: 20px; /* Reduced from 25px */
   pointer-events: none;
   z-index: -1;
 }
 
-/* Enhanced Pointer */
+/* Fixed Size Pointer */
 .pointer-wrapper {
   position: absolute;
-  top: -50px;
+  top: -35px; /* Reduced from -50px */
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
@@ -1058,63 +1058,63 @@ body {
 #pointer {
   width: 0;
   height: 0;
-  border-left: 25px solid transparent;
-  border-right: 25px solid transparent;
-  border-top: 60px solid #FF0055;
-  filter: drop-shadow(0 5px 15px rgba(255, 0, 85, 0.7));
+  border-left: 18px solid transparent; /* Reduced from 25px */
+  border-right: 18px solid transparent; /* Reduced from 25px */
+  border-top: 45px solid #FF0055; /* Reduced from 60px */
+  filter: drop-shadow(0 4px 10px rgba(255, 0, 85, 0.6)); /* Reduced */
   position: relative;
   animation: pointerPulse 2s infinite;
 }
 
 .pointer-tip {
   position: absolute;
-  top: -15px;
+  top: -12px; /* Reduced from -15px */
   left: 50%;
   transform: translateX(-50%);
-  width: 20px;
-  height: 20px;
+  width: 16px; /* Reduced from 20px */
+  height: 16px; /* Reduced from 20px */
   background: radial-gradient(circle, gold, orange);
   border-radius: 50%;
-  border: 3px solid white;
-  box-shadow: 0 0 20px gold;
+  border: 2px solid white; /* Reduced from 3px */
+  box-shadow: 0 0 15px gold; /* Reduced from 20px */
 }
 
 @keyframes pointerPulse {
   0%, 100% { transform: translateX(-50%) scale(1); }
-  50% { transform: translateX(-50%) scale(1.1); }
+  50% { transform: translateX(-50%) scale(1.05); } /* Reduced from 1.1 */
 }
 
-/* Enhanced Spin Button */
+/* Fixed Spin Button */
 #spin-button {
   background: linear-gradient(45deg, #8000FF, #FF0055);
   border: none;
-  border-radius: 12px;
+  border-radius: 10px; /* Reduced from 12px */
   color: white;
   font-family: 'Orbitron', sans-serif;
-  font-size: 1.2rem;
+  font-size: 1.1rem; /* Reduced from 1.2rem */
   font-weight: 900;
-  padding: 15px 30px;
+  padding: 12px 25px; /* Reduced from 15px 30px */
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 
-    0 5px 20px rgba(128, 0, 255, 0.4),
-    0 0 20px rgba(255, 0, 85, 0.3);
+    0 4px 15px rgba(128, 0, 255, 0.3),
+    0 0 15px rgba(255, 0, 85, 0.2);
   position: relative;
   overflow: hidden;
-  margin-top: 20px;
+  margin-top: 15px; /* Reduced from 20px */
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.8px; /* Reduced from 1px */
 }
 
 #spin-button:hover:not(:disabled) {
-  transform: translateY(-3px);
+  transform: translateY(-2px); /* Reduced from -3px */
   box-shadow: 
-    0 8px 25px rgba(128, 0, 255, 0.6),
-    0 0 30px rgba(255, 0, 85, 0.4);
+    0 6px 20px rgba(128, 0, 255, 0.5),
+    0 0 25px rgba(255, 0, 85, 0.3);
 }
 
 #spin-button:active:not(:disabled) {
-  transform: translateY(1px);
+  transform: translateY(0px);
 }
 
 #spin-button:disabled {
@@ -1148,24 +1148,24 @@ body {
 /* Enhanced Modal Title */
 #spin-modal .modal-title {
   font-family: 'Orbitron', sans-serif;
-  font-size: 1.8rem;
+  font-size: 1.6rem; /* Reduced from 1.8rem */
   font-weight: 900;
   background: linear-gradient(45deg, #8000FF, #00CCFF, #FF0055);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  margin-bottom: 20px;
-  text-shadow: 0 0 20px rgba(128, 0, 255, 0.3);
-  letter-spacing: 2px;
+  margin-bottom: 15px; /* Reduced from 20px */
+  text-shadow: 0 0 15px rgba(128, 0, 255, 0.3); /* Reduced from 20px */
+  letter-spacing: 1.5px; /* Reduced from 2px */
 }
 
 /* Enhanced Modal Info */
 #spin-modal .modal-info {
   color: #00CCFF;
-  font-size: 1rem;
+  font-size: 0.95rem; /* Reduced from 1rem */
   font-weight: 600;
-  margin-bottom: 20px;
-  text-shadow: 0 0 10px rgba(0, 204, 255, 0.3);
+  margin-bottom: 15px; /* Reduced from 20px */
+  text-shadow: 0 0 8px rgba(0, 204, 255, 0.3); /* Reduced from 10px */
 }
 
 /* Win Celebration Styles */
@@ -1181,8 +1181,8 @@ body {
 
 .confetti {
   position: absolute;
-  width: 10px;
-  height: 10px;
+  width: 8px; /* Reduced from 10px */
+  height: 8px; /* Reduced from 10px */
   background: #FF0055;
   opacity: 0;
 }
@@ -1190,19 +1190,19 @@ body {
 /* Number Counter Animation */
 .counter-animation {
   font-family: 'Orbitron', sans-serif;
-  font-size: 2.5rem;
+  font-size: 2rem; /* Reduced from 2.5rem */
   font-weight: 900;
   color: gold;
   text-shadow: 
-    0 0 10px gold,
-    0 0 20px gold,
-    0 0 30px gold;
+    0 0 8px gold, /* Reduced from 10px */
+    0 0 15px gold, /* Reduced from 20px */
+    0 0 25px gold; /* Reduced from 30px */
   animation: counterPop 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
 }
 
 @keyframes counterPop {
   0% { transform: scale(0.5); opacity: 0; }
-  70% { transform: scale(1.2); }
+  70% { transform: scale(1.1); } /* Reduced from 1.2 */
   100% { transform: scale(1); opacity: 1; }
 }
 
@@ -1215,18 +1215,18 @@ body {
 .spinning-glow::before {
   content: '';
   position: absolute;
-  top: -10px;
-  left: -10px;
-  right: -10px;
-  bottom: -10px;
+  top: -8px; /* Reduced from -10px */
+  left: -8px; /* Reduced from -10px */
+  right: -8px; /* Reduced from -10px */
+  bottom: -8px; /* Reduced from -10px */
   background: conic-gradient(from 0deg, 
     #8000FF, #00CCFF, #FF0055, #00FF55, #8000FF
   );
   border-radius: 50%;
   animation: spinGlow 0.5s linear infinite;
   z-index: -1;
-  opacity: 0.7;
-  filter: blur(10px);
+  opacity: 0.6; /* Reduced from 0.7 */
+  filter: blur(8px); /* Reduced from 10px */
 }
 
 @keyframes spinGlow {
@@ -1250,7 +1250,7 @@ body {
 .modal-particles .particle {
   position: absolute;
   border-radius: 50%;
-  opacity: 0.3;
+  opacity: 0.25; /* Reduced from 0.3 */
   animation: floatParticle 4s infinite linear;
 }
 
@@ -1260,13 +1260,13 @@ body {
     opacity: 0;
   }
   10% {
-    opacity: 0.5;
+    opacity: 0.4; /* Reduced from 0.5 */
   }
   90% {
-    opacity: 0.5;
+    opacity: 0.4; /* Reduced from 0.5 */
   }
   100% {
-    transform: translateY(-100px) translateX(100px);
+    transform: translateY(-80px) translateX(80px); /* Reduced from 100px */
     opacity: 0;
   }
 }
@@ -1277,10 +1277,10 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 120%;
-  height: 120%;
-  background: radial-gradient(circle, rgba(128, 0, 255, 0.2) 0%, transparent 70%);
-  filter: blur(40px);
+  width: 110%; /* Reduced from 120% */
+  height: 110%; /* Reduced from 120% */
+  background: radial-gradient(circle, rgba(128, 0, 255, 0.15) 0%, transparent 70%); /* Reduced opacity */
+  filter: blur(30px); /* Reduced from 40px */
   z-index: -1;
   pointer-events: none;
 }
@@ -1288,8 +1288,8 @@ body {
 /* Trail Effect */
 .spin-trail {
   position: absolute;
-  width: 5px;
-  height: 60px;
+  width: 4px; /* Reduced from 5px */
+  height: 50px; /* Reduced from 60px */
   background: linear-gradient(to bottom, 
     transparent, 
     #00FFFF, 
@@ -1303,7 +1303,7 @@ body {
 /* Confetti Animation */
 @keyframes confettiFall {
   0% {
-    transform: translateY(-100px) rotate(0deg);
+    transform: translateY(-80px) rotate(0deg); /* Reduced from 100px */
     opacity: 1;
   }
   100% {
@@ -1355,17 +1355,18 @@ body {
   .modal-content {
     padding: 20px;
     margin: 10px;
+    max-width: 380px; /* Adjusted for mobile */
   }
 
   /* Spin Wheel Adjustments */
   .wheel-container {
-    width: 280px;
-    height: 280px;
+    width: 240px; /* Smaller for mobile */
+    height: 240px;
   }
   #pointer {
-    border-left: 20px solid transparent;
-    border-right: 20px solid transparent;
-    border-top: 50px solid #FF0055;
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-top: 35px solid #FF0055;
   }
 }
 
@@ -1425,6 +1426,7 @@ body {
   }
   .modal-content {
     padding: 15px;
+    max-width: 340px; /* Smaller for mobile */
   }
   .modal-title {
     font-size: 1.2rem;
@@ -1436,17 +1438,21 @@ body {
 
   /* Spin Wheel Mobile */
   .wheel-container {
-    width: 250px;
-    height: 250px;
+    width: 220px;
+    height: 220px;
   }
   #pointer {
-    border-left: 15px solid transparent;
-    border-right: 15px solid transparent;
-    border-top: 40px solid #FF0055;
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-top: 30px solid #FF0055;
   }
   .pointer-tip {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
+  }
+  #spin-button {
+    font-size: 1rem;
+    padding: 10px 20px;
   }
 }
 
