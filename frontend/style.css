@@ -901,54 +901,6 @@ body {
   color: var(--bg-dark);
 }
 
-/* ==================== ✅ FIXED SPIN WHEEL STYLES (SVG-Based) ==================== */
-.wheel-container {
-  position: relative;
-  width: 300px;
-  height: 300px;
-  margin: 30px auto;
-}
-
-#wheel {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
-  transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
-}
-
-/* Pointer styling — kept for JS compatibility */
-.pointer-wrapper {
-  position: absolute;
-  top: -40px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-}
-
-#pointer {
-  width: 0;
-  height: 0;
-  border-left: 20px solid transparent;
-  border-right: 20px solid transparent;
-  border-top: 50px solid #ff3333;
-  filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.7));
-  position: relative;
-}
-
-.pointer-tip {
-  position: absolute;
-  top: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 15px;
-  height: 15px;
-  background: #ffcc00;
-  border-radius: 50%;
-  border: 3px solid white;
-  box-shadow: 0 0 15px rgba(255, 204, 0, 0.8);
-}
-
 /* ==================== TIKTOK MODAL STYLES ==================== */
 .tiktok-account-display {
   background: rgba(37, 244, 238, 0.1);
@@ -1062,7 +1014,305 @@ body {
   to { transform: translateY(0); opacity: 1; }
 }
 
-/* ==================== 8. RESPONSIVE DESIGN ==================== */
+/* ==================== 8. ENHANCED SPIN WHEEL STYLES ==================== */
+
+/* Enhanced Wheel Container */
+.wheel-container {
+  position: relative;
+  width: 320px;
+  height: 320px;
+  margin: 30px auto;
+  background: linear-gradient(135deg, rgba(10, 10, 31, 0.8), rgba(30, 30, 69, 0.9));
+  border-radius: 20px;
+  padding: 10px;
+  box-shadow: 
+    0 0 60px rgba(128, 0, 255, 0.4),
+    inset 0 0 30px rgba(0, 204, 255, 0.1);
+  border: 2px solid rgba(128, 0, 255, 0.3);
+}
+
+/* Decorative border around container */
+.wheel-container::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  border: 3px solid transparent;
+  border-image: linear-gradient(45deg, #8000FF, #00CCFF, #FF0055, #00FF55) 1;
+  border-radius: 25px;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Enhanced Pointer */
+.pointer-wrapper {
+  position: absolute;
+  top: -50px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+}
+
+#pointer {
+  width: 0;
+  height: 0;
+  border-left: 25px solid transparent;
+  border-right: 25px solid transparent;
+  border-top: 60px solid #FF0055;
+  filter: drop-shadow(0 5px 15px rgba(255, 0, 85, 0.7));
+  position: relative;
+  animation: pointerPulse 2s infinite;
+}
+
+.pointer-tip {
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 20px;
+  background: radial-gradient(circle, gold, orange);
+  border-radius: 50%;
+  border: 3px solid white;
+  box-shadow: 0 0 20px gold;
+}
+
+@keyframes pointerPulse {
+  0%, 100% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(1.1); }
+}
+
+/* Enhanced Spin Button */
+#spin-button {
+  background: linear-gradient(45deg, #8000FF, #FF0055);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 900;
+  padding: 15px 30px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 5px 20px rgba(128, 0, 255, 0.4),
+    0 0 20px rgba(255, 0, 85, 0.3);
+  position: relative;
+  overflow: hidden;
+  margin-top: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+#spin-button:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 
+    0 8px 25px rgba(128, 0, 255, 0.6),
+    0 0 30px rgba(255, 0, 85, 0.4);
+}
+
+#spin-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+#spin-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+#spin-button::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 70%
+  );
+  transform: rotate(45deg);
+  animation: shine 3s infinite;
+}
+
+@keyframes shine {
+  0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+  100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+}
+
+/* Enhanced Modal Title */
+#spin-modal .modal-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 900;
+  background: linear-gradient(45deg, #8000FF, #00CCFF, #FF0055);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 20px;
+  text-shadow: 0 0 20px rgba(128, 0, 255, 0.3);
+  letter-spacing: 2px;
+}
+
+/* Enhanced Modal Info */
+#spin-modal .modal-info {
+  color: #00CCFF;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  text-shadow: 0 0 10px rgba(0, 204, 255, 0.3);
+}
+
+/* Win Celebration Styles */
+.win-celebration {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10000;
+}
+
+.confetti {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #FF0055;
+  opacity: 0;
+}
+
+/* Number Counter Animation */
+.counter-animation {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: gold;
+  text-shadow: 
+    0 0 10px gold,
+    0 0 20px gold,
+    0 0 30px gold;
+  animation: counterPop 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+@keyframes counterPop {
+  0% { transform: scale(0.5); opacity: 0; }
+  70% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Spinning Glow Effect */
+.spinning-glow {
+  position: relative;
+  overflow: visible !important;
+}
+
+.spinning-glow::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  right: -10px;
+  bottom: -10px;
+  background: conic-gradient(from 0deg, 
+    #8000FF, #00CCFF, #FF0055, #00FF55, #8000FF
+  );
+  border-radius: 50%;
+  animation: spinGlow 0.5s linear infinite;
+  z-index: -1;
+  opacity: 0.7;
+  filter: blur(10px);
+}
+
+@keyframes spinGlow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Particles Background */
+.modal-particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: var(--border-radius);
+}
+
+.modal-particles .particle {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.3;
+  animation: floatParticle 4s infinite linear;
+}
+
+@keyframes floatParticle {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.5;
+  }
+  90% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(-100px) translateX(100px);
+    opacity: 0;
+  }
+}
+
+/* Modal Background Glow */
+.modal-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 120%;
+  height: 120%;
+  background: radial-gradient(circle, rgba(128, 0, 255, 0.2) 0%, transparent 70%);
+  filter: blur(40px);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Trail Effect */
+.spin-trail {
+  position: absolute;
+  width: 5px;
+  height: 60px;
+  background: linear-gradient(to bottom, 
+    transparent, 
+    #00FFFF, 
+    transparent
+  );
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Confetti Animation */
+@keyframes confettiFall {
+  0% {
+    transform: translateY(-100px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+/* ==================== 9. RESPONSIVE DESIGN ==================== */
 @media (max-width: 1200px) {
   .header-content, .app-main {
     max-width: 100%;
@@ -1109,8 +1359,13 @@ body {
 
   /* Spin Wheel Adjustments */
   .wheel-container {
-    width: 260px;
-    height: 260px;
+    width: 280px;
+    height: 280px;
+  }
+  #pointer {
+    border-left: 20px solid transparent;
+    border-right: 20px solid transparent;
+    border-top: 50px solid #FF0055;
   }
 }
 
@@ -1181,13 +1436,13 @@ body {
 
   /* Spin Wheel Mobile */
   .wheel-container {
-    width: 220px;
-    height: 220px;
+    width: 250px;
+    height: 250px;
   }
   #pointer {
     border-left: 15px solid transparent;
     border-right: 15px solid transparent;
-    border-top: 40px solid #ff3333;
+    border-top: 40px solid #FF0055;
   }
   .pointer-tip {
     width: 12px;
