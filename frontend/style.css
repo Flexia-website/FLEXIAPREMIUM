@@ -56,125 +56,11 @@ body {
   position: relative;
 }
 
-/* ==================== 2. Screen Animations ==================== */
-.screen {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
-  background: var(--bg-dark);
+.critical-css {
+  display: none;
 }
 
-.screen.hidden {
-  display: none !important;
-}
-
-.screen.entering {
-  animation: screenSlideIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  z-index: 10;
-}
-
-.screen.leaving {
-  animation: screenSlideOut 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  z-index: 9;
-}
-
-@keyframes screenSlideIn {
-  from { 
-    opacity: 0; 
-    transform: translateY(40px);
-  }
-  to { 
-    opacity: 1; 
-    transform: translateY(0);
-  }
-}
-
-@keyframes screenSlideOut {
-  from { 
-    opacity: 1; 
-    transform: translateY(0);
-  }
-  to { 
-    opacity: 0; 
-    transform: translateY(-40px);
-  }
-}
-
-@keyframes fadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes loadingPulse {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.7;
-    transform: scale(0.98);
-  }
-}
-
-/* Loading overlay */
-.loading-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(10, 10, 31, 0.95);
-  backdrop-filter: blur(15px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  z-index: 99999;
-  animation: fadeIn 0.3s ease-out;
-}
-
-.loading-overlay.hidden {
-  animation: fadeOut 0.3s ease-out forwards;
-  pointer-events: none;
-}
-
-.loading-spinner {
-  width: 70px;
-  height: 70px;
-  border: 4px solid rgba(128, 0, 255, 0.2);
-  border-radius: 50%;
-  border-top-color: var(--primary);
-  animation: spin 1s linear infinite;
-  margin-bottom: 25px;
-  box-shadow: 0 0 30px rgba(128, 0, 255, 0.3);
-}
-
-.loading-text {
-  font-family: var(--font-display);
-  font-size: 1.2rem;
-  color: var(--secondary);
-  letter-spacing: 2px;
-  animation: loadingPulse 2s infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* ==================== 3. LOGO STYLES ==================== */
+/* ==================== LOGO STYLES ==================== */
 .logo-container {
   text-align: center;
   margin-bottom: 25px;
@@ -219,7 +105,7 @@ body {
   }
 }
 
-/* ==================== 4. HEADER LOGO ==================== */
+/* ==================== HEADER LOGO ==================== */
 .header-logo {
   display: flex;
   align-items: center;
@@ -250,7 +136,7 @@ body {
   letter-spacing: 1px;
 }
 
-/* ==================== 5. MODAL LOGO ==================== */
+/* ==================== MODAL LOGO ==================== */
 .modal-logo {
   text-align: center;
   margin-bottom: 20px;
@@ -269,7 +155,7 @@ body {
   height: 40px;
 }
 
-/* ==================== 6. FOOTER LOGO ==================== */
+/* ==================== FOOTER LOGO ==================== */
 .footer-logo {
   text-align: center;
   padding: 20px;
@@ -292,7 +178,7 @@ body {
   letter-spacing: 2px;
 }
 
-/* ==================== 7. GAME PAGE LOGO ==================== */
+/* ==================== GAME PAGE LOGO ==================== */
 .game-logo {
   display: flex;
   align-items: center;
@@ -322,9 +208,15 @@ body {
   text-shadow: 0 0 10px rgba(128, 0, 255, 0.3);
 }
 
-/* ==================== 8. Utility & Layout ==================== */
-.critical-css {
-  display: none;
+/* ==================== 2. Utility & Layout ==================== */
+.screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.hidden {
+  display: none !important;
 }
 
 .spinner {
@@ -351,6 +243,11 @@ body {
   z-index: 0;
 }
 
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 @keyframes slideIn {
   from { transform: translateX(30px); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
@@ -361,15 +258,13 @@ body {
   to { transform: translateX(30px); opacity: 0; }
 }
 
-/* ==================== 9. AUTH SCREEN ==================== */
+/* ==================== 3. AUTH SCREEN ==================== */
 #auth-screen {
   align-items: center;
   justify-content: center;
   padding: 20px;
   position: relative;
   z-index: 1;
-  background: linear-gradient(135deg, var(--bg-dark) 0%, #151530 100%);
-  animation: fadeIn 0.6s ease-out;
 }
 
 .auth-container {
@@ -382,12 +277,7 @@ body {
   z-index: 10;
   border: 1px solid rgba(128, 0, 255, 0.2);
   backdrop-filter: blur(10px);
-  animation: screenSlideIn 0.5s ease-out;
-  transform-origin: center;
-}
-
-.auth-container.logging-in {
-  animation: loadingPulse 1s infinite;
+  animation: slideIn 0.5s ease-out;
 }
 
 .auth-header {
@@ -420,7 +310,6 @@ body {
   margin-bottom: 15px;
   font-size: 0.8rem;
   text-align: center;
-  animation: fadeIn 0.5s ease-out;
 }
 
 .test-login-info p {
@@ -432,7 +321,6 @@ body {
   display: flex;
   margin-bottom: 20px;
   border-bottom: 2px solid var(--bg-medium);
-  animation: fadeIn 0.6s ease-out 0.1s backwards;
 }
 
 .tab {
@@ -459,17 +347,11 @@ body {
   height: 3px;
   background: var(--accent);
   border-radius: 3px 3px 0 0;
-  animation: tabSlide 0.3s ease-out;
-}
-
-@keyframes tabSlide {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
 }
 
 .auth-form {
   display: none;
-  animation: fadeIn 0.4s ease-out;
+  animation: fadeIn 0.3s ease-out;
 }
 
 .auth-form.active {
@@ -479,14 +361,7 @@ body {
 .input-group {
   position: relative;
   margin-bottom: 20px;
-  animation: fadeIn 0.4s ease-out;
 }
-
-.input-group:nth-child(1) { animation-delay: 0.1s; }
-.input-group:nth-child(2) { animation-delay: 0.2s; }
-.input-group:nth-child(3) { animation-delay: 0.3s; }
-.input-group:nth-child(4) { animation-delay: 0.4s; }
-.input-group:nth-child(5) { animation-delay: 0.5s; }
 
 .form-input {
   width: 100%;
@@ -504,7 +379,6 @@ body {
 .form-input:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(128, 0, 255, 0.3);
-  transform: translateY(-2px);
 }
 
 .form-input::placeholder {
@@ -519,41 +393,6 @@ body {
   transform: translateY(-50%);
   color: var(--text-muted);
   font-size: 0.9rem;
-  transition: var(--transition);
-}
-
-.form-input:focus + .input-icon {
-  color: var(--primary);
-}
-
-/* Password toggle styles */
-.password-container {
-  position: relative;
-}
-
-.password-toggle {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 1.1rem;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: var(--transition);
-  z-index: 10;
-}
-
-.password-toggle:hover {
-  color: var(--primary);
-  background: rgba(128, 0, 255, 0.1);
 }
 
 .btn-primary {
@@ -572,40 +411,21 @@ body {
   box-shadow: 0 5px 15px rgba(128, 0, 255, 0.3);
   position: relative;
   overflow: hidden;
-  animation: fadeIn 0.5s ease-out 0.3s backwards;
 }
 
 .btn-primary:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(128, 0, 255, 0.4);
 }
 
 .btn-primary:active {
-  transform: translateY(-1px);
+  transform: translateY(0);
 }
 
 .btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none !important;
-}
-
-.btn-primary.loading {
-  color: transparent;
-}
-
-.btn-primary.loading::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 20px;
-  height: 20px;
-  border: 3px solid transparent;
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
 }
 
 .btn-secondary {
@@ -620,7 +440,6 @@ body {
   cursor: pointer;
   transition: var(--transition);
   margin-bottom: 20px;
-  animation: fadeIn 0.5s ease-out 0.4s backwards;
 }
 
 .btn-secondary:hover {
@@ -671,7 +490,6 @@ body {
   background: rgba(0, 204, 255, 0.1);
   border-radius: 8px;
   border-left: 5px solid var(--secondary);
-  animation: fadeIn 0.5s ease-out 0.5s backwards;
 }
 
 .info-box h4 {
@@ -697,27 +515,20 @@ body {
   opacity: 0.8;
 }
 
-/* ==================== 10. APP SCREEN (Dashboard) ==================== */
+/* ==================== 4. APP SCREEN (Dashboard) ==================== */
 #app-screen {
   padding-bottom: 70px;
   position: relative;
-  animation: fadeIn 0.6s ease-out;
 }
 
 .app-header {
-  background: rgba(21, 21, 53, 0.9);
+  background: var(--bg-medium);
   padding: 15px 20px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
   position: sticky;
   top: 0;
   z-index: 100;
   backdrop-filter: blur(10px);
-  animation: slideDown 0.5s ease-out;
-}
-
-@keyframes slideDown {
-  from { transform: translateY(-100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
 }
 
 .header-content {
@@ -733,7 +544,6 @@ body {
   align-items: center;
   color: var(--text-light);
   font-weight: 600;
-  animation: fadeIn 0.8s ease-out 0.2s backwards;
 }
 
 .welcome-message i {
@@ -746,7 +556,6 @@ body {
   display: flex;
   align-items: center;
   gap: 15px;
-  animation: fadeIn 0.8s ease-out 0.3s backwards;
 }
 
 .icon-btn {
@@ -767,7 +576,6 @@ body {
 .icon-btn:hover {
   color: var(--accent);
   background: rgba(0, 255, 204, 0.1);
-  transform: scale(1.1);
 }
 
 .user-avatar {
@@ -784,7 +592,6 @@ body {
   border: 2px solid var(--accent);
   transition: var(--transition);
   font-family: var(--font-display);
-  animation: fadeIn 0.8s ease-out 0.4s backwards;
 }
 
 .user-avatar:hover {
@@ -797,7 +604,6 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
-  animation: fadeIn 0.8s ease-out 0.2s backwards;
 }
 
 .balance-card {
@@ -809,7 +615,6 @@ body {
   border: 1px solid rgba(0, 255, 204, 0.1);
   position: relative;
   overflow: hidden;
-  animation: fadeIn 0.6s ease-out 0.3s backwards;
 }
 
 .balance-card::before {
@@ -820,12 +625,6 @@ body {
   right: 0;
   height: 3px;
   background: linear-gradient(90deg, var(--primary), var(--accent), var(--secondary));
-  animation: shimmer 3s infinite;
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% center; }
-  100% { background-position: 200% center; }
 }
 
 .balance-label {
@@ -855,7 +654,6 @@ body {
 .balance-controls {
   display: flex;
   gap: 15px;
-  animation: fadeIn 0.6s ease-out 0.4s backwards;
 }
 
 .control-btn {
@@ -897,7 +695,6 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  animation: fadeIn 0.6s ease-out 0.4s backwards;
 }
 
 .section-title i {
@@ -908,7 +705,6 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 15px;
-  animation: fadeIn 0.6s ease-out 0.5s backwards;
 }
 
 .activity-card {
@@ -925,23 +721,10 @@ body {
   flex-direction: column;
   justify-content: space-between;
   border: 1px solid transparent;
-  animation: cardPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards;
 }
-
-@keyframes cardPop {
-  0% { opacity: 0; transform: scale(0.8); }
-  100% { opacity: 1; transform: scale(1); }
-}
-
-.activity-card:nth-child(1) { animation-delay: 0.1s; }
-.activity-card:nth-child(2) { animation-delay: 0.2s; }
-.activity-card:nth-child(3) { animation-delay: 0.3s; }
-.activity-card:nth-child(4) { animation-delay: 0.4s; }
-.activity-card:nth-child(5) { animation-delay: 0.5s; }
-.activity-card:nth-child(6) { animation-delay: 0.6s; }
 
 .activity-card:hover {
-  transform: translateY(-5px) scale(1.02);
+  transform: translateY(-5px);
   border: 1px solid var(--accent);
   box-shadow: 0 10px 30px rgba(0, 255, 204, 0.1);
 }
@@ -949,7 +732,6 @@ body {
 .card-icon {
   font-size: 1.5rem;
   margin-bottom: 10px;
-  transition: var(--transition);
 }
 
 .card-icon.game { color: var(--danger); }
@@ -983,37 +765,25 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  animation: badgePulse 2s infinite;
 }
 
-@keyframes badgePulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.8; }
-}
-
-.card-badge.free { background: var(--success); }
-.card-badge.bet { background: var(--primary); }
+.card-badge.free { background: var(--success); }      /* Snake: 20/day */
+.card-badge.bet { background: var(--primary); }       /* Coin/Plinko: 50/day */
 .card-badge.daily { background: var(--secondary); }
 .card-badge.bonus { background: var(--accent); color: var(--bg-dark); }
 
-/* ==================== 11. BOTTOM NAVIGATION ==================== */
+/* ==================== 5. BOTTOM NAVIGATION ==================== */
 .bottom-nav {
   position: fixed;
   bottom: 0;
   left: 0;
   width: 100%;
   display: flex;
-  background: rgba(21, 21, 53, 0.9);
+  background: var(--bg-medium);
   box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.5);
   z-index: 100;
   backdrop-filter: blur(10px);
   border-top: 1px solid rgba(128, 0, 255, 0.2);
-  animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes slideUp {
-  from { transform: translateY(100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
 }
 
 .nav-item {
@@ -1050,7 +820,7 @@ body {
   letter-spacing: 0.5px;
 }
 
-/* ==================== 12. MODAL STYLES ==================== */
+/* ==================== 6. MODAL STYLES ==================== */
 #modals-container {
   position: fixed;
   top: 0;
@@ -1072,15 +842,10 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: modalFadeIn 0.3s ease-out;
+  animation: fadeIn 0.3s ease-out;
   padding: 20px;
   pointer-events: auto;
   z-index: 2001;
-}
-
-@keyframes modalFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 .modal-content {
@@ -1088,7 +853,7 @@ body {
   border-radius: var(--border-radius);
   padding: 25px;
   width: 100%;
-  max-width: 420px;
+  max-width: 420px; /* Reduced from 450px */
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 0 50px rgba(0, 255, 204, 0.1);
@@ -1098,15 +863,10 @@ body {
   position: relative;
 }
 
-@keyframes modalSlide {
-  from { transform: translateY(-50px) scale(0.9); opacity: 0; }
-  to { transform: translateY(0) scale(1); opacity: 1; }
-}
-
 .modal-title {
   font-family: var(--font-display);
   color: var(--secondary);
-  margin-bottom: 20px;
+  margin-bottom: 20px; /* Reduced from 25px */
   font-size: 1.5rem;
   text-shadow: 0 0 5px rgba(0, 204, 255, 0.5);
 }
@@ -1123,7 +883,7 @@ body {
 }
 
 .btn-close {
-  margin-top: 15px;
+  margin-top: 15px; /* Reduced from 20px */
   background: none;
   border: 1px solid var(--danger);
   padding: 8px 15px;
@@ -1134,16 +894,14 @@ body {
   font-weight: 600;
   transition: var(--transition);
   font-family: var(--font-primary);
-  animation: fadeIn 0.3s ease-out;
 }
 
 .btn-close:hover {
   background: var(--danger);
   color: var(--bg-dark);
-  transform: translateY(-2px);
 }
 
-/* ==================== 13. TIKTOK MODAL STYLES ==================== */
+/* ==================== TIKTOK MODAL STYLES ==================== */
 .tiktok-account-display {
   background: rgba(37, 244, 238, 0.1);
   border: 2px solid #25F4EE;
@@ -1153,12 +911,6 @@ body {
   font-size: 1.2rem;
   font-weight: 700;
   font-family: var(--font-display);
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 0 10px rgba(37, 244, 238, 0.3); }
-  50% { box-shadow: 0 0 20px rgba(37, 244, 238, 0.6); }
 }
 
 .action-buttons {
@@ -1173,7 +925,7 @@ body {
   margin: 0;
 }
 
-/* ==================== 14. PROFILE & SETTINGS STYLES ==================== */
+/* ==================== PROFILE & SETTINGS STYLES ==================== */
 .profile-info, .settings-info {
   display: flex;
   flex-direction: column;
@@ -1187,14 +939,7 @@ body {
   align-items: center;
   padding: 12px 0;
   border-bottom: 1px solid rgba(128, 0, 255, 0.2);
-  animation: fadeIn 0.4s ease-out backwards;
 }
-
-.profile-item:nth-child(1) { animation-delay: 0.1s; }
-.profile-item:nth-child(2) { animation-delay: 0.2s; }
-.profile-item:nth-child(3) { animation-delay: 0.3s; }
-.profile-item:nth-child(4) { animation-delay: 0.4s; }
-.profile-item:nth-child(5) { animation-delay: 0.5s; }
 
 .profile-item:last-child, .setting-item:last-child {
   border-bottom: none;
@@ -1246,7 +991,6 @@ body {
   margin-top: 10px;
   object-fit: cover;
   border: 2px solid var(--primary);
-  animation: fadeIn 0.5s ease-out;
 }
 
 #profile-pic-url {
@@ -1259,54 +1003,53 @@ body {
   border-radius: 4px;
 }
 
-/* ==================== 15. FIXED SIZE SPIN WHEEL STYLES ==================== */
+/* ==================== 7. ANIMATIONS ==================== */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalSlide {
+  from { transform: translateY(-50px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ==================== 8. FIXED SIZE SPIN WHEEL STYLES ==================== */
 
 /* Fixed Size Wheel Container */
 .wheel-container {
   position: relative;
-  width: 260px;
-  height: 260px;
-  margin: 15px auto;
+  width: 260px; /* FIXED: Properly sized */
+  height: 260px; /* FIXED: Properly sized */
+  margin: 15px auto; /* Reduced from 30px */
   background: linear-gradient(135deg, rgba(10, 10, 31, 0.8), rgba(30, 30, 69, 0.9));
-  border-radius: 16px;
-  padding: 8px;
+  border-radius: 16px; /* Reduced from 20px */
+  padding: 8px; /* Reduced from 10px */
   box-shadow: 
     0 0 40px rgba(128, 0, 255, 0.3),
     inset 0 0 20px rgba(0, 204, 255, 0.1);
   border: 2px solid rgba(128, 0, 255, 0.3);
-  animation: wheelFloat 3s ease-in-out infinite;
-}
-
-@keyframes wheelFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
 }
 
 /* Decorative border around container */
 .wheel-container::before {
   content: '';
   position: absolute;
-  top: -4px;
-  left: -4px;
-  right: -4px;
-  bottom: -4px;
-  border: 2px solid transparent;
+  top: -4px; /* Reduced from -5px */
+  left: -4px; /* Reduced from -5px */
+  right: -4px; /* Reduced from -5px */
+  bottom: -4px; /* Reduced from -5px */
+  border: 2px solid transparent; /* Reduced from 3px */
   border-image: linear-gradient(45deg, #8000FF, #00CCFF, #FF0055, #00FF55) 1;
-  border-radius: 20px;
+  border-radius: 20px; /* Reduced from 25px */
   pointer-events: none;
   z-index: -1;
-  animation: borderRotate 10s linear infinite;
-}
-
-@keyframes borderRotate {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
 }
 
 /* Fixed Size Pointer */
 .pointer-wrapper {
   position: absolute;
-  top: -35px;
+  top: -35px; /* Reduced from -50px */
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
@@ -1315,42 +1058,42 @@ body {
 #pointer {
   width: 0;
   height: 0;
-  border-left: 18px solid transparent;
-  border-right: 18px solid transparent;
-  border-top: 45px solid #FF0055;
-  filter: drop-shadow(0 4px 10px rgba(255, 0, 85, 0.6));
+  border-left: 18px solid transparent; /* Reduced from 25px */
+  border-right: 18px solid transparent; /* Reduced from 25px */
+  border-top: 45px solid #FF0055; /* Reduced from 60px */
+  filter: drop-shadow(0 4px 10px rgba(255, 0, 85, 0.6)); /* Reduced */
   position: relative;
   animation: pointerPulse 2s infinite;
 }
 
 .pointer-tip {
   position: absolute;
-  top: -12px;
+  top: -12px; /* Reduced from -15px */
   left: 50%;
   transform: translateX(-50%);
-  width: 16px;
-  height: 16px;
+  width: 16px; /* Reduced from 20px */
+  height: 16px; /* Reduced from 20px */
   background: radial-gradient(circle, gold, orange);
   border-radius: 50%;
-  border: 2px solid white;
-  box-shadow: 0 0 15px gold;
+  border: 2px solid white; /* Reduced from 3px */
+  box-shadow: 0 0 15px gold; /* Reduced from 20px */
 }
 
 @keyframes pointerPulse {
   0%, 100% { transform: translateX(-50%) scale(1); }
-  50% { transform: translateX(-50%) scale(1.05); }
+  50% { transform: translateX(-50%) scale(1.05); } /* Reduced from 1.1 */
 }
 
 /* Fixed Spin Button */
 #spin-button {
   background: linear-gradient(45deg, #8000FF, #FF0055);
   border: none;
-  border-radius: 10px;
+  border-radius: 10px; /* Reduced from 12px */
   color: white;
   font-family: 'Orbitron', sans-serif;
-  font-size: 1.1rem;
+  font-size: 1.1rem; /* Reduced from 1.2rem */
   font-weight: 900;
-  padding: 12px 25px;
+  padding: 12px 25px; /* Reduced from 15px 30px */
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 
@@ -1358,19 +1101,13 @@ body {
     0 0 15px rgba(255, 0, 85, 0.2);
   position: relative;
   overflow: hidden;
-  margin-top: 15px;
+  margin-top: 15px; /* Reduced from 20px */
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  animation: buttonGlow 3s infinite;
-}
-
-@keyframes buttonGlow {
-  0%, 100% { box-shadow: 0 4px 15px rgba(128, 0, 255, 0.3), 0 0 15px rgba(255, 0, 85, 0.2); }
-  50% { box-shadow: 0 4px 20px rgba(128, 0, 255, 0.5), 0 0 25px rgba(255, 0, 85, 0.4); }
+  letter-spacing: 0.8px; /* Reduced from 1px */
 }
 
 #spin-button:hover:not(:disabled) {
-  transform: translateY(-2px);
+  transform: translateY(-2px); /* Reduced from -3px */
   box-shadow: 
     0 6px 20px rgba(128, 0, 255, 0.5),
     0 0 25px rgba(255, 0, 85, 0.3);
@@ -1384,7 +1121,6 @@ body {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none !important;
-  animation: none;
 }
 
 #spin-button::before {
@@ -1412,24 +1148,24 @@ body {
 /* Enhanced Modal Title */
 #spin-modal .modal-title {
   font-family: 'Orbitron', sans-serif;
-  font-size: 1.6rem;
+  font-size: 1.6rem; /* Reduced from 1.8rem */
   font-weight: 900;
   background: linear-gradient(45deg, #8000FF, #00CCFF, #FF0055);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  margin-bottom: 15px;
-  text-shadow: 0 0 15px rgba(128, 0, 255, 0.3);
-  letter-spacing: 1.5px;
+  margin-bottom: 15px; /* Reduced from 20px */
+  text-shadow: 0 0 15px rgba(128, 0, 255, 0.3); /* Reduced from 20px */
+  letter-spacing: 1.5px; /* Reduced from 2px */
 }
 
 /* Enhanced Modal Info */
 #spin-modal .modal-info {
   color: #00CCFF;
-  font-size: 0.95rem;
+  font-size: 0.95rem; /* Reduced from 1rem */
   font-weight: 600;
-  margin-bottom: 15px;
-  text-shadow: 0 0 8px rgba(0, 204, 255, 0.3);
+  margin-bottom: 15px; /* Reduced from 20px */
+  text-shadow: 0 0 8px rgba(0, 204, 255, 0.3); /* Reduced from 10px */
 }
 
 /* Win Celebration Styles */
@@ -1445,8 +1181,8 @@ body {
 
 .confetti {
   position: absolute;
-  width: 8px;
-  height: 8px;
+  width: 8px; /* Reduced from 10px */
+  height: 8px; /* Reduced from 10px */
   background: #FF0055;
   opacity: 0;
 }
@@ -1454,19 +1190,19 @@ body {
 /* Number Counter Animation */
 .counter-animation {
   font-family: 'Orbitron', sans-serif;
-  font-size: 2rem;
+  font-size: 2rem; /* Reduced from 2.5rem */
   font-weight: 900;
   color: gold;
   text-shadow: 
-    0 0 8px gold,
-    0 0 15px gold,
-    0 0 25px gold;
+    0 0 8px gold, /* Reduced from 10px */
+    0 0 15px gold, /* Reduced from 20px */
+    0 0 25px gold; /* Reduced from 30px */
   animation: counterPop 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
 }
 
 @keyframes counterPop {
   0% { transform: scale(0.5); opacity: 0; }
-  70% { transform: scale(1.1); }
+  70% { transform: scale(1.1); } /* Reduced from 1.2 */
   100% { transform: scale(1); opacity: 1; }
 }
 
@@ -1479,18 +1215,18 @@ body {
 .spinning-glow::before {
   content: '';
   position: absolute;
-  top: -8px;
-  left: -8px;
-  right: -8px;
-  bottom: -8px;
+  top: -8px; /* Reduced from -10px */
+  left: -8px; /* Reduced from -10px */
+  right: -8px; /* Reduced from -10px */
+  bottom: -8px; /* Reduced from -10px */
   background: conic-gradient(from 0deg, 
     #8000FF, #00CCFF, #FF0055, #00FF55, #8000FF
   );
   border-radius: 50%;
   animation: spinGlow 0.5s linear infinite;
   z-index: -1;
-  opacity: 0.6;
-  filter: blur(8px);
+  opacity: 0.6; /* Reduced from 0.7 */
+  filter: blur(8px); /* Reduced from 10px */
 }
 
 @keyframes spinGlow {
@@ -1514,7 +1250,7 @@ body {
 .modal-particles .particle {
   position: absolute;
   border-radius: 50%;
-  opacity: 0.25;
+  opacity: 0.25; /* Reduced from 0.3 */
   animation: floatParticle 4s infinite linear;
 }
 
@@ -1524,13 +1260,13 @@ body {
     opacity: 0;
   }
   10% {
-    opacity: 0.4;
+    opacity: 0.4; /* Reduced from 0.5 */
   }
   90% {
-    opacity: 0.4;
+    opacity: 0.4; /* Reduced from 0.5 */
   }
   100% {
-    transform: translateY(-80px) translateX(80px);
+    transform: translateY(-80px) translateX(80px); /* Reduced from 100px */
     opacity: 0;
   }
 }
@@ -1541,10 +1277,10 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 110%;
-  height: 110%;
-  background: radial-gradient(circle, rgba(128, 0, 255, 0.15) 0%, transparent 70%);
-  filter: blur(30px);
+  width: 110%; /* Reduced from 120% */
+  height: 110%; /* Reduced from 120% */
+  background: radial-gradient(circle, rgba(128, 0, 255, 0.15) 0%, transparent 70%); /* Reduced opacity */
+  filter: blur(30px); /* Reduced from 40px */
   z-index: -1;
   pointer-events: none;
 }
@@ -1552,8 +1288,8 @@ body {
 /* Trail Effect */
 .spin-trail {
   position: absolute;
-  width: 4px;
-  height: 50px;
+  width: 4px; /* Reduced from 5px */
+  height: 50px; /* Reduced from 60px */
   background: linear-gradient(to bottom, 
     transparent, 
     #00FFFF, 
@@ -1567,7 +1303,7 @@ body {
 /* Confetti Animation */
 @keyframes confettiFall {
   0% {
-    transform: translateY(-80px) rotate(0deg);
+    transform: translateY(-80px) rotate(0deg); /* Reduced from 100px */
     opacity: 1;
   }
   100% {
@@ -1576,26 +1312,7 @@ body {
   }
 }
 
-/* Wheel spinning animation */
-.wheel-spinning {
-  animation: wheelSpin 4s cubic-bezier(0.17, 0.67, 0.12, 0.99) forwards;
-  will-change: transform;
-}
-
-@keyframes wheelSpin {
-  0% {
-    transform: rotate(0deg);
-    animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0);
-  }
-  70% {
-    animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0.33);
-  }
-  100% {
-    transform: rotate(calc(var(--spin-rotation, 1440) * 1deg));
-  }
-}
-
-/* ==================== 16. RESPONSIVE DESIGN ==================== */
+/* ==================== 9. RESPONSIVE DESIGN ==================== */
 @media (max-width: 1200px) {
   .header-content, .app-main {
     max-width: 100%;
@@ -1638,21 +1355,18 @@ body {
   .modal-content {
     padding: 20px;
     margin: 10px;
-    max-width: 380px;
+    max-width: 380px; /* Adjusted for mobile */
   }
 
-  /* Spin Wheel Adjustments for Tablet */
+  /* Spin Wheel Adjustments */
   .wheel-container {
-    width: 240px;
+    width: 240px; /* Smaller for mobile */
     height: 240px;
   }
   #pointer {
     border-left: 15px solid transparent;
     border-right: 15px solid transparent;
     border-top: 35px solid #FF0055;
-  }
-  #spin-modal .modal-title {
-    font-size: 1.4rem;
   }
 }
 
@@ -1712,7 +1426,7 @@ body {
   }
   .modal-content {
     padding: 15px;
-    max-width: 340px;
+    max-width: 340px; /* Smaller for mobile */
   }
   .modal-title {
     font-size: 1.2rem;
@@ -1742,54 +1456,7 @@ body {
   }
 }
 
-/* Ultra-small phones (iPhone SE, Galaxy Fold, etc.) */
-@media (max-width: 360px) {
-  #spin-modal .modal-content {
-    padding: 15px;
-    margin: 5px;
-    max-width: 320px;
-  }
-  
-  .wheel-container {
-    width: 200px !important;
-    height: 200px !important;
-  }
-  
-  #wheel {
-    width: 180px !important;
-    height: 180px !important;
-  }
-  
-  #pointer {
-    border-left: 10px solid transparent !important;
-    border-right: 10px solid transparent !important;
-    border-top: 25px solid #FF0055 !important;
-    top: -30px !important;
-  }
-  
-  .pointer-tip {
-    width: 8px !important;
-    height: 8px !important;
-    top: -8px !important;
-  }
-  
-  #spin-button {
-    padding: 10px 15px !important;
-    font-size: 0.9rem !important;
-  }
-  
-  #spin-modal .modal-title {
-    font-size: 1.2rem !important;
-    margin-bottom: 10px !important;
-  }
-  
-  #spin-modal .modal-info {
-    font-size: 0.85rem !important;
-    margin-bottom: 10px !important;
-  }
-}
-
-/* ==================== 17. ACCESSIBILITY & ENHANCEMENTS ==================== */
+/* ==================== ACCESSIBILITY & ENHANCEMENTS ==================== */
 
 /* Touch-friendly improvements */
 @media (hover: none) and (pointer: coarse) {
@@ -1819,67 +1486,5 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-  }
-  
-  .screen.entering,
-  .screen.leaving,
-  .activity-card,
-  .modal-content,
-  .wheel-container,
-  #pointer,
-  .card-badge,
-  .loading-spinner,
-  .loading-text {
-    animation: none !important;
-    transition: none !important;
-  }
-  
-  .wheel-spinning {
-    animation: none !important;
-  }
-  
-  .spinning-glow::before {
-    animation: none !important;
-  }
-  
-  .particle, .confetti {
-    animation: none !important;
-    display: none !important;
-  }
-}
-
-/* High contrast mode */
-@media (prefers-contrast: high) {
-  :root {
-    --primary: #0000FF;
-    --secondary: #008000;
-    --accent: #FF0000;
-    --text-light: #000000;
-    --bg-dark: #FFFFFF;
-  }
-  
-  .btn-primary, .btn-secondary, .control-btn {
-    border: 3px solid black !important;
-  }
-}
-
-/* Print styles */
-@media print {
-  .bottom-nav,
-  .header-actions,
-  .control-btn,
-  #spin-button,
-  .btn-close {
-    display: none !important;
-  }
-  
-  body {
-    background: white !important;
-    color: black !important;
-  }
-  
-  .screen {
-    position: static !important;
-    height: auto !important;
   }
 }
