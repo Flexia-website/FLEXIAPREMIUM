@@ -1,5 +1,5 @@
-// script.js - FLEXIA Frontend Logic v12.0 - ENHANCED SPIN WHEEL
-// ✅ ALL GLOBAL FUNCTIONS WORKING ✅ ENHANCED VISUALS ✅
+// script.js - FLEXIA Frontend Logic v12.0 - FIXED SIZE SPIN WHEEL
+// ✅ ALL GLOBAL FUNCTIONS WORKING ✅ PROPERLY SIZED WHEEL ✅
 
 //========== CONFIGURATION ========
 const CONFIG = {
@@ -1108,7 +1108,7 @@ const Games = {
           
           const resultEl = document.getElementById('spin-result');
           if (resultEl) {
-            resultEl.innerHTML = `<p style="font-size: 1.1rem; font-weight: bold;">${resultMsg}</p>`;
+            resultEl.innerHTML = `<p style="font-size: 1rem; font-weight: bold;">${resultMsg}</p>`;
             resultEl.classList.remove('hidden');
           }
           
@@ -1166,15 +1166,15 @@ Games.enhanceSpinVisuals = function() {
         
         particlesContainer.innerHTML = '';
         
-        for (let i = 0; i < 15; i++) {
+        for (let i = 0; i < 12; i++) { // Reduced from 15
             const particle = document.createElement('div');
             particle.className = 'particle';
             particle.style.cssText = `
-                width: ${2 + Math.random() * 4}px;
-                height: ${2 + Math.random() * 4}px;
+                width: ${1 + Math.random() * 3}px; /* Smaller particles */
+                height: ${1 + Math.random() * 3}px; /* Smaller particles */
                 background: ${['#8000FF', '#00CCFF', '#FF0055', '#00FF55'][Math.floor(Math.random() * 4)]};
                 border-radius: 50%;
-                opacity: ${0.2 + Math.random() * 0.3};
+                opacity: ${0.15 + Math.random() * 0.2}; /* Reduced opacity */
                 animation: floatParticle ${3 + Math.random() * 4}s infinite linear;
                 animation-delay: ${Math.random() * 5}s;
                 top: ${Math.random() * 100}%;
@@ -1193,7 +1193,7 @@ Games.enhanceSpinVisuals = function() {
         celebration.id = 'win-celebration';
         
         // Create confetti
-        for (let i = 0; i < 100; i++) {
+        for (let i = 0; i < 80; i++) { // Reduced from 100
             const confetti = document.createElement('div');
             confetti.className = 'confetti';
             confetti.style.cssText = `
@@ -1238,12 +1238,12 @@ Games.enhanceSpinVisuals = function() {
             resultEl.innerHTML = `
                 <p class="counter-animation" style="
                     text-align: center;
-                    margin: 10px 0;
-                    font-size: 2rem;
+                    margin: 8px 0; /* Reduced from 10px */
+                    font-size: 1.8rem; /* Reduced from 2rem */
                 ">
                     🎉 ₦${amount.toLocaleString()}! 🎉
                 </p>
-                <p style="text-align: center; color: #00FF55; font-weight: 600;">
+                <p style="text-align: center; color: #00FF55; font-weight: 600; font-size: 0.9rem;">
                     Added to your balance!
                 </p>
             `;
@@ -1547,7 +1547,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==================== GLOBAL FUNCTIONS FOR GAME PAGES ====================
-// ENHANCED VERSION - WITH VISUAL EFFECTS
+// FIXED SIZE VERSION - PROPERLY FITS IN MODAL
 (function() {
     // Export all functions to window
     window.App = App;
@@ -1643,7 +1643,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    console.log('✅ FLEXIA Script v12.0 - ENHANCED SPIN WHEEL LOADED');
+    console.log('✅ FLEXIA Script v12.0 - FIXED SIZE SPIN WHEEL LOADED');
 })();
 
 // Emergency fallback loader
