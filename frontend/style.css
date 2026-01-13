@@ -917,6 +917,17 @@ body {
   padding: 20px;
   pointer-events: auto;
   z-index: 2001;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+/* CRITICAL: Hide modals by default */
+.modal.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  display: none;
 }
 
 .modal-content {
@@ -986,15 +997,63 @@ body {
   border-radius: 50%;
   box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
   transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+  will-change: transform;
 }
 
-/* Pointer styling — kept for JS compatibility */
+/* Fix SVG text rendering */
+#wheel text {
+  pointer-events: none;
+  user-select: none;
+  font-family: var(--font-display);
+  font-weight: 900;
+  fill: #000000;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+  paint-order: stroke fill;
+  stroke: rgba(255,255,255,0.3);
+  stroke-width: 0.5px;
+}
+
+/* Enhance SVG segments */
+#wheel path {
+  transition: opacity 0.3s ease;
+}
+
+#wheel path:hover {
+  opacity: 0.9;
+}
+
+/* Center button enhancement */
+#wheel circle[r="20"] {
+  filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(255, 215, 0, 1));
+  }
+}
+
+/* Pointer styling — positioned at top center */
 .pointer-wrapper {
   position: absolute;
   top: -40px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
+  animation: pointerBounce 1s ease-in-out infinite;
+}
+
+@keyframes pointerBounce {
+  0%, 100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-5px);
+  }
 }
 
 #pointer {
@@ -1018,6 +1077,59 @@ body {
   border-radius: 50%;
   border: 3px solid white;
   box-shadow: 0 0 15px rgba(255, 204, 0, 0.8);
+  animation: tipGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes tipGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(255, 204, 0, 0.8);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(255, 204, 0, 1);
+  }
+}
+
+/* Spinning state */
+#wheel.spinning {
+  animation: spinGlow 4s ease-out;
+}
+
+@keyframes spinGlow {
+  0% {
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+  }
+  50% {
+    box-shadow: 0 0 60px rgba(255, 51, 51, 0.6), 0 0 80px rgba(128, 0, 255, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+  }
+}
+
+/* Wheel decorative glow */
+.wheel-container::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  right: -10px;
+  bottom: -10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 51, 51, 0.2) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+  animation: wheelGlow 3s ease-in-out infinite;
+}
+
+@keyframes wheelGlow {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
 }
 
 /* ==================== TIKTOK MODAL STYLES ==================== */
