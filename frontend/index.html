@@ -18,7 +18,7 @@
 </head>
 <body>
     <!-- Auth Screen -->
-    <div id="auth-screen" class="screen">
+    <div id="auth-screen" class="screen hidden">
         <div class="auth-container">
             <div class="auth-header">
                 <div class="logo-container">
@@ -354,6 +354,7 @@
 
                     <!-- Fixed Size SVG Wheel -->
                     <svg id="wheel" width="240" height="240" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+                        <!-- SVG content remains the same -->
                         <defs>
                             <linearGradient id="goldGrad">
                                 <stop offset="0%" stop-color="#FFD700" />
@@ -463,170 +464,57 @@
         </div>
     </div>
 
-    <!-- Enhanced Referral Sharing -->
-    <script>
-        // This remains exactly as you had it
-        const originalReferralOpen = window.Referral?.open || function() {};
-        window.Referral = window.Referral || {};
-        Referral.open = function() {
-            originalReferralOpen();
-            setTimeout(() => {
-                const dataEl = document.getElementById('referral-data');
-                if (!dataEl || !dataEl.innerHTML.includes('Your Referral Code')) return;
-                const codeMatch = dataEl.innerHTML.match(/<strong>([A-Z0-9]+)<\/strong>/);
-                if (!codeMatch) return;
-                const code = codeMatch[1];
-                if (dataEl.querySelector('.share-referral-btn')) return;
-                const btn = document.createElement('button');
-                btn.className = 'btn-primary';
-                btn.style.marginTop = '15px';
-                btn.innerHTML = '<i class="fas fa-share-alt"></i> Share Referral Link';
-                btn.onclick = () => {
-                    const link = `${window.location.origin}?ref=${code}`;
-                    if (navigator.share) {
-                        navigator.share({ title: 'FLEXIA', text: `Join FLEXIA! Use my code: ${code}`, url: link });
-                    } else {
-                        navigator.clipboard.writeText(link).then(() => {
-                            if (window.App && App.showMessage) {
-                                App.showMessage('Link copied!', 'success');
-                            } else {
-                                alert('Referral link copied to clipboard!');
-                            }
-                        });
-                    }
-                };
-                dataEl.appendChild(btn);
-            }, 300);
-        };
-    </script>
-
     <!-- Main App Script -->
     <script src="script.js"></script>
     
-    <!-- Ensure global functions are available -->
+    <!-- Add smooth transition logic -->
     <script>
-        // Create global functions if they don't exist (as backup)
-        if (!window.openSnakeGame) {
-            window.openSnakeGame = function() {
-                window.location.href = 'snake.html';
-            };
+        // Enhanced screen transitions
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded, setting up transitions...');
             
-            window.openCoinFlipGame = function() {
-                window.location.href = 'coinflip.html';
-            };
-            
-            window.openPlinkoGame = function() {
-                window.location.href = 'plinko.html';
-            };
-            
-            window.openTikTokGame = function() {
-                if (window.Games && Games.openTikTok) {
-                    Games.openTikTok();
-                } else {
-                    alert('Please wait for the app to load completely.');
+            // Add transition styles
+            const style = document.createElement('style');
+            style.textContent = `
+                /* Smooth screen transitions */
+                .screen {
+                    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+                    will-change: opacity, transform;
                 }
-            };
-            
-            window.openSpinWheelGame = function() {
-                if (window.Games && Games.openSpinWheel) {
-                    Games.openSpinWheel();
-                } else {
-                    alert('Please wait for the app to load completely.');
+                
+                .screen.slide-out {
+                    opacity: 0;
+                    transform: translateY(30px);
                 }
-            };
-        }
-        
-        // Emergency backup functions
-        window.goBackToDashboard = function() {
-            window.location.href = 'index.html';
-        };
-        
-        window.showMessage = function(message, type = 'info') {
-            alert(`[${type.toUpperCase()}] ${message}`);
-        };
+                
+                .screen.slide-in {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+                
+                /* Hide screens properly */
+                .screen.hidden {
+                    display: none !important;
+                }
+                
+                /* Animation for modal close */
+                .modal.closing {
+                    animation: modalClose 0.4s ease forwards;
+                }
+                
+                @keyframes modalClose {
+                    from {
+                        opacity: 1;
+                        transform: scale(1);
+                    }
+                    to {
+                        opacity: 0;
+                        transform: scale(0.9);
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        });
     </script>
-    <!-- Load script.js -->
-<script src="script.js"></script>
-    
-<!-- Emergency function loader -->
-<script>
-// Ensure critical functions exist immediately
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Page loaded, initializing...');
-    
-    // Create emergency fallbacks if functions don't exist
-    const requiredFunctions = {
-        'checkDailyLimit': async () => ({ can_play: true, played_today: 0, max_per_day: 999 }),
-        'claimSnakeReward': async (apples) => {
-            try {
-                const res = await fetch('/api/games/snake/report', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ apples_eaten: apples })
-                });
-                return await res.json();
-            } catch (e) {
-                return { success: false, message: e.message };
-            }
-        },
-        'claimCoinFlipReward': async (bet, won) => {
-            try {
-                const res = await fetch('/api/games/coinflip/report', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ bet: bet, won: won })
-                });
-                return await res.json();
-            } catch (e) {
-                return { success: false, message: e.message };
-            }
-        },
-        'claimPlinkoReward': async (bet, multiplier) => {
-            try {
-                const res = await fetch('/api/games/plinko/report', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ bet: bet, multiplier: multiplier })
-                });
-                return await res.json();
-            } catch (e) {
-                return { success: false, message: e.message };
-            }
-        },
-        'updateBalance': (newBalance) => {
-            console.log('Balance update:', newBalance);
-            const els = document.querySelectorAll('[id*="balance"], .balance');
-            els.forEach(el => {
-                if (el.textContent.includes('₦')) {
-                    el.textContent = `₦${newBalance.toLocaleString()}`;
-                }
-            });
-        },
-        'showMessage': (text, type) => alert(`[${type || 'INFO'}] ${text}`),
-        'goBackToDashboard': () => window.location.href = 'index.html'
-    };
-    
-    // Create any missing functions
-    Object.keys(requiredFunctions).forEach(funcName => {
-        if (typeof window[funcName] !== 'function') {
-            window[funcName] = requiredFunctions[funcName];
-            console.log(`Created emergency fallback for: ${funcName}`);
-        }
-    });
-    
-    // Initialize main app
-    setTimeout(() => {
-        if (window.App && typeof window.App.init === 'function') {
-            window.App.init();
-        } else {
-            console.error('App not loaded properly');
-            alert('Please refresh the page to load the application.');
-        }
-    }, 500);
-});
-</script>
 </body>
 </html>
