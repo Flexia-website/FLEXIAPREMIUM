@@ -4,8 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FLEXIA | Referral Banking Platform</title>
-    <meta name="google-site-verification" content="y-r0aHL3VuYE3xVBTyAxgRWmUb_PmaP9jYI2C75ciTw" /> 
-   <!-- Favicon -->
+    <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="logo/favicon.ico" />
     <link rel="icon" type="image/png" sizes="32x32" href="logo/flexia-logo.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="logo/flexia-logo.png" />
@@ -330,9 +329,13 @@
             </div>
         </div>
 
-        <!-- ✅ SPIN WHEEL MODAL (SVG-Based) -->
+        <!-- ✅ ENHANCED SPIN WHEEL MODAL (Premium Version) -->
         <div id="spin-modal" class="modal hidden">
             <div class="modal-content">
+                <!-- Background Effects -->
+                <div class="modal-glow"></div>
+                <div class="modal-particles" id="spin-particles"></div>
+                
                 <div class="modal-logo">
                     <div class="modal-logo-icon">
                         <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 40px; height: 40px;" />
@@ -341,7 +344,7 @@
                 <h3 class="modal-title">DAILY SPIN WHEEL</h3>
                 <p class="modal-info">Spin once daily to win amazing rewards!</p>
 
-                <!-- Wheel Container -->
+                <!-- Enhanced Wheel Container -->
                 <div class="wheel-container">
                     <div class="pointer-wrapper">
                         <div id="pointer">
@@ -349,52 +352,94 @@
                         </div>
                     </div>
 
-                    <!-- SVG Wheel -->
+                    <!-- Enhanced SVG Wheel -->
                     <svg id="wheel" width="300" height="300" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="150" cy="150" r="145" fill="none" stroke="#FF3333" stroke-width="10" filter="url(#glow)" />
                         <defs>
-                            <linearGradient id="redSeg">
-                                <stop offset="0%" stop-color="#FF3333" />
-                                <stop offset="100%" stop-color="#FF6666" />
+                            <linearGradient id="goldGrad">
+                                <stop offset="0%" stop-color="#FFD700" />
+                                <stop offset="100%" stop-color="#FFA500" />
                             </linearGradient>
-                            <linearGradient id="whiteSeg">
-                                <stop offset="0%" stop-color="#FFFFFF" />
-                                <stop offset="100%" stop-color="#F0F0F0" />
+                            <linearGradient id="purpleGrad">
+                                <stop offset="0%" stop-color="#9D00FF" />
+                                <stop offset="100%" stop-color="#8000FF" />
+                            </linearGradient>
+                            <linearGradient id="blueGrad">
+                                <stop offset="0%" stop-color="#00CCFF" />
+                                <stop offset="100%" stop-color="#0099CC" />
                             </linearGradient>
                             <filter id="glow">
-                                <feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#FF3333" flood-opacity="0.7" />
+                                <feGaussianBlur stdDeviation="3" result="blur" />
+                                <feFlood flood-color="#8000FF" flood-opacity="0.8" />
+                                <feComposite in2="blur" operator="in" />
+                                <feMerge>
+                                    <feMergeNode />
+                                    <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                            </filter>
+                            <filter id="shadow">
+                                <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#000000" flood-opacity="0.7" />
                             </filter>
                         </defs>
-                        <path d="M150,150 L150,30 A120,120 0 0,1 204.85,45.15 Z" fill="url(#redSeg)" />
-                        <path d="M150,150 L204.85,45.15 A120,120 0 0,1 254.85,75.15 Z" fill="url(#whiteSeg)" />
-                        <path d="M150,150 L254.85,75.15 A120,120 0 0,1 254.85,125.15 Z" fill="url(#redSeg)" />
-                        <path d="M150,150 L254.85,125.15 A120,120 0 0,1 204.85,175.15 Z" fill="url(#whiteSeg)" />
-                        <path d="M150,150 L204.85,175.15 A120,120 0 0,1 150,225 Z" fill="url(#redSeg)" />
-                        <path d="M150,150 L150,225 A120,120 0 0,1 95.15,175.15 Z" fill="url(#whiteSeg)" />
-                        <path d="M150,150 L95.15,175.15 A120,120 0 0,1 45.15,125.15 Z" fill="url(#redSeg)" />
-                        <path d="M150,150 L45.15,125.15 A120,120 0 0,1 95.15,75.15 Z" fill="url(#whiteSeg)" />
-                        <g font-family="Orbitron" font-weight="900" text-anchor="middle" fill="black" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">
-                            <text x="150" y="65" transform="rotate(22.5,150,150)" font-size="16">₦1000</text>
-                            <text x="225" y="100" transform="rotate(67.5,150,150)" font-size="16">₦500</text>
-                            <text x="225" y="175" transform="rotate(112.5,150,150)" font-size="16">₦200</text>
-                            <text x="150" y="235" transform="rotate(157.5,150,150)" font-size="16">₦100</text>
-                            <text x="75" y="175" transform="rotate(202.5,150,150)" font-size="16">₦50</text>
-                            <text x="75" y="100" transform="rotate(247.5,150,150)" font-size="16">TRY AGAIN</text>
-                            <text x="150" y="65" transform="rotate(292.5,150,150)" font-size="16">₦1000</text>
-                            <text x="225" y="100" transform="rotate(337.5,150,150)" font-size="16">₦500</text>
+                        
+                        <!-- Outer glow ring -->
+                        <circle cx="150" cy="150" r="148" fill="none" stroke="url(#goldGrad)" stroke-width="4" opacity="0.3" filter="url(#glow)" />
+                        
+                        <!-- Main wheel circle -->
+                        <circle cx="150" cy="150" r="140" fill="url(#purpleGrad)" filter="url(#shadow)" />
+                        
+                        <!-- Segments with alternating colors -->
+                        <path d="M150,150 L150,30 A120,120 0 0,1 204.85,45.15 Z" fill="#8000FF" stroke="#9D00FF" stroke-width="2" opacity="0.9" />
+                        <path d="M150,150 L204.85,45.15 A120,120 0 0,1 254.85,75.15 Z" fill="#00CCFF" stroke="#00AAFF" stroke-width="2" opacity="0.9" />
+                        <path d="M150,150 L254.85,75.15 A120,120 0 0,1 254.85,125.15 Z" fill="#8000FF" stroke="#9D00FF" stroke-width="2" opacity="0.9" />
+                        <path d="M150,150 L254.85,125.15 A120,120 0 0,1 204.85,175.15 Z" fill="#00CCFF" stroke="#00AAFF" stroke-width="2" opacity="0.9" />
+                        <path d="M150,150 L204.85,175.15 A120,120 0 0,1 150,225 Z" fill="#8000FF" stroke="#9D00FF" stroke-width="2" opacity="0.9" />
+                        <path d="M150,150 L150,225 A120,120 0 0,1 95.15,175.15 Z" fill="#00CCFF" stroke="#00AAFF" stroke-width="2" opacity="0.9" />
+                        <path d="M150,150 L95.15,175.15 A120,120 0 0,1 45.15,125.15 Z" fill="#8000FF" stroke="#9D00FF" stroke-width="2" opacity="0.9" />
+                        <path d="M150,150 L45.15,125.15 A120,120 0 0,1 95.15,75.15 Z" fill="#00CCFF" stroke="#00AAFF" stroke-width="2" opacity="0.9" />
+                        
+                        <!-- Segment borders -->
+                        <circle cx="150" cy="150" r="130" fill="none" stroke="url(#goldGrad)" stroke-width="2" opacity="0.5" />
+                        
+                        <!-- Prize labels -->
+                        <g font-family="Orbitron" font-weight="900" text-anchor="middle" fill="white">
+                            <text x="150" y="60" font-size="16" fill="gold" stroke="#000" stroke-width="1">₦1000</text>
+                            <text x="225" y="100" font-size="16" fill="#00FF55" stroke="#000" stroke-width="1">₦500</text>
+                            <text x="225" y="175" font-size="16" fill="#00CCFF" stroke="#000" stroke-width="1">₦200</text>
+                            <text x="150" y="240" font-size="16" fill="#FF0055" stroke="#000" stroke-width="1">₦100</text>
+                            <text x="75" y="175" font-size="16" fill="#FFCC00" stroke="#000" stroke-width="1">₦50</text>
+                            <text x="75" y="100" font-size="14" fill="white" stroke="#000" stroke-width="1">TRY</text>
+                            <text x="75" y="115" font-size="14" fill="white" stroke="#000" stroke-width="1">AGAIN</text>
                         </g>
-                        <circle cx="150" cy="150" r="20" fill="gold" stroke="#333" stroke-width="3" />
-                        <circle cx="150" cy="150" r="5" fill="#333" />
-                        <g fill="#FFD700">
-                            <circle cx="150" cy="30" r="3" />
-                            <circle cx="204.85" cy="45.15" r="3" />
-                            <circle cx="254.85" cy="75.15" r="3" />
-                            <circle cx="254.85" cy="125.15" r="3" />
-                            <circle cx="204.85" cy="175.15" r="3" />
-                            <circle cx="150" cy="225" r="3" />
-                            <circle cx="95.15" cy="175.15" r="3" />
-                            <circle cx="45.15" cy="125.15" r="3" />
-                            <circle cx="95.15" cy="75.15" r="3" />
+                        
+                        <!-- Center hub -->
+                        <circle cx="150" cy="150" r="25" fill="url(#goldGrad)" stroke="#FFA500" stroke-width="3" />
+                        <circle cx="150" cy="150" r="15" fill="white" opacity="0.8" />
+                        <circle cx="150" cy="150" r="5" fill="#8000FF" />
+                        
+                        <!-- Decorative dots around center -->
+                        <circle cx="190" cy="150" r="2" fill="gold" />
+                        <circle cx="165" cy="175" r="2" fill="gold" />
+                        <circle cx="165" cy="125" r="2" fill="gold" />
+                        <circle cx="150" cy="190" r="2" fill="gold" />
+                        <circle cx="150" cy="110" r="2" fill="gold" />
+                        <circle cx="135" cy="175" r="2" fill="gold" />
+                        <circle cx="135" cy="125" r="2" fill="gold" />
+                        <circle cx="110" cy="150" r="2" fill="gold" />
+                        
+                        <!-- Sparkle effects -->
+                        <g opacity="0.7">
+                            <circle cx="90" cy="90" r="3" fill="#00FFFF">
+                                <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite" />
+                            </circle>
+                            <circle cx="210" cy="90" r="3" fill="#FF00FF">
+                                <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite" begin="0.5s" />
+                            </circle>
+                            <circle cx="210" cy="210" r="3" fill="#00FF00">
+                                <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite" begin="1s" />
+                            </circle>
+                            <circle cx="90" cy="210" r="3" fill="#FFFF00">
+                                <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite" begin="1.5s" />
+                            </circle>
                         </g>
                     </svg>
                 </div>
@@ -585,4 +630,3 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
-
