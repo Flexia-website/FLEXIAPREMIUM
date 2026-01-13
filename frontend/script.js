@@ -1,5 +1,5 @@
-// script.js - FLEXIA Frontend Logic v12.0 - FIXED SIZE SPIN WHEEL
-// ✅ ALL GLOBAL FUNCTIONS WORKING ✅ PROPERLY SIZED WHEEL ✅
+// script.js - FLEXIA Frontend Logic v12.0 - SMOOTH LOGOUT TRANSITION
+// ✅ ALL GLOBAL FUNCTIONS WORKING ✅ PROPERLY SIZED WHEEL ✅ SMOOTH LOGOUT
 
 //========== CONFIGURATION ========
 const CONFIG = {
@@ -57,13 +57,31 @@ const App = {
   },
   
   showAppScreen: function () {
-    document.getElementById('auth-screen').classList.add('hidden');
-    document.getElementById('app-screen').classList.remove('hidden');
+    const authScreen = document.getElementById('auth-screen');
+    const appScreen = document.getElementById('app-screen');
+    
+    if (authScreen) authScreen.classList.add('hidden');
+    if (appScreen) {
+      appScreen.classList.remove('hidden');
+      appScreen.classList.add('app-fade-in');
+      setTimeout(() => {
+        appScreen.classList.remove('app-fade-in');
+      }, 800);
+    }
   },
   
   showAuthScreen: function () {
-    document.getElementById('app-screen').classList.add('hidden');
-    document.getElementById('auth-screen').classList.remove('hidden');
+    const authScreen = document.getElementById('auth-screen');
+    const appScreen = document.getElementById('app-screen');
+    
+    if (appScreen) appScreen.classList.add('hidden');
+    if (authScreen) {
+      authScreen.classList.remove('hidden');
+      authScreen.classList.add('login-transition');
+      setTimeout(() => {
+        authScreen.classList.remove('login-transition');
+      }, 600);
+    }
   },
   
   refreshBalance: function (force = false) {
@@ -124,7 +142,14 @@ const App = {
   },
   
   closeModal: function (modalId) {
-    document.getElementById(modalId).classList.add('hidden');
+    const modal = document.getElementById(modalId);
+    if (modal) {
+      modal.classList.add('closing');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('closing');
+      }, 400);
+    }
   },
   
   showMessage: function (text, type = 'info', duration = 5000) {
@@ -357,11 +382,43 @@ const Auth = {
       messageEl.className = data.success ? 'message success' : 'message error';
       
       if (data.success) {
+        // Start login animation
+        const authScreen = document.getElementById('auth-screen');
+        if (authScreen) {
+          authScreen.classList.add('logout-transition');
+        }
+        
         App.currentUser = data.user;
-        App.showAppScreen();
+        
+        // Wait for animation to complete
+        await new Promise(resolve => setTimeout(resolve, 600));
+        
+        // Show app screen with animation
+        const appScreen = document.getElementById('app-screen');
+        if (appScreen) {
+          appScreen.classList.remove('hidden');
+          appScreen.classList.add('app-fade-in');
+          
+          // Hide auth screen after animation
+          if (authScreen) {
+            authScreen.classList.remove('logout-transition');
+            authScreen.classList.add('hidden');
+          }
+          
+          // Remove animation classes after completion
+          setTimeout(() => {
+            appScreen.classList.remove('app-fade-in');
+          }, 800);
+        }
+        
         App.refreshBalance();
+        document.getElementById('welcome-text').textContent = `Welcome, ${data.user.username}!`;
+        document.getElementById('user-avatar').textContent = data.user.username.charAt(0).toUpperCase();
+        
+        // Clear form fields
         document.getElementById('login-username').value = '';
         document.getElementById('login-password').value = '';
+        
         // Reset password visibility after login
         const loginPassword = document.getElementById('login-password');
         if (loginPassword.type === 'text') {
@@ -372,6 +429,9 @@ const Auth = {
             toggleBtn.setAttribute('title', 'Show password');
           }
         }
+        
+        // Show welcome message
+        App.showMessage(`Welcome back, ${data.user.username}!`, 'success');
       }
     } catch (error) {
       messageEl.textContent = 'Network error. Please try again.';
@@ -419,6 +479,7 @@ const Auth = {
       if (data.success) {
         document.getElementById('login-username').value = username;
         document.getElementById('login-password').value = password;
+        
         // Reset password visibility after registration
         const regPassword = document.getElementById('reg-password');
         if (regPassword.type === 'text') {
@@ -429,7 +490,11 @@ const Auth = {
             toggleBtn.setAttribute('title', 'Show password');
           }
         }
+        
+        // Switch to login tab
         document.querySelector('.tab[data-tab="login"]').click();
+        
+        App.showMessage('Registration successful! Please login.', 'success');
       }
     } catch (error) {
       messageEl.textContent = 'Network error. Please try again.';
@@ -1351,13 +1416,21 @@ const Settings = {
         
         <div class="settings-section">
           <h4><i class="fas fa-sign-out-alt"></i> Session</h4>
-          <button class="btn-primary" style="background:#d32f2f;width:100%;" onclick="Settings.logout()">
+          <button class="btn-primary logout-btn" style="background:#d32f2f;width:100%;">
             <i class="fas fa-sign-out-alt"></i> Logout
           </button>
         </div>
       `;
       
       document.getElementById('settings-data').innerHTML = html;
+      
+      // Add logout event listener after content is loaded
+      setTimeout(() => {
+        const logoutBtn = document.querySelector('.logout-btn');
+        if (logoutBtn) {
+          logoutBtn.onclick = Settings.logout;
+        }
+      }, 100);
       
       if (!document.getElementById('social-style')) {
         const style = document.createElement('style');
@@ -1508,18 +1581,71 @@ const Settings = {
     if (!confirm('Are you sure you want to logout?')) return;
     
     try {
-      await fetch('/api/auth/logout', { 
-        method: 'POST', 
-        credentials: 'include' 
+      // Start logout animation
+      const appScreen = document.getElementById('app-screen');
+      if (appScreen) {
+        appScreen.classList.add('logout-transition');
+      }
+      
+      // Wait for animation to complete
+      await new Promise(resolve => setTimeout(resolve, 600));
+      
+      // Perform logout API call
+      try {
+        await fetch('/api/auth/logout', { 
+          method: 'POST', 
+          credentials: 'include' 
+        });
+      } catch (e) {
+        console.warn('Logout endpoint failed, clearing local session');
+      }
+      
+      // Clear all session data
+      document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax' +
+        (window.location.protocol === 'https:' ? '; secure' : '');
+      
+      localStorage.removeItem('session_data');
+      sessionStorage.clear();
+      
+      // Reset app state
+      App.currentUser = null;
+      
+      // Show auth screen with animation
+      const authScreen = document.getElementById('auth-screen');
+      if (authScreen) {
+        authScreen.classList.remove('hidden');
+        authScreen.classList.add('login-transition');
+        
+        // Reset form fields
+        document.getElementById('login-username').value = '';
+        document.getElementById('login-password').value = '';
+        document.getElementById('login-message').textContent = '';
+        
+        // Hide app screen after animation
+        if (appScreen) {
+          appScreen.classList.remove('logout-transition');
+          appScreen.classList.add('hidden');
+        }
+        
+        // Remove transition classes after animation completes
+        setTimeout(() => {
+          authScreen.classList.remove('login-transition');
+        }, 600);
+      }
+      
+      // Close any open modals
+      document.querySelectorAll('.modal').forEach(modal => {
+        modal.classList.add('hidden');
       });
-    } catch (e) {
-      console.warn('Logout endpoint failed');
+      
+      // Show logout success message
+      App.showMessage('Logged out successfully', 'success');
+      
+    } catch (err) {
+      console.error('Logout error:', err);
+      // Fallback: redirect to home
+      window.location.href = '/';
     }
-    
-    document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax' +
-      (window.location.protocol === 'https:' ? '; secure' : '');
-    
-    window.location.href = '/';
   }
 };
 
@@ -1643,7 +1769,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    console.log('✅ FLEXIA Script v12.0 - FIXED SIZE SPIN WHEEL LOADED');
+    console.log('✅ FLEXIA Script v12.0 - SMOOTH LOGOUT TRANSITION LOADED');
 })();
 
 // Emergency fallback loader
