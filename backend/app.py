@@ -1,4 +1,4 @@
-# backend/app.py - ULTIMATE VERSION 12.3 - ACHIEVEMENT FIXES APPLIED
+# backend/app.py - ULTIMATE VERSION 12.4 - SPIN WHEEL FIXES APPLIED
 # FLEXIA Platform - PRODUCTION READY
 
 import os
@@ -549,18 +549,18 @@ def init_db():
             balance REAL DEFAULT 0.00,
             referral_code TEXT,
             referred_by TEXT,
-            is_admin BOOLEAN DEFAULT 0,
+            is_admin INTEGER DEFAULT 0,
             created_at TEXT,
             last_login TEXT,
             claimed_bonuses INTEGER DEFAULT 0,
             points INTEGER DEFAULT 0,
             game_stats TEXT,
             withdrawal_pin TEXT,
-            admin_password_changed BOOLEAN DEFAULT 0,
+            admin_password_changed INTEGER DEFAULT 0,
             contact TEXT,
             profile_picture TEXT,
             ui_theme TEXT DEFAULT 'light',
-            withdrawal_restricted BOOLEAN DEFAULT 0,
+            withdrawal_restricted INTEGER DEFAULT 0,
             custom_withdrawal_days TEXT,
             withdrawal_limit REAL DEFAULT 0.00,
             last_game_timestamp TEXT,
@@ -1285,7 +1285,7 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "uptime": get_uptime(),
             "database": db_status,
-            "version": "12.3",
+            "version": "12.4",
             "stats": {
                 "total_users": user_count,
                 "pending_withdrawals": pending_withdrawals
@@ -1305,7 +1305,7 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "database": f"error: {str(e)}",
             "uptime": get_uptime(),
-            "version": "12.3"
+            "version": "12.4"
         }), 503
 
 # ======================= BACKUP ENDPOINTS =======================
@@ -1364,6 +1364,109 @@ def list_backups():
             "success": False,
             "message": f"Error listing backups: {str(e)}"
         }), 500
+
+# ======================= SPIN WHEEL ENDPOINTS =======================
+@app.route('/api/spin/daily-status', methods=['GET'])
+@require_auth
+def spin_daily_status():
+    """Check if user can spin today"""
+    user = get_current_user()
+    today = datetime.utcnow().date()
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if user has spun today
+        cursor.execute('''
+        SELECT 1 FROM transactions 
+        WHERE user_id = %s AND type = %s 
+        AND DATE(timestamp) = %s
+        ''', (user['id'], 'SPIN_REWARD', today))
+        
+        has_spun_today = cursor.fetchone() is not None
+        
+        return jsonify({
+            "success": True,
+            "can_spin": not has_spun_today,
+            "has_spun_today": has_spun_today
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Spin daily status error: {e}")
+        return jsonify({"success": False, "message": "Failed to check spin status"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/spin/execute', methods=['POST'])
+@require_auth
+def spin_execute():
+    """Execute a spin and determine reward"""
+    user = get_current_user()
+    today = datetime.utcnow().date()
+    
+    # Check if already spun today
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('''
+        SELECT 1 FROM transactions 
+        WHERE user_id = %s AND type = %s 
+        AND DATE(timestamp) = %s
+        ''', (user['id'], 'SPIN_REWARD', today))
+        
+        if cursor.fetchone():
+            return jsonify({
+                "success": False,
+                "message": "You already spun today"
+            }), 400
+        
+        # Define possible rewards (matching frontend segments: 1000, 0, 500, 50, 1000, 100, 500, 200)
+        # Adjusted weights to make 1000 less common
+        possible_rewards = [1000, 0, 500, 50, 1000, 100, 500, 200]
+        weights = [5, 25, 15, 20, 5, 15, 15, 20]  # 1000 is rare, 0 is most common
+        
+        # Choose reward based on weights
+        reward = random.choices(possible_rewards, weights=weights, k=1)[0]
+        
+        # Use atomic balance update
+        new_balance = update_user_balance(user['id'], reward)
+        if new_balance is None:
+            return jsonify({"success": False, "message": "Failed to update balance"}), 500
+        
+        # Record game play
+        record_game_play(user['id'], 'spin')
+        
+        # Update last game timestamp
+        update_last_game_timestamp(user['id'])
+        
+        # Create transaction
+        tx_id = f"SPIN-{secrets.token_hex(8)}"
+        cursor.execute('''
+        INSERT INTO transactions (id, user_id, type, amount, status, timestamp)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        ''', (
+            tx_id, user['id'], 'SPIN_REWARD', reward, 'COMPLETED',
+            datetime.utcnow().isoformat()
+        ))
+        
+        conn.commit()
+        
+        app.logger.info(f"✅ Spin executed for {user['username']}: reward {reward}")
+        
+        return jsonify({
+            "success": True,
+            "reward": reward,
+            "message": f"Congratulations! You won ₦{reward}!"
+        })
+        
+    except Exception as e:
+        app.logger.error(f"❌ Spin execute error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": f"Failed to process spin: {str(e)}"}), 500
+    finally:
+        return_db_connection(conn)
 
 # ======================= AUTH ENDPOINTS =======================
 @app.route('/api/auth/register', methods=['POST'])
@@ -3667,7 +3770,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug = os.getenv('ENV') != 'production'
     
-    app.logger.info(f"🚀 Starting Flexia Platform ULTIMATE v12.3 on port {port} (debug: {debug})")
+    app.logger.info(f"🚀 Starting Flexia Platform ULTIMATE v12.4 on port {port} (debug: {debug})")
     app.logger.info(f"📁 Frontend directory: {CONFIG.FRONTEND_DIR}")
     app.logger.info(f"🔐 Secret key set: {'Yes' if CONFIG.SECRET_KEY else 'No'}")
     app.logger.info(f"🗄️  Database: {'PostgreSQL' if os.environ.get('DATABASE_URL') else 'SQLite'}")
@@ -3685,6 +3788,7 @@ if __name__ == '__main__':
     app.logger.info(f"   • ✅ ACHIEVEMENT FIX: One-time rewards only")
     app.logger.info(f"   • ✅ Added claimed_achievements column to track claimed achievements")
     app.logger.info(f"   • ✅ Each achievement can only be claimed once per user")
-    app.logger.info(f"✅ VERSION 12.3: The ultimate production-ready version with one-time achievement rewards")
+    app.logger.info(f"   • ✅ SPIN WHEEL FIX: Added /api/spin/daily-status and /api/spin/execute endpoints")
+    app.logger.info(f"   • ✅ VERSION 12.4: The ultimate production-ready version with working spin wheel")
     
     app.run(host='0.0.0.0', port=port, debug=debug)
