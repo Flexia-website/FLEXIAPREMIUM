@@ -1,588 +1,641 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FLEXIA | Referral Banking Platform</title>
-    <meta name="google-site-verification" content="y-r0aHL3VuYE3xVBTyAxgRWmUb_PmaP9jYI2C75ciTw" /> 
-   <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="logo/favicon.ico" />
-    <link rel="icon" type="image/png" sizes="32x32" href="logo/flexia-logo.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="logo/flexia-logo.png" />
-    <link rel="apple-touch-icon" href="logo/apple-touch-icon.png" />
-    <link rel="manifest" href="manifest.json" />
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <!-- CSS -->
-    <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FLEXIA | Referral Banking Platform</title>
+<meta name="google-site-verification" content="y-r0aHL3VuYE3xVBTyAxgRWmUb_PmaP9jYI2C75ciTw" />
+<!-- Favicon -->
+<link rel="icon" type="image/x-icon" href="logo/favicon.ico" />
+<link rel="icon" type="image/png" sizes="32x32" href="logo/flexia-logo.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="logo/flexia-logo.png" />
+<link rel="apple-touch-icon" href="logo/apple-touch-icon.png" />
+<link rel="manifest" href="manifest.json" />
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<!-- Main CSS -->
+<link rel="stylesheet" href="style.css" />
+
+<!-- === EMBEDDED CUSTOM STYLES (Spin + Merchant Button) === -->
+<style>
+/* --- MERCHANT BUTTON STYLE --- */
+.btn-merchant {
+  background: #8000FF;
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 10px;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 15px;
+  transition: background 0.3s ease;
+}
+.btn-merchant:hover {
+  background: #9000FF;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(128, 0, 255, 0.4);
+}
+
+/* --- MODERN SPIN WHEEL SYSTEM --- */
+.wheel-outer-ring {
+  position: relative;
+  width: 280px;  height: 280px;
+  margin: 25px auto;
+  border-radius: 50%;
+  background: #111;
+  padding: 8px;
+  border: 4px solid #222;
+  box-shadow: 0 0 30px rgba(128, 0, 255, 0.3), inset 0 0 20px #000;
+}
+.wheel-outer-ring::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  animation: rotateLights 20s linear infinite;
+}
+@keyframes rotateLights {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+#wheel-svg {
+  width: 100%;
+  height: 100%;
+  transition: transform 5s cubic-bezier(0.15, 0, 0, 1);
+}
+.wheel-pointer-modern {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 35px;
+  height: 45px;
+  background: gold;
+  clip-path: polygon(50% 100%, 0 0, 100% 0);
+  z-index: 100;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
+}
+#spin-btn-custom {
+  background: linear-gradient(135deg, #8000FF 0%, #FF3333 100%) !important;
+  width: 100%;
+  max-width: 240px;
+  padding: 16px !important;
+  font-family: 'Orbitron', sans-serif !important;
+  font-weight: 900 !important;
+  border: none !important;
+  border-radius: 50px !important;
+  color: white;  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(128, 0, 255, 0.3);
+  margin-top: 15px;
+  transition: 0.3s;
+}
+#spin-btn-custom:disabled {
+  background: #333 !important;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.result-banner {
+  margin-top: 15px;
+  padding: 12px;
+  border-radius: 8px;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  display: none;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid #444;
+}
+</style>
 </head>
 <body>
-    <!-- Auth Screen -->
-    <div id="auth-screen" class="screen">
-        <div class="auth-container">
-            <div class="auth-header">
-                <div class="logo-container">
-                    <div class="logo-icon">
-                        <img src="logo/flexia-logo.png" alt="FLEXIA Logo" style="width: 80px; height: 80px; border-radius: 12px;" />
-                    </div>
-                    <h1 class="app-title">FLEXIA</h1>
-                    <p class="app-subtitle">Referral Banking & Earnings Platform</p>
-                </div>
-            </div>
-            <div class="auth-tabs">
-                <div class="tab active" data-tab="login">LOGIN</div>
-                <div class="tab" data-tab="register">REGISTER</div>
-            </div>
-            <div id="login-form" class="auth-form active">
-                <div class="input-group">
-                    <input type="text" id="login-username" class="form-input" placeholder="Username" required />
-                    <i class="fas fa-user input-icon"></i>
-                </div>
-                <div class="input-group">
-                    <input type="password" id="login-password" class="form-input" placeholder="Password" required />
-                    <i class="fas fa-lock input-icon"></i>
-                </div>
-                <button class="btn-primary" onclick="Auth.login()">
-                    <i class="fas fa-sign-in-alt"></i> ENTER VAULT
-                </button>
-                <div class="test-login-info">
-                    <p><strong>Login:</strong> with your login details</p>
-                </div>
-                <div id="login-message" class="message"></div>
-            </div>
-            <div id="register-form" class="auth-form">
-                <div class="input-group">
-                    <input type="text" id="reg-username" class="form-input" placeholder="Choose Username" required />
-                    <i class="fas fa-user input-icon"></i>
-                </div>
-                <div class="input-group">
-                    <input type="password" id="reg-password" class="form-input" placeholder="Create Password" required />
-                    <i class="fas fa-lock input-icon"></i>
-                </div>
-                <div class="input-group">
-                    <input type="text" id="reg-coupon" class="form-input" placeholder="Coupon Code" required />
-                    <i class="fas fa-ticket input-icon"></i>
-                </div>
-                <div class="input-group">
-                    <input type="text" id="reg-referral" class="form-input" placeholder="Referral Code (Optional)" />
-                    <i class="fas fa-user-plus input-icon"></i>
-                </div>
-                <div class="input-group">
-                    <input type="text" id="reg-contact" class="form-input" placeholder="Email or Phone (Optional)" />
-                    <i class="fas fa-envelope input-icon"></i>
-                </div>
-                <button class="btn-primary" onclick="Auth.register()">
-                    <i class="fas fa-user-plus"></i> CREATE ACCOUNT
-                </button>
-                <button class="btn-secondary" onclick="Auth.buyCoupon()">
-                    <i class="fab fa-whatsapp"></i> BUY COUPON CODE
-                </button>
-                <div id="register-message" class="message"></div>
-                <div class="info-box">
-                    <h4><i class="fas fa-gift"></i> Referral Program</h4>
-                    <p>Earn <strong>₦7,500</strong> for each friend you refer!</p>
-                    <p class="small-text">Share your referral code after registration</p>
-                </div>
-            </div>
+
+<!-- Auth Screen -->
+<div id="auth-screen" class="screen">
+  <div class="auth-container">
+    <div class="auth-header">
+      <div class="logo-container">
+        <div class="logo-icon">
+          <img src="logo/flexia-logo.png" alt="FLEXIA Logo" style="width: 80px; height: 80px; border-radius: 12px;" />
         </div>
+        <h1 class="app-title">FLEXIA</h1>
+        <p class="app-subtitle">Referral Banking & Earnings Platform</p>
+      </div>
     </div>
-
-    <!-- App Screen (Hidden by Default) -->
-    <div id="app-screen" class="screen hidden">
-        <div class="grid-bg"></div>
-        <header class="app-header">
-            <div class="header-content">
-                <div class="header-logo">
-                    <div class="header-logo-icon">
-                        <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 35px; height: 35px; border-radius: 8px;" />
-                    </div>
-                    <div class="header-logo-text">FLEXIA</div>
-                </div>
-                <div class="welcome-message">
-                    <i class="fas fa-user-circle"></i>
-                    <span id="welcome-text">Welcome, User!</span>
-                </div>
-                <div class="header-actions">
-                    <button class="icon-btn" onclick="App.toggleBalance()" title="Toggle Balance">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <div class="user-avatar" onclick="Profile.open()" id="user-avatar">U</div>
-                </div>
-            </div>
-        </header>
-        <main class="app-main">
-            <section class="balance-section">
-                <div class="balance-card">
-                    <div class="balance-label">TOTAL ASSETS</div>
-                    <div class="balance-amount">
-                        <span class="currency">₦</span>
-                        <span id="balance-display" class="amount">0.00</span>
-                    </div>
-                    <div class="balance-controls">
-                        <button class="control-btn" onclick="Referral.claimBonuses()">
-                            <i class="fas fa-gift"></i> Claim Bonuses
-                        </button>
-                        <button class="control-btn" onclick="Games.openSpinWheel()">
-                            <i class="fas fa-sync-alt"></i> Daily Spin
-                        </button>
-                    </div>
-                </div>
-            </section>
-            <section class="activities-section">
-                <h3 class="section-title"><i class="fas fa-gamepad"></i> Earn & Play</h3>
-                <div class="activities-grid">
-                    <!-- FIXED: Direct link to game -->
-                    <div class="activity-card" onclick="window.location.href='snake.html'">
-                        <div class="card-icon game"><i class="fas fa-gamepad"></i></div>
-                        <div class="card-title">Snake Mine</div>
-                        <div class="card-subtitle">Eat = ₦200 Each</div>
-                        <div class="card-badge free">FREE</div>
-                    </div>
-                    <!-- FIXED: Direct link to game -->
-                    <div class="activity-card" onclick="window.location.href='coinflip.html'">
-                        <div class="card-icon coin"><i class="fas fa-coins"></i></div>
-                        <div class="card-title">Coin Flip</div>
-                        <div class="card-subtitle">Bet & Double</div>
-                        <div class="card-badge bet">Min: ₦100</div>
-                    </div>
-                    <!-- FIXED: Direct link to game -->
-                    <div class="activity-card" onclick="window.location.href='plinko.html'">
-                        <div class="card-icon play"><i class="fas fa-bowling-ball"></i></div>
-                        <div class="card-title">Plinko 3D</div>
-                        <div class="card-subtitle">Bet & Multiply</div>
-                        <div class="card-badge bet">Min: ₦100</div>
-                    </div>
-                    <!-- FIXED: Updated function name -->
-                    <div class="activity-card" onclick="Games.openTikTok()">
-                        <div class="card-icon tiktok"><i class="fab fa-tiktok"></i></div>
-                        <div class="card-title">TikTok Follow</div>
-                        <div class="card-subtitle">Follow = ₦150</div>
-                        <div class="card-badge daily">1/Day</div>
-                    </div>
-                    <div class="activity-card" onclick="Referral.open()">
-                        <div class="card-icon referral"><i class="fas fa-users"></i></div>
-                        <div class="card-title">Refer & Earn</div>
-                        <div class="card-subtitle">₦7,500/Friend</div>
-                        <div class="card-badge bonus">Bonus</div>
-                    </div>
-                    <!-- FIXED: Updated function name -->
-                    <div class="activity-card" onclick="Games.openSpinWheel()">
-                        <div class="card-icon spin"><i class="fas fa-sync-alt"></i></div>
-                        <div class="card-title">Daily Spin</div>
-                        <div class="card-subtitle">Win Up To ₦1000</div>
-                        <div class="card-badge daily">1/Day</div>
-                    </div>
-                </div>
-            </section>
-            <section class="activities-section">
-                <h3 class="section-title"><i class="fas fa-trophy"></i> Achievements & Records</h3>
-                <div class="activities-grid">
-                    <div class="activity-card" onclick="window.location.href='achievements.html'">
-                        <div class="card-icon game"><i class="fas fa-trophy"></i></div>
-                        <div class="card-title">Achievements</div>
-                        <div class="card-subtitle">Track Your Progress</div>
-                        <div class="card-badge free">NEW</div>
-                    </div>
-                    <div class="activity-card" onclick="window.location.href='receipt.html'">
-                        <div class="card-icon coin"><i class="fas fa-receipt"></i></div>
-                        <div class="card-title">Withdraw Receipt</div>
-                        <div class="card-subtitle">View & Download</div>
-                        <div class="card-badge free">NEW</div>
-                    </div>
-                    <div class="activity-card" onclick="window.location.href='receipt.html?history=true'">
-                        <div class="card-icon play"><i class="fas fa-history"></i></div>
-                        <div class="card-title">Withdraw History</div>
-                        <div class="card-subtitle">Past Transactions</div>
-                        <div class="card-badge free">NEW</div>
-                    </div>
-                </div>
-            </section>
-        </main>
-        <nav class="bottom-nav">
-            <div class="nav-item active" onclick="App.showScreen('home')">
-                <i class="fas fa-home"></i>
-                <span>Home</span>
-            </div>
-            <div class="nav-item" onclick="Banking.openWithdraw()">
-                <i class="fas fa-wallet"></i>
-                <span>Cashout</span>
-            </div>
-            <div class="nav-item" onclick="window.location.href='achievements.html'">
-                <i class="fas fa-trophy"></i>
-                <span>Achievements</span>
-            </div>
-            <div class="nav-item" onclick="window.location.href='receipt.html'">
-                <i class="fas fa-receipt"></i>
-                <span>Receipt</span>
-            </div>
-            <div class="nav-item" onclick="Settings.open()">
-                <i class="fas fa-cog"></i>
-                <span>Settings</span>
-            </div>
-        </nav>
+    <div class="auth-tabs">
+      <div class="tab active" data-tab="login">LOGIN</div>
+      <div class="tab" data-tab="register">REGISTER</div>
     </div>
-
-    <!-- Modals Container -->
-    <div id="modals-container">
-        <!-- Withdrawal Modal -->
-        <div id="withdrawal-modal" class="modal hidden">
-            <div class="modal-content">
-                <div class="modal-logo">
-                    <div class="modal-logo-icon">
-                        <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 40px; height: 40px;" />
-                    </div>
-                </div>
-                <h3 class="modal-title">CASH-OUT VAULT</h3>
-                <p class="modal-info">Available Balance: <strong id="withdraw-balance">₦0.00</strong></p>
-                <p class="modal-info">Minimum Withdrawal: <strong id="withdraw-min">₦100,000.00</strong></p>
-                <div class="input-group">
-                    <input type="number" id="withdraw-amount" class="form-input" placeholder="Amount (e.g., 100000)" required />
-                </div>
-                <div class="input-group">
-                    <select id="bank-select" class="form-input" required>
-                        <option value="" disabled selected>Select Bank</option>
-                    </select>
-                </div>
-                <div class="input-group">
-                    <input type="text" id="account-number" class="form-input" placeholder="Account Number" required />
-                </div>
-                <div class="input-group">
-                    <input type="text" id="account-name-manual" class="form-input" placeholder="Account Name (Manual)" required />
-                </div>
-                <button class="btn-primary" onclick="Banking.processWithdrawal()">
-                    <i class="fas fa-paper-plane"></i> SUBMIT WITHDRAWAL
-                </button>
-                <div id="withdrawal-message" class="message"></div>
-                <button class="btn-close" onclick="App.closeModal('withdrawal-modal')">CLOSE</button>
-            </div>
-        </div>
-
-        <!-- Referral Modal -->
-        <div id="referral-modal" class="modal hidden">
-            <div class="modal-content">
-                <div class="modal-logo">
-                    <div class="modal-logo-icon">
-                        <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 40px; height: 40px;" />
-                    </div>
-                </div>
-                <h3 class="modal-title">Refer & Earn</h3>
-                <div id="referral-data">Loading referral data...</div>
-                <button class="btn-close" onclick="App.closeModal('referral-modal')">CLOSE</button>
-            </div>
-        </div>
-
-        <!-- Profile Modal -->
-        <div id="profile-modal" class="modal hidden">
-            <div class="modal-content">
-                <div class="modal-logo">
-                    <div class="modal-logo-icon">
-                        <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 40px; height: 40px;" />
-                    </div>
-                </div>
-                <h3 class="modal-title">User Profile</h3>
-                <div id="profile-data">...</div>
-                <button class="btn-close" onclick="App.closeModal('profile-modal')">CLOSE</button>
-            </div>
-        </div>
-
-        <!-- Settings Modal -->
-        <div id="settings-modal" class="modal hidden">
-            <div class="modal-content">
-                <div class="modal-logo">
-                    <div class="modal-logo-icon">
-                        <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 40px; height: 40px;" />
-                    </div>
-                </div>
-                <h3 class="modal-title">Settings</h3>
-                <div id="settings-data">...</div>
-                <button class="btn-close" onclick="App.closeModal('settings-modal')">CLOSE</button>
-            </div>
-        </div>
-
-        <!-- TikTok Modal -->
-        <div id="tiktok-modal" class="modal hidden">
-            <div class="modal-content">
-                <div class="modal-logo">
-                    <div class="modal-logo-icon">
-                        <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 40px; height: 40px;" />
-                    </div>
-                </div>
-                <h3 class="modal-title">TIKTOK FOLLOW</h3>
-                <p class="modal-info">Earn <strong>₦150.00</strong> for following on TikTok</p>
-                <div id="tiktok-instructions">
-                    <p>Follow the account below on TikTok to earn ₦150.00</p>
-                    <div class="tiktok-account-display">
-                        <strong id="tiktok-account-name">Loading...</strong>
-                    </div>
-                    <p class="small-text">Search this username on TikTok and follow the account</p>
-                </div>
-                <div class="action-buttons">
-                    <button class="btn-secondary" onclick="Games.openTikTokApp()">
-                        <i class="fab fa-tiktok"></i> OPEN TIKTOK
-                    </button>
-                    <button class="btn-primary" onclick="Games.verifyTikTokFollow()">
-                        <i class="fas fa-check"></i> I FOLLOWED
-                    </button>
-                </div>
-                <div id="tiktok-message" class="message"></div>
-                <button class="btn-close" onclick="App.closeModal('tiktok-modal')">CLOSE</button>
-            </div>
-        </div>
-
-        <!-- ✅ SPIN WHEEL MODAL (SVG-Based) -->
-        <div id="spin-modal" class="modal hidden">
-            <div class="modal-content">
-                <div class="modal-logo">
-                    <div class="modal-logo-icon">
-                        <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 40px; height: 40px;" />
-                    </div>
-                </div>
-                <h3 class="modal-title">DAILY SPIN WHEEL</h3>
-                <p class="modal-info">Spin once daily to win amazing rewards!</p>
-
-                <!-- Wheel Container -->
-                <div class="wheel-container">
-                    <div class="pointer-wrapper">
-                        <div id="pointer">
-                            <div class="pointer-tip"></div>
-                        </div>
-                    </div>
-
-                    <!-- SVG Wheel -->
-                    <svg id="wheel" width="300" height="300" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="150" cy="150" r="145" fill="none" stroke="#FF3333" stroke-width="10" filter="url(#glow)" />
-                        <defs>
-                            <linearGradient id="redSeg">
-                                <stop offset="0%" stop-color="#FF3333" />
-                                <stop offset="100%" stop-color="#FF6666" />
-                            </linearGradient>
-                            <linearGradient id="whiteSeg">
-                                <stop offset="0%" stop-color="#FFFFFF" />
-                                <stop offset="100%" stop-color="#F0F0F0" />
-                            </linearGradient>
-                            <filter id="glow">
-                                <feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#FF3333" flood-opacity="0.7" />
-                            </filter>
-                        </defs>
-                        <path d="M150,150 L150,30 A120,120 0 0,1 204.85,45.15 Z" fill="url(#redSeg)" />
-                        <path d="M150,150 L204.85,45.15 A120,120 0 0,1 254.85,75.15 Z" fill="url(#whiteSeg)" />
-                        <path d="M150,150 L254.85,75.15 A120,120 0 0,1 254.85,125.15 Z" fill="url(#redSeg)" />
-                        <path d="M150,150 L254.85,125.15 A120,120 0 0,1 204.85,175.15 Z" fill="url(#whiteSeg)" />
-                        <path d="M150,150 L204.85,175.15 A120,120 0 0,1 150,225 Z" fill="url(#redSeg)" />
-                        <path d="M150,150 L150,225 A120,120 0 0,1 95.15,175.15 Z" fill="url(#whiteSeg)" />
-                        <path d="M150,150 L95.15,175.15 A120,120 0 0,1 45.15,125.15 Z" fill="url(#redSeg)" />
-                        <path d="M150,150 L45.15,125.15 A120,120 0 0,1 95.15,75.15 Z" fill="url(#whiteSeg)" />
-                        <g font-family="Orbitron" font-weight="900" text-anchor="middle" fill="black" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">
-                            <text x="150" y="65" transform="rotate(22.5,150,150)" font-size="16">₦1000</text>
-                            <text x="225" y="100" transform="rotate(67.5,150,150)" font-size="16">₦500</text>
-                            <text x="225" y="175" transform="rotate(112.5,150,150)" font-size="16">₦200</text>
-                            <text x="150" y="235" transform="rotate(157.5,150,150)" font-size="16">₦100</text>
-                            <text x="75" y="175" transform="rotate(202.5,150,150)" font-size="16">₦50</text>
-                            <text x="75" y="100" transform="rotate(247.5,150,150)" font-size="16">TRY AGAIN</text>
-                            <text x="150" y="65" transform="rotate(292.5,150,150)" font-size="16">₦1000</text>
-                            <text x="225" y="100" transform="rotate(337.5,150,150)" font-size="16">₦500</text>
-                        </g>
-                        <circle cx="150" cy="150" r="20" fill="gold" stroke="#333" stroke-width="3" />
-                        <circle cx="150" cy="150" r="5" fill="#333" />
-                        <g fill="#FFD700">
-                            <circle cx="150" cy="30" r="3" />
-                            <circle cx="204.85" cy="45.15" r="3" />
-                            <circle cx="254.85" cy="75.15" r="3" />
-                            <circle cx="254.85" cy="125.15" r="3" />
-                            <circle cx="204.85" cy="175.15" r="3" />
-                            <circle cx="150" cy="225" r="3" />
-                            <circle cx="95.15" cy="175.15" r="3" />
-                            <circle cx="45.15" cy="125.15" r="3" />
-                            <circle cx="95.15" cy="75.15" r="3" />
-                        </g>
-                    </svg>
-                </div>
-
-                <button class="btn-primary" id="spin-button" onclick="Games.spinWheel()">
-                    <i class="fas fa-sync-alt"></i> SPIN WHEEL
-                </button>
-
-                <div id="spin-result" class="game-result hidden" style="margin-top: 15px; padding: 15px; background: rgba(0,255,85,0.1); border-radius: 8px;">
-                    <p style="margin: 0; font-size: 1.1rem;"></p>
-                </div>
-
-                <div class="message" id="spin-message" style="margin-top: 10px;"></div>
-
-                <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 15px;">
-                    You can spin once per day
-                </p>
-
-                <button class="btn-close" onclick="App.closeModal('spin-modal')">CLOSE</button>
-            </div>
-        </div>
+    <div id="login-form" class="auth-form active">
+      <div class="input-group">
+        <input type="text" id="login-username" class="form-input" placeholder="Username" required />
+        <i class="fas fa-user input-icon"></i>
+      </div>
+      <div class="input-group">
+        <input type="password" id="login-password" class="form-input" placeholder="Password" required />
+        <i class="fas fa-lock input-icon"></i>
+      </div>
+      <button class="btn-primary" onclick="Auth.login()">        <i class="fas fa-sign-in-alt"></i> ENTER VAULT
+      </button>
+      <div class="test-login-info">
+        <p><strong>Login:</strong> with your login details</p>
+      </div>
+      <div id="login-message" class="message"></div>
     </div>
+    <div id="register-form" class="auth-form">
+      <div class="input-group">
+        <input type="text" id="reg-username" class="form-input" placeholder="Choose Username" required />
+        <i class="fas fa-user input-icon"></i>
+      </div>
+      <div class="input-group">
+        <input type="password" id="reg-password" class="form-input" placeholder="Create Password" required />
+        <i class="fas fa-lock input-icon"></i>
+      </div>
+      <div class="input-group">
+        <input type="text" id="reg-coupon" class="form-input" placeholder="Coupon Code" required />
+        <i class="fas fa-ticket input-icon"></i>
+      </div>
+      <div class="input-group">
+        <input type="text" id="reg-referral" class="form-input" placeholder="Referral Code (Optional)" />
+        <i class="fas fa-user-plus input-icon"></i>
+      </div>
+      <div class="input-group">
+        <input type="text" id="reg-contact" class="form-input" placeholder="Email or Phone (Optional)" />
+        <i class="fas fa-envelope input-icon"></i>
+      </div>
+      <button class="btn-primary" onclick="Auth.register()">
+        <i class="fas fa-user-plus"></i> CREATE ACCOUNT
+      </button>
 
-    <!-- Enhanced Referral Sharing -->
-    <script>
-        // This remains exactly as you had it
-        const originalReferralOpen = window.Referral?.open || function() {};
-        window.Referral = window.Referral || {};
-        Referral.open = function() {
-            originalReferralOpen();
-            setTimeout(() => {
-                const dataEl = document.getElementById('referral-data');
-                if (!dataEl || !dataEl.innerHTML.includes('Your Referral Code')) return;
-                const codeMatch = dataEl.innerHTML.match(/<strong>([A-Z0-9]+)<\/strong>/);
-                if (!codeMatch) return;
-                const code = codeMatch[1];
-                if (dataEl.querySelector('.share-referral-btn')) return;
-                const btn = document.createElement('button');
-                btn.className = 'btn-primary';
-                btn.style.marginTop = '15px';
-                btn.innerHTML = '<i class="fas fa-share-alt"></i> Share Referral Link';
-                btn.onclick = () => {
-                    const link = `${window.location.origin}?ref=${code}`;
-                    if (navigator.share) {
-                        navigator.share({ title: 'FLEXIA', text: `Join FLEXIA! Use my code: ${code}`, url: link });
-                    } else {
-                        navigator.clipboard.writeText(link).then(() => {
-                            if (window.App && App.showMessage) {
-                                App.showMessage('Link copied!', 'success');
-                            } else {
-                                alert('Referral link copied to clipboard!');
-                            }
-                        });
-                    }
-                };
-                dataEl.appendChild(btn);
-            }, 300);
-        };
-    </script>
+      <!-- === NEW MERCHANT BUTTON === -->
+      <button class="btn-merchant" onclick="openMerchantChat()">
+        <i class="fas fa-store"></i> Buy Coupon from Merchant
+      </button>
 
-    <!-- Main App Script -->
-    <script src="script.js"></script>
-    
-    <!-- Ensure global functions are available -->
-    <script>
-        // Create global functions if they don't exist (as backup)
-        if (!window.openSnakeGame) {
-            window.openSnakeGame = function() {
-                window.location.href = 'snake.html';
-            };
-            
-            window.openCoinFlipGame = function() {
-                window.location.href = 'coinflip.html';
-            };
-            
-            window.openPlinkoGame = function() {
-                window.location.href = 'plinko.html';
-            };
-            
-            window.openTikTokGame = function() {
-                if (window.Games && Games.openTikTok) {
-                    Games.openTikTok();
-                } else {
-                    alert('Please wait for the app to load completely.');
-                }
-            };
-            
-            window.openSpinWheelGame = function() {
-                if (window.Games && Games.openSpinWheel) {
-                    Games.openSpinWheel();
-                } else {
-                    alert('Please wait for the app to load completely.');
-                }
-            };
-        }
-        
-        // Emergency backup functions
-        window.goBackToDashboard = function() {
-            window.location.href = 'index.html';
-        };
-        
-        window.showMessage = function(message, type = 'info') {
-            alert(`[${type.toUpperCase()}] ${message}`);
-        };
-    </script>
-    <!-- Load script.js -->
-<script src="script.js"></script>
-    
-<!-- Emergency function loader -->
+      <div id="register-message" class="message"></div>
+      <div class="info-box">
+        <h4><i class="fas fa-gift"></i> Referral Program</h4>
+        <p>Earn <strong>₦7,500</strong> for each friend you refer!</p>
+        <p class="small-text">Share your referral code after registration</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- App Screen (Hidden by Default) -->
+<div id="app-screen" class="screen hidden">
+  <div class="grid-bg"></div>  <header class="app-header">
+    <div class="header-content">
+      <div class="header-logo">
+        <div class="header-logo-icon">
+          <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 35px; height: 35px; border-radius: 8px;" />
+        </div>
+        <div class="header-logo-text">FLEXIA</div>
+      </div>
+      <div class="welcome-message">
+        <i class="fas fa-user-circle"></i>
+        <span id="welcome-text">Welcome, User!</span>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" onclick="App.toggleBalance()" title="Toggle Balance">
+          <i class="fas fa-eye"></i>
+        </button>
+        <div class="user-avatar" onclick="Profile.open()" id="user-avatar">U</div>
+      </div>
+    </div>
+  </header>
+  <main class="app-main">
+    <section class="balance-section">
+      <div class="balance-card">
+        <div class="balance-label">TOTAL ASSETS</div>
+        <div class="balance-amount">
+          <span class="currency">₦</span>
+          <span id="balance-display" class="amount">0.00</span>
+        </div>
+        <div class="balance-controls">
+          <button class="control-btn" onclick="Referral.claimBonuses()">
+            <i class="fas fa-gift"></i> Claim Bonuses
+          </button>
+          <button class="control-btn" onclick="customSpinEngine.openModal()">
+            <i class="fas fa-sync-alt"></i> Daily Spin
+          </button>
+        </div>
+      </div>
+    </section>
+    <section class="activities-section">
+      <h3 class="section-title"><i class="fas fa-gamepad"></i> Earn & Play</h3>
+      <div class="activities-grid">
+        <div class="activity-card" onclick="window.location.href='snake.html'">
+          <div class="card-icon game"><i class="fas fa-gamepad"></i></div>
+          <div class="card-title">Snake Mine</div>
+          <div class="card-subtitle">Eat = ₦200 Each</div>
+          <div class="card-badge free">FREE</div>
+        </div>
+        <div class="activity-card" onclick="window.location.href='coinflip.html'">
+          <div class="card-icon coin"><i class="fas fa-coins"></i></div>
+          <div class="card-title">Coin Flip</div>          <div class="card-subtitle">Bet & Double</div>
+          <div class="card-badge bet">Min: ₦100</div>
+        </div>
+        <div class="activity-card" onclick="window.location.href='plinko.html'">
+          <div class="card-icon play"><i class="fas fa-bowling-ball"></i></div>
+          <div class="card-title">Plinko 3D</div>
+          <div class="card-subtitle">Bet & Multiply</div>
+          <div class="card-badge bet">Min: ₦100</div>
+        </div>
+        <div class="activity-card" onclick="Games.openTikTok()">
+          <div class="card-icon tiktok"><i class="fab fa-tiktok"></i></div>
+          <div class="card-title">TikTok Follow</div>
+          <div class="card-subtitle">Follow = ₦150</div>
+          <div class="card-badge daily">1/Day</div>
+        </div>
+        <div class="activity-card" onclick="Referral.open()">
+          <div class="card-icon referral"><i class="fas fa-users"></i></div>
+          <div class="card-title">Refer & Earn</div>
+          <div class="card-subtitle">₦7,500/Friend</div>
+          <div class="card-badge bonus">Bonus</div>
+        </div>
+        <div class="activity-card" onclick="customSpinEngine.openModal()">
+          <div class="card-icon spin"><i class="fas fa-sync-alt"></i></div>
+          <div class="card-title">Daily Spin</div>
+          <div class="card-subtitle">Win Up To ₦1000</div>
+          <div class="card-badge daily">1/Day</div>
+        </div>
+      </div>
+    </section>
+    <section class="activities-section">
+      <h3 class="section-title"><i class="fas fa-trophy"></i> Achievements & Records</h3>
+      <div class="activities-grid">
+        <div class="activity-card" onclick="window.location.href='achievements.html'">
+          <div class="card-icon game"><i class="fas fa-trophy"></i></div>
+          <div class="card-title">Achievements</div>
+          <div class="card-subtitle">Track Your Progress</div>
+          <div class="card-badge free">NEW</div>
+        </div>
+        <div class="activity-card" onclick="window.location.href='receipt.html'">
+          <div class="card-icon coin"><i class="fas fa-receipt"></i></div>
+          <div class="card-title">Withdraw Receipt</div>
+          <div class="card-subtitle">View & Download</div>
+          <div class="card-badge free">NEW</div>
+        </div>
+        <div class="activity-card" onclick="window.location.href='receipt.html₦history=true'">
+          <div class="card-icon play"><i class="fas fa-history"></i></div>
+          <div class="card-title">Withdraw History</div>
+          <div class="card-subtitle">Past Transactions</div>
+          <div class="card-badge free">NEW</div>
+        </div>      </div>
+    </section>
+  </main>
+  <nav class="bottom-nav">
+    <div class="nav-item active" onclick="App.showScreen('home')">
+      <i class="fas fa-home"></i>
+      <span>Home</span>
+    </div>
+    <div class="nav-item" onclick="Banking.openWithdraw()">
+      <i class="fas fa-wallet"></i>
+      <span>Cashout</span>
+    </div>
+    <div class="nav-item" onclick="window.location.href='achievements.html'">
+      <i class="fas fa-trophy"></i>
+      <span>Achievements</span>
+    </div>
+    <div class="nav-item" onclick="window.location.href='receipt.html'">
+      <i class="fas fa-receipt"></i>
+      <span>Receipt</span>
+    </div>
+    <div class="nav-item" onclick="Settings.open()">
+      <i class="fas fa-cog"></i>
+      <span>Settings</span>
+    </div>
+  </nav>
+</div>
+
+<!-- Modals Container -->
+<div id="modals-container">
+  <!-- Withdrawal Modal -->
+  <div id="withdrawal-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-logo">
+        <div class="modal-logo-icon">
+          <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 40px; height: 40px;" />
+        </div>
+      </div>
+      <h3 class="modal-title">CASH-OUT VAULT</h3>
+      <p class="modal-info">Available Balance: <strong id="withdraw-balance">₦0.00</strong></p>
+      <p class="modal-info">Minimum Withdrawal: <strong id="withdraw-min">₦100,000.00</strong></p>
+      <div class="input-group">
+        <input type="number" id="withdraw-amount" class="form-input" placeholder="Amount (e.g., 100000)" required />
+      </div>
+      <div class="input-group">
+        <select id="bank-select" class="form-input" required>
+          <option value="" disabled selected>Select Bank</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <input type="text" id="account-number" class="form-input" placeholder="Account Number" required />      </div>
+      <div class="input-group">
+        <input type="text" id="account-name-manual" class="form-input" placeholder="Account Name (Manual)" required />
+      </div>
+      <button class="btn-primary" onclick="Banking.processWithdrawal()">
+        <i class="fas fa-paper-plane"></i> SUBMIT WITHDRAWAL
+      </button>
+      <div id="withdrawal-message" class="message"></div>
+      <button class="btn-close" onclick="App.closeModal('withdrawal-modal')">CLOSE</button>
+    </div>
+  </div>
+
+  <!-- Other Modals -->
+  <div id="referral-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-logo">
+        <div class="modal-logo-icon">
+          <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 40px; height: 40px;" />
+        </div>
+      </div>
+      <h3 class="modal-title">Refer & Earn</h3>
+      <div id="referral-data">Loading referral data...</div>
+      <button class="btn-close" onclick="App.closeModal('referral-modal')">CLOSE</button>
+    </div>
+  </div>
+  <div id="profile-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-logo">
+        <div class="modal-logo-icon">
+          <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 40px; height: 40px;" />
+        </div>
+      </div>
+      <h3 class="modal-title">User Profile</h3>
+      <div id="profile-data">...</div>
+      <button class="btn-close" onclick="App.closeModal('profile-modal')">CLOSE</button>
+    </div>
+  </div>
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-logo">
+        <div class="modal-logo-icon">
+          <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 40px; height: 40px;" />
+        </div>
+      </div>
+      <h3 class="modal-title">Settings</h3>
+      <div id="settings-data">...</div>
+      <button class="btn-close" onclick="App.closeModal('settings-modal')">CLOSE</button>
+    </div>
+  </div>
+  <div id="tiktok-modal" class="modal hidden">    <div class="modal-content">
+      <div class="modal-logo">
+        <div class="modal-logo-icon">
+          <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 40px; height: 40px;" />
+        </div>
+      </div>
+      <h3 class="modal-title">TIKTOK FOLLOW</h3>
+      <p class="modal-info">Earn <strong>₦150.00</strong> for following on TikTok</p>
+      <div id="tiktok-instructions">
+        <p>Follow the account below on TikTok to earn ₦150.00</p>
+        <div class="tiktok-account-display">
+          <strong id="tiktok-account-name">Loading...</strong>
+        </div>
+        <p class="small-text">Search this username on TikTok and follow the account</p>
+      </div>
+      <div class="action-buttons">
+        <button class="btn-secondary" onclick="Games.openTikTokApp()">
+          <i class="fab fa-tiktok"></i> OPEN TIKTOK
+        </button>
+        <button class="btn-primary" onclick="Games.verifyTikTokFollow()">
+          <i class="fas fa-check"></i> I FOLLOWED
+        </button>
+      </div>
+      <div id="tiktok-message" class="message"></div>
+      <button class="btn-close" onclick="App.closeModal('tiktok-modal')">CLOSE</button>
+    </div>
+  </div>
+
+  <!-- === CYBER SPIN MODAL (from spin.html) === -->
+  <div id="spin-modal" class="modal hidden">
+    <div class="modal-content" style="background: #0a0a0a; border: 1px solid #333; text-align: center;">
+      <h3 class="modal-title" style="color: #fff; letter-spacing: 2px;">CYBER SPIN</h3>
+      <div class="wheel-outer-ring">
+        <div class="wheel-pointer-modern"></div>
+        <svg id="wheel-svg" viewBox="0 0 300 300">
+          <defs>
+            <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#8000FF;" />
+              <stop offset="100%" style="stop-color:#4B0082;" />
+            </linearGradient>
+            <linearGradient id="darkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#222;" />
+              <stop offset="100%" style="stop-color:#000;" />
+            </linearGradient>
+          </defs>
+          <g id="segments-group"></g>
+          <circle cx="150" cy="150" r="12" fill="#fff" />
+        </svg>
+      </div>
+      <button id="spin-btn-custom" onclick="customSpinEngine.initSpin()">INITIATE SPIN</button>      <div id="custom-result-banner" class="result-banner"></div>
+      <button class="btn-close" onclick="App.closeModal('spin-modal')" style="margin-top: 20px; opacity: 0.5;">CLOSE</button>
+    </div>
+  </div>
+
+</div> <!-- #modals-container -->
+
+<!-- Enhanced Referral Sharing -->
 <script>
-// Ensure critical functions exist immediately
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Page loaded, initializing...');
-    
-    // Create emergency fallbacks if functions don't exist
-    const requiredFunctions = {
-        'checkDailyLimit': async () => ({ can_play: true, played_today: 0, max_per_day: 999 }),
-        'claimSnakeReward': async (apples) => {
-            try {
-                const res = await fetch('/api/games/snake/report', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ apples_eaten: apples })
-                });
-                return await res.json();
-            } catch (e) {
-                return { success: false, message: e.message };
-            }
-        },
-        'claimCoinFlipReward': async (bet, won) => {
-            try {
-                const res = await fetch('/api/games/coinflip/report', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ bet: bet, won: won })
-                });
-                return await res.json();
-            } catch (e) {
-                return { success: false, message: e.message };
-            }
-        },
-        'claimPlinkoReward': async (bet, multiplier) => {
-            try {
-                const res = await fetch('/api/games/plinko/report', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ bet: bet, multiplier: multiplier })
-                });
-                return await res.json();
-            } catch (e) {
-                return { success: false, message: e.message };
-            }
-        },
-        'updateBalance': (newBalance) => {
-            console.log('Balance update:', newBalance);
-            const els = document.querySelectorAll('[id*="balance"], .balance');
-            els.forEach(el => {
-                if (el.textContent.includes('₦')) {
-                    el.textContent = `₦${newBalance.toLocaleString()}`;
-                }
-            });
-        },
-        'showMessage': (text, type) => alert(`[${type || 'INFO'}] ${text}`),
-        'goBackToDashboard': () => window.location.href = 'index.html'
+const originalReferralOpen = window.Referral?.open || function() {};
+window.Referral = window.Referral || {};
+Referral.open = function() {
+  originalReferralOpen();
+  setTimeout(() => {
+    const dataEl = document.getElementById('referral-data');
+    if (!dataEl || !dataEl.innerHTML.includes('Your Referral Code')) return;
+    const codeMatch = dataEl.innerHTML.match(/<strong>([A-Z0-9]+)<\/strong>/);
+    if (!codeMatch) return;
+    const code = codeMatch[1];
+    if (dataEl.querySelector('.share-referral-btn')) return;
+    const btn = document.createElement('button');
+    btn.className = 'btn-primary';
+    btn.style.marginTop = '15px';
+    btn.innerHTML = '<i class="fas fa-share-alt"></i> Share Referral Link';
+    btn.onclick = () => {
+      const link = `${window.location.origin}₦ref=${code}`;
+      if (navigator.share) {
+        navigator.share({ title: 'FLEXIA', text: `Join FLEXIA! Use my code: ${code}`, url: link });
+      } else {
+        navigator.clipboard.writeText(link).then(() => {
+          if (window.App && App.showMessage) {
+            App.showMessage('Link copied!', 'success');
+          } else {
+            alert('Referral link copied to clipboard!');
+          }
+        });
+      }
     };
-    
-    // Create any missing functions
-    Object.keys(requiredFunctions).forEach(funcName => {
-        if (typeof window[funcName] !== 'function') {
-            window[funcName] = requiredFunctions[funcName];
-            console.log(`Created emergency fallback for: ${funcName}`);
-        }
+    dataEl.appendChild(btn);
+  }, 300);
+};
+</script>
+
+<!-- Main App Script -->
+<script src="script.js"></script>
+
+<!-- === CUSTOM SPIN ENGINE WITH BACKEND SYNC === -->
+<script>
+const customSpinEngine = {
+  segments: [    { label: "₦1000", color: "url(#purpleGrad)", val: 1000 },
+    { label: "TRY AGAIN", color: "url(#darkGrad)", val: 0 },
+    { label: "₦500", color: "url(#purpleGrad)", val: 500 },
+    { label: "₦50", color: "url(#darkGrad)", val: 50 },
+    { label: "₦1000", color: "url(#purpleGrad)", val: 1000 },
+    { label: "₦100", color: "url(#darkGrad)", val: 100 },
+    { label: "₦500", color: "url(#purpleGrad)", val: 500 },
+    { label: "₦200", color: "url(#darkGrad)", val: 200 }
+  ],
+  currentRot: 0,
+  isSpinning: false,
+
+  async checkDailyStatus() {
+    try {
+      const res = await fetch('/api/spin/daily-status', { credentials: 'include' });
+      const data = await res.json();
+      return data.can_spin === true;
+    } catch (e) {
+      console.error('Failed to check spin status:', e);
+      return true; // Allow if offline
+    }
+  },
+
+  async executeSpinOnServer() {
+    try {
+      const res = await fetch('/api/spin/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+      const data = await res.json();
+      if (data.success) {
+        return { success: true, reward: data.reward || 0 };
+      } else {
+        return { success: false, message: data.message || 'Spin not allowed' };
+      }
+    } catch (e) {
+      console.error('Spin execution failed:', e);
+      return { success: false, message: 'Network error' };
+    }
+  },
+
+  setup() {
+    const group = document.getElementById('segments-group');
+    const step = 360 / this.segments.length;
+    this.segments.forEach((seg, i) => {
+      const angle = i * step;
+      const x1 = 150 + 140 * Math.cos(Math.PI * (angle - 90) / 180);
+      const y1 = 150 + 140 * Math.sin(Math.PI * (angle - 90) / 180);
+      const x2 = 150 + 140 * Math.cos(Math.PI * (angle + step - 90) / 180);      const y2 = 150 + 140 * Math.sin(Math.PI * (angle + step - 90) / 180);
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", `M150,150 L${x1},${y1} A140,140 0 0,1 ${x2},${y2} Z`);
+      path.setAttribute("fill", seg.color);
+      path.setAttribute("stroke", "#111");
+      group.appendChild(path);
+      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      text.setAttribute("transform", `rotate(${angle + step/2}, 150, 150)`);
+      text.setAttribute("x", "150"); text.setAttribute("y", "50");
+      text.setAttribute("fill", "white"); text.setAttribute("font-family", "Orbitron");
+      text.setAttribute("font-size", "10"); text.setAttribute("text-anchor", "middle");
+      text.textContent = seg.label;
+      group.appendChild(text);
     });
-    
-    // Initialize main app
-    setTimeout(() => {
-        if (window.App && typeof window.App.init === 'function') {
-            window.App.init();
-        } else {
-            console.error('App not loaded properly');
-            alert('Please refresh the page to load the application.');
+  },
+
+  openModal() {
+    if (window.App && App.showModal) App.showModal('spin-modal');
+    else document.getElementById('spin-modal').classList.remove('hidden');
+  },
+
+  async initSpin() {
+    if (this.isSpinning) return;
+
+    const canSpin = await this.checkDailyStatus();
+    if (!canSpin) {
+      const banner = document.getElementById('custom-result-banner');
+      banner.innerHTML = `<span style="color:#FF3333">You already spun today!</span>`;
+      banner.style.display = 'block';
+      setTimeout(() => banner.style.display = 'none', 3000);
+      return;
+    }
+
+    this.isSpinning = true;
+    const btn = document.getElementById('spin-btn-custom');
+    const wheel = document.getElementById('wheel-svg');
+    const banner = document.getElementById('custom-result-banner');
+    btn.disabled = true;
+    banner.style.display = 'none';
+
+    const fakeWinIdx = Math.floor(Math.random() * this.segments.length);
+    const spinDeg = 1800 + (360 - (fakeWinIdx * (360 / this.segments.length))) % 360;
+    this.currentRot += spinDeg;
+    wheel.style.transform = `rotate(${this.currentRot}deg)`;
+
+    setTimeout(async () => {
+      const result = await this.executeSpinOnServer();
+
+      if (result.success) {
+        if (typeof window.updateBalance === 'function') {          window.updateBalance(result.reward);
         }
-    }, 500);
+        banner.innerHTML = `<span style="color:#00FF00">WON: ₦${result.reward}</span>`;
+      } else {
+        banner.innerHTML = `<span style="color:#FF3333">${result.message}</span>`;
+      }
+
+      banner.style.display = 'block';
+      this.isSpinning = false;
+      btn.disabled = false;
+    }, 5000);
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  customSpinEngine.setup();
+  if (!window.Games) window.Games = {};
+  window.Games.openSpinWheel = () => customSpinEngine.openModal();
+  window.Games.spinWheel = () => customSpinEngine.initSpin();
 });
+</script>
+
+<!-- === MERCHANT CHAT FUNCTION === -->
+<script>
+function openMerchantChat() {
+  window.open('https://chat-3zot.onrender.com', '_blank');
+}
+</script>
+
+<!-- Emergency fallbacks -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const requiredFunctions = {
+    'updateBalance': (newBalance) => {
+      console.log('Balance update:', newBalance);
+      const els = document.querySelectorAll('[id*="balance"], .balance');
+      els.forEach(el => {
+        if (el.textContent.includes('₦')) {
+          el.textContent = `₦${newBalance.toLocaleString()}`;
+        }
+      });
+    },
+    'showMessage': (text, type) => alert(`[${type || 'INFO'}] ${text}`),
+    'goBackToDashboard': () => window.location.href = 'index.html'
+  };
+  Object.keys(requiredFunctions).forEach(funcName => {
+    if (typeof window[funcName] !== 'function') {
+      window[funcName] = requiredFunctions[funcName];
+    }
+  });});
 </script>
 </body>
 </html>
-
