@@ -115,6 +115,8 @@
   display: none;
   background: rgba(0,0,0,0.5);
   border: 1px solid #444;
+  text-align: center;
+  font-size: 1rem;
 }
 </style>
 </head>
@@ -145,7 +147,8 @@
         <input type="password" id="login-password" class="form-input" placeholder="Password" required />
         <i class="fas fa-lock input-icon"></i>
       </div>
-      <button class="btn-primary" onclick="Auth.login()">        <i class="fas fa-sign-in-alt"></i> ENTER VAULT
+      <button class="btn-primary" onclick="Auth.login()">
+        <i class="fas fa-sign-in-alt"></i> ENTER VAULT
       </button>
       <div class="test-login-info">
         <p><strong>Login:</strong> with your login details</p>
@@ -194,7 +197,8 @@
 
 <!-- App Screen (Hidden by Default) -->
 <div id="app-screen" class="screen hidden">
-  <div class="grid-bg"></div>  <header class="app-header">
+  <div class="grid-bg"></div>
+  <header class="app-header">
     <div class="header-content">
       <div class="header-logo">
         <div class="header-logo-icon">
@@ -243,7 +247,8 @@
         </div>
         <div class="activity-card" onclick="window.location.href='coinflip.html'">
           <div class="card-icon coin"><i class="fas fa-coins"></i></div>
-          <div class="card-title">Coin Flip</div>          <div class="card-subtitle">Bet & Double</div>
+          <div class="card-title">Coin Flip</div>
+          <div class="card-subtitle">Bet & Double</div>
           <div class="card-badge bet">Min: ₦100</div>
         </div>
         <div class="activity-card" onclick="window.location.href='plinko.html'">
@@ -287,12 +292,13 @@
           <div class="card-subtitle">View & Download</div>
           <div class="card-badge free">NEW</div>
         </div>
-        <div class="activity-card" onclick="window.location.href='receipt.html₦history=true'">
+        <div class="activity-card" onclick="window.location.href='receipt.html?history=true'">
           <div class="card-icon play"><i class="fas fa-history"></i></div>
           <div class="card-title">Withdraw History</div>
           <div class="card-subtitle">Past Transactions</div>
           <div class="card-badge free">NEW</div>
-        </div>      </div>
+        </div>
+      </div>
     </section>
   </main>
   <nav class="bottom-nav">
@@ -341,7 +347,8 @@
         </select>
       </div>
       <div class="input-group">
-        <input type="text" id="account-number" class="form-input" placeholder="Account Number" required />      </div>
+        <input type="text" id="account-number" class="form-input" placeholder="Account Number" required />
+      </div>
       <div class="input-group">
         <input type="text" id="account-name-manual" class="form-input" placeholder="Account Name (Manual)" required />
       </div>
@@ -390,7 +397,8 @@
       <button class="btn-close" onclick="App.closeModal('settings-modal')">CLOSE</button>
     </div>
   </div>
-  <div id="tiktok-modal" class="modal hidden">    <div class="modal-content">
+  <div id="tiktok-modal" class="modal hidden">
+    <div class="modal-content">
       <div class="modal-logo">
         <div class="modal-logo-icon">
           <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 40px; height: 40px;" />
@@ -439,7 +447,8 @@
           <circle cx="150" cy="150" r="12" fill="#fff" />
         </svg>
       </div>
-      <button id="spin-btn-custom" onclick="customSpinEngine.initSpin()">INITIATE SPIN</button>      <div id="custom-result-banner" class="result-banner"></div>
+      <button id="spin-btn-custom" onclick="customSpinEngine.initSpin()">INITIATE SPIN</button>
+      <div id="custom-result-banner" class="result-banner"></div>
       <button class="btn-close" onclick="App.closeModal('spin-modal')" style="margin-top: 20px; opacity: 0.5;">CLOSE</button>
     </div>
   </div>
@@ -464,7 +473,7 @@ Referral.open = function() {
     btn.style.marginTop = '15px';
     btn.innerHTML = '<i class="fas fa-share-alt"></i> Share Referral Link';
     btn.onclick = () => {
-      const link = `${window.location.origin}₦ref=${code}`;
+      const link = `${window.location.origin}?ref=${code}`;
       if (navigator.share) {
         navigator.share({ title: 'FLEXIA', text: `Join FLEXIA! Use my code: ${code}`, url: link });
       } else {
@@ -485,10 +494,11 @@ Referral.open = function() {
 <!-- Main App Script -->
 <script src="script.js"></script>
 
-<!-- === CUSTOM SPIN ENGINE WITH BACKEND SYNC === -->
+<!-- === CUSTOM SPIN ENGINE WITH BACKEND SYNC - FIXED === -->
 <script>
 const customSpinEngine = {
-  segments: [    { label: "₦1000", color: "url(#purpleGrad)", val: 1000 },
+  segments: [
+    { label: "₦1000", color: "url(#purpleGrad)", val: 1000 },
     { label: "TRY AGAIN", color: "url(#darkGrad)", val: 0 },
     { label: "₦500", color: "url(#purpleGrad)", val: 500 },
     { label: "₦50", color: "url(#darkGrad)", val: 50 },
@@ -502,12 +512,25 @@ const customSpinEngine = {
 
   async checkDailyStatus() {
     try {
-      const res = await fetch('/api/spin/daily-status', { credentials: 'include' });
+      const res = await fetch('/api/spin/daily-status', { 
+        credentials: 'include',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
+      
+      if (!res.ok) {
+        console.log('Spin status check failed:', res.status);
+        // If endpoint doesn't exist yet, allow spin
+        return true;
+      }
+      
       const data = await res.json();
+      console.log('Spin status response:', data);
       return data.can_spin === true;
     } catch (e) {
-      console.error('Failed to check spin status:', e);
-      return true; // Allow if offline
+      console.log('Failed to check spin status (network error):', e);
+      return true; // Allow if offline or endpoint not ready
     }
   },
 
@@ -515,96 +538,210 @@ const customSpinEngine = {
     try {
       const res = await fetch('/api/spin/execute', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        },
+        credentials: 'include',
+        body: JSON.stringify({})
       });
+      
       const data = await res.json();
-      if (data.success) {
-        return { success: true, reward: data.reward || 0 };
-      } else {
-        return { success: false, message: data.message || 'Spin not allowed' };
-      }
+      console.log('Spin execute response:', data);
+      return data;
+      
     } catch (e) {
       console.error('Spin execution failed:', e);
-      return { success: false, message: 'Network error' };
+      return { 
+        success: false, 
+        message: 'Network error. Please try again.',
+        reward: 0 
+      };
     }
   },
 
   setup() {
     const group = document.getElementById('segments-group');
+    if (!group) {
+      console.error('Segments group not found');
+      return;
+    }
+    
+    // Clear existing segments
+    group.innerHTML = '';
+    
     const step = 360 / this.segments.length;
     this.segments.forEach((seg, i) => {
       const angle = i * step;
       const x1 = 150 + 140 * Math.cos(Math.PI * (angle - 90) / 180);
       const y1 = 150 + 140 * Math.sin(Math.PI * (angle - 90) / 180);
-      const x2 = 150 + 140 * Math.cos(Math.PI * (angle + step - 90) / 180);      const y2 = 150 + 140 * Math.sin(Math.PI * (angle + step - 90) / 180);
+      const x2 = 150 + 140 * Math.cos(Math.PI * (angle + step - 90) / 180);
+      const y2 = 150 + 140 * Math.sin(Math.PI * (angle + step - 90) / 180);
+      
       const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
       path.setAttribute("d", `M150,150 L${x1},${y1} A140,140 0 0,1 ${x2},${y2} Z`);
       path.setAttribute("fill", seg.color);
       path.setAttribute("stroke", "#111");
       group.appendChild(path);
+      
       const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
       text.setAttribute("transform", `rotate(${angle + step/2}, 150, 150)`);
-      text.setAttribute("x", "150"); text.setAttribute("y", "50");
-      text.setAttribute("fill", "white"); text.setAttribute("font-family", "Orbitron");
-      text.setAttribute("font-size", "10"); text.setAttribute("text-anchor", "middle");
+      text.setAttribute("x", "150");
+      text.setAttribute("y", "50");
+      text.setAttribute("fill", "white");
+      text.setAttribute("font-family", "Orbitron");
+      text.setAttribute("font-size", "10");
+      text.setAttribute("text-anchor", "middle");
       text.textContent = seg.label;
       group.appendChild(text);
     });
+    
+    console.log('Spin wheel setup complete');
   },
 
   openModal() {
-    if (window.App && App.showModal) App.showModal('spin-modal');
-    else document.getElementById('spin-modal').classList.remove('hidden');
+    if (window.App && App.showModal) {
+      App.showModal('spin-modal');
+    } else {
+      document.getElementById('spin-modal').classList.remove('hidden');
+    }
+    
+    // Reset wheel position
+    const wheel = document.getElementById('wheel-svg');
+    if (wheel) {
+      wheel.style.transform = 'rotate(0deg)';
+      this.currentRot = 0;
+    }
+    
+    // Reset result banner
+    const banner = document.getElementById('custom-result-banner');
+    if (banner) {
+      banner.style.display = 'none';
+      banner.innerHTML = '';
+    }
+    
+    // Enable spin button
+    const btn = document.getElementById('spin-btn-custom');
+    if (btn) {
+      btn.disabled = false;
+    }
+    
+    this.isSpinning = false;
+    
+    console.log('Spin modal opened - ready to spin');
   },
 
   async initSpin() {
-    if (this.isSpinning) return;
-
-    const canSpin = await this.checkDailyStatus();
-    if (!canSpin) {
-      const banner = document.getElementById('custom-result-banner');
-      banner.innerHTML = `<span style="color:#FF3333">You already spun today!</span>`;
-      banner.style.display = 'block';
-      setTimeout(() => banner.style.display = 'none', 3000);
+    if (this.isSpinning) {
+      console.log('Already spinning, ignoring request');
       return;
     }
 
-    this.isSpinning = true;
+    console.log('Starting spin process...');
+    
     const btn = document.getElementById('spin-btn-custom');
     const wheel = document.getElementById('wheel-svg');
     const banner = document.getElementById('custom-result-banner');
+    
+    if (!btn || !wheel || !banner) {
+      console.error('Required elements not found');
+      return;
+    }
+    
+    // Show loading state
+    this.isSpinning = true;
     btn.disabled = true;
     banner.style.display = 'none';
-
-    const fakeWinIdx = Math.floor(Math.random() * this.segments.length);
-    const spinDeg = 1800 + (360 - (fakeWinIdx * (360 / this.segments.length))) % 360;
-    this.currentRot += spinDeg;
-    wheel.style.transform = `rotate(${this.currentRot}deg)`;
-
-    setTimeout(async () => {
-      const result = await this.executeSpinOnServer();
-
-      if (result.success) {
-        if (typeof window.updateBalance === 'function') {          window.updateBalance(result.reward);
-        }
-        banner.innerHTML = `<span style="color:#00FF00">WON: ₦${result.reward}</span>`;
-      } else {
-        banner.innerHTML = `<span style="color:#FF3333">${result.message}</span>`;
+    banner.innerHTML = '';
+    
+    try {
+      // Check if can spin today
+      const canSpin = await this.checkDailyStatus();
+      console.log('Can spin today?', canSpin);
+      
+      if (!canSpin) {
+        banner.innerHTML = `<span style="color:#FF3333">⚠️ You already spun today! Come back tomorrow.</span>`;
+        banner.style.display = 'block';
+        this.isSpinning = false;
+        btn.disabled = false;
+        return;
       }
-
+      
+      // Start wheel animation
+      const fakeWinIdx = Math.floor(Math.random() * this.segments.length);
+      const spinDeg = 1800 + (360 - (fakeWinIdx * (360 / this.segments.length))) % 360;
+      this.currentRot += spinDeg;
+      wheel.style.transform = `rotate(${this.currentRot}deg)`;
+      
+      console.log('Wheel spinning... waiting for server response');
+      
+      // Execute spin on server after animation delay
+      setTimeout(async () => {
+        try {
+          const result = await this.executeSpinOnServer();
+          console.log('Server spin result:', result);
+          
+          if (result.success) {
+            // Update balance display
+            const balanceEl = document.getElementById('balance-display');
+            if (balanceEl) {
+              const currentText = balanceEl.textContent.replace(/,/g, '');
+              const currentBalance = parseFloat(currentText) || 0;
+              const newBalance = currentBalance + result.reward;
+              balanceEl.textContent = newBalance.toLocaleString('en-US', { minimumFractionDigits: 2 });
+            }
+            
+            // Update global balance if function exists
+            if (typeof window.updateBalance === 'function') {
+              window.updateBalance(result.reward);
+            }
+            
+            banner.innerHTML = `<span style="color:#00FF00">🎉 CONGRATULATIONS! WON: ₦${result.reward.toLocaleString()}</span>`;
+          } else {
+            banner.innerHTML = `<span style="color:#FF3333">${result.message || 'Spin failed. Try again.'}</span>`;
+          }
+          
+        } catch (error) {
+          console.error('Error during spin execution:', error);
+          banner.innerHTML = `<span style="color:#FFAA00">⚠️ Connection issue. Please try again.</span>`;
+        }
+        
+        banner.style.display = 'block';
+        this.isSpinning = false;
+        btn.disabled = false;
+        
+      }, 3000); // Wait 3 seconds for wheel animation
+      
+    } catch (error) {
+      console.error('Spin initialization error:', error);
+      banner.innerHTML = `<span style="color:#FF3333">⚠️ Error initializing spin. Please try again.</span>`;
       banner.style.display = 'block';
       this.isSpinning = false;
       btn.disabled = false;
-    }, 5000);
+    }
   }
 };
 
+// Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
-  customSpinEngine.setup();
+  console.log('Initializing spin engine...');
+  
+  // Setup wheel with a small delay to ensure DOM is ready
+  setTimeout(() => {
+    try {
+      customSpinEngine.setup();
+      console.log('Spin wheel SVG setup complete');
+    } catch (error) {
+      console.error('Error setting up spin wheel:', error);
+    }
+  }, 500);
+  
+  // Expose to global scope for other buttons
   if (!window.Games) window.Games = {};
   window.Games.openSpinWheel = () => customSpinEngine.openModal();
   window.Games.spinWheel = () => customSpinEngine.initSpin();
+  
+  console.log('Spin engine initialized and ready');
 });
 </script>
 
@@ -635,7 +772,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof window[funcName] !== 'function') {
       window[funcName] = requiredFunctions[funcName];
     }
-  });});
+  });
+});
 </script>
 </body>
 </html>
