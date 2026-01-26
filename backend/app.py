@@ -1,4 +1,4 @@
-# backend/app.py - ULTIMATE VERSION 12.6 - ALL FIXES APPLIED - THREAD SAFE & SSL FIXED
+# backend/app.py - ULTIMATE VERSION 12.7 - ALL FIXES APPLIED WITH GAME COOLDOWNS
 # FLEXIA Platform - PRODUCTION READY
 
 import os
@@ -40,6 +40,24 @@ class Config:
     PLINKO_MIN_BET = 100
     SESSION_DURATION_HOURS = 24
     DEFAULT_WITHDRAWAL_DAYS = [7, 14, 25, 30]
+    
+    # Game cooldown periods in seconds
+    GAME_COOLDOWNS = {
+        'SNAKE': 600,     # 10 minutes
+        'COINFLIP': 300,  # 5 minutes
+        'PLINKO': 300,    # 5 minutes
+        'SPIN': 86400,    # 24 hours
+        'TIKTOK': 86400   # 24 hours
+    }
+    
+    # Daily game limits
+    GAME_DAILY_LIMITS = {
+        'snake': 5,
+        'coinflip': 2,
+        'plinko': 2,
+        'spin': 1,
+        'tiktok': 1
+    }
     
     # Security settings
     SESSION_COOKIE_SECURE = os.environ.get('ENV') == 'production'
@@ -485,7 +503,8 @@ def add_missing_columns():
         # Check and add missing columns for PostgreSQL
         columns_to_add = [
             'last_achievement_check', 'last_game_timestamp', 'claimed_achievements',
-            'total_referrals', 'total_games_played', 'total_withdrawals', 'total_transactions'
+            'total_referrals', 'total_games_played', 'total_withdrawals', 'total_transactions',
+            'last_snake_play', 'last_coinflip_play', 'last_plinko_play', 'last_spin_play', 'last_tiktok_play'
         ]
         for column in columns_to_add:
             cursor.execute(f"""
@@ -575,7 +594,13 @@ def init_db():
             total_referrals INTEGER DEFAULT 0,
             total_games_played INTEGER DEFAULT 0,
             total_withdrawals INTEGER DEFAULT 0,
-            total_transactions INTEGER DEFAULT 0
+            total_transactions INTEGER DEFAULT 0,
+            -- GAME COOLDOWN COLUMNS
+            last_snake_play TEXT,
+            last_coinflip_play TEXT,
+            last_plinko_play TEXT,
+            last_spin_play TEXT,
+            last_tiktok_play TEXT
         )
         ''')
 
@@ -726,16 +751,20 @@ def init_db():
                 created_at, last_login, game_stats, admin_password_changed,
                 withdrawal_pin, contact, profile_picture, ui_theme, 
                 last_game_timestamp, last_achievement_check, claimed_achievements,
-                total_referrals, total_games_played, total_withdrawals, total_transactions
+                total_referrals, total_games_played, total_withdrawals, total_transactions,
+                last_snake_play, last_coinflip_play, last_plinko_play, last_spin_play, last_tiktok_play
             ) VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
             )
             ''', (
                 "flexiaadmin", admin_pass, 500000.00, "ADM0001", True,
                 datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
                 game_stats, False, pin_hash, "", "", "light", 
                 datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
-                '[]', 0, 0, 0, 0
+                '[]', 0, 0, 0, 0,
+                datetime.utcnow().isoformat(), datetime.utcnow().isoformat(), 
+                datetime.utcnow().isoformat(), datetime.utcnow().isoformat(), 
+                datetime.utcnow().isoformat()
             ))
             app.logger.warning("\n?? FLEXIA ADMIN ACCOUNT CREATED ??")
             app.logger.warning("Username: flexiaadmin")
@@ -819,43 +848,89 @@ def update_user_balance(user_id, amount_change):
             cursor.close()
         return_db_connection(conn)
 
+# ======================= GAME COOLDOWN SYSTEM =======================
 def check_game_cooldown(user_id, game_type):
-    """Check if user is in cooldown for a specific game"""
+    """Check if user is in cooldown for a specific game - ENHANCED WITH COOLDOWNS"""
     conn = get_db()
     cursor = None
     try:
         cursor = conn.cursor()
-        cursor.execute('SELECT last_game_timestamp FROM users WHERE id = %s', (user_id,))
+        
+        # Map game_type to column name
+        column_map = {
+            'SNAKE': 'last_snake_play',
+            'COINFLIP': 'last_coinflip_play',
+            'PLINKO': 'last_plinko_play',
+            'SPIN': 'last_spin_play',
+            'TIKTOK': 'last_tiktok_play'
+        }
+        
+        column_name = column_map.get(game_type)
+        if not column_name:
+            return True  # No cooldown for unknown game types
+        
+        # Get the last play timestamp for this game
+        cursor.execute(f'SELECT {column_name} FROM users WHERE id = %s', (user_id,))
         row = cursor.fetchone()
-        if row and row[0]:
-            try:
-                last_game = datetime.fromisoformat(row[0])
-                now = datetime.utcnow()
-                # 1 second cooldown between games
-                if (now - last_game).total_seconds() < 1:
-                    return False
-            except:
-                pass
-        return True
+        if not row or not row[0]:
+            return True  # No previous play, can play
+        
+        try:
+            last_play = datetime.fromisoformat(row[0])
+            now = datetime.utcnow()
+            cooldown_seconds = CONFIG.GAME_COOLDOWNS.get(game_type, 0)
+            
+            time_since_last = (now - last_play).total_seconds()
+            
+            if time_since_last < cooldown_seconds:
+                remaining = int(cooldown_seconds - time_since_last)
+                return {
+                    "can_play": False,
+                    "remaining_seconds": remaining,
+                    "message": f"Please wait {remaining // 60} minutes {(remaining % 60)} seconds before playing {game_type.lower()} again"
+                }
+            else:
+                return {"can_play": True}
+                
+        except Exception as e:
+            app.logger.error(f"Error parsing timestamp for {game_type}: {e}")
+            return {"can_play": True}
+            
     except Exception as e:
-        app.logger.error(f"Cooldown check error: {e}")
-        return True
+        app.logger.error(f"Cooldown check error for {game_type}: {e}")
+        return {"can_play": True}  # Allow on error
     finally:
         if cursor:
             cursor.close()
         return_db_connection(conn)
 
-def update_last_game_timestamp(user_id):
-    """Update user's last game timestamp"""
+def update_game_cooldown(user_id, game_type):
+    """Update the last play timestamp for a specific game"""
     conn = get_db()
     cursor = None
+    
     try:
         cursor = conn.cursor()
-        cursor.execute('UPDATE users SET last_game_timestamp = %s WHERE id = %s',
-                       (datetime.utcnow().isoformat(), user_id))
+        
+        # Map game_type to column name
+        column_map = {
+            'SNAKE': 'last_snake_play',
+            'COINFLIP': 'last_coinflip_play',
+            'PLINKO': 'last_plinko_play',
+            'SPIN': 'last_spin_play',
+            'TIKTOK': 'last_tiktok_play'
+        }
+        
+        column_name = column_map.get(game_type)
+        if not column_name:
+            return
+        
+        cursor.execute(f'UPDATE users SET {column_name} = %s WHERE id = %s',
+                      (datetime.utcnow().isoformat(), user_id))
         conn.commit()
+        
     except Exception as e:
-        app.logger.error(f"Update last game timestamp error: {e}")
+        app.logger.error(f"Update cooldown error for {game_type}: {e}")
         conn.rollback()
     finally:
         if cursor:
@@ -863,17 +938,9 @@ def update_last_game_timestamp(user_id):
         return_db_connection(conn)
 
 def can_play_today(user_id, game_type, max_plays=None):
-    """Check if user can play a game today - UPDATED LIMITS"""
+    """Check if user can play a game today"""
     if max_plays is None:
-        # Set new daily limits
-        limits = {
-            'snake': 5,      # Reduced from 20 to 5
-            'coinflip': 2,   # Reduced from 50 to 2
-            'plinko': 2,     # Reduced from 50 to 2
-            'spin': 1,
-            'tiktok': 1
-        }
-        max_plays = limits.get(game_type, 10)  # Default 10
+        max_plays = CONFIG.GAME_DAILY_LIMITS.get(game_type, 10)
     
     conn = get_db()
     cursor = None
@@ -1282,7 +1349,7 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "uptime": get_uptime(),
             "database": db_status,
-            "version": "12.6",
+            "version": "12.7",
             "stats": {
                 "total_users": user_count,
                 "pending_withdrawals": pending_withdrawals
@@ -1303,7 +1370,7 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "database": f"error: {str(e)}",
             "uptime": get_uptime(),
-            "version": "12.6"
+            "version": "12.7"
         }), 503
 
 # ======================= BACKUP ENDPOINTS =======================
@@ -1424,6 +1491,14 @@ def spin_execute():
                 "message": "You already spun today"
             }), 400
         
+        # Check cooldown
+        cooldown_check = check_game_cooldown(user['id'], 'SPIN')
+        if isinstance(cooldown_check, dict) and not cooldown_check.get("can_play", True):
+            return jsonify({
+                "success": False,
+                "message": cooldown_check.get("message", "Please wait before spinning again")
+            }), 429
+        
         # Define possible rewards (matching frontend segments: 1000, 0, 500, 50, 1000, 100, 500, 200)
         # Adjusted weights to make 1000 less common
         possible_rewards = [1000, 0, 500, 50, 1000, 100, 500, 200]
@@ -1437,11 +1512,11 @@ def spin_execute():
         if new_balance is None:
             return jsonify({"success": False, "message": "Failed to update balance"}), 500
         
+        # Update game cooldown
+        update_game_cooldown(user['id'], 'SPIN')
+        
         # Record game play
         record_game_play(user['id'], 'spin')
-        
-        # Update last game timestamp
-        update_last_game_timestamp(user['id'])
         
         # Create transaction
         tx_id = f"SPIN-{secrets.token_hex(8)}"
@@ -1535,17 +1610,21 @@ def register():
             created_at, last_login, game_stats, contact, profile_picture, ui_theme,
             admin_password_changed, withdrawal_pin, withdrawal_restricted, withdrawal_limit, 
             points, claimed_bonuses, last_game_timestamp, last_achievement_check,
-            claimed_achievements, total_referrals, total_games_played, total_withdrawals, total_transactions
+            claimed_achievements, total_referrals, total_games_played, total_withdrawals, total_transactions,
+            last_snake_play, last_coinflip_play, last_plinko_play, last_spin_play, last_tiktok_play
         ) VALUES (
             %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
         )
         ''', (
             username, generate_password_hash(password), 0.00, user_referral_code, referral_code or None, False,
             datetime.utcnow().isoformat(), datetime.utcnow().isoformat(), game_stats, contact or "", "", "light",
             False, None, False, 0.00, 0, 0, 
             datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
-            '[]', 0, 0, 0, 0
+            '[]', 0, 0, 0, 0,
+            datetime.utcnow().isoformat(), datetime.utcnow().isoformat(), 
+            datetime.utcnow().isoformat(), datetime.utcnow().isoformat(), 
+            datetime.utcnow().isoformat()
         ))
         
         cursor.execute("SELECT LASTVAL()")
@@ -1910,23 +1989,14 @@ def verify_withdrawal_pin():
 @app.route('/api/games/limit-check', methods=['GET'])
 @require_auth
 def check_game_limits():
-    """Check user's daily game limits - UPDATED"""
+    """Check user's daily game limits"""
     user = get_current_user()
     game_type = request.args.get('game', '')
     
-    # Updated limits
-    limits = {
-        'snake': 5,      # Changed to 5
-        'coinflip': 2,   # Changed to 2
-        'plinko': 2,     # Changed to 2
-        'spin': 1,
-        'tiktok': 1
-    }
-    
-    if game_type not in limits:
+    if game_type not in CONFIG.GAME_DAILY_LIMITS:
         return jsonify({"success": True, "can_play": True, "remaining": 999})
     
-    max_plays = limits[game_type]
+    max_plays = CONFIG.GAME_DAILY_LIMITS[game_type]
     today = datetime.utcnow().date()
     
     conn = get_db()
@@ -1953,6 +2023,28 @@ def check_game_limits():
             cursor.close()
         return_db_connection(conn)
 
+@app.route('/api/games/cooldown-check', methods=['GET'])
+@require_auth
+def check_game_cooldown_endpoint():
+    """Check cooldown status for all games"""
+    user = get_current_user()
+    
+    games = ['SNAKE', 'COINFLIP', 'PLINKO', 'SPIN', 'TIKTOK']
+    cooldown_status = {}
+    
+    for game in games:
+        result = check_game_cooldown(user['id'], game)
+        if isinstance(result, dict):
+            cooldown_status[game.lower()] = result
+        else:
+            cooldown_status[game.lower()] = {"can_play": True}
+    
+    return jsonify({
+        "success": True,
+        "cooldowns": cooldown_status,
+        "cooldown_periods": CONFIG.GAME_COOLDOWNS
+    })
+
 @app.route('/api/games/snake/report', methods=['POST'])
 @require_auth
 def report_snake():
@@ -1973,12 +2065,16 @@ def report_snake():
         return jsonify({"success": False, "message": "Invalid apple count (1-100)"}), 400
     
     # Check game cooldown
-    if not check_game_cooldown(user['id'], 'SNAKE'):
-        return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
+    cooldown_check = check_game_cooldown(user['id'], 'SNAKE')
+    if isinstance(cooldown_check, dict) and not cooldown_check.get("can_play", True):
+        return jsonify({
+            "success": False,
+            "message": cooldown_check.get("message", "Please wait before playing snake again")
+        }), 429
     
-    # Check daily plays - UPDATED: 5 times per day
-    if not can_play_today(user['id'], 'snake', max_plays=5):
-        return jsonify({"success": False, "message": "Max 5 snake plays per day"}), 403
+    # Check daily plays
+    if not can_play_today(user['id'], 'snake', max_plays=CONFIG.GAME_DAILY_LIMITS['snake']):
+        return jsonify({"success": False, "message": f"Max {CONFIG.GAME_DAILY_LIMITS['snake']} snake plays per day"}), 403
     
     # Check duplicate claim
     data_hash = create_transaction_hash(user['id'], 'SNAKE', {'apples': apples})
@@ -2010,8 +2106,8 @@ def report_snake():
         cursor.execute('UPDATE users SET game_stats = %s WHERE id = %s',
                       (json.dumps(game_stats), user['id']))
         
-        # Update last game timestamp
-        update_last_game_timestamp(user['id'])
+        # Update game cooldown
+        update_game_cooldown(user['id'], 'SNAKE')
         
         # Record game play
         record_game_play(user['id'], 'snake')
@@ -2070,12 +2166,16 @@ def report_coinflip():
         return jsonify({"success": False, "message": f"Invalid bet (min: {CONFIG.COIN_FLIP_MIN_BET}, max: 50000)"}), 400
     
     # Check game cooldown
-    if not check_game_cooldown(user['id'], 'COINFLIP'):
-        return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
+    cooldown_check = check_game_cooldown(user['id'], 'COINFLIP')
+    if isinstance(cooldown_check, dict) and not cooldown_check.get("can_play", True):
+        return jsonify({
+            "success": False,
+            "message": cooldown_check.get("message", "Please wait before playing coinflip again")
+        }), 429
     
-    # Check daily plays - UPDATED: 2 times per day
-    if not can_play_today(user['id'], 'coinflip', max_plays=2):
-        return jsonify({"success": False, "message": "Max 2 coin flips per day"}), 403
+    # Check daily plays
+    if not can_play_today(user['id'], 'coinflip', max_plays=CONFIG.GAME_DAILY_LIMITS['coinflip']):
+        return jsonify({"success": False, "message": f"Max {CONFIG.GAME_DAILY_LIMITS['coinflip']} coin flips per day"}), 403
     
     # Check duplicate claim
     data_hash = create_transaction_hash(user['id'], 'COINFLIP', {'bet': bet, 'won': won})
@@ -2110,8 +2210,8 @@ def report_coinflip():
         cursor.execute('UPDATE users SET game_stats = %s WHERE id = %s',
                        (json.dumps(game_stats), user['id']))
         
-        # Update last game timestamp
-        update_last_game_timestamp(user['id'])
+        # Update game cooldown
+        update_game_cooldown(user['id'], 'COINFLIP')
         
         # Record game play
         record_game_play(user['id'], 'coinflip')
@@ -2173,12 +2273,16 @@ def report_plinko():
         return jsonify({"success": False, "message": "Invalid multiplier"}), 400
     
     # Check game cooldown
-    if not check_game_cooldown(user['id'], 'PLINKO'):
-        return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
+    cooldown_check = check_game_cooldown(user['id'], 'PLINKO')
+    if isinstance(cooldown_check, dict) and not cooldown_check.get("can_play", True):
+        return jsonify({
+            "success": False,
+            "message": cooldown_check.get("message", "Please wait before playing plinko again")
+        }), 429
     
-    # Check daily plays - UPDATED: 2 times per day
-    if not can_play_today(user['id'], 'plinko', max_plays=2):
-        return jsonify({"success": False, "message": "Max 2 plinko plays per day"}), 403
+    # Check daily plays
+    if not can_play_today(user['id'], 'plinko', max_plays=CONFIG.GAME_DAILY_LIMITS['plinko']):
+        return jsonify({"success": False, "message": f"Max {CONFIG.GAME_DAILY_LIMITS['plinko']} plinko plays per day"}), 403
     
     # Check duplicate claim
     data_hash = create_transaction_hash(user['id'], 'PLINKO', {'bet': bet, 'multiplier': multiplier})
@@ -2213,8 +2317,8 @@ def report_plinko():
         cursor.execute('UPDATE users SET game_stats = %s WHERE id = %s',
                        (json.dumps(game_stats), user['id']))
         
-        # Update last game timestamp
-        update_last_game_timestamp(user['id'])
+        # Update game cooldown
+        update_game_cooldown(user['id'], 'PLINKO')
         
         # Record game play
         record_game_play(user['id'], 'plinko')
@@ -2274,11 +2378,15 @@ def report_spin():
         return jsonify({"success": False, "message": "Invalid spin reward"}), 400
     
     # Check game cooldown
-    if not check_game_cooldown(user['id'], 'SPIN'):
-        return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
+    cooldown_check = check_game_cooldown(user['id'], 'SPIN')
+    if isinstance(cooldown_check, dict) and not cooldown_check.get("can_play", True):
+        return jsonify({
+            "success": False,
+            "message": cooldown_check.get("message", "Please wait before spinning again")
+        }), 429
     
     # Check daily plays
-    if not can_play_today(user['id'], 'spin', max_plays=1):
+    if not can_play_today(user['id'], 'spin', max_plays=CONFIG.GAME_DAILY_LIMITS['spin']):
         return jsonify({"success": False, "message": "One spin per day only"}), 403
     
     # Check duplicate claim
@@ -2296,8 +2404,8 @@ def report_spin():
         if new_balance is None:
             return jsonify({"success": False, "message": "Failed to update balance"}), 500
         
-        # Update last game timestamp
-        update_last_game_timestamp(user['id'])
+        # Update game cooldown
+        update_game_cooldown(user['id'], 'SPIN')
         
         # Record game play
         record_game_play(user['id'], 'spin')
@@ -2566,12 +2674,23 @@ def follow_tiktok_daily():
         if not task_row:
             return jsonify({"success": False, "message": "No task for today"}), 404
         
+        # Check game cooldown
+        cooldown_check = check_game_cooldown(user['id'], 'TIKTOK')
+        if isinstance(cooldown_check, dict) and not cooldown_check.get("can_play", True):
+            return jsonify({
+                "success": False,
+                "message": cooldown_check.get("message", "Please wait before claiming TikTok reward again")
+            }), 429
+        
         reward = float(task_row[0]) if task_row[0] else CONFIG.TIKTOK_REWARD
         
         # Use atomic balance update
         new_balance = update_user_balance(user['id'], reward)
         if new_balance is None:
             return jsonify({"success": False, "message": "Failed to update balance"}), 500
+        
+        # Update game cooldown
+        update_game_cooldown(user['id'], 'TIKTOK')
         
         tx_id = f"TIKTOK-{secrets.token_hex(8)}"
         cursor.execute('''
@@ -3909,7 +4028,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug = os.getenv('ENV') != 'production'
     
-    app.logger.info(f"Starting Flexia Platform ULTIMATE v12.6 on port {port} (debug: {debug})")
+    app.logger.info(f"Starting Flexia Platform ULTIMATE v12.7 on port {port} (debug: {debug})")
     app.logger.info(f"Frontend directory: {CONFIG.FRONTEND_DIR}")
     app.logger.info(f"Secret key set: {'Yes' if CONFIG.SECRET_KEY else 'No'}")
     app.logger.info(f"Database: PostgreSQL (DATABASE_URL required)")
@@ -3919,7 +4038,8 @@ if __name__ == '__main__':
     app.logger.info(f"Automatic backups: Enabled (daily at 2 AM UTC)")
     app.logger.info(f"ALL FIXES APPLIED:")
     app.logger.info(f"   • SSL ERROR FIXED: Fixed 'SSL SYSCALL error: EOF detected' in background tasks")
-    app.logger.info(f"   • GAME LIMITS UPDATED: Snake=5/day, CoinFlip=2/day, Plinko=2/day")
+    app.logger.info(f"   • GAME COOLDOWNS ADDED: Snake=10min, CoinFlip=5min, Plinko=5min, Spin=24h, TikTok=24h")
+    app.logger.info(f"   • GAME LIMITS UPDATED: Snake=5/day, CoinFlip=2/day, Plinko=2/day, Spin=1/day, TikTok=1/day")
     app.logger.info(f"   • Connection timeout parameters added (10s)")
     app.logger.info(f"   • Health check frequency reduced (5 minutes)")
     app.logger.info(f"   • Thread-safe connection pool monitoring")
@@ -3927,11 +4047,12 @@ if __name__ == '__main__':
     app.logger.info(f"   • Atomic balance updates")
     app.logger.info(f"   • Fixed duplicate claim prevention")
     app.logger.info(f"   • Removed automatic achievement granting")
-    app.logger.info(f"   • Added game cooldown checks")
+    app.logger.info(f"   • Added game cooldown checks with separate timestamps per game")
     app.logger.info(f"   • Added manual achievement claim endpoint")
     app.logger.info(f"   • ACHIEVEMENT FIX: One-time rewards only")
     app.logger.info(f"   • SPIN WHEEL: Daily spin with proper validation")
-    app.logger.info(f"   • VERSION 12.6: Ultimate production-ready version with SSL fixes")
+    app.logger.info(f"   • VERSION 12.7: Ultimate production-ready version with GAME COOLDOWNS")
     app.logger.info(f"   • THREAD-SAFE: No more SSL errors from background tasks")
+    app.logger.info(f"   • NEW FEATURE: Cooldown check endpoint at /api/games/cooldown-check")
     
     app.run(host='0.0.0.0', port=port, debug=debug)
