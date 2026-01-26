@@ -194,10 +194,6 @@
             cursor: not-allowed;
         }
         
-        .drop-btn#drop-all-btn {
-            background: linear-gradient(45deg, #FF0055, #FF8800);
-        }
-        
         /* Main Game Area */
         .main-game {
             flex: 1;
@@ -454,7 +450,6 @@
             .bet-input-container { order: 1; width: 100%; }
             .bet-input { width: 100%; max-width: 120px; margin: 0 auto; }
             .drop-btn { order: 2; flex: 1; min-width: 0; padding: 10px; }
-            .drop-btn#drop-all-btn { order: 3; flex: 1; }
             .plinko-board { height: 300px; min-height: 300px; margin-bottom: 10px; }
             .multiplier-row { gap: 3px; padding: 0; }
             .multiplier-slot { font-size: 0.8rem; padding: 5px; min-width: 0; }
@@ -517,11 +512,8 @@
             <span class="currency-symbol">₦</span>
             <input type="number" class="bet-input" id="bet-amount" value="500" min="100" max="50000" step="100">
         </div>
-        <button class="drop-btn" id="drop-btn" onclick="addBallToQueue()">
-            <i class="fas fa-plus-circle"></i> ADD BALL
-        </button>
-        <button class="drop-btn" id="drop-all-btn" onclick="dropAllBalls()">
-            <i class="fas fa-play"></i> DROP ALL
+        <button class="drop-btn" id="drop-btn" onclick="dropSingleBall()">
+            <i class="fas fa-play"></i> DROP BALL
         </button>
     </div>
 
@@ -543,7 +535,7 @@
         </div>
         
         <div class="win-display" id="win-display">
-            <div class="win-label">TOTAL WIN</div>
+            <div class="win-label">WIN</div>
             <div class="win-amount" id="win-amount">₦0</div>
             <div class="win-multiplier" id="win-multiplier">×0.0</div>
         </div>
@@ -579,11 +571,8 @@
         let balls = [];
         let pegs = [];
         let animations = [];
-        let queuedBalls = 0;
-        let isDroppingAll = false;
         let gameInitialized = false;
         let betAmount = 500;
-        let totalWinAmount = 0;
         
         // ==================== API CALLS ====================
         async function fetchProfile() {
@@ -608,7 +597,6 @@
         
         async function submitGameResult(bet, multiplier) {
             try {
-                // DIRECT API CALL - NO DEPENDENCIES
                 const res = await fetch('/api/games/plinko/report', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -650,7 +638,7 @@
             document.getElementById('balance').textContent = `₦${balance.toLocaleString()}`;
             document.getElementById('active-balls').textContent = activeBalls;
             document.getElementById('total-wins').textContent = totalWins;
-            document.getElementById('ball-counter').textContent = `Balls: ${queuedBalls}`;
+            document.getElementById('ball-counter').textContent = `Balls: ${activeBalls}`;
         }
         
         // ==================== PEGS SETUP ====================
@@ -706,7 +694,7 @@
         }
         
         // ==================== BALL MANAGEMENT ====================
-        function addBallToQueue() {
+        async function dropSingleBall() {
             const betInput = parseInt(document.getElementById('bet-amount').value);
             
             if (isNaN(betInput) || betInput < MIN_BET || betInput > MAX_BET) {
@@ -714,96 +702,53 @@
                 return;
             }
             
-            const totalCost = (queuedBalls + 1) * betInput;
-            if (totalCost > balance) {
-                alert('Insufficient balance for this many balls!');
+            if (betInput > balance) {
+                alert('Insufficient balance!');
                 return;
             }
+            
+            // Disable button during drop
+            const dropBtn = document.getElementById('drop-btn');
+            dropBtn.disabled = true;
+            dropBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> DROPPING...';
             
             betAmount = betInput;
-            queuedBalls++;
-            updateStatsDisplay();
-            
-            const dropBtn = document.getElementById('drop-btn');
-            dropBtn.style.animation = 'bounce 0.3s';
-            setTimeout(() => {
-                dropBtn.style.animation = '';
-            }, 300);
-        }
-        
-        async function dropAllBalls() {
-            if (queuedBalls === 0) {
-                alert('Add some balls first!');
-                return;
-            }
-            
-            if (isDroppingAll) return;
-            
-            isDroppingAll = true;
-            const ballsToDrop = queuedBalls;
-            const totalCost = ballsToDrop * betAmount;
-            
-            if (totalCost > balance) {
-                alert('Insufficient balance!');
-                isDroppingAll = false;
-                return;
-            }
-            
-            // Disable buttons
-            document.getElementById('drop-btn').disabled = true;
-            document.getElementById('drop-all-btn').disabled = true;
-            document.getElementById('bet-amount').disabled = true;
-            
-            queuedBalls = 0;
-            totalWinAmount = 0;
-            updateStatsDisplay();
-            
-            // Drop balls with delay
-            for (let i = 0; i < ballsToDrop; i++) {
-                setTimeout(() => {
-                    createBall(betAmount);
-                }, i * 200);
-            }
-            
-            // Re-enable after all balls land
-            setTimeout(() => {
-                isDroppingAll = false;
-                document.getElementById('drop-btn').disabled = false;
-                document.getElementById('drop-all-btn').disabled = false;
-                document.getElementById('bet-amount').disabled = false;
-            }, ballsToDrop * 3000);
+            await createBall(betAmount);
         }
         
         function createBall(bet) {
-            const board = document.getElementById('plinko-board');
-            const container = document.getElementById('ball-container');
-            
-            const ballId = Date.now() + Math.random();
-            const ball = {
-                id: ballId,
-                x: board.clientWidth / 2,
-                y: 35,
-                vx: (Math.random() - 0.5) * 0.3,
-                vy: 0.4,
-                radius: 8,
-                element: document.createElement('div'),
-                landed: false,
-                bet: bet,
-                winAmount: 0,
-                multiplier: 0
-            };
-            
-            ball.element.className = 'ball';
-            ball.element.style.left = `${ball.x}px`;
-            ball.element.style.top = `${ball.y}px`;
-            ball.element.style.animation = 'ballDrop 0.3s ease-out';
-            container.appendChild(ball.element);
-            
-            balls.push(ball);
-            activeBalls++;
-            updateStatsDisplay();
-            
-            animateBall(ballId);
+            return new Promise((resolve) => {
+                const board = document.getElementById('plinko-board');
+                const container = document.getElementById('ball-container');
+                
+                const ballId = Date.now() + Math.random();
+                const ball = {
+                    id: ballId,
+                    x: board.clientWidth / 2,
+                    y: 35,
+                    vx: (Math.random() - 0.5) * 0.3,
+                    vy: 0.4,
+                    radius: 8,
+                    element: document.createElement('div'),
+                    landed: false,
+                    bet: bet,
+                    winAmount: 0,
+                    multiplier: 0
+                };
+                
+                ball.element.className = 'ball';
+                ball.element.style.left = `${ball.x}px`;
+                ball.element.style.top = `${ball.y}px`;
+                ball.element.style.animation = 'ballDrop 0.3s ease-out';
+                container.appendChild(ball.element);
+                
+                balls.push(ball);
+                activeBalls++;
+                updateStatsDisplay();
+                
+                animateBall(ballId);
+                resolve();
+            });
         }
         
         // ==================== BALL PHYSICS ====================
@@ -900,11 +845,13 @@
             if (result.success) {
                 ball.winAmount = result.winAmount;
                 ball.multiplier = multiplier;
-                totalWinAmount += result.winAmount;
                 
                 if (result.winAmount > 0) {
                     totalWins++;
                 }
+                
+                // Update balance
+                balance = result.new_balance;
                 
                 // Highlight slot
                 const slotElement = document.getElementById(`slot-${slotIndex}`);
@@ -912,16 +859,13 @@
                 setTimeout(() => {
                     slotElement.classList.remove('active');
                 }, 800);
+                
+                // Show win display
+                showWinDisplay(ball.winAmount, ball.multiplier);
             } else {
                 // Handle error (e.g., daily limit reached)
                 if (result.message) {
                     alert('❌ ' + result.message);
-                    // Stop dropping more balls
-                    isDroppingAll = false;
-                    balls = balls.filter(b => !b.landed);
-                    document.getElementById('drop-btn').disabled = false;
-                    document.getElementById('drop-all-btn').disabled = false;
-                    document.getElementById('bet-amount').disabled = false;
                 }
             }
             
@@ -936,39 +880,35 @@
                 }
                 balls.splice(ballIndex, 1);
                 
-                // Show total win when all balls land
-                if (activeBalls === 0 && !isDroppingAll) {
-                    showTotalWin();
-                }
+                // Re-enable drop button
+                const dropBtn = document.getElementById('drop-btn');
+                dropBtn.disabled = false;
+                dropBtn.innerHTML = '<i class="fas fa-play"></i> DROP BALL';
                 
                 updateStatsDisplay();
             }, 500);
         }
         
-        function showTotalWin() {
-            if (totalWinAmount > 0 || balls.length > 0) {
-                const winDisplay = document.getElementById('win-display');
-                const winAmountElement = document.getElementById('win-amount');
-                const winMultiplierElement = document.getElementById('win-multiplier');
-                
-                winAmountElement.textContent = `₦${totalWinAmount.toLocaleString()}`;
-                winMultiplierElement.textContent = `Total Earnings`;
-                
-                if (totalWinAmount > 0) {
-                    winAmountElement.style.color = '#00FF55';
-                } else {
-                    winAmountElement.style.color = '#FF5555';
-                }
-                
-                winDisplay.style.display = 'block';
-                winDisplay.style.animation = 'winPulse 1s ease-in-out';
-                
-                setTimeout(() => {
-                    winDisplay.style.display = 'none';
-                }, 5000);
+        function showWinDisplay(winAmount, multiplier) {
+            const winDisplay = document.getElementById('win-display');
+            const winAmountElement = document.getElementById('win-amount');
+            const winMultiplierElement = document.getElementById('win-multiplier');
+            
+            winAmountElement.textContent = `₦${winAmount.toLocaleString()}`;
+            winMultiplierElement.textContent = `×${multiplier}`;
+            
+            if (winAmount > 0) {
+                winAmountElement.style.color = '#00FF55';
+            } else {
+                winAmountElement.style.color = '#FF5555';
             }
             
-            totalWinAmount = 0;
+            winDisplay.style.display = 'block';
+            winDisplay.style.animation = 'winPulse 1s ease-in-out';
+            
+            setTimeout(() => {
+                winDisplay.style.display = 'none';
+            }, 3000);
         }
         
         // ==================== INITIALIZATION ====================
@@ -992,22 +932,19 @@
             
             // Keyboard shortcuts
             document.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !isDroppingAll) {
-                    addBallToQueue();
+                if (e.key === 'Enter') {
+                    dropSingleBall();
                 } else if (e.key === 'Escape') {
                     goBackToDashboard();
                 } else if (e.key === 'f' || e.key === 'F') {
                     toggleFullscreen();
-                } else if (e.key === ' ') {
-                    e.preventDefault();
-                    dropAllBalls();
                 }
             });
             
-            // Click on board to add ball
+            // Click on board to drop ball
             document.getElementById('plinko-board').addEventListener('click', (e) => {
-                if (e.target === document.getElementById('plinko-board') && !isDroppingAll) {
-                    addBallToQueue();
+                if (e.target === document.getElementById('plinko-board')) {
+                    dropSingleBall();
                 }
             });
             
@@ -1036,9 +973,9 @@
         
         // Warn before leaving with active balls
         window.addEventListener('beforeunload', function(e) {
-            if (activeBalls > 0 || queuedBalls > 0) {
+            if (activeBalls > 0) {
                 e.preventDefault();
-                e.returnValue = 'You have active balls. Are you sure you want to leave?';
+                e.returnValue = 'You have an active ball. Are you sure you want to leave?';
             }
         });
         
