@@ -1,4 +1,4 @@
-# backend/app.py - ULTIMATE VERSION 12.4 - SPIN WHEEL FIXES APPLIED
+# backend/app.py - ULTIMATE VERSION 12.4 - SPIN WHEEL FIXES APPLIED - POSTGRESQL ONLY
 # FLEXIA Platform - PRODUCTION READY
 
 import os
@@ -24,10 +24,11 @@ from psycopg2.pool import SimpleConnectionPool
 
 # ======================= CONFIGURATION =======================
 class Config:
-    if os.environ.get('DATABASE_URL'):
-        DB_URL = os.environ.get('DATABASE_URL')
-    else:
-        DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'flexia.db')
+    # PostgreSQL is required
+    DB_URL = os.environ.get('DATABASE_URL')
+    if not DB_URL:
+        raise ValueError("DATABASE_URL environment variable is required for PostgreSQL connection")
+    
     COUPON_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'coupon.txt')
     FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'frontend')
     SECRET_KEY = os.environ.get('SECRET_KEY', 'flexia_secure_key_2024_change_in_production')
@@ -156,52 +157,37 @@ def backup_database():
     try:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         
-        if os.environ.get('DATABASE_URL'):
-            # PostgreSQL backup
-            app.logger.info('Creating PostgreSQL backup...')
-            backup_file = f'backups/backup_flexia_{timestamp}.sql'
-            
-            # Create backups directory if it doesn't exist
-            if not os.path.exists('backups'):
-                os.makedirs('backups')
-            
-            # Extract connection details from DATABASE_URL
-            parsed = urllib.parse.urlparse(os.environ['DATABASE_URL'])
-            
-            # Run pg_dump
-            env = os.environ.copy()
-            env['PGPASSWORD'] = parsed.password
-            
-            result = subprocess.run([
-                'pg_dump',
-                '-h', parsed.hostname,
-                '-p', str(parsed.port),
-                '-U', parsed.username,
-                '-d', parsed.path[1:],
-                '-f', backup_file,
-                '--no-password'
-            ], env=env, capture_output=True, text=True)
-            
-            if result.returncode == 0:
-                app.logger.info(f'PostgreSQL backup created: {backup_file}')
-                return backup_file
-            else:
-                app.logger.error(f'PostgreSQL backup failed: {result.stderr}')
-                return None
-                
-        else:
-            # SQLite backup
-            app.logger.info('Creating SQLite backup...')
-            backup_file = f'backups/backup_flexia_{timestamp}.db'
-            
-            # Create backups directory if it doesn't exist
-            if not os.path.exists('backups'):
-                os.makedirs('backups')
-            
-            shutil.copy2(CONFIG.DB_FILE, backup_file)
-            app.logger.info(f'SQLite backup created: {backup_file}')
+        app.logger.info('Creating PostgreSQL backup...')
+        backup_file = f'backups/backup_flexia_{timestamp}.sql'
+        
+        # Create backups directory if it doesn't exist
+        if not os.path.exists('backups'):
+            os.makedirs('backups')
+        
+        # Extract connection details from DATABASE_URL
+        parsed = urllib.parse.urlparse(os.environ['DATABASE_URL'])
+        
+        # Run pg_dump
+        env = os.environ.copy()
+        env['PGPASSWORD'] = parsed.password
+        
+        result = subprocess.run([
+            'pg_dump',
+            '-h', parsed.hostname,
+            '-p', str(parsed.port),
+            '-U', parsed.username,
+            '-d', parsed.path[1:],
+            '-f', backup_file,
+            '--no-password'
+        ], env=env, capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            app.logger.info(f'PostgreSQL backup created: {backup_file}')
             return backup_file
-            
+        else:
+            app.logger.error(f'PostgreSQL backup failed: {result.stderr}')
+            return None
+                
     except Exception as e:
         app.logger.error(f'Backup failed: {str(e)}')
         app.logger.error(traceback.format_exc())
@@ -267,23 +253,22 @@ def init_db_pool():
     """Initialize database connection pool"""
     global db_pool
     
-    if os.environ.get('DATABASE_URL'):
-        try:
-            db_pool = SimpleConnectionPool(
-                1,  # min connections
-                20, # max connections
-                dsn=os.environ['DATABASE_URL']
-            )
-            app.logger.info('Database connection pool initialized')
-        except Exception as e:
-            app.logger.error(f'Failed to initialize connection pool: {str(e)}')
-            db_pool = None
+    try:
+        db_pool = SimpleConnectionPool(
+            1,  # min connections
+            20, # max connections
+            dsn=os.environ['DATABASE_URL']
+        )
+        app.logger.info('Database connection pool initialized')
+    except Exception as e:
+        app.logger.error(f'Failed to initialize connection pool: {str(e)}')
+        db_pool = None
 
 def get_db():
     """Get database connection from pool or create new one"""
     global db_pool
     
-    if os.environ.get('DATABASE_URL') and db_pool:
+    if db_pool:
         try:
             conn = db_pool.getconn()
             conn.autocommit = False
@@ -297,35 +282,27 @@ def get_db():
 
 def get_db_direct():
     """Get direct database connection (fallback)"""
-    if os.environ.get('DATABASE_URL'):
-        try:
-            parsed = urllib.parse.urlparse(os.environ['DATABASE_URL'])
-            conn = psycopg2.connect(
-                host=parsed.hostname,
-                port=parsed.port,
-                user=parsed.username,
-                password=parsed.password,
-                database=parsed.path[1:],
-                sslmode='require'
-            )
-            conn.autocommit = False
-            return conn
-        except Exception as e:
-            app.logger.error(f'Direct PostgreSQL connection failed: {str(e)}')
-            raise
-    else:
-        if os.getenv('ENV') == 'production':
-            raise RuntimeError("SQLite not allowed in production. Set DATABASE_URL.")
-        import sqlite3
-        conn = sqlite3.connect(CONFIG.DB_FILE, check_same_thread=False)
-        conn.row_factory = sqlite3.Row
+    try:
+        parsed = urllib.parse.urlparse(os.environ['DATABASE_URL'])
+        conn = psycopg2.connect(
+            host=parsed.hostname,
+            port=parsed.port,
+            user=parsed.username,
+            password=parsed.password,
+            database=parsed.path[1:],
+            sslmode='require'
+        )
+        conn.autocommit = False
         return conn
+    except Exception as e:
+        app.logger.error(f'Direct PostgreSQL connection failed: {str(e)}')
+        raise
 
 def return_db_connection(conn):
     """Return connection to pool"""
     global db_pool
     
-    if os.environ.get('DATABASE_URL') and db_pool:
+    if db_pool:
         try:
             db_pool.putconn(conn)
         except:
@@ -403,8 +380,7 @@ def get_current_user():
     conn = get_db()
     cursor = conn.cursor()
     try:
-        ph = '%s' if os.environ.get('DATABASE_URL') else '?'
-        cursor.execute(f'SELECT * FROM users WHERE id = {ph}', (user_id,))
+        cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))
         row = cursor.fetchone()
         return row_to_dict(cursor, row)
     except Exception as e:
@@ -442,30 +418,17 @@ def add_missing_columns():
     conn = get_db()
     cursor = conn.cursor()
     try:
-        is_postgres = os.environ.get('DATABASE_URL') is not None
-        
-        if is_postgres:
-            # Check and add missing columns for PostgreSQL
-            columns_to_add = ['last_achievement_check', 'last_game_timestamp', 'claimed_achievements']
-            for column in columns_to_add:
-                cursor.execute(f"""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name='users' and column_name='{column}'
-                """)
-                if not cursor.fetchone():
-                    cursor.execute(f"ALTER TABLE users ADD COLUMN {column} TEXT")
-                    app.logger.info(f"Added missing column: {column} to users table")
-        else:
-            # SQLite - check pragma
-            cursor.execute("PRAGMA table_info(users)")
-            columns = [col[1] for col in cursor.fetchall()]
-            
-            columns_to_add = ['last_achievement_check', 'last_game_timestamp', 'claimed_achievements']
-            for column in columns_to_add:
-                if column not in columns:
-                    cursor.execute(f"ALTER TABLE users ADD COLUMN {column} TEXT")
-                    app.logger.info(f"Added missing column: {column} to users table")
+        # Check and add missing columns for PostgreSQL
+        columns_to_add = ['last_achievement_check', 'last_game_timestamp', 'claimed_achievements']
+        for column in columns_to_add:
+            cursor.execute(f"""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name='users' and column_name='{column}'
+            """)
+            if not cursor.fetchone():
+                cursor.execute(f"ALTER TABLE users ADD COLUMN {column} TEXT")
+                app.logger.info(f"Added missing column: {column} to users table")
         
         conn.commit()
         app.logger.info("Database column verification complete")
@@ -480,8 +443,6 @@ def add_database_indexes():
     conn = get_db()
     cursor = conn.cursor()
     try:
-        is_postgres = os.environ.get('DATABASE_URL') is not None
-        
         indexes = [
             "CREATE INDEX IF NOT EXISTS idx_transactions_user_timestamp ON transactions(user_id, timestamp)",
             "CREATE INDEX IF NOT EXISTS idx_transactions_type_timestamp ON transactions(type, timestamp)",
@@ -509,87 +470,46 @@ def add_database_indexes():
 def init_db():
     conn = get_db()
     cursor = conn.cursor()
-    is_postgres = os.environ.get('DATABASE_URL') is not None
 
     # Users table - FIXED WITH ALL COLUMNS INCLUDING claimed_achievements
-    if is_postgres:
-        cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            balance REAL DEFAULT 0.00,
-            referral_code TEXT,
-            referred_by TEXT,
-            is_admin BOOLEAN DEFAULT FALSE,
-            created_at TEXT,
-            last_login TEXT,
-            claimed_bonuses INTEGER DEFAULT 0,
-            points INTEGER DEFAULT 0,
-            game_stats TEXT,
-            withdrawal_pin TEXT,
-            admin_password_changed BOOLEAN DEFAULT FALSE,
-            contact TEXT,
-            profile_picture TEXT,
-            ui_theme TEXT DEFAULT 'light',
-            withdrawal_restricted BOOLEAN DEFAULT FALSE,
-            custom_withdrawal_days TEXT,
-            withdrawal_limit REAL DEFAULT 0.00,
-            last_game_timestamp TEXT,
-            last_achievement_check TEXT,
-            claimed_achievements TEXT DEFAULT '[]'  -- NEW COLUMN FOR TRACKING CLAIMED ACHIEVEMENTS
-        )
-        ''')
-    else:
-        cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            balance REAL DEFAULT 0.00,
-            referral_code TEXT,
-            referred_by TEXT,
-            is_admin INTEGER DEFAULT 0,
-            created_at TEXT,
-            last_login TEXT,
-            claimed_bonuses INTEGER DEFAULT 0,
-            points INTEGER DEFAULT 0,
-            game_stats TEXT,
-            withdrawal_pin TEXT,
-            admin_password_changed INTEGER DEFAULT 0,
-            contact TEXT,
-            profile_picture TEXT,
-            ui_theme TEXT DEFAULT 'light',
-            withdrawal_restricted INTEGER DEFAULT 0,
-            custom_withdrawal_days TEXT,
-            withdrawal_limit REAL DEFAULT 0.00,
-            last_game_timestamp TEXT,
-            last_achievement_check TEXT,
-            claimed_achievements TEXT DEFAULT '[]'  -- NEW COLUMN FOR TRACKING CLAIMED ACHIEVEMENTS
-        )
-        ''')
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        balance REAL DEFAULT 0.00,
+        referral_code TEXT,
+        referred_by TEXT,
+        is_admin BOOLEAN DEFAULT FALSE,
+        created_at TEXT,
+        last_login TEXT,
+        claimed_bonuses INTEGER DEFAULT 0,
+        points INTEGER DEFAULT 0,
+        game_stats TEXT,
+        withdrawal_pin TEXT,
+        admin_password_changed BOOLEAN DEFAULT FALSE,
+        contact TEXT,
+        profile_picture TEXT,
+        ui_theme TEXT DEFAULT 'light',
+        withdrawal_restricted BOOLEAN DEFAULT FALSE,
+        custom_withdrawal_days TEXT,
+        withdrawal_limit REAL DEFAULT 0.00,
+        last_game_timestamp TEXT,
+        last_achievement_check TEXT,
+        claimed_achievements TEXT DEFAULT '[]'  -- NEW COLUMN FOR TRACKING CLAIMED ACHIEVEMENTS
+    )
+    ''')
 
     # Admin settings
-    if is_postgres:
-        cursor.execute('''
-        CREATE TABLE IF NOT EXISTS admin_settings (
-            id SERIAL PRIMARY KEY,
-            whatsapp_link TEXT,
-            telegram_link TEXT,
-            facebook_link TEXT,
-            global_withdrawal_days TEXT
-        )
-        ''')
-    else:
-        cursor.execute('''
-        CREATE TABLE IF NOT EXISTS admin_settings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            whatsapp_link TEXT,
-            telegram_link TEXT,
-            facebook_link TEXT,
-            global_withdrawal_days TEXT
-        )
-        ''')
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS admin_settings (
+        id SERIAL PRIMARY KEY,
+        whatsapp_link TEXT,
+        telegram_link TEXT,
+        facebook_link TEXT,
+        global_withdrawal_days TEXT
+    )
+    ''')
 
     # Other tables
     tables_sql = [
@@ -612,12 +532,6 @@ def init_db():
             is_active BOOLEAN DEFAULT TRUE
         )''',
         '''CREATE TABLE IF NOT EXISTS whatsapp_numbers (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            number TEXT UNIQUE NOT NULL,
-            label TEXT,
-            is_active BOOLEAN DEFAULT 1,
-            created_at TEXT
-        )''' if not is_postgres else '''CREATE TABLE IF NOT EXISTS whatsapp_numbers (
             id SERIAL PRIMARY KEY,
             number TEXT UNIQUE NOT NULL,
             label TEXT,
@@ -625,12 +539,6 @@ def init_db():
             created_at TEXT
         )''',
         '''CREATE TABLE IF NOT EXISTS game_plays (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            game_type TEXT,
-            play_date DATE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )''' if not is_postgres else '''CREATE TABLE IF NOT EXISTS game_plays (
             id SERIAL PRIMARY KEY,
             user_id INTEGER,
             game_type TEXT,
@@ -638,12 +546,6 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''',
         '''CREATE TABLE IF NOT EXISTS tiktok_daily (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT UNIQUE NOT NULL,
-            tiktok_link TEXT NOT NULL,
-            reward_amount REAL DEFAULT 150.0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )''' if not is_postgres else '''CREATE TABLE IF NOT EXISTS tiktok_daily (
             id SERIAL PRIMARY KEY,
             date TEXT UNIQUE NOT NULL,
             tiktok_link TEXT NOT NULL,
@@ -664,7 +566,6 @@ def init_db():
             app.logger.error(f"Error creating table: {e}")
 
     # Insert default banks - FIXED
-    ph = '%s' if is_postgres else '?'
     cursor.execute('SELECT COUNT(*) as count FROM banks')
     bank_count = cursor.fetchone()
     if isinstance(bank_count, dict):
@@ -684,7 +585,7 @@ def init_db():
         ]
         for bank in banks:
             try:
-                cursor.execute(f'INSERT INTO banks (code, name, is_active) VALUES ({ph}, {ph}, {ph})', 
+                cursor.execute('INSERT INTO banks (code, name, is_active) VALUES (%s, %s, %s)', 
                              (bank[0], bank[1], True))
             except Exception as e:
                 app.logger.error(f"Error inserting bank {bank[0]}: {e}")
@@ -699,7 +600,7 @@ def init_db():
         settings_count = settings_count[0] if settings_count else 0
     if settings_count == 0:
         default_days_json = json.dumps(CONFIG.DEFAULT_WITHDRAWAL_DAYS)
-        cursor.execute(f'INSERT INTO admin_settings (whatsapp_link, telegram_link, facebook_link, global_withdrawal_days) VALUES ({ph}, {ph}, {ph}, {ph})',
+        cursor.execute('INSERT INTO admin_settings (whatsapp_link, telegram_link, facebook_link, global_withdrawal_days) VALUES (%s, %s, %s, %s)',
                        ('', '', '', default_days_json))
 
     # Coupons
@@ -714,7 +615,7 @@ def init_db():
                     pass
                 for code in codes:
                     try:
-                        cursor.execute(f'INSERT INTO coupons (code, status) VALUES ({ph}, {ph})', (code, 'AVAILABLE'))
+                        cursor.execute('INSERT INTO coupons (code, status) VALUES (%s, %s)', (code, 'AVAILABLE'))
                     except:
                         pass
                 app.logger.info(f"Loaded {len(codes)} coupons from file")
@@ -724,13 +625,13 @@ def init_db():
         default_coupons = ['WELCOME123', 'SIGNUP456', 'REGISTER789', 'FLEXIA2024']
         for code in default_coupons:
             try:
-                cursor.execute(f'INSERT INTO coupons (code, status) VALUES ({ph}, {ph})', (code, 'AVAILABLE'))
+                cursor.execute('INSERT INTO coupons (code, status) VALUES (%s, %s)', (code, 'AVAILABLE'))
             except:
                 pass
         app.logger.info(f"Created {len(default_coupons)} default coupons")
 
     # Admin user
-    cursor.execute('SELECT COUNT(*) as count FROM users WHERE username = %s' if is_postgres else 'SELECT COUNT(*) as count FROM users WHERE username = ?', ("flexiaadmin",))
+    cursor.execute('SELECT COUNT(*) as count FROM users WHERE username = %s', ("flexiaadmin",))
     admin_count = cursor.fetchone()[0]
     if admin_count == 0:
         admin_pass = generate_password_hash("Flexiaadmin")
@@ -740,36 +641,20 @@ def init_db():
             "plinko": {"total_wins": 15, "total_bets": 25000, "highest_win": 5000}
         })
         pin_hash = generate_password_hash("4567")
-        if is_postgres:
-            cursor.execute(f'''
-            INSERT INTO users (
-                username, password, balance, referral_code, is_admin,
-                created_at, last_login, game_stats, admin_password_changed,
-                withdrawal_pin, contact, profile_picture, ui_theme, 
-                last_game_timestamp, last_achievement_check, claimed_achievements
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ''', (
-                "flexiaadmin", admin_pass, 500000.00, "ADM0001", True,
-                datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
-                game_stats, False, pin_hash, "", "", "light", 
-                datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
-                '[]'  # Empty array for claimed achievements
-            ))
-        else:
-            cursor.execute(f'''
-            INSERT INTO users (
-                username, password, balance, referral_code, is_admin,
-                created_at, last_login, game_stats, admin_password_changed,
-                withdrawal_pin, contact, profile_picture, ui_theme,
-                last_game_timestamp, last_achievement_check, claimed_achievements
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                "flexiaadmin", admin_pass, 500000.00, "ADM0001", 1,
-                datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
-                game_stats, 0, pin_hash, "", "", "light",
-                datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
-                '[]'  # Empty array for claimed achievements
-            ))
+        cursor.execute('''
+        INSERT INTO users (
+            username, password, balance, referral_code, is_admin,
+            created_at, last_login, game_stats, admin_password_changed,
+            withdrawal_pin, contact, profile_picture, ui_theme, 
+            last_game_timestamp, last_achievement_check, claimed_achievements
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ''', (
+            "flexiaadmin", admin_pass, 500000.00, "ADM0001", True,
+            datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
+            game_stats, False, pin_hash, "", "", "light", 
+            datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
+            '[]'  # Empty array for claimed achievements
+        ))
         app.logger.warning("\n?? FLEXIA ADMIN ACCOUNT CREATED ??")
         app.logger.warning("Username: flexiaadmin")
         app.logger.warning("Initial Password: Flexiaadmin")
@@ -780,8 +665,8 @@ def init_db():
     cursor.execute('SELECT COUNT(*) as count FROM whatsapp_numbers')
     whatsapp_count = cursor.fetchone()[0]
     if whatsapp_count == 0:
-        cursor.execute(f'INSERT INTO whatsapp_numbers (number, label, is_active, created_at) VALUES ({ph}, {ph}, {ph}, {ph})',
-                       ('2348160881049', 'Primary Seller', True if is_postgres else 1, datetime.utcnow().isoformat()))
+        cursor.execute('INSERT INTO whatsapp_numbers (number, label, is_active, created_at) VALUES (%s, %s, %s, %s)',
+                       ('2348160881049', 'Primary Seller', True, datetime.utcnow().isoformat()))
 
     conn.commit()
     return_db_connection(conn)
@@ -818,24 +703,12 @@ def update_user_balance(user_id, amount_change):
     conn = get_db()
     cursor = conn.cursor()
     try:
-        ph = '%s' if os.environ.get('DATABASE_URL') else '?'
-        
-        # Use database-level atomic update
-        if os.environ.get('DATABASE_URL'):
-            cursor.execute(f'''
-            UPDATE users 
-            SET balance = balance + {ph}
-            WHERE id = {ph}
-            RETURNING balance
-            ''', (amount_change, user_id))
-        else:
-            cursor.execute(f'''
-            UPDATE users 
-            SET balance = balance + {ph}
-            WHERE id = {ph}
-            ''', (amount_change, user_id))
-            
-            cursor.execute(f'SELECT balance FROM users WHERE id = {ph}', (user_id,))
+        cursor.execute('''
+        UPDATE users 
+        SET balance = balance + %s
+        WHERE id = %s
+        RETURNING balance
+        ''', (amount_change, user_id))
         
         row = cursor.fetchone()
         new_balance = float(row[0]) if row and row[0] else 0.0
@@ -893,10 +766,8 @@ def can_play_today(user_id, game_type, max_plays=10):
     conn = get_db()
     cursor = conn.cursor()
     today = datetime.utcnow().date()
-    is_postgres = os.environ.get('DATABASE_URL') is not None
-    ph = '%s' if is_postgres else '?'
     try:
-        cursor.execute(f"SELECT COUNT(*) FROM game_plays WHERE user_id = {ph} AND game_type = {ph} AND play_date = {ph}",
+        cursor.execute("SELECT COUNT(*) FROM game_plays WHERE user_id = %s AND game_type = %s AND play_date = %s",
                        (user_id, game_type, today))
         count = cursor.fetchone()[0]
         return count < max_plays
@@ -911,15 +782,13 @@ def record_game_play(user_id, game_type):
     conn = get_db()
     cursor = conn.cursor()
     today = datetime.utcnow().date()
-    is_postgres = os.environ.get('DATABASE_URL') is not None
-    ph = '%s' if is_postgres else '?'
     try:
         # Check if already recorded today
-        cursor.execute(f"SELECT COUNT(*) FROM game_plays WHERE user_id = {ph} AND game_type = {ph} AND play_date = {ph}",
+        cursor.execute("SELECT COUNT(*) FROM game_plays WHERE user_id = %s AND game_type = %s AND play_date = %s",
                        (user_id, game_type, today))
         count = cursor.fetchone()[0]
         if count == 0:
-            cursor.execute(f"INSERT INTO game_plays (user_id, game_type, play_date) VALUES ({ph}, {ph}, {ph})",
+            cursor.execute("INSERT INTO game_plays (user_id, game_type, play_date) VALUES (%s, %s, %s)",
                            (user_id, game_type, today))
             conn.commit()
     except Exception as e:
@@ -934,9 +803,8 @@ def is_withdrawal_day(user_id=None):
         return today in get_global_withdrawal_days()
     conn = get_db()
     cursor = conn.cursor()
-    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
     try:
-        cursor.execute(f'SELECT withdrawal_restricted, custom_withdrawal_days FROM users WHERE id = {ph}', (user_id,))
+        cursor.execute('SELECT withdrawal_restricted, custom_withdrawal_days FROM users WHERE id = %s', (user_id,))
         row = cursor.fetchone()
         if row:
             restricted, custom_days_str = row[0], row[1]
@@ -994,17 +862,13 @@ def grant_achievement_rewards(user_id):
         cursor = conn.cursor()
         
         # Start transaction
-        if os.environ.get('DATABASE_URL'):
-            cursor.execute("BEGIN")
-        else:
-            cursor.execute("BEGIN IMMEDIATE")
+        cursor.execute("BEGIN")
         
         # Get user data WITH LOCK to prevent concurrent updates
-        ph = '%s' if os.environ.get('DATABASE_URL') else '?'
-        cursor.execute(f'''
+        cursor.execute('''
         SELECT balance, game_stats, referral_code, points, last_achievement_check,
                claimed_achievements
-        FROM users WHERE id = {ph}
+        FROM users WHERE id = %s
         ''', (user_id,))
         
         row = cursor.fetchone()
@@ -1038,22 +902,22 @@ def grant_achievement_rewards(user_id):
         game_stats = json.loads(game_stats_str)
         
         # Get referrals count
-        cursor.execute(f'SELECT COUNT(*) FROM users WHERE referred_by = {ph}', (referral_code,))
+        cursor.execute('SELECT COUNT(*) FROM users WHERE referred_by = %s', (referral_code,))
         referrals = cursor.fetchone()[0]
         
         # Get transaction counts
-        cursor.execute(f'SELECT COUNT(*) FROM transactions WHERE user_id = {ph}', (user_id,))
+        cursor.execute('SELECT COUNT(*) FROM transactions WHERE user_id = %s', (user_id,))
         total_tx = cursor.fetchone()[0]
         
-        cursor.execute(f"SELECT COUNT(*) FROM transactions WHERE user_id = {ph} AND type = 'WITHDRAWAL'", (user_id,))
+        cursor.execute("SELECT COUNT(*) FROM transactions WHERE user_id = %s AND type = 'WITHDRAWAL'", (user_id,))
         total_withdrawals = cursor.fetchone()[0]
         
         # Get today's games
         today = datetime.utcnow().date()
-        cursor.execute(f'SELECT COUNT(*) FROM game_plays WHERE user_id = {ph} AND play_date = {ph}', (user_id, today))
+        cursor.execute('SELECT COUNT(*) FROM game_plays WHERE user_id = %s AND play_date = %s', (user_id, today))
         games_today = cursor.fetchone()[0]
         
-        cursor.execute(f'SELECT COUNT(*) FROM game_plays WHERE user_id = {ph}', (user_id,))
+        cursor.execute('SELECT COUNT(*) FROM game_plays WHERE user_id = %s', (user_id,))
         total_games = cursor.fetchone()[0]
         
         # Extract game stats
@@ -1090,7 +954,7 @@ def grant_achievement_rewards(user_id):
         
         if not new_achievements:
             # Still update last check time
-            cursor.execute(f'UPDATE users SET last_achievement_check = {ph} WHERE id = {ph}', 
+            cursor.execute('UPDATE users SET last_achievement_check = %s WHERE id = %s', 
                           (datetime.utcnow().isoformat(), user_id))
             conn.commit()
             return balance
@@ -1104,31 +968,21 @@ def grant_achievement_rewards(user_id):
         
         new_balance = balance + total_reward
         
-        # Update user balance and points using atomic update
-        if os.environ.get('DATABASE_URL'):
-            cursor.execute(f'''
-            UPDATE users SET balance = {ph}, points = {ph}, 
-            last_achievement_check = {ph}, claimed_achievements = {ph}
-            WHERE id = {ph}
-            ''', (new_balance, current_points + total_points, 
-                  datetime.utcnow().isoformat(), 
-                  json.dumps(all_claimed_achievements), user_id))
-        else:
-            # For SQLite, we need to update separately
-            cursor.execute(f'''
-            UPDATE users SET balance = balance + {ph}, points = points + {ph}, 
-            last_achievement_check = {ph}, claimed_achievements = {ph}
-            WHERE id = {ph}
-            ''', (total_reward, total_points, 
-                  datetime.utcnow().isoformat(), 
-                  json.dumps(all_claimed_achievements), user_id))
+        # Update user balance and points
+        cursor.execute('''
+        UPDATE users SET balance = %s, points = %s, 
+        last_achievement_check = %s, claimed_achievements = %s
+        WHERE id = %s
+        ''', (new_balance, current_points + total_points, 
+              datetime.utcnow().isoformat(), 
+              json.dumps(all_claimed_achievements), user_id))
         
         # Record achievement transaction if reward > 0
         if total_reward > 0:
             tx_id = f"ACH-{secrets.token_hex(8)}"
-            cursor.execute(f'''
+            cursor.execute('''
             INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp)
-            VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             ''', (
                 tx_id, user_id, 'ACHIEVEMENT_REWARD', total_reward, 'COMPLETED',
                 json.dumps({"source": "manual_claim", "points": total_points, "achievement_ids": new_achievement_ids}),
@@ -1160,8 +1014,7 @@ def cleanup_old_tiktok_tasks():
         conn = get_db()
         cursor = conn.cursor()
         cutoff_date = (datetime.utcnow().date() - timedelta(days=2)).isoformat()
-        ph = '%s' if os.environ.get('DATABASE_URL') else '?'
-        cursor.execute(f'DELETE FROM tiktok_daily WHERE date < {ph}', (cutoff_date,))
+        cursor.execute('DELETE FROM tiktok_daily WHERE date < %s', (cutoff_date,))
         conn.commit()
         return_db_connection(conn)
         app.logger.info(f"Removed TikTok tasks before {cutoff_date}")
@@ -1197,10 +1050,7 @@ def db_status():
     try:
         conn = get_db()
         cursor = conn.cursor()
-        if os.environ.get('DATABASE_URL'):
-            cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
-        else:
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
         tables = [row[0] for row in cursor.fetchall()]
         cursor.execute('SELECT COUNT(*) FROM users')
         user_count = cursor.fetchone()[0]
@@ -1215,7 +1065,7 @@ def db_status():
             "user_count": user_count,
             "coupon_count": coupon_count,
             "available_coupons": available_coupons,
-            "database_type": "PostgreSQL" if os.environ.get('DATABASE_URL') else "SQLite",
+            "database_type": "PostgreSQL",
             "connection_pool": "active" if db_pool else "inactive"
         })
     except Exception as e:
@@ -1494,15 +1344,13 @@ def register():
     
     conn = get_db()
     cursor = conn.cursor()
-    is_postgres = os.environ.get('DATABASE_URL') is not None
-    ph = '%s' if is_postgres else '?'
     
     try:
-        cursor.execute(f'SELECT id FROM users WHERE LOWER(username) = LOWER({ph})', (username,))
+        cursor.execute('SELECT id FROM users WHERE LOWER(username) = LOWER(%s)', (username,))
         if cursor.fetchone():
             return jsonify({"success": False, "message": "Username already taken"}), 409
         
-        cursor.execute(f'SELECT status FROM coupons WHERE code = {ph}', (coupon_code,))
+        cursor.execute('SELECT status FROM coupons WHERE code = %s', (coupon_code,))
         coupon_row = cursor.fetchone()
         if not coupon_row:
             return jsonify({"success": False, "message": "Invalid coupon code"}), 403
@@ -1511,11 +1359,11 @@ def register():
             return jsonify({"success": False, "message": "Coupon already used"}), 403
         
         if referral_code:
-            cursor.execute(f'SELECT referral_code FROM users WHERE referral_code = {ph}', (referral_code,))
+            cursor.execute('SELECT referral_code FROM users WHERE referral_code = %s', (referral_code,))
             if not cursor.fetchone():
                 return jsonify({"success": False, "message": "Invalid referral code"}), 400
         
-        cursor.execute(f'UPDATE coupons SET status = {ph} WHERE code = {ph}', ("USED", coupon_code))
+        cursor.execute('UPDATE coupons SET status = %s WHERE code = %s', ("USED", coupon_code))
         
         timestamp = int(time.time())
         user_referral_code = f"{username[:3].upper()}{timestamp % 10000:04d}"
@@ -1526,12 +1374,8 @@ def register():
             "plinko": {"total_wins": 0, "total_bets": 0, "highest_win": 0}
         })
         
-        is_admin_value = False if is_postgres else 0
-        admin_pw_changed = False if is_postgres else 0
-        withdrawal_restricted = False if is_postgres else 0
-        
         # NEW: Initialize with empty claimed achievements array
-        cursor.execute(f'''
+        cursor.execute('''
         INSERT INTO users (
             username, password, balance, referral_code, referred_by, is_admin,
             created_at, last_login, game_stats, contact, profile_picture, ui_theme,
@@ -1539,30 +1383,27 @@ def register():
             points, claimed_bonuses, last_game_timestamp, last_achievement_check,
             claimed_achievements
         ) VALUES (
-            {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, 
-            {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
+            %s, %s, %s, %s, %s, %s, %s, %s, %s
         )
         ''', (
-            username, generate_password_hash(password), 0.00, user_referral_code, referral_code or None, is_admin_value,
+            username, generate_password_hash(password), 0.00, user_referral_code, referral_code or None, False,
             datetime.utcnow().isoformat(), datetime.utcnow().isoformat(), game_stats, contact or "", "", "light",
-            admin_pw_changed, None, withdrawal_restricted, 0.00, 0, 0, 
+            False, None, False, 0.00, 0, 0, 
             datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
             '[]'  # Empty array for claimed achievements
         ))
         
-        if is_postgres:
-            cursor.execute("SELECT LASTVAL()")
-            new_id = cursor.fetchone()[0]
-        else:
-            new_id = cursor.lastrowid
+        cursor.execute("SELECT LASTVAL()")
+        new_id = cursor.fetchone()[0]
         
         admin_bonus = 0
         if referral_code:
-            cursor.execute(f'SELECT is_admin FROM users WHERE referral_code = {ph}', (referral_code,))
+            cursor.execute('SELECT is_admin FROM users WHERE referral_code = %s', (referral_code,))
             ref_row = cursor.fetchone()
             if ref_row and ref_row[0]:
                 admin_bonus = 5000
-                cursor.execute(f'UPDATE users SET balance = {ph} WHERE id = {ph}', (admin_bonus, new_id))
+                cursor.execute('UPDATE users SET balance = %s WHERE id = %s', (admin_bonus, new_id))
         
         conn.commit()
         
@@ -1615,10 +1456,9 @@ def login():
     
     conn = get_db()
     cursor = conn.cursor()
-    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
     
     try:
-        cursor.execute(f'SELECT * FROM users WHERE LOWER(username) = LOWER({ph}) OR LOWER(contact) = LOWER({ph})',
+        cursor.execute('SELECT * FROM users WHERE LOWER(username) = LOWER(%s) OR LOWER(contact) = LOWER(%s)',
                        (identifier, identifier))
         row = cursor.fetchone()
         
@@ -1634,7 +1474,7 @@ def login():
         
         user = row_to_dict(cursor, row)
         
-        cursor.execute(f'UPDATE users SET last_login = {ph} WHERE id = {ph}',
+        cursor.execute('UPDATE users SET last_login = %s WHERE id = %s',
                        (datetime.utcnow().isoformat(), user['id']))
         conn.commit()
         
@@ -1689,22 +1529,21 @@ def get_user_profile():
     
     conn = get_db()
     cursor = conn.cursor()
-    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
     
     try:
-        cursor.execute(f'SELECT * FROM users WHERE id = {ph}', (user['id'],))
+        cursor.execute('SELECT * FROM users WHERE id = %s', (user['id'],))
         fresh_user = row_to_dict(cursor, cursor.fetchone())
         
         if not fresh_user:
             return jsonify({"success": False, "message": "User not found"}), 404
         
-        cursor.execute(f'SELECT COUNT(*) FROM users WHERE referred_by = {ph}', (fresh_user.get('referral_code', ''),))
+        cursor.execute('SELECT COUNT(*) FROM users WHERE referred_by = %s', (fresh_user.get('referral_code', ''),))
         referrals = cursor.fetchone()[0]
         
         claimed = int(fresh_user.get('claimed_bonuses', 0))
         unclaimed = max(0, referrals * CONFIG.REFERRAL_BONUS - claimed)
         
-        cursor.execute(f'SELECT * FROM transactions WHERE user_id = {ph} ORDER BY timestamp DESC LIMIT 20', (user['id'],))
+        cursor.execute('SELECT * FROM transactions WHERE user_id = %s ORDER BY timestamp DESC LIMIT 20', (user['id'],))
         transactions = [row_to_dict(cursor, row) for row in cursor.fetchall()]
         
         return jsonify({
@@ -3773,7 +3612,7 @@ if __name__ == '__main__':
     app.logger.info(f"?? Starting Flexia Platform ULTIMATE v12.4 on port {port} (debug: {debug})")
     app.logger.info(f"?? Frontend directory: {CONFIG.FRONTEND_DIR}")
     app.logger.info(f"?? Secret key set: {'Yes' if CONFIG.SECRET_KEY else 'No'}")
-    app.logger.info(f"???  Database: {'PostgreSQL' if os.environ.get('DATABASE_URL') else 'SQLite'}")
+    app.logger.info(f"???  Database: PostgreSQL (DATABASE_URL required)")
     app.logger.info(f"?? Security headers: Enabled")
     app.logger.info(f"?? Structured logging: Enabled")
     app.logger.info(f"?? Database connection pool: {'Enabled' if db_pool else 'Disabled'}")
@@ -3790,5 +3629,6 @@ if __name__ == '__main__':
     app.logger.info(f"   • ? Each achievement can only be claimed once per user")
     app.logger.info(f"   • ? SPIN WHEEL FIX: Added /api/spin/daily-status and /api/spin/execute endpoints")
     app.logger.info(f"   • ? VERSION 12.4: The ultimate production-ready version with working spin wheel")
+    app.logger.info(f"   • ? REMOVED SQLITE: Now PostgreSQL-only for production")
     
     app.run(host='0.0.0.0', port=port, debug=debug)
