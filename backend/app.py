@@ -253,7 +253,7 @@ class SecurityMiddleware:
         img.save(buffered, format="PNG")
         img_str = base64.b64encode(buffered.getvalue()).decode()
         
-        return f"data:image/png;base64,{img_str}"
+        return f"image/png;base64,{img_str}"
     
     @staticmethod
     def verify_2fa_token(secret, token):
@@ -516,7 +516,7 @@ def add_security_headers(response):
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
             "style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data:; "
+            "img-src 'self' ; "
             "font-src 'self'; "
             "connect-src 'self'"
         )
@@ -635,10 +635,10 @@ def validate_input(data, rules):
                     continue
             elif rule['type'] == 'string' and not isinstance(value, str):
                 errors[field] = f"{field} must be a string"
-                    continue
+                continue
             elif rule['type'] == 'bool' and not isinstance(value, bool):
                 errors[field] = f"{field} must be a boolean"
-                    continue
+                continue
         
         # Range checks
         if 'min' in rule and value < rule['min']:
@@ -1890,7 +1890,7 @@ def verify_2fa_v1():
     user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -1982,7 +1982,7 @@ def disable_2fa_v1():
     user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -2086,7 +2086,7 @@ def verify_2fa_login_v1():
     """Verify 2FA token during login - API v1"""
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -2544,7 +2544,7 @@ def register_v1():
 def login_v1():
     """Login user - API v1"""
     data = request.get_json()
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -2799,7 +2799,7 @@ def change_password_v1():
     user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -2908,7 +2908,7 @@ def admin_change_password_v1():
     admin_user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -3007,7 +3007,7 @@ def set_withdrawal_pin_v1():
     user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -3069,7 +3069,7 @@ def verify_withdrawal_pin_v1():
     user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -3178,7 +3178,7 @@ def report_snake_v1():
     user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -3323,7 +3323,7 @@ def report_coinflip_v1():
     user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -3481,7 +3481,7 @@ def report_plinko_v1():
     user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -3873,7 +3873,7 @@ def set_profile_picture_v1():
     user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -3929,7 +3929,7 @@ def set_theme_v1():
     user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -4453,7 +4453,7 @@ def admin_set_tiktok_daily_v1():
     admin_user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -4698,7 +4698,7 @@ def admin_set_global_withdrawal_days_v1():
     admin_user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -4777,7 +4777,7 @@ def admin_set_user_custom_days_v1(user_id):
     admin_user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -4976,7 +4976,7 @@ def withdraw_v1():
     user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -5236,7 +5236,7 @@ def admin_approve_payment_v1():
     admin_user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -5340,7 +5340,7 @@ def admin_reject_payment_v1():
     admin_user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -5609,7 +5609,7 @@ def admin_toggle_admin_v1(user_id):
     admin_user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -5811,7 +5811,7 @@ def admin_create_coupon_v1():
     admin_user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -5896,7 +5896,7 @@ def admin_create_bulk_coupons_v1():
     admin_user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -6092,7 +6092,7 @@ def admin_add_whatsapp_number_v1():
     admin_user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -6179,7 +6179,7 @@ def admin_update_whatsapp_number_v1(number_id):
     admin_user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -6691,7 +6691,7 @@ def admin_toggle_user_restrict_v1(user_id):
     admin_user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -6767,7 +6767,7 @@ def admin_adjust_user_balance_v1(user_id):
     admin_user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -7029,7 +7029,7 @@ def admin_update_transaction_v1(transaction_id):
     admin_user = get_current_user()
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
@@ -7156,8 +7156,8 @@ def admin_get_settings_v1():
             return jsonify({
                 "success": False,
                 "message": "Settings not found",
-                "request_id": request.id,
-                "api_version": request.api_version
+                "request_id": getattr(request, 'id', 'unknown'),
+                "api_version": getattr(request, 'api_version', 'v1')
             }), 404
         
         settings = {
@@ -7706,7 +7706,7 @@ def generate_report_v1():
     """Generate custom report - API v1"""
     data = request.get_json()
     
-    if not data:
+    if not 
         return jsonify({
             "success": False,
             "message": "No data provided",
