@@ -1837,9 +1837,9 @@ def check_game_limits():
     game_type = request.args.get('game', '')
     
     limits = {
-        'snake': 20,
-        'coinflip': 50,
-        'plinko': 50,
+        'snake': 5,
+        'coinflip': 2,
+        'plinko': 2,
         'spin': 1,
         'tiktok': 1
     }
@@ -1895,8 +1895,8 @@ def report_snake():
             return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
         
         # Check daily plays
-        if not can_play_today(user['id'], 'snake', max_plays=20):
-            return jsonify({"success": False, "message": "Max 20 snake plays per day"}), 403
+        if not can_play_today(user['id'], 'snake', max_plays=5):
+            return jsonify({"success": False, "message": "Max 5 snake plays per day"}), 403
         
         reward = apples * CONFIG.SNAKE_REWARD
         
@@ -1990,8 +1990,8 @@ def report_coinflip():
             return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
         
         # Check daily plays
-        if not can_play_today(user['id'], 'coinflip', max_plays=50):
-            return jsonify({"success": False, "message": "Max 50 coin flips per day"}), 403
+        if not can_play_today(user['id'], 'coinflip', max_plays=2):
+            return jsonify({"success": False, "message": "Max 2 coin flips per day"}), 403
         
         payout = bet * 2 if won else 0
         net_change = payout - bet
@@ -2091,8 +2091,8 @@ def report_plinko():
             return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
         
         # Check daily plays
-        if not can_play_today(user['id'], 'plinko', max_plays=50):
-            return jsonify({"success": False, "message": "Max 50 plinko plays per day"}), 403
+        if not can_play_today(user['id'], 'plinko', max_plays=2):
+            return jsonify({"success": False, "message": "Max 2 plinko plays per day"}), 403
         
         win_amount = bet * multiplier
         net_change = win_amount - bet  # Positive if win, negative if loss
