@@ -1,5 +1,5 @@
-// script.js - FLEXIA Frontend Logic v12.4 - ULTIMATE FIXED VERSION
-// ✅ ALL FIXES APPLIED ✅ NO MORE "UNEXPECTED JSON" ERRORS ✅ MULTI-USER READY
+// script.js - FLEXIA Frontend Logic v12.4 - COMPLETE VERSION
+// ✅ ALL FIXES APPLIED ✅ DAILY PLAY LIMITS ✅ BEAUTIFUI UI
 
 //========== EMBEDDED CSS ========
 const embeddedCSS = `
@@ -305,6 +305,128 @@ const embeddedCSS = `
   .limit-display.danger {
     border-left-color: #FF0055;
   }
+  
+  /* Game Limit Modal Styles */
+  .game-limit-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(10px);
+  }
+  
+  .game-limit-modal-content {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-radius: 20px;
+    padding: 30px;
+    max-width: 400px;
+    width: 90%;
+    border: 2px solid #8000FF;
+    box-shadow: 0 20px 40px rgba(128, 0, 255, 0.3);
+    text-align: center;
+    animation: slideIn 0.4s ease-out;
+  }
+  
+  .game-limit-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    color: #ff4757;
+    animation: pulse 2s infinite;
+  }
+  
+  .game-limit-title {
+    color: white;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+  }
+  
+  .game-limit-message {
+    background: rgba(255, 71, 87, 0.1);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+    border: 1px solid rgba(255, 71, 87, 0.3);
+  }
+  
+  .game-limit-text {
+    color: #ffb8c6;
+    font-size: 1.1rem;
+    line-height: 1.5;
+    margin-bottom: 15px;
+  }
+  
+  .game-limit-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
+    color: #ffcc00;
+  }
+  
+  .game-limit-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 25px;
+  }
+  
+  .game-limit-btn-ok {
+    background: linear-gradient(135deg, #8000FF 0%, #6C00FF 100%);
+    color: white;
+    border: none;
+    padding: 15px;
+    border-radius: 10px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+  }
+  
+  .game-limit-btn-ok:hover {
+    transform: translateY(-2px);
+  }
+  
+  .game-limit-btn-alternative {
+    background: transparent;
+    color: #00D4FF;
+    border: 1px solid #00D4FF;
+    padding: 12px;
+    border-radius: 10px;
+    font-family: 'Orbitron', sans-serif;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+  }
+  
+  .game-limit-btn-alternative:hover {
+    background: rgba(0, 212, 255, 0.1);
+  }
+  
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-30px) scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
 `;
 
 // Inject CSS into document
@@ -320,7 +442,7 @@ const CONFIG = {
   SNAKE_REWARD: 200,
   COIN_FLIP_MIN_BET: 100,
   PLINKO_MIN_BET: 100,
-  CLAIM_COOLDOWN: 2000  // Increased to 2 seconds to match backend
+  CLAIM_COOLDOWN: 2000
 };
 
 //========== CORE APP ==========
@@ -503,7 +625,7 @@ const App = {
 //========== GAME MANAGER WITH LOCKING ==========
 const GameManager = {
   lastClaimTime: 0,
-  pendingRequests: new Map(), // Track pending requests by type
+  pendingRequests: new Map(),
   
   async checkDailyLimit(gameType) {
     try {
@@ -527,9 +649,7 @@ const GameManager = {
     }
   },
   
-  // SAFE CLAIM FUNCTION - prevents duplicate claims
   async safeClaim(endpoint, data, gameType = 'unknown') {
-    // Check if already claiming this game
     if (this.pendingRequests.has(gameType)) {
       console.warn(`Already claiming ${gameType}, ignoring duplicate`);
       return { 
@@ -538,7 +658,6 @@ const GameManager = {
       };
     }
     
-    // Set pending request
     this.pendingRequests.set(gameType, true);
     
     try {
@@ -550,7 +669,7 @@ const GameManager = {
         },
         credentials: 'include',
         body: JSON.stringify(data)
-      }, 15000); // 15 second timeout for game claims
+      }, 15000);
       
       const result = await response.json();
       this.lastClaimTime = Date.now();
@@ -572,12 +691,10 @@ const GameManager = {
       };
       
     } finally {
-      // Clear pending request
       this.pendingRequests.delete(gameType);
     }
   },
   
-  // Add loading state to button
   setButtonLoading: function(buttonId, isLoading) {
     const button = document.getElementById(buttonId);
     if (!button) return;
@@ -592,9 +709,251 @@ const GameManager = {
   }
 };
 
+//========== GAME LIMITER SYSTEM ==========
+const GameLimiter = {
+  dailyLimits: {
+    'snake': 10,
+    'coinflip': 5,
+    'plinko': 5
+  },
+  
+  gameMessages: {
+    'snake': {
+      icon: '🐍',
+      title: 'Snake Game Limit Reached',
+      message: 'You have played Snake 10 times today. Come back tomorrow for more fun!'
+    },
+    'coinflip': {
+      icon: '🪙',
+      title: 'Coin Flip Limit Reached',
+      message: 'You have played Coin Flip 5 times today. Daily limit reached!'
+    },
+    'plinko': {
+      icon: '🎯',
+      title: 'Plinko Limit Reached',
+      message: 'You have played Plinko 5 times today. Try again tomorrow!'
+    }
+  },
+  
+  async checkAndNavigate(gameType, redirectUrl) {
+    if (!App.currentUser) {
+      App.showMessage('Please login first', 'error');
+      return false;
+    }
+    
+    try {
+      const response = await GameManager.checkDailyLimit(gameType);
+      
+      if (response.can_play === false || response.remaining <= 0) {
+        this.showLimitModal(gameType);
+        return false;
+      }
+      
+      window.location.href = redirectUrl;
+      return true;
+      
+    } catch (error) {
+      console.error('Limit check error:', error);
+      window.location.href = redirectUrl;
+      return true;
+    }
+  },
+  
+  showLimitModal(gameType) {
+    const existingModal = document.getElementById('game-limit-modal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+    
+    const gameInfo = this.gameMessages[gameType];
+    const limit = this.dailyLimits[gameType];
+    
+    const modal = document.createElement('div');
+    modal.id = 'game-limit-modal';
+    modal.className = 'game-limit-modal';
+    
+    modal.innerHTML = `
+      <div class="game-limit-modal-content">
+        <div class="game-limit-icon">${gameInfo.icon}</div>
+        
+        <h3 class="game-limit-title">${gameInfo.title}</h3>
+        
+        <div class="game-limit-message">
+          <p class="game-limit-text">${gameInfo.message}</p>
+          
+          <div class="game-limit-info">
+            <i class="fas fa-calendar-day"></i>
+            <span>Daily Limit: ${limit} plays</span>
+          </div>
+        </div>
+        
+        <div class="game-limit-buttons">
+          <button class="game-limit-btn-ok" onclick="GameLimiter.closeModal()">
+            <i class="fas fa-check-circle"></i> OK, I Understand
+          </button>
+          
+          <button class="game-limit-btn-alternative" onclick="GameLimiter.suggestAlternative()">
+            <i class="fas fa-gamepad"></i> Try Another Game
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+  },
+  
+  closeModal() {
+    const modal = document.getElementById('game-limit-modal');
+    if (modal) {
+      modal.remove();
+    }
+  },
+  
+  suggestAlternative() {
+    this.closeModal();
+    
+    // Show alternative games modal
+    const alternativesHTML = `
+      <div style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10001;
+        backdrop-filter: blur(10px);
+      ">
+        <div style="
+          background: linear-gradient(135deg, #0f3460 0%, #1a1a2e 100%);
+          border-radius: 20px;
+          padding: 30px;
+          max-width: 400px;
+          width: 90%;
+          border: 2px solid #00D4FF;
+          box-shadow: 0 20px 40px rgba(0, 212, 255, 0.3);
+          text-align: center;
+          animation: slideIn 0.4s ease-out;
+        ">
+          <h3 style="
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+          ">
+            🎮 Try These Games
+          </h3>
+          
+          <div style="
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 20px 0;
+          ">
+            <button onclick="window.location.href='snake.html'" style="
+              background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%);
+              color: white;
+              border: none;
+              padding: 15px;
+              border-radius: 10px;
+              font-family: 'Orbitron', sans-serif;
+              font-weight: 700;
+              cursor: pointer;
+              transition: all 0.3s ease;
+              text-align: left;
+              display: flex;
+              align-items: center;
+              gap: 15px;
+            ">
+              <span style="font-size: 1.5rem;">🐍</span>
+              <div style="text-align: left;">
+                <div style="font-size: 1.1rem;">Snake Game</div>
+                <div style="font-size: 0.8rem; opacity: 0.8;">Eat apples, earn ₦200 each</div>
+              </div>
+            </button>
+            
+            <button onclick="Games.openTikTok()" style="
+              background: linear-gradient(135deg, #000000 0%, #25f4ee 100%);
+              color: white;
+              border: none;
+              padding: 15px;
+              border-radius: 10px;
+              font-family: 'Orbitron', sans-serif;
+              font-weight: 700;
+              cursor: pointer;
+              transition: all 0.3s ease;
+              text-align: left;
+              display: flex;
+              align-items: center;
+              gap: 15px;
+            ">
+              <span style="font-size: 1.5rem;">📱</span>
+              <div style="text-align: left;">
+                <div style="font-size: 1.1rem;">TikTok Follow</div>
+                <div style="font-size: 0.8rem; opacity: 0.8;">Follow & earn ₦150 daily</div>
+              </div>
+            </button>
+            
+            <button onclick="Games.openSpinWheel()" style="
+              background: linear-gradient(135deg, #8000FF 0%, #FF3333 100%);
+              color: white;
+              border: none;
+              padding: 15px;
+              border-radius: 10px;
+              font-family: 'Orbitron', sans-serif;
+              font-weight: 700;
+              cursor: pointer;
+              transition: all 0.3s ease;
+              text-align: left;
+              display: flex;
+              align-items: center;
+              gap: 15px;
+            ">
+              <span style="font-size: 1.5rem;">🎡</span>
+              <div style="text-align: left;">
+                <div style="font-size: 1.1rem;">Daily Spin</div>
+                <div style="font-size: 0.8rem; opacity: 0.8;">Spin & win up to ₦1000</div>
+              </div>
+            </button>
+          </div>
+          
+          <button onclick="GameLimiter.closeAlternativeModal()" style="
+            background: transparent;
+            color: #A0A0B5;
+            border: 1px solid #A0A0B5;
+            padding: 12px;
+            border-radius: 10px;
+            font-family: 'Orbitron', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 15px;
+          ">
+            Close
+          </button>
+        </div>
+      </div>
+    `;
+    
+    const altModal = document.createElement('div');
+    altModal.innerHTML = alternativesHTML;
+    altModal.id = 'alternative-games-modal';
+    document.body.appendChild(altModal);
+  },
+  
+  closeAlternativeModal() {
+    const modal = document.getElementById('alternative-games-modal');
+    if (modal) {
+      modal.remove();
+    }
+  }
+};
+
 //========== AUTHENTICATION =========
 const Auth = {
-  // Password toggle function
   togglePasswordVisibility: function(fieldId) {
     const passwordField = document.getElementById(fieldId);
     const toggleBtn = passwordField.nextElementSibling;
@@ -610,9 +969,7 @@ const Auth = {
     }
   },
   
-  // Setup password toggles
   initPasswordToggles: function() {
-    // Setup login password toggle
     const loginPasswordField = document.getElementById('login-password');
     if (loginPasswordField && !loginPasswordField.parentNode?.classList?.contains('password-container')) {
       const loginContainer = document.createElement('div');
@@ -631,7 +988,6 @@ const Auth = {
       loginContainer.appendChild(loginToggle);
     }
     
-    // Setup registration password toggle
     const regPasswordField = document.getElementById('reg-password');
     if (regPasswordField && !regPasswordField.parentNode?.classList?.contains('password-container')) {
       const regContainer = document.createElement('div');
@@ -679,7 +1035,7 @@ const Auth = {
         App.refreshBalance();
         document.getElementById('login-username').value = '';
         document.getElementById('login-password').value = '';
-        // Reset password visibility after login
+        
         const loginPassword = document.getElementById('login-password');
         if (loginPassword.type === 'text') {
           loginPassword.type = 'password';
@@ -736,7 +1092,7 @@ const Auth = {
       if (data.success) {
         document.getElementById('login-username').value = username;
         document.getElementById('login-password').value = password;
-        // Reset password visibility after registration
+        
         const regPassword = document.getElementById('reg-password');
         if (regPassword.type === 'text') {
           regPassword.type = 'password';
@@ -1139,11 +1495,12 @@ const Achievements = {
 
 //========== GAMES & TIKTOK DAILY =========
 const Games = {
-  openSnake: () => window.location.href = 'snake.html',
-  openCoinFlip: () => window.location.href = 'coinflip.html',
-  openPlinko: () => window.location.href = 'plinko.html',
+  // Updated game opening functions with daily limits
+  openSnake: () => GameLimiter.checkAndNavigate('snake', 'snake.html'),
+  openCoinFlip: () => GameLimiter.checkAndNavigate('coinflip', 'coinflip.html'),
+  openPlinko: () => GameLimiter.checkAndNavigate('plinko', 'plinko.html'),
   
-  // All game reports use safeClaim
+  // Game reporting functions
   reportSnake: async function (apples) {
     return await GameManager.safeClaim(
       '/api/games/snake/report', 
@@ -1416,69 +1773,6 @@ const Games = {
   }
 };
 
-// ==================== SPIN WHEEL FUNCTIONS ====================
-function initSpinWheel() {
-  const wheel = document.getElementById('wheel');
-  if (!wheel) return;
-  
-  wheel.innerHTML = '';
-  
-  const segments = [
-    { class: 'segment-1', color: '#FF0055' },
-    { class: 'segment-2', color: '#FF5C5C' },
-    { class: 'segment-3', color: '#FFCC00' },
-    { class: 'segment-4', color: '#00FF55' },
-    { class: 'segment-5', color: '#00CCFF' },
-    { class: 'segment-6', color: '#8000FF' }
-  ];
-  
-  segments.forEach(seg => {
-    const div = document.createElement('div');
-    div.className = `wheel-segment ${seg.class}`;
-    wheel.appendChild(div);
-  });
-  
-  const labelsDiv = document.createElement('div');
-  labelsDiv.className = 'wheel-labels';
-  
-  const labels = ['₦1000', '₦500', '₦200', '₦100', '₦50', 'TRY AGAIN'];
-  labels.forEach((label, index) => {
-    const labelDiv = document.createElement('div');
-    labelDiv.className = `wheel-label label-${index + 1}`;
-    labelDiv.textContent = label;
-    labelDiv.style.setProperty('--rotation', index * 60);
-    labelsDiv.appendChild(labelDiv);
-  });
-  
-  wheel.appendChild(labelsDiv);
-  
-  const center = document.createElement('div');
-  center.className = 'wheel-center';
-  wheel.appendChild(center);
-}
-
-// Auto-initialize when modal opens
-document.addEventListener('DOMContentLoaded', function() {
-  const spinModal = document.getElementById('spin-modal');
-  if (spinModal) {
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.attributeName === 'class') {
-          const isVisible = !spinModal.classList.contains('hidden');
-          if (isVisible) {
-            setTimeout(() => initSpinWheel(), 100);
-          }
-        }
-      });
-    });
-    
-    observer.observe(spinModal, { 
-      attributes: true, 
-      attributeFilter: ['class'] 
-    });
-  }
-});
-
 //========== SETTINGS & LOGOUT =========
 const Settings = {
   open: async function () {
@@ -1690,6 +1984,47 @@ const Settings = {
   }
 };
 
+//========== SPIN WHEEL FUNCTIONS =========
+function initSpinWheel() {
+  const wheel = document.getElementById('wheel');
+  if (!wheel) return;
+  
+  wheel.innerHTML = '';
+  
+  const segments = [
+    { class: 'segment-1', color: '#FF0055' },
+    { class: 'segment-2', color: '#FF5C5C' },
+    { class: 'segment-3', color: '#FFCC00' },
+    { class: 'segment-4', color: '#00FF55' },
+    { class: 'segment-5', color: '#00CCFF' },
+    { class: 'segment-6', color: '#8000FF' }
+  ];
+  
+  segments.forEach(seg => {
+    const div = document.createElement('div');
+    div.className = `wheel-segment ${seg.class}`;
+    wheel.appendChild(div);
+  });
+  
+  const labelsDiv = document.createElement('div');
+  labelsDiv.className = 'wheel-labels';
+  
+  const labels = ['₦1000', '₦500', '₦200', '₦100', '₦50', 'TRY AGAIN'];
+  labels.forEach((label, index) => {
+    const labelDiv = document.createElement('div');
+    labelDiv.className = `wheel-label label-${index + 1}`;
+    labelDiv.textContent = label;
+    labelDiv.style.setProperty('--rotation', index * 60);
+    labelsDiv.appendChild(labelDiv);
+  });
+  
+  wheel.appendChild(labelsDiv);
+  
+  const center = document.createElement('div');
+  center.className = 'wheel-center';
+  wheel.appendChild(center);
+}
+
 //========== DOM READY ===========
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.tab').forEach(tab => {
@@ -1707,17 +2042,36 @@ document.addEventListener('DOMContentLoaded', () => {
     buyCouponBtn.onclick = () => Auth.buyCoupon();
   }
   
-  // Initialize password toggles
   Auth.initPasswordToggles();
-  
   App.init();
+  
+  // Auto-initialize spin wheel when modal opens
+  const spinModal = document.getElementById('spin-modal');
+  if (spinModal) {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          const isVisible = !spinModal.classList.contains('hidden');
+          if (isVisible) {
+            setTimeout(() => initSpinWheel(), 100);
+          }
+        }
+      });
+    });
+    
+    observer.observe(spinModal, { 
+      attributes: true, 
+      attributeFilter: ['class'] 
+    });
+  }
 });
 
-// ==================== GLOBAL FUNCTIONS FOR GAME PAGES ====================
+//========== GLOBAL FUNCTIONS FOR GAME PAGES =========
 (function() {
     // Export all functions to window
     window.App = App;
     window.GameManager = GameManager;
+    window.GameLimiter = GameLimiter;
     window.Games = Games;
     window.Auth = Auth;
     window.Profile = Profile;
@@ -1726,10 +2080,10 @@ document.addEventListener('DOMContentLoaded', () => {
     window.Achievements = Achievements;
     window.Settings = Settings;
     
-    // Game navigation
-    window.openSnakeGame = () => window.location.href = 'snake.html';
-    window.openCoinFlipGame = () => window.location.href = 'coinflip.html';
-    window.openPlinkoGame = () => window.location.href = 'plinko.html';
+    // Game navigation with limits
+    window.openSnakeGame = () => GameLimiter.checkAndNavigate('snake', 'snake.html');
+    window.openCoinFlipGame = () => GameLimiter.checkAndNavigate('coinflip', 'coinflip.html');
+    window.openPlinkoGame = () => GameLimiter.checkAndNavigate('plinko', 'plinko.html');
     window.openTikTokGame = Games.openTikTok;
     window.openSpinWheelGame = Games.openSpinWheel;
     
@@ -1781,12 +2135,30 @@ document.addEventListener('DOMContentLoaded', () => {
         return await GameManager.safeClaim(endpoint, data, gameType);
     };
     
-    console.log('✅ FLEXIA Script v12.4 - ALL FUNCTIONS LOADED WITH FIXES');
+    // Update main dashboard game card click handlers
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(() => {
+            const snakeCard = document.querySelector('.activity-card[onclick*="snake.html"]');
+            const coinflipCard = document.querySelector('.activity-card[onclick*="coinflip.html"]');
+            const plinkoCard = document.querySelector('.activity-card[onclick*="plinko.html"]');
+            
+            if (snakeCard) {
+                snakeCard.onclick = () => GameLimiter.checkAndNavigate('snake', 'snake.html');
+            }
+            if (coinflipCard) {
+                coinflipCard.onclick = () => GameLimiter.checkAndNavigate('coinflip', 'coinflip.html');
+            }
+            if (plinkoCard) {
+                plinkoCard.onclick = () => GameLimiter.checkAndNavigate('plinko', 'plinko.html');
+            }
+        }, 1000);
+    });
+    
+    console.log('✅ FLEXIA Script v12.4 - ALL FUNCTIONS LOADED WITH DAILY LIMITS');
 })();
 
 // Emergency fallback loader
 document.addEventListener('DOMContentLoaded', function() {
-    // Double-check critical functions
     setTimeout(() => {
         const required = ['checkDailyLimit', 'claimSnakeReward', 'claimCoinFlipReward', 'claimPlinkoReward'];
         required.forEach(func => {
