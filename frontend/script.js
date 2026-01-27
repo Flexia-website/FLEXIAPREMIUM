@@ -1,5 +1,5 @@
-// script.js - FLEXIA Frontend Logic v12.4 - COMPLETE VERSION
-// ✅ ALL FIXES APPLIED ✅ DAILY PLAY LIMITS ✅ BEAUTIFUI UI
+// script.js - FLEXIA Frontend Logic v12.5 - COMPLETE VERSION WITH GAME LIMITS
+// ✅ ALL FIXES APPLIED ✅ DAILY PLAY LIMITS ✅ BEAUTIFUL UI
 
 //========== EMBEDDED CSS ========
 const embeddedCSS = `
@@ -427,6 +427,32 @@ const embeddedCSS = `
     50% { transform: scale(1.1); }
     100% { transform: scale(1); }
   }
+  
+  /* Game Card Disabled State */
+  .activity-card.disabled {
+    opacity: 0.5;
+    filter: grayscale(0.7);
+    cursor: not-allowed !important;
+    position: relative;
+  }
+  
+  .activity-card.disabled::after {
+    content: "LIMIT REACHED";
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #ff4757;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+  
+  .activity-card.disabled .card-badge {
+    background: #ff4757 !important;
+  }
 `;
 
 // Inject CSS into document
@@ -442,7 +468,14 @@ const CONFIG = {
   SNAKE_REWARD: 200,
   COIN_FLIP_MIN_BET: 100,
   PLINKO_MIN_BET: 100,
-  CLAIM_COOLDOWN: 2000
+  CLAIM_COOLDOWN: 2000,
+  GAME_DAILY_LIMITS: {
+    'snake': 10,
+    'coinflip': 5,
+    'plinko': 5,
+    'spin': 1,
+    'tiktok': 1
+  }
 };
 
 //========== CORE APP ==========
@@ -458,6 +491,7 @@ const App = {
       await Banking.loadBanks();
       this.setupTheme();
       this.setupAutoRefresh();
+      this.updateGameCards();
     }
   },
   
@@ -592,6 +626,60 @@ const App = {
   setupAutoRefresh: function () {
     // Refresh balance every 10 seconds
     setInterval(() => this.refreshBalance(), 10000);
+    // Update game cards every 30 seconds
+    setInterval(() => this.updateGameCards(), 30000);
+  },
+  
+  async updateGameCards() {
+    if (!this.currentUser) return;
+    
+    const games = [
+      { type: 'snake', element: document.querySelector('.activity-card[onclick*="snake.html"]') },
+      { type: 'coinflip', element: document.querySelector('.activity-card[onclick*="coinflip.html"]') },
+      { type: 'plinko', element: document.querySelector('.activity-card[onclick*="plinko.html"]') }
+    ];
+    
+    for (const game of games) {
+      if (!game.element) continue;
+      
+      try {
+        const response = await this.requestWithTimeout(`/api/games/access?game=${game.type}`, {
+          credentials: 'include',
+          headers: { 'Cache-Control': 'no-cache' }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            if (data.can_play) {
+              game.element.classList.remove('disabled');
+              game.element.style.opacity = '1';
+              game.element.style.filter = 'none';
+              game.element.style.cursor = 'pointer';
+              
+              // Update badge if exists
+              const badge = game.element.querySelector('.card-badge');
+              if (badge && data.remaining_plays) {
+                badge.textContent = `${data.remaining_plays}/${data.max_plays} left`;
+              }
+            } else {
+              game.element.classList.add('disabled');
+              game.element.style.opacity = '0.5';
+              game.element.style.filter = 'grayscale(0.7)';
+              game.element.style.cursor = 'not-allowed';
+              
+              const badge = game.element.querySelector('.card-badge');
+              if (badge) {
+                badge.textContent = `LIMIT REACHED`;
+                badge.style.background = '#ff4757';
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to update ${game.type} card:`, error);
+      }
+    }
   },
   
   requestWithTimeout: async function(url, options = {}, timeout = 10000) {
@@ -709,12 +797,24 @@ const GameManager = {
   }
 };
 
-//========== GAME LIMITER SYSTEM ==========
+//========== ENHANCED GAME LIMITER WITH FRIENDLY MESSAGES ==========
 const GameLimiter = {
-  dailyLimits: {
-    'snake': 10,
-    'coinflip': 5,
-    'plinko': 5
+  dailyLimits: CONFIG.GAME_DAILY_LIMITS,
+  
+  gameFriendlyNames: {
+    'snake': 'Snake Game',
+    'coinflip': 'Coin Flip',
+    'plinko': 'Plinko 3D',
+    'spin': 'Daily Spin',
+    'tiktok': 'TikTok Follow'
+  },
+  
+  gameEmojis: {
+    'snake': '🐍',
+    'coinflip': '🪙',
+    'plinko': '🎯',
+    'spin': '🎡',
+    'tiktok': '📱'
   },
   
   gameMessages: {
@@ -732,41 +832,72 @@ const GameLimiter = {
       icon: '🎯',
       title: 'Plinko Limit Reached',
       message: 'You have played Plinko 5 times today. Try again tomorrow!'
+    },
+    'spin': {
+      icon: '🎡',
+      title: 'Daily Spin Limit Reached',
+      message: 'You have already used your daily spin today! Come back tomorrow.'
+    },
+    'tiktok': {
+      icon: '📱',
+      title: 'TikTok Daily Limit Reached',
+      message: 'You have already claimed TikTok reward today! Come back tomorrow.'
     }
   },
   
-  async checkAndNavigate(gameType, redirectUrl) {
+  async checkAndNavigate(gameType, targetUrl) {
     if (!App.currentUser) {
       App.showMessage('Please login first', 'error');
       return false;
     }
     
     try {
-      const response = await GameManager.checkDailyLimit(gameType);
+      // First check if user can access the game
+      const response = await App.requestWithTimeout(`/api/games/access?game=${gameType}`, {
+        credentials: 'include',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
       
-      if (response.can_play === false || response.remaining <= 0) {
-        this.showLimitModal(gameType);
+      const data = await response.json();
+      
+      if (!data.success) {
+        App.showMessage('Failed to check game access. Please try again.', 'error');
         return false;
       }
       
-      window.location.href = redirectUrl;
+      if (data.can_play === false) {
+        // Show friendly limit modal
+        this.showLimitModal(gameType, data);
+        return false;
+      }
+      
+      // User can play, proceed to game
+      window.location.href = targetUrl;
       return true;
       
     } catch (error) {
-      console.error('Limit check error:', error);
-      window.location.href = redirectUrl;
+      console.error('Game access check error:', error);
+      // On error, still allow navigation but show warning
+      App.showMessage('Could not verify game limits. Proceeding to game...', 'warning');
+      window.location.href = targetUrl;
       return true;
     }
   },
   
-  showLimitModal(gameType) {
+  showLimitModal(gameType, data = null) {
     const existingModal = document.getElementById('game-limit-modal');
     if (existingModal) {
       existingModal.remove();
     }
     
-    const gameInfo = this.gameMessages[gameType];
-    const limit = this.dailyLimits[gameType];
+    const gameInfo = this.gameMessages[gameType] || {
+      icon: '🚫',
+      title: 'Game Limit Reached',
+      message: 'You have reached your daily limit for this game.'
+    };
+    
+    const limit = this.dailyLimits[gameType] || 5;
+    const played = data?.played_today || limit;
     
     const modal = document.createElement('div');
     modal.id = 'game-limit-modal';
@@ -783,7 +914,12 @@ const GameLimiter = {
           
           <div class="game-limit-info">
             <i class="fas fa-calendar-day"></i>
-            <span>Daily Limit: ${limit} plays</span>
+            <span>Daily Limit: ${played}/${limit} plays</span>
+          </div>
+          
+          <div class="game-limit-info">
+            <i class="fas fa-clock"></i>
+            <span>Reset Time: Midnight (00:00 GMT)</span>
           </div>
         </div>
         
@@ -792,7 +928,7 @@ const GameLimiter = {
             <i class="fas fa-check-circle"></i> OK, I Understand
           </button>
           
-          <button class="game-limit-btn-alternative" onclick="GameLimiter.suggestAlternative()">
+          <button class="game-limit-btn-alternative" onclick="GameLimiter.suggestAlternative('${gameType}')">
             <i class="fas fa-gamepad"></i> Try Another Game
           </button>
         </div>
@@ -809,11 +945,13 @@ const GameLimiter = {
     }
   },
   
-  suggestAlternative() {
+  suggestAlternative(currentGame) {
     this.closeModal();
     
-    // Show alternative games modal
-    const alternativesHTML = `
+    // Determine which games to suggest (all except the current one)
+    const alternativeGames = Object.keys(this.gameFriendlyNames).filter(game => game !== currentGame);
+    
+    let alternativesHTML = `
       <div style="
         position: fixed;
         top: 0;
@@ -844,7 +982,7 @@ const GameLimiter = {
             font-size: 1.5rem;
             margin-bottom: 20px;
           ">
-            🎮 Try These Games
+            🎮 Try These Games Instead
           </h3>
           
           <div style="
@@ -853,71 +991,46 @@ const GameLimiter = {
             gap: 15px;
             margin: 20px 0;
           ">
-            <button onclick="window.location.href='snake.html'" style="
-              background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%);
-              color: white;
-              border: none;
-              padding: 15px;
-              border-radius: 10px;
-              font-family: 'Orbitron', sans-serif;
-              font-weight: 700;
-              cursor: pointer;
-              transition: all 0.3s ease;
-              text-align: left;
-              display: flex;
-              align-items: center;
-              gap: 15px;
-            ">
-              <span style="font-size: 1.5rem;">🐍</span>
-              <div style="text-align: left;">
-                <div style="font-size: 1.1rem;">Snake Game</div>
-                <div style="font-size: 0.8rem; opacity: 0.8;">Eat apples, earn ₦200 each</div>
-              </div>
-            </button>
-            
-            <button onclick="Games.openTikTok()" style="
-              background: linear-gradient(135deg, #000000 0%, #25f4ee 100%);
-              color: white;
-              border: none;
-              padding: 15px;
-              border-radius: 10px;
-              font-family: 'Orbitron', sans-serif;
-              font-weight: 700;
-              cursor: pointer;
-              transition: all 0.3s ease;
-              text-align: left;
-              display: flex;
-              align-items: center;
-              gap: 15px;
-            ">
-              <span style="font-size: 1.5rem;">📱</span>
-              <div style="text-align: left;">
-                <div style="font-size: 1.1rem;">TikTok Follow</div>
-                <div style="font-size: 0.8rem; opacity: 0.8;">Follow & earn ₦150 daily</div>
-              </div>
-            </button>
-            
-            <button onclick="Games.openSpinWheel()" style="
-              background: linear-gradient(135deg, #8000FF 0%, #FF3333 100%);
-              color: white;
-              border: none;
-              padding: 15px;
-              border-radius: 10px;
-              font-family: 'Orbitron', sans-serif;
-              font-weight: 700;
-              cursor: pointer;
-              transition: all 0.3s ease;
-              text-align: left;
-              display: flex;
-              align-items: center;
-              gap: 15px;
-            ">
-              <span style="font-size: 1.5rem;">🎡</span>
-              <div style="text-align: left;">
-                <div style="font-size: 1.1rem;">Daily Spin</div>
-                <div style="font-size: 0.8rem; opacity: 0.8;">Spin & win up to ₦1000</div>
-              </div>
-            </button>
+    `;
+    
+    // Add alternative game buttons
+    alternativeGames.forEach(gameType => {
+      const gameName = this.gameFriendlyNames[gameType];
+      const emoji = this.gameEmojis[gameType] || '🎮';
+      
+      let onclick = '';
+      if (gameType === 'snake') onclick = 'window.location.href=\'snake.html\'';
+      else if (gameType === 'coinflip') onclick = 'window.location.href=\'coinflip.html\'';
+      else if (gameType === 'plinko') onclick = 'window.location.href=\'plinko.html\'';
+      else if (gameType === 'spin') onclick = 'Games.openSpinWheel()';
+      else if (gameType === 'tiktok') onclick = 'Games.openTikTok()';
+      
+      alternativesHTML += `
+        <button onclick="${onclick}" style="
+          background: linear-gradient(135deg, #8000FF 0%, #6C00FF 100%);
+          color: white;
+          border: none;
+          padding: 15px;
+          border-radius: 10px;
+          font-family: 'Orbitron', sans-serif;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          text-align: left;
+          display: flex;
+          align-items: center;
+          gap: 15px;
+        ">
+          <span style="font-size: 1.5rem;">${emoji}</span>
+          <div style="text-align: left;">
+            <div style="font-size: 1.1rem;">${gameName}</div>
+            <div style="font-size: 0.8rem; opacity: 0.8;">${this.getGameDescription(gameType)}</div>
+          </div>
+        </button>
+      `;
+    });
+    
+    alternativesHTML += `
           </div>
           
           <button onclick="GameLimiter.closeAlternativeModal()" style="
@@ -942,6 +1055,17 @@ const GameLimiter = {
     altModal.innerHTML = alternativesHTML;
     altModal.id = 'alternative-games-modal';
     document.body.appendChild(altModal);
+  },
+  
+  getGameDescription(gameType) {
+    const descriptions = {
+      'snake': 'Eat apples, earn ₦200 each',
+      'coinflip': 'Bet & double your money',
+      'plinko': 'Bet & multiply your earnings',
+      'spin': 'Spin & win up to ₦1000',
+      'tiktok': 'Follow & earn ₦150 daily'
+    };
+    return descriptions[gameType] || 'Earn rewards';
   },
   
   closeAlternativeModal() {
@@ -1535,6 +1659,23 @@ const Games = {
   
   openTikTok: async function () {
     if (!App.currentUser) return;
+    
+    // Check TikTok limit first
+    try {
+      const response = await App.requestWithTimeout(`/api/games/access?game=tiktok`, {
+        credentials: 'include',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      
+      const data = await response.json();
+      if (data.success && !data.can_play) {
+        GameLimiter.showLimitModal('tiktok', data);
+        return;
+      }
+    } catch (error) {
+      console.error('TikTok access check error:', error);
+    }
+    
     const msgEl = document.getElementById('tiktok-message');
     msgEl.textContent = '';
     msgEl.className = 'message';
@@ -1646,8 +1787,24 @@ const Games = {
     }
   },
   
-  openSpinWheel: function() {
+  openSpinWheel: async function() {
     if (!App.currentUser) return;
+    
+    // Check spin limit first
+    try {
+      const response = await App.requestWithTimeout(`/api/games/access?game=spin`, {
+        credentials: 'include',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      
+      const data = await response.json();
+      if (data.success && !data.can_play) {
+        GameLimiter.showLimitModal('spin', data);
+        return;
+      }
+    } catch (error) {
+      console.error('Spin access check error:', error);
+    }
     
     const wheel = document.getElementById('wheel');
     const button = document.getElementById('spin-button');
@@ -2045,6 +2202,23 @@ document.addEventListener('DOMContentLoaded', () => {
   Auth.initPasswordToggles();
   App.init();
   
+  // Update game card click handlers for limits
+  setTimeout(() => {
+    const snakeCard = document.querySelector('.activity-card[onclick*="snake.html"]');
+    const coinflipCard = document.querySelector('.activity-card[onclick*="coinflip.html"]');
+    const plinkoCard = document.querySelector('.activity-card[onclick*="plinko.html"]');
+    
+    if (snakeCard) {
+      snakeCard.onclick = () => GameLimiter.checkAndNavigate('snake', 'snake.html');
+    }
+    if (coinflipCard) {
+      coinflipCard.onclick = () => GameLimiter.checkAndNavigate('coinflip', 'coinflip.html');
+    }
+    if (plinkoCard) {
+      plinkoCard.onclick = () => GameLimiter.checkAndNavigate('plinko', 'plinko.html');
+    }
+  }, 1000);
+  
   // Auto-initialize spin wheel when modal opens
   const spinModal = document.getElementById('spin-modal');
   if (spinModal) {
@@ -2135,26 +2309,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return await GameManager.safeClaim(endpoint, data, gameType);
     };
     
-    // Update main dashboard game card click handlers
-    document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(() => {
-            const snakeCard = document.querySelector('.activity-card[onclick*="snake.html"]');
-            const coinflipCard = document.querySelector('.activity-card[onclick*="coinflip.html"]');
-            const plinkoCard = document.querySelector('.activity-card[onclick*="plinko.html"]');
-            
-            if (snakeCard) {
-                snakeCard.onclick = () => GameLimiter.checkAndNavigate('snake', 'snake.html');
-            }
-            if (coinflipCard) {
-                coinflipCard.onclick = () => GameLimiter.checkAndNavigate('coinflip', 'coinflip.html');
-            }
-            if (plinkoCard) {
-                plinkoCard.onclick = () => GameLimiter.checkAndNavigate('plinko', 'plinko.html');
-            }
-        }, 1000);
-    });
-    
-    console.log('✅ FLEXIA Script v12.4 - ALL FUNCTIONS LOADED WITH DAILY LIMITS');
+    console.log('✅ FLEXIA Script v12.5 - ALL FUNCTIONS LOADED WITH COMPLETE GAME LIMITS');
 })();
 
 // Emergency fallback loader
