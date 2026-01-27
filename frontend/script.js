@@ -1,5 +1,316 @@
-// script.js - FLEXIA Frontend Logic v12.0 - FIXED VERSION
-// ✅ ALL GLOBAL FUNCTIONS WORKING ✅ NO BACKEND CHANGES NEEDED
+// script.js - FLEXIA Frontend Logic v12.4 - ULTIMATE FIXED VERSION
+// ✅ ALL FIXES APPLIED ✅ NO MORE "UNEXPECTED JSON" ERRORS ✅ MULTI-USER READY
+
+//========== EMBEDDED CSS ========
+const embeddedCSS = `
+  /* Password visibility toggle */
+  .password-container {
+    position: relative;
+    width: 100%;
+    margin-bottom: 15px;
+  }
+  
+  .password-container input {
+    width: 100%;
+    padding-left: 45px !important;
+    padding-right: 45px !important;
+    box-sizing: border-box !important;
+  }
+  
+  .password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: #A0A0B5;
+    cursor: pointer;
+    font-size: 1.1rem;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: color 0.2s, background 0.2s;
+    z-index: 10;
+  }
+  
+  .password-toggle:hover {
+    color: #8000FF;
+    background: rgba(128, 0, 255, 0.1);
+  }
+  
+  /* Game button loading states */
+  .btn-loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+  }
+  
+  .btn-loading::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 0.8s linear infinite;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  /* Global messages */
+  .global-message {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 24px;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    border-radius: 8px;
+    z-index: 10000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    animation: slideDown 0.3s ease-out;
+    max-width: 90%;
+    text-align: center;
+    border-left: 4px solid;
+  }
+  
+  .global-message.success {
+    border-left-color: #00ff88;
+    background: rgba(0, 255, 136, 0.1);
+  }
+  
+  .global-message.error {
+    border-left-color: #ff0055;
+    background: rgba(255, 0, 85, 0.1);
+  }
+  
+  .global-message.warning {
+    border-left-color: #ffaa00;
+    background: rgba(255, 170, 0, 0.1);
+  }
+  
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  }
+  
+  @keyframes slideOut {
+    from {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-20px);
+    }
+  }
+  
+  /* Social links */
+  .social-link {
+    display: inline-block;
+    margin: 5px 0;
+    padding: 8px 15px;
+    background: rgba(30,30,69,0.8);
+    border: 1px solid #8000FF;
+    border-radius: 8px;
+    color: #8000FF;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  
+  .social-link:hover {
+    background: rgba(128,0,255,0.2);
+    transform: translateY(-2px);
+  }
+  
+  /* Settings sections */
+  .settings-section {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #252540;
+  }
+  
+  .settings-section:last-child {
+    border-bottom: none;
+  }
+  
+  .small-text {
+    font-size: 0.8rem;
+    color: #A0A0B5;
+    margin: 10px 0;
+  }
+  
+  /* Profile sections */
+  .profile-section {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: rgba(30,30,69,0.5);
+    border-radius: 8px;
+    border-left: 4px solid #8000FF;
+  }
+  
+  .profile-section h4 {
+    margin-top: 0;
+    color: #8000FF;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .profile-section p {
+    margin: 8px 0;
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .profile-section strong {
+    color: #A0A0B5;
+  }
+  
+  /* Referral sections */
+  .referral-section {
+    margin-bottom: 25px;
+    padding: 20px;
+    background: rgba(30,30,69,0.5);
+    border-radius: 10px;
+    border: 1px solid rgba(128, 0, 255, 0.3);
+  }
+  
+  .referral-section h4 {
+    margin-top: 0;
+    color: #8000FF;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .referral-section code {
+    display: inline-block;
+    padding: 5px 10px;
+    background: rgba(128, 0, 255, 0.2);
+    border-radius: 5px;
+    font-family: monospace;
+    margin: 10px 0;
+  }
+  
+  /* TikTok display */
+  .tiktok-account-display {
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid #8000FF;
+    border-radius: 10px;
+    padding: 15px;
+    margin: 15px 0;
+    text-align: center;
+    font-size: 1.2rem;
+  }
+  
+  /* Spin wheel */
+  .wheel-container {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    margin: 20px auto;
+  }
+  
+  .wheel {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    position: relative;
+    overflow: hidden;
+    border: 5px solid #8000FF;
+    box-shadow: 0 0 20px rgba(128, 0, 255, 0.5);
+  }
+  
+  .wheel-segment {
+    position: absolute;
+    width: 50%;
+    height: 50%;
+    transform-origin: 100% 100%;
+    left: 0;
+    top: 0;
+    border-radius: 0 100% 0 0;
+  }
+  
+  .wheel-segment.segment-1 { background: #FF0055; transform: rotate(0deg); }
+  .wheel-segment.segment-2 { background: #FF5C5C; transform: rotate(60deg); }
+  .wheel-segment.segment-3 { background: #FFCC00; transform: rotate(120deg); }
+  .wheel-segment.segment-4 { background: #00FF55; transform: rotate(180deg); }
+  .wheel-segment.segment-5 { background: #00CCFF; transform: rotate(240deg); }
+  .wheel-segment.segment-6 { background: #8000FF; transform: rotate(300deg); }
+  
+  .wheel-center {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    background: white;
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    border: 5px solid #8000FF;
+  }
+  
+  .wheel-labels {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+  }
+  
+  .wheel-label {
+    position: absolute;
+    left: 50%;
+    top: 15%;
+    transform: translateX(-50%) rotate(var(--rotation));
+    transform-origin: 50% 150px;
+    color: white;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+  }
+  
+  /* Game limits display */
+  .limit-display {
+    background: rgba(30,30,69,0.8);
+    padding: 10px;
+    border-radius: 5px;
+    margin: 10px 0;
+    border-left: 3px solid #00FF55;
+  }
+  
+  .limit-display.warning {
+    border-left-color: #FFAA00;
+  }
+  
+  .limit-display.danger {
+    border-left-color: #FF0055;
+  }
+`;
+
+// Inject CSS into document
+const style = document.createElement('style');
+style.textContent = embeddedCSS;
+document.head.appendChild(style);
 
 //========== CONFIGURATION ========
 const CONFIG = {
@@ -9,7 +320,7 @@ const CONFIG = {
   SNAKE_REWARD: 200,
   COIN_FLIP_MIN_BET: 100,
   PLINKO_MIN_BET: 100,
-  CLAIM_COOLDOWN: 1000
+  CLAIM_COOLDOWN: 2000  // Increased to 2 seconds to match backend
 };
 
 //========== CORE APP ==========
@@ -24,13 +335,14 @@ const App = {
       await Profile.load();
       await Banking.loadBanks();
       this.setupTheme();
+      this.setupAutoRefresh();
     }
   },
   
   checkAuth: async function () {
     try {
-      const res = await fetch('/api/user/profile');
-      const data = await res.json();
+      const response = await this.requestWithTimeout('/api/user/profile');
+      const data = await response.json();
       if (data.success) {
         this.currentUser = data.user;
         this.showAppScreen();
@@ -63,7 +375,7 @@ const App = {
     if (!this.currentUser) return;
     
     const now = Date.now();
-    if (!force && (now - this.lastBalanceUpdate) < 5000) {
+    if (!force && (now - this.lastBalanceUpdate) < 3000) {
       return;
     }
     
@@ -116,26 +428,11 @@ const App = {
   },
   
   showMessage: function (text, type = 'info', duration = 5000) {
+    // Remove existing messages
+    document.querySelectorAll('.global-message').forEach(el => el.remove());
+    
     const messageEl = document.createElement('div');
     messageEl.className = `global-message ${type}`;
-    messageEl.style.cssText = `
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 15px 25px;
-      background: ${type === 'success' ? 'rgba(0, 255, 85, 0.9)' : 
-                   type === 'error' ? 'rgba(255, 0, 85, 0.9)' : 
-                   'rgba(0, 204, 255, 0.9)'};
-      color: white;
-      border-radius: 8px;
-      font-weight: 600;
-      z-index: 9999;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-      min-width: 300px;
-      text-align: center;
-      animation: slideIn 0.3s ease-out;
-    `;
     messageEl.textContent = text;
     document.body.appendChild(messageEl);
     
@@ -153,6 +450,8 @@ const App = {
     document.body.classList.toggle('dark-mode');
     const isDark = document.body.classList.contains('dark-mode');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    
+    // Save to backend
     fetch('/api/user/set-theme', {
       method: 'POST',
       credentials: 'include',
@@ -166,95 +465,129 @@ const App = {
     if (savedTheme === 'dark') {
       document.body.classList.add('dark-mode');
     }
+  },
+  
+  setupAutoRefresh: function () {
+    // Refresh balance every 10 seconds
+    setInterval(() => this.refreshBalance(), 10000);
+  },
+  
+  requestWithTimeout: async function(url, options = {}, timeout = 10000) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server returned non-JSON response. Please try again.');
+      }
+      
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Request timed out. Please try again.');
+      }
+      throw error;
+    }
   }
 };
 
-// Add CSS animations for messages
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
-    to { opacity: 1; transform: translateX(-50%) translateY(0); }
-  }
-  @keyframes slideOut {
-    from { opacity: 1; transform: translateX(-50%) translateY(0); }
-    to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
-  }
-  
-  .password-container {
-    position: relative;
-    width: 100%;
-    margin-bottom: 15px;
-  }
-  
-  .password-container input {
-    width: 100%;
-    padding-left: 45px !important;  /* Space for left padlock icon */
-    padding-right: 45px !important; /* Space for right eye icon */
-    box-sizing: border-box !important;
-  }
-  
-  .password-toggle {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: transparent;
-    border: none;
-    color: #A0A0B5;
-    cursor: pointer;
-    font-size: 1.1rem;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    transition: color 0.2s, background 0.2s;
-    z-index: 10;
-  }
-  
-  .password-toggle:hover {
-    color: #8000FF;
-    background: rgba(128, 0, 255, 0.1);
-  }
-  
-  .auth-form input {
-    padding: 12px 20px 12px 45px !important; /* Extra left padding for padlock */
-    font-size: 1rem !important;
-  }
-  
-  /* Make sure text doesn't overlap with left icon */
-  input[type="password"], input[type="text"] {
-    text-indent: 5px; /* Small indent to move text away from left border */
-  }
-`;
-document.head.appendChild(style);
-
-//========== GAME MANAGER ==========
+//========== GAME MANAGER WITH LOCKING ==========
 const GameManager = {
   lastClaimTime: 0,
-  isClaiming: false,
-  
-  canClaimNow() {
-    const now = Date.now();
-    return (now - this.lastClaimTime) >= CONFIG.CLAIM_COOLDOWN;
-  },
+  pendingRequests: new Map(), // Track pending requests by type
   
   async checkDailyLimit(gameType) {
     try {
-      const response = await fetch(`/api/games/limit-check?game=${gameType}`, {
+      const response = await App.requestWithTimeout(`/api/games/limit-check?game=${gameType}`, {
         credentials: 'include',
-        headers: { 'Cache-Control': 'no-cache' }
+        headers: { 
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
       });
       
       if (!response.ok) {
+        console.warn('Limit check failed, assuming can play');
         return { can_play: true, remaining: 999 };
       }
       
       return await response.json();
     } catch (error) {
+      console.error('Limit check error:', error);
       return { can_play: true, remaining: 999 };
+    }
+  },
+  
+  // SAFE CLAIM FUNCTION - prevents duplicate claims
+  async safeClaim(endpoint, data, gameType = 'unknown') {
+    // Check if already claiming this game
+    if (this.pendingRequests.has(gameType)) {
+      console.warn(`Already claiming ${gameType}, ignoring duplicate`);
+      return { 
+        success: false, 
+        message: "Please wait for the current claim to complete" 
+      };
+    }
+    
+    // Set pending request
+    this.pendingRequests.set(gameType, true);
+    
+    try {
+      const response = await App.requestWithTimeout(endpoint, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Request-ID': Date.now().toString()
+        },
+        credentials: 'include',
+        body: JSON.stringify(data)
+      }, 15000); // 15 second timeout for game claims
+      
+      const result = await response.json();
+      this.lastClaimTime = Date.now();
+      return result;
+      
+    } catch (error) {
+      console.error('Claim error:', error);
+      
+      if (error.name === 'AbortError') {
+        return { 
+          success: false, 
+          message: "Request timed out. Please try again." 
+        };
+      }
+      
+      return { 
+        success: false, 
+        message: error.message || "Connection error. Please check your internet and try again." 
+      };
+      
+    } finally {
+      // Clear pending request
+      this.pendingRequests.delete(gameType);
+    }
+  },
+  
+  // Add loading state to button
+  setButtonLoading: function(buttonId, isLoading) {
+    const button = document.getElementById(buttonId);
+    if (!button) return;
+    
+    if (isLoading) {
+      button.classList.add('btn-loading');
+      button.disabled = true;
+    } else {
+      button.classList.remove('btn-loading');
+      button.disabled = false;
     }
   }
 };
@@ -285,11 +618,9 @@ const Auth = {
       const loginContainer = document.createElement('div');
       loginContainer.className = 'password-container';
       
-      // Move the input into the container
       loginPasswordField.parentNode.insertBefore(loginContainer, loginPasswordField);
       loginContainer.appendChild(loginPasswordField);
       
-      // Create toggle button
       const loginToggle = document.createElement('button');
       loginToggle.type = 'button';
       loginToggle.className = 'password-toggle';
@@ -306,11 +637,9 @@ const Auth = {
       const regContainer = document.createElement('div');
       regContainer.className = 'password-container';
       
-      // Move the input into the container
       regPasswordField.parentNode.insertBefore(regContainer, regPasswordField);
       regContainer.appendChild(regPasswordField);
       
-      // Create toggle button
       const regToggle = document.createElement('button');
       regToggle.type = 'button';
       regToggle.className = 'password-toggle';
@@ -334,13 +663,13 @@ const Auth = {
     }
     
     try {
-      const res = await fetch('/api/auth/login', {
+      const response = await App.requestWithTimeout('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: identifier, password })
       });
       
-      const data = await res.json();
+      const data = await response.json();
       messageEl.textContent = data.message;
       messageEl.className = data.success ? 'message success' : 'message error';
       
@@ -362,7 +691,7 @@ const Auth = {
         }
       }
     } catch (error) {
-      messageEl.textContent = 'Network error. Please try again.';
+      messageEl.textContent = error.message || 'Network error. Please try again.';
       messageEl.className = 'message error';
     }
   },
@@ -394,13 +723,13 @@ const Auth = {
     }
     
     try {
-      const res = await fetch('/api/auth/register', {
+      const response = await App.requestWithTimeout('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password, coupon_code: coupon, referral_code: referral, contact })
       });
       
-      const data = await res.json();
+      const data = await response.json();
       messageEl.textContent = data.message;
       messageEl.className = data.success ? 'message success' : 'message error';
       
@@ -420,15 +749,15 @@ const Auth = {
         document.querySelector('.tab[data-tab="login"]').click();
       }
     } catch (error) {
-      messageEl.textContent = 'Network error. Please try again.';
+      messageEl.textContent = error.message || 'Network error. Please try again.';
       messageEl.className = 'message error';
     }
   },
   
   buyCoupon: async function () {
     try {
-      const res = await fetch('/api/whatsapp/numbers');
-      const data = await res.json();
+      const response = await App.requestWithTimeout('/api/whatsapp/numbers');
+      const data = await response.json();
       const number = (data.success && data.numbers && data.numbers[0]) ? data.numbers[0].number.trim() : '2348160881049';
       window.open(`https://wa.me/${number}`, '_blank');
     } catch (error) {
@@ -447,8 +776,8 @@ const Profile = {
   
   load: async function () {
     try {
-      const res = await fetch('/api/user/profile');
-      const data = await res.json();
+      const response = await App.requestWithTimeout('/api/user/profile');
+      const data = await response.json();
       if (data.success) {
         App.currentUser = data.user;
         App.refreshBalance(true);
@@ -506,14 +835,14 @@ const Profile = {
     }
     
     try {
-      const res = await fetch('/api/user/set-profile-picture', {
+      const response = await App.requestWithTimeout('/api/user/set-profile-picture', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ picture_url: url })
       });
       
-      const data = await res.json();
+      const data = await response.json();
       if (data.success) {
         App.showMessage('Profile picture updated!', 'success');
         Profile.load();
@@ -532,8 +861,8 @@ const Referral = {
     if (!App.currentUser) return;
     
     try {
-      const res = await fetch('/api/user/profile');
-      const data = await res.json();
+      const response = await App.requestWithTimeout('/api/user/profile');
+      const data = await response.json();
       
       if (data.success) {
         const unclaimed = data.referrals.unclaimed_bonus;
@@ -591,19 +920,19 @@ const Referral = {
   
   claimBonuses: async function () {
     try {
-      const res = await fetch('/api/referral/claim', {
-        method: 'POST',
-        credentials: 'include'
-      });
+      const result = await GameManager.safeClaim(
+        '/api/referral/claim',
+        {},
+        'referral'
+      );
       
-      const data = await res.json();
-      if (!data.success) {
-        App.showMessage(data.message, 'error');
+      if (!result.success) {
+        App.showMessage(result.message, 'error');
         return;
       }
       
-      App.showMessage(`✅ ₦${data.claimed.toLocaleString()} referral bonus claimed!`, 'success');
-      App.updateBalance(data.new_balance);
+      App.showMessage(`✅ ₦${result.claimed.toLocaleString()} referral bonus claimed!`, 'success');
+      App.updateBalance(result.new_balance);
       Referral.open();
     } catch (error) {
       App.showMessage('Failed to claim bonus. Please try again.', 'error');
@@ -617,8 +946,8 @@ const Banking = {
   
   async loadBanks() {
     try {
-      const res = await fetch('/api/banking/banks');
-      const data = await res.json();
+      const response = await App.requestWithTimeout('/api/banking/banks');
+      const data = await response.json();
       if (data.success) {
         this.banks = data.banks;
         const select = document.getElementById('bank-select');
@@ -695,7 +1024,7 @@ const Banking = {
   },
   
   processWithdrawal: async function () {
-    const userRes = await fetch('/api/user/profile');
+    const userRes = await App.requestWithTimeout('/api/user/profile');
     const userData = await userRes.json();
     if (!userData.success) {
       App.showMessage('Session expired. Please log in again.', 'error');
@@ -740,25 +1069,23 @@ const Banking = {
     msgEl.className = 'message info';
     
     try {
-      const res = await fetch('/api/banking/withdraw', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+      const result = await GameManager.safeClaim(
+        '/api/banking/withdraw',
+        {
           amount, 
           bank_code: bankCode, 
           account_number: accountNumber, 
           account_name: accountName, 
           pin 
-        }),
-        credentials: 'include'
-      });
+        },
+        'withdrawal'
+      );
       
-      const data = await res.json();
-      msgEl.textContent = data.message;
-      msgEl.className = data.success ? 'message success' : 'message error';
+      msgEl.textContent = result.message;
+      msgEl.className = result.success ? 'message success' : 'message error';
       
-      if (data.success) {
-        App.updateBalance(data.new_balance);
+      if (result.success) {
+        App.updateBalance(result.new_balance);
         App.showMessage('✅ Withdrawal submitted for manual review!', 'success');
         setTimeout(() => App.closeModal('withdrawal-modal'), 2000);
       }
@@ -775,8 +1102,8 @@ const Achievements = {
     if (!App.currentUser) return;
     
     try {
-      const res = await fetch('/api/achievements');
-      const data = await res.json();
+      const response = await App.requestWithTimeout('/api/achievements');
+      const data = await response.json();
       
       if (data.success) {
         this.achievementsData = data;
@@ -792,18 +1119,17 @@ const Achievements = {
   
   claimAllRewards: async function () {
     try {
-      const res = await fetch('/api/achievements/claim', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const result = await GameManager.safeClaim(
+        '/api/achievements/claim',
+        {},
+        'achievements'
+      );
       
-      const data = await res.json();
-      if (data.success) {
-        App.showMessage(`✅ Achievement rewards claimed! New balance: ₦${data.new_balance.toLocaleString()}`, 'success');
-        App.updateBalance(data.new_balance);
+      if (result.success) {
+        App.showMessage(`✅ Achievement rewards claimed! New balance: ₦${result.new_balance.toLocaleString()}`, 'success');
+        App.updateBalance(result.new_balance);
       } else {
-        App.showMessage(data.message || 'Failed to claim rewards', 'error');
+        App.showMessage(result.message || 'Failed to claim rewards', 'error');
       }
     } catch (error) {
       App.showMessage('Network error. Please try again.', 'error');
@@ -817,64 +1143,37 @@ const Games = {
   openCoinFlip: () => window.location.href = 'coinflip.html',
   openPlinko: () => window.location.href = 'plinko.html',
   
+  // All game reports use safeClaim
   reportSnake: async function (apples) {
-    try {
-      const response = await fetch('/api/games/snake/report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ apples_eaten: apples })
-      });
-      
-      return await response.json();
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
+    return await GameManager.safeClaim(
+      '/api/games/snake/report', 
+      { apples_eaten: apples }, 
+      'snake'
+    );
   },
   
   reportCoinFlip: async function (bet, won) {
-    try {
-      const response = await fetch('/api/games/coinflip/report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ bet: bet, won: won })
-      });
-      
-      return await response.json();
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
+    return await GameManager.safeClaim(
+      '/api/games/coinflip/report',
+      { bet: bet, won: won },
+      'coinflip'
+    );
   },
   
   reportPlinko: async function (bet, multiplier) {
-    try {
-      const response = await fetch('/api/games/plinko/report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ bet: bet, multiplier: multiplier })
-      });
-      
-      return await response.json();
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
+    return await GameManager.safeClaim(
+      '/api/games/plinko/report',
+      { bet: bet, multiplier: multiplier },
+      'plinko'
+    );
   },
   
   reportSpin: async function (reward) {
-    try {
-      const response = await fetch('/api/games/spin/report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ reward: reward })
-      });
-      
-      return await response.json();
-    } catch (error) {
-      return { success: false, message: error.message };
-    }
+    return await GameManager.safeClaim(
+      '/api/games/spin/report',
+      { reward: reward },
+      'spin'
+    );
   },
   
   openTikTok: async function () {
@@ -884,11 +1183,8 @@ const Games = {
     msgEl.className = 'message';
     
     try {
-      const res = await fetch('/api/games/tiktok/daily', {
-        credentials: 'include'
-      });
-      
-      const data = await res.json();
+      const response = await App.requestWithTimeout('/api/games/tiktok/daily');
+      const data = await response.json();
       
       if (!data.success) {
         document.getElementById('tiktok-instructions').innerHTML = `
@@ -957,14 +1253,11 @@ const Games = {
     msgEl.className = 'message';
     
     try {
-      const response = await fetch('/api/games/tiktok/follow-daily', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({})
-      });
-      
-      const result = await response.json();
+      const result = await GameManager.safeClaim(
+        '/api/games/tiktok/follow-daily',
+        {},
+        'tiktok'
+      );
       
       if (result.success) {
         App.updateBalance(result.new_balance);
@@ -1046,7 +1339,7 @@ const Games = {
       console.error('Limit check failed:', error);
     }
     
-    button.disabled = true;
+    GameManager.setButtonLoading('spin-button', true);
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SPINNING...';
     
     if (msgEl) {
@@ -1072,6 +1365,8 @@ const Games = {
       const result = await this.reportSpin(reward);
       
       setTimeout(() => {
+        GameManager.setButtonLoading('spin-button', false);
+        
         if (result.success) {
           App.updateBalance(result.new_balance);
           
@@ -1100,7 +1395,6 @@ const Games = {
             msgEl.textContent = result.message || 'Spin failed. Please try again.';
             msgEl.className = 'message error';
           }
-          button.disabled = false;
           button.innerHTML = '<i class="fas fa-sync-alt"></i> TRY AGAIN';
           
           App.showMessage(result.message || 'Spin failed', 'error');
@@ -1110,11 +1404,11 @@ const Games = {
     } catch (err) {
       console.error('Spin error:', err);
       setTimeout(() => {
+        GameManager.setButtonLoading('spin-button', false);
         if (msgEl) {
           msgEl.textContent = 'Network error. Please try again later.';
           msgEl.className = 'message error';
         }
-        button.disabled = false;
         button.innerHTML = '<i class="fas fa-sync-alt"></i> TRY AGAIN';
         App.showMessage('Network error during spin', 'error');
       }, 4200);
@@ -1191,8 +1485,8 @@ const Settings = {
     if (!App.currentUser) return;
     
     try {
-      const res = await fetch('/api/user/profile');
-      const data = await res.json();
+      const response = await App.requestWithTimeout('/api/user/profile');
+      const data = await response.json();
       if (!data.success) {
         App.showMessage('Failed to load settings', 'error');
         return;
@@ -1209,8 +1503,8 @@ const Settings = {
       `;
       
       try {
-        const socialRes = await fetch('/api/admin/settings');
-        const socialData = await socialRes.json();
+        const socialResponse = await App.requestWithTimeout('/api/admin/settings');
+        const socialData = await socialResponse.json();
         if (socialData.success) {
           const s = socialData.settings;
           html += `
@@ -1273,44 +1567,6 @@ const Settings = {
       `;
       
       document.getElementById('settings-data').innerHTML = html;
-      
-      if (!document.getElementById('social-style')) {
-        const style = document.createElement('style');
-        style.id = 'social-style';
-        style.textContent = `
-          .social-link {
-            display: inline-block;
-            margin: 5px 0;
-            padding: 8px 15px;
-            background: rgba(30,30,69,0.8);
-            border: 1px solid #8000FF;
-            border-radius: 8px;
-            color: #8000FF;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.2s;
-          }
-          .social-link:hover {
-            background: rgba(128,0,255,0.2);
-            transform: translateY(-2px);
-          }
-          .settings-section {
-            margin-bottom: 20px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #252540;
-          }
-          .settings-section:last-child {
-            border-bottom: none;
-          }
-          .small-text {
-            font-size: 0.8rem;
-            color: #A0A0B5;
-            margin: 10px 0;
-          }
-        `;
-        document.head.appendChild(style);
-      }
-      
       App.showModal('settings-modal');
     } catch (error) {
       console.error('Settings error:', error);
@@ -1329,14 +1585,14 @@ const Settings = {
       }
       
       try {
-        const verifyRes = await fetch('/api/user/verify-withdrawal-pin', {
+        const response = await App.requestWithTimeout('/api/user/verify-withdrawal-pin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ pin: currentPin }),
           credentials: 'include'
         });
         
-        const verifyData = await verifyRes.json();
+        const verifyData = await response.json();
         if (!verifyData.success) {
           App.showMessage('Incorrect current PIN.', 'error');
           return;
@@ -1360,19 +1616,17 @@ const Settings = {
     }
     
     try {
-      const res = await fetch('/api/user/set-withdrawal-pin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin: newPin }),
-        credentials: 'include'
-      });
+      const result = await GameManager.safeClaim(
+        '/api/user/set-withdrawal-pin',
+        { pin: newPin },
+        'setpin'
+      );
       
-      const data = await res.json();
-      if (data.success) {
+      if (result.success) {
         App.showMessage('PIN ' + (isChange ? 'changed' : 'set') + ' successfully!', 'success');
         App.closeModal('settings-modal');
       } else {
-        App.showMessage(data.message, 'error');
+        App.showMessage(result.message, 'error');
       }
     } catch (error) {
       App.showMessage('Failed to set PIN. Please try again.', 'error');
@@ -1400,19 +1654,17 @@ const Settings = {
     }
     
     try {
-      const res = await fetch('/api/user/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ old_password: oldPass, new_password: newPass }),
-        credentials: 'include'
-      });
+      const result = await GameManager.safeClaim(
+        '/api/user/change-password',
+        { old_password: oldPass, new_password: newPass },
+        'changepassword'
+      );
       
-      const data = await res.json();
-      if (data.success) {
+      if (result.success) {
         App.showMessage("Password changed successfully!", "success");
         App.closeModal('settings-modal');
       } else {
-        App.showMessage(data.message, "error");
+        App.showMessage(result.message, "error");
       }
     } catch (error) {
       App.showMessage("Failed to change password. Please try again.", "error");
@@ -1423,7 +1675,7 @@ const Settings = {
     if (!confirm('Are you sure you want to logout?')) return;
     
     try {
-      await fetch('/api/auth/logout', { 
+      await App.requestWithTimeout('/api/auth/logout', { 
         method: 'POST', 
         credentials: 'include' 
       });
@@ -1462,7 +1714,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==================== GLOBAL FUNCTIONS FOR GAME PAGES ====================
-// FIXED VERSION - ALL FUNCTIONS PROPERLY EXPORTED
 (function() {
     // Export all functions to window
     window.App = App;
@@ -1488,47 +1739,29 @@ document.addEventListener('DOMContentLoaded', () => {
     window.showMessage = App.showMessage;
     window.goBackToDashboard = () => window.location.href = 'index.html';
     
-    // Game claim functions (DIRECT API CALLS)
+    // Game claim functions using safeClaim
     window.claimSnakeReward = async function(apples) {
-        try {
-            const response = await fetch('/api/games/snake/report', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ apples_eaten: apples })
-            });
-            return await response.json();
-        } catch (error) {
-            return { success: false, message: error.message };
-        }
+        return await GameManager.safeClaim(
+            '/api/games/snake/report',
+            { apples_eaten: apples },
+            'snake'
+        );
     };
     
     window.claimCoinFlipReward = async function(bet, won) {
-        try {
-            const response = await fetch('/api/games/coinflip/report', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ bet: bet, won: won })
-            });
-            return await response.json();
-        } catch (error) {
-            return { success: false, message: error.message };
-        }
+        return await GameManager.safeClaim(
+            '/api/games/coinflip/report',
+            { bet: bet, won: won },
+            'coinflip'
+        );
     };
     
     window.claimPlinkoReward = async function(bet, multiplier) {
-        try {
-            const response = await fetch('/api/games/plinko/report', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ bet: bet, multiplier: multiplier })
-            });
-            return await response.json();
-        } catch (error) {
-            return { success: false, message: error.message };
-        }
+        return await GameManager.safeClaim(
+            '/api/games/plinko/report',
+            { bet: bet, multiplier: multiplier },
+            'plinko'
+        );
     };
     
     // Universal game result reporter
@@ -1545,20 +1778,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return { success: false, message: 'Unknown game type' };
         }
         
-        try {
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify(data)
-            });
-            return await response.json();
-        } catch (error) {
-            return { success: false, message: error.message };
-        }
+        return await GameManager.safeClaim(endpoint, data, gameType);
     };
     
-    console.log('✅ FLEXIA Script v12.0 - ALL FUNCTIONS LOADED');
+    console.log('✅ FLEXIA Script v12.4 - ALL FUNCTIONS LOADED WITH FIXES');
 })();
 
 // Emergency fallback loader
