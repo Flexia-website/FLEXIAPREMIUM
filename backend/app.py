@@ -1,5 +1,5 @@
-# backend/app.py - ULTIMATE PRODUCTION FIX - MULTI-USER OPTIMIZED
-# FLEXIA Platform - PRODUCTION READY v12.4
+# backend/app.py - ULTIMATE PRODUCTION FIX - MULTI-USER OPTIMIZED WITH GAME LIMITS
+# FLEXIA Platform - PRODUCTION READY v12.5
 
 import os
 import json
@@ -39,6 +39,15 @@ class Config:
     PLINKO_MIN_BET = 100
     SESSION_DURATION_HOURS = 24
     DEFAULT_WITHDRAWAL_DAYS = [7, 14, 25, 30]
+    
+    # Game daily limits
+    GAME_DAILY_LIMITS = {
+        'snake': 10,
+        'coinflip': 5,
+        'plinko': 5,
+        'spin': 1,
+        'tiktok': 1
+    }
     
     # Security settings
     SESSION_COOKIE_SECURE = os.environ.get('ENV') == 'production'
@@ -873,6 +882,17 @@ def get_global_withdrawal_days():
         return_db_connection(conn)
     return CONFIG.DEFAULT_WITHDRAWAL_DAYS
 
+def get_game_friendly_name(game_type):
+    """Get user-friendly name for game type"""
+    names = {
+        'snake': 'Snake Game',
+        'coinflip': 'Coin Flip',
+        'plinko': 'Plinko 3D',
+        'spin': 'Daily Spin',
+        'tiktok': 'TikTok Follow'
+    }
+    return names.get(game_type, game_type)
+
 # ======================= OPTIMIZED: ATOMIC BALANCE UPDATES =======================
 def update_user_balance(user_id, amount_change):
     """Thread-safe atomic balance update with connection timeout"""
@@ -958,8 +978,30 @@ def update_last_game_timestamp(user_id):
     finally:
         return_db_connection(conn)
 
-def can_play_today(user_id, game_type, max_plays=10):
+def can_play_today(user_id, game_type, max_plays=None):
     """Check if user can play a game today"""
+    conn = get_db()
+    cursor = conn.cursor()
+    today = datetime.utcnow().date()
+    is_postgres = os.environ.get('DATABASE_URL') is not None
+    ph = '%s' if is_postgres else '?'
+    try:
+        # Get max plays from config if not provided
+        if max_plays is None:
+            max_plays = CONFIG.GAME_DAILY_LIMITS.get(game_type, 5)
+        
+        cursor.execute(f"SELECT COUNT(*) FROM game_plays WHERE user_id = {ph} AND game_type = {ph} AND play_date = {ph}",
+                       (user_id, game_type, today))
+        count = cursor.fetchone()[0]
+        return count < max_plays
+    except Exception as e:
+        app.logger.error(f"Play check error: {e}")
+        return False
+    finally:
+        return_db_connection(conn)
+
+def get_plays_today(user_id, game_type):
+    """Get how many times user has played a game today"""
     conn = get_db()
     cursor = conn.cursor()
     today = datetime.utcnow().date()
@@ -969,10 +1011,10 @@ def can_play_today(user_id, game_type, max_plays=10):
         cursor.execute(f"SELECT COUNT(*) FROM game_plays WHERE user_id = {ph} AND game_type = {ph} AND play_date = {ph}",
                        (user_id, game_type, today))
         count = cursor.fetchone()[0]
-        return count < max_plays
+        return count
     except Exception as e:
-        app.logger.error(f"Play check error: {e}")
-        return False
+        app.logger.error(f"Get plays error: {e}")
+        return 0
     finally:
         return_db_connection(conn)
 
@@ -1327,7 +1369,7 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "uptime": get_uptime(),
             "database": db_status,
-            "version": "12.4",
+            "version": "12.5",
             "stats": {
                 "total_users": user_count,
                 "pending_withdrawals": pending_withdrawals
@@ -1347,8 +1389,58 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "database": f"error: {str(e)}",
             "uptime": get_uptime(),
-            "version": "12.4"
+            "version": "12.5"
         }), 503
+
+# ======================= GAME ACCESS CHECK ENDPOINT =======================
+@app.route('/api/games/access', methods=['GET'])
+@require_auth
+def check_game_access():
+    """Check if user can access a specific game (has plays remaining today)"""
+    user = get_current_user()
+    game_type = request.args.get('game', '').lower()
+    
+    if not game_type:
+        return jsonify({"success": False, "message": "Game type required"}), 400
+    
+    # Get max plays for this game
+    max_plays = CONFIG.GAME_DAILY_LIMITS.get(game_type, 5)
+    
+    try:
+        # Get plays today
+        played_today = get_plays_today(user['id'], game_type)
+        can_play = played_today < max_plays
+        
+        if not can_play:
+            return jsonify({
+                "success": True,
+                "can_play": False,
+                "limit_reached": True,
+                "game_name": get_game_friendly_name(game_type),
+                "played_today": played_today,
+                "max_plays": max_plays,
+                "message": f"You've reached your daily limit for {get_game_friendly_name(game_type)}! ({played_today}/{max_plays} plays)",
+                "suggestions": [
+                    "Try a different game",
+                    "Come back tomorrow",
+                    "Check out TikTok Daily for extra earnings"
+                ]
+            })
+        
+        return jsonify({
+            "success": True,
+            "can_play": True,
+            "limit_reached": False,
+            "game_name": get_game_friendly_name(game_type),
+            "played_today": played_today,
+            "max_plays": max_plays,
+            "remaining_plays": max_plays - played_today,
+            "message": f"You can play {get_game_friendly_name(game_type)} {max_plays - played_today} more times today"
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Game access check error: {e}")
+        return jsonify({"success": False, "message": "Failed to check game access"}), 500
 
 # ======================= BACKUP ENDPOINTS =======================
 @app.route('/api/admin/backup/trigger', methods=['POST'])
@@ -1836,13 +1928,7 @@ def check_game_limits():
     user = get_current_user()
     game_type = request.args.get('game', '')
     
-    limits = {
-        'snake': 5,
-        'coinflip': 2,
-        'plinko': 2,
-        'spin': 1,
-        'tiktok': 1
-    }
+    limits = CONFIG.GAME_DAILY_LIMITS
     
     if game_type not in limits:
         return jsonify({"success": True, "can_play": True, "remaining": 999})
@@ -1863,7 +1949,8 @@ def check_game_limits():
             "can_play": remaining > 0,
             "played_today": played_today,
             "remaining": remaining,
-            "max_per_day": max_plays
+            "max_per_day": max_plays,
+            "game_name": get_game_friendly_name(game_type)
         })
     except Exception as e:
         app.logger.error(f"Limit check error: {e}")
@@ -1895,8 +1982,8 @@ def report_snake():
             return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
         
         # Check daily plays
-        if not can_play_today(user['id'], 'snake', max_plays=5):
-            return jsonify({"success": False, "message": "Max 5 snake plays per day"}), 403
+        if not can_play_today(user['id'], 'snake', max_plays=CONFIG.GAME_DAILY_LIMITS['snake']):
+            return jsonify({"success": False, "message": f"Max {CONFIG.GAME_DAILY_LIMITS['snake']} snake plays per day"}), 403
         
         reward = apples * CONFIG.SNAKE_REWARD
         
@@ -1990,8 +2077,8 @@ def report_coinflip():
             return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
         
         # Check daily plays
-        if not can_play_today(user['id'], 'coinflip', max_plays=2):
-            return jsonify({"success": False, "message": "Max 2 coin flips per day"}), 403
+        if not can_play_today(user['id'], 'coinflip', max_plays=CONFIG.GAME_DAILY_LIMITS['coinflip']):
+            return jsonify({"success": False, "message": f"Max {CONFIG.GAME_DAILY_LIMITS['coinflip']} coin flips per day"}), 403
         
         payout = bet * 2 if won else 0
         net_change = payout - bet
@@ -2091,8 +2178,8 @@ def report_plinko():
             return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
         
         # Check daily plays
-        if not can_play_today(user['id'], 'plinko', max_plays=2):
-            return jsonify({"success": False, "message": "Max 2 plinko plays per day"}), 403
+        if not can_play_today(user['id'], 'plinko', max_plays=CONFIG.GAME_DAILY_LIMITS['plinko']):
+            return jsonify({"success": False, "message": f"Max {CONFIG.GAME_DAILY_LIMITS['plinko']} plinko plays per day"}), 403
         
         win_amount = bet * multiplier
         net_change = win_amount - bet  # Positive if win, negative if loss
@@ -2190,8 +2277,8 @@ def report_spin():
             return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
         
         # Check daily plays
-        if not can_play_today(user['id'], 'spin', max_plays=1):
-            return jsonify({"success": False, "message": "One spin per day only"}), 403
+        if not can_play_today(user['id'], 'spin', max_plays=CONFIG.GAME_DAILY_LIMITS['spin']):
+            return jsonify({"success": False, "message": f"One spin per day only"}), 403
         
         conn = get_db()
         cursor = conn.cursor()
@@ -3733,7 +3820,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug = os.getenv('ENV') != 'production'
     
-    app.logger.info(f"🚀 Starting Flexia Platform OPTIMIZED v12.4 on port {port} (debug: {debug})")
+    app.logger.info(f"🚀 Starting Flexia Platform OPTIMIZED v12.5 with Game Limits on port {port} (debug: {debug})")
     app.logger.info(f"📁 Frontend directory: {CONFIG.FRONTEND_DIR}")
     app.logger.info(f"🔒 Secret key set: {'Yes' if CONFIG.SECRET_KEY else 'No'}")
     app.logger.info(f"🗄️ Database: {'PostgreSQL' if os.environ.get('DATABASE_URL') else 'SQLite'}")
@@ -3741,14 +3828,12 @@ if __name__ == '__main__':
     app.logger.info(f"📊 Structured logging: Enabled")
     app.logger.info(f"🔗 Database connection pool: {'Enabled (5-50)' if db_pool else 'Disabled'}")
     app.logger.info(f"💾 Automatic backups: Enabled (daily at 2 AM UTC)")
-    app.logger.info(f"✅ ALL FIXES APPLIED:")
-    app.logger.info(f"   • Optimized connection pool (5-50 connections)")
-    app.logger.info(f"   • Claim locking system to prevent duplicates")
-    app.logger.info(f"   • JSON response enforcer (no more 'Unexpected JSON' errors)")
-    app.logger.info(f"   • Atomic balance updates with timeout")
-    app.logger.info(f"   • Global exception handler")
-    app.logger.info(f"   • Game cooldown checks")
-    app.logger.info(f"   • Rate limiting for all endpoints")
-    app.logger.info(f"🚀 VERSION 12.4: The ultimate multi-user optimized version")
+    app.logger.info(f"🎮 GAME LIMITS ENABLED:")
+    app.logger.info(f"   • Snake: {CONFIG.GAME_DAILY_LIMITS['snake']} plays/day")
+    app.logger.info(f"   • Coin Flip: {CONFIG.GAME_DAILY_LIMITS['coinflip']} plays/day")
+    app.logger.info(f"   • Plinko: {CONFIG.GAME_DAILY_LIMITS['plinko']} plays/day")
+    app.logger.info(f"   • Spin: {CONFIG.GAME_DAILY_LIMITS['spin']} plays/day")
+    app.logger.info(f"   • TikTok: {CONFIG.GAME_DAILY_LIMITS['tiktok']} plays/day")
+    app.logger.info(f"🚀 VERSION 12.5: Complete game limit system with friendly messages")
     
     app.run(host='0.0.0.0', port=port, debug=debug)
