@@ -17,37 +17,41 @@
 <!-- Main CSS -->
 <link rel="stylesheet" href="style.css" />
 
-<!-- === EMBEDDED CUSTOM STYLES (Spin + Merchant Button) === -->
+<!-- === EMBEDDED STYLES === -->
 <style>
-/* --- MERCHANT BUTTON STYLE --- */
+/* Merchant Button */
 .btn-merchant {
-  background: #8000FF;
+  background: linear-gradient(135deg, #8000FF 0%, #FF3333 100%);
   color: white;
   border: none;
-  padding: 14px;
-  border-radius: 10px;
+  padding: 16px;
+  border-radius: 12px;
   font-family: 'Orbitron', sans-serif;
-  font-weight: 700;
-  font-size: 0.95rem;
+  font-weight: 900;
+  font-size: 1rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  margin-top: 15px;
-  transition: background 0.3s ease;
-}
-.btn-merchant:hover {
-  background: #9000FF;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(128, 0, 255, 0.4);
+  margin-top: 20px;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-/* --- MODERN SPIN WHEEL SYSTEM --- */
+.btn-merchant:hover {
+  background: linear-gradient(135deg, #9000FF 0%, #FF4444 100%);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(128, 0, 255, 0.4);
+}
+
+/* Spin Wheel Styles */
 .wheel-outer-ring {
   position: relative;
-  width: 280px;  height: 280px;
+  width: 280px;
+  height: 280px;
   margin: 25px auto;
   border-radius: 50%;
   background: #111;
@@ -55,6 +59,7 @@
   border: 4px solid #222;
   box-shadow: 0 0 30px rgba(128, 0, 255, 0.3), inset 0 0 20px #000;
 }
+
 .wheel-outer-ring::before {
   content: "";
   position: absolute;
@@ -66,15 +71,18 @@
   border: 2px dashed rgba(255, 255, 255, 0.2);
   animation: rotateLights 20s linear infinite;
 }
+
 @keyframes rotateLights {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
 #wheel-svg {
   width: 100%;
   height: 100%;
   transition: transform 5s cubic-bezier(0.15, 0, 0, 1);
 }
+
 .wheel-pointer-modern {
   position: absolute;
   top: -12px;
@@ -87,36 +95,44 @@
   z-index: 100;
   filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
 }
+
 #spin-btn-custom {
   background: linear-gradient(135deg, #8000FF 0%, #FF3333 100%) !important;
   width: 100%;
   max-width: 240px;
-  padding: 16px !important;
+  padding: 18px !important;
   font-family: 'Orbitron', sans-serif !important;
   font-weight: 900 !important;
   border: none !important;
   border-radius: 50px !important;
-  color: white;  cursor: pointer;
+  color: white;
+  cursor: pointer;
   box-shadow: 0 10px 20px rgba(128, 0, 255, 0.3);
-  margin-top: 15px;
+  margin-top: 20px;
   transition: 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 1rem;
 }
+
 #spin-btn-custom:disabled {
   background: #333 !important;
   cursor: not-allowed;
   opacity: 0.6;
 }
+
 .result-banner {
-  margin-top: 15px;
-  padding: 12px;
-  border-radius: 8px;
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 10px;
   font-family: 'Rajdhani', sans-serif;
   font-weight: 700;
   display: none;
   background: rgba(0,0,0,0.5);
   border: 1px solid #444;
   text-align: center;
-  font-size: 1rem;
+  font-size: 1.1rem;
+  backdrop-filter: blur(5px);
 }
 </style>
 </head>
@@ -180,9 +196,9 @@
         <i class="fas fa-user-plus"></i> CREATE ACCOUNT
       </button>
 
-      <!-- === NEW MERCHANT BUTTON === -->
+      <!-- Merchant Button -->
       <button class="btn-merchant" onclick="openMerchantChat()">
-        <i class="fas fa-store"></i> Buy Coupon from Merchant
+        <i class="fas fa-store"></i> BUY COUPON FROM MERCHANT
       </button>
 
       <div id="register-message" class="message"></div>
@@ -239,29 +255,29 @@
     <section class="activities-section">
       <h3 class="section-title"><i class="fas fa-gamepad"></i> Earn & Play</h3>
       <div class="activities-grid">
-        <div class="activity-card" onclick="window.location.href='snake.html'">
+        <div class="activity-card" onclick="GameLimiter.checkAndNavigate('snake', 'snake.html')">
           <div class="card-icon game"><i class="fas fa-gamepad"></i></div>
           <div class="card-title">Snake Mine</div>
           <div class="card-subtitle">Eat = ₦200 Each</div>
-          <div class="card-badge free">FREE</div>
+          <div class="card-badge free">10/day</div>
         </div>
-        <div class="activity-card" onclick="window.location.href='coinflip.html'">
+        <div class="activity-card" onclick="GameLimiter.checkAndNavigate('coinflip', 'coinflip.html')">
           <div class="card-icon coin"><i class="fas fa-coins"></i></div>
           <div class="card-title">Coin Flip</div>
           <div class="card-subtitle">Bet & Double</div>
-          <div class="card-badge bet">Min: ₦100</div>
+          <div class="card-badge bet">5/day</div>
         </div>
-        <div class="activity-card" onclick="window.location.href='plinko.html'">
+        <div class="activity-card" onclick="GameLimiter.checkAndNavigate('plinko', 'plinko.html')">
           <div class="card-icon play"><i class="fas fa-bowling-ball"></i></div>
           <div class="card-title">Plinko 3D</div>
           <div class="card-subtitle">Bet & Multiply</div>
-          <div class="card-badge bet">Min: ₦100</div>
+          <div class="card-badge bet">5/day</div>
         </div>
         <div class="activity-card" onclick="Games.openTikTok()">
           <div class="card-icon tiktok"><i class="fab fa-tiktok"></i></div>
           <div class="card-title">TikTok Follow</div>
           <div class="card-subtitle">Follow = ₦150</div>
-          <div class="card-badge daily">1/Day</div>
+          <div class="card-badge daily">1/day</div>
         </div>
         <div class="activity-card" onclick="Referral.open()">
           <div class="card-icon referral"><i class="fas fa-users"></i></div>
@@ -273,7 +289,7 @@
           <div class="card-icon spin"><i class="fas fa-sync-alt"></i></div>
           <div class="card-title">Daily Spin</div>
           <div class="card-subtitle">Win Up To ₦1000</div>
-          <div class="card-badge daily">1/Day</div>
+          <div class="card-badge daily">1/day</div>
         </div>
       </div>
     </section>
@@ -426,7 +442,7 @@
     </div>
   </div>
 
-  <!-- === CYBER SPIN MODAL (from spin.html) === -->
+  <!-- Spin Modal -->
   <div id="spin-modal" class="modal hidden">
     <div class="modal-content" style="background: #0a0a0a; border: 1px solid #333; text-align: center;">
       <h3 class="modal-title" style="color: #fff; letter-spacing: 2px;">CYBER SPIN</h3>
@@ -494,7 +510,7 @@ Referral.open = function() {
 <!-- Main App Script -->
 <script src="script.js"></script>
 
-<!-- === CUSTOM SPIN ENGINE WITH BACKEND SYNC - FIXED === -->
+<!-- Custom Spin Engine -->
 <script>
 const customSpinEngine = {
   segments: [
@@ -514,23 +530,16 @@ const customSpinEngine = {
     try {
       const res = await fetch('/api/spin/daily-status', { 
         credentials: 'include',
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
+        headers: { 'Cache-Control': 'no-cache' }
       });
       
-      if (!res.ok) {
-        console.log('Spin status check failed:', res.status);
-        // If endpoint doesn't exist yet, allow spin
-        return true;
-      }
+      if (!res.ok) return true;
       
       const data = await res.json();
-      console.log('Spin status response:', data);
       return data.can_spin === true;
     } catch (e) {
-      console.log('Failed to check spin status (network error):', e);
-      return true; // Allow if offline or endpoint not ready
+      console.log('Spin status check failed:', e);
+      return true;
     }
   },
 
@@ -538,23 +547,19 @@ const customSpinEngine = {
     try {
       const res = await fetch('/api/spin/execute', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache'
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({})
       });
       
       const data = await res.json();
-      console.log('Spin execute response:', data);
       return data;
       
     } catch (e) {
       console.error('Spin execution failed:', e);
       return { 
         success: false, 
-        message: 'Network error. Please try again.',
+        message: 'Network error',
         reward: 0 
       };
     }
@@ -562,12 +567,8 @@ const customSpinEngine = {
 
   setup() {
     const group = document.getElementById('segments-group');
-    if (!group) {
-      console.error('Segments group not found');
-      return;
-    }
+    if (!group) return;
     
-    // Clear existing segments
     group.innerHTML = '';
     
     const step = 360 / this.segments.length;
@@ -595,8 +596,6 @@ const customSpinEngine = {
       text.textContent = seg.label;
       group.appendChild(text);
     });
-    
-    console.log('Spin wheel setup complete');
   },
 
   openModal() {
@@ -606,58 +605,42 @@ const customSpinEngine = {
       document.getElementById('spin-modal').classList.remove('hidden');
     }
     
-    // Reset wheel position
     const wheel = document.getElementById('wheel-svg');
     if (wheel) {
       wheel.style.transform = 'rotate(0deg)';
       this.currentRot = 0;
     }
     
-    // Reset result banner
     const banner = document.getElementById('custom-result-banner');
     if (banner) {
       banner.style.display = 'none';
       banner.innerHTML = '';
     }
     
-    // Enable spin button
     const btn = document.getElementById('spin-btn-custom');
     if (btn) {
       btn.disabled = false;
     }
     
     this.isSpinning = false;
-    
-    console.log('Spin modal opened - ready to spin');
   },
 
   async initSpin() {
-    if (this.isSpinning) {
-      console.log('Already spinning, ignoring request');
-      return;
-    }
+    if (this.isSpinning) return;
 
-    console.log('Starting spin process...');
-    
     const btn = document.getElementById('spin-btn-custom');
     const wheel = document.getElementById('wheel-svg');
     const banner = document.getElementById('custom-result-banner');
     
-    if (!btn || !wheel || !banner) {
-      console.error('Required elements not found');
-      return;
-    }
+    if (!btn || !wheel || !banner) return;
     
-    // Show loading state
     this.isSpinning = true;
     btn.disabled = true;
     banner.style.display = 'none';
     banner.innerHTML = '';
     
     try {
-      // Check if can spin today
       const canSpin = await this.checkDailyStatus();
-      console.log('Can spin today?', canSpin);
       
       if (!canSpin) {
         banner.innerHTML = `<span style="color:#FF3333">⚠️ You already spun today! Come back tomorrow.</span>`;
@@ -667,22 +650,16 @@ const customSpinEngine = {
         return;
       }
       
-      // Start wheel animation
       const fakeWinIdx = Math.floor(Math.random() * this.segments.length);
       const spinDeg = 1800 + (360 - (fakeWinIdx * (360 / this.segments.length))) % 360;
       this.currentRot += spinDeg;
       wheel.style.transform = `rotate(${this.currentRot}deg)`;
       
-      console.log('Wheel spinning... waiting for server response');
-      
-      // Execute spin on server after animation delay
       setTimeout(async () => {
         try {
           const result = await this.executeSpinOnServer();
-          console.log('Server spin result:', result);
           
           if (result.success) {
-            // Update balance display
             const balanceEl = document.getElementById('balance-display');
             if (balanceEl) {
               const currentText = balanceEl.textContent.replace(/,/g, '');
@@ -691,30 +668,29 @@ const customSpinEngine = {
               balanceEl.textContent = newBalance.toLocaleString('en-US', { minimumFractionDigits: 2 });
             }
             
-            // Update global balance if function exists
             if (typeof window.updateBalance === 'function') {
               window.updateBalance(result.reward);
             }
             
             banner.innerHTML = `<span style="color:#00FF00">🎉 CONGRATULATIONS! WON: ₦${result.reward.toLocaleString()}</span>`;
           } else {
-            banner.innerHTML = `<span style="color:#FF3333">${result.message || 'Spin failed. Try again.'}</span>`;
+            banner.innerHTML = `<span style="color:#FF3333">${result.message || 'Spin failed'}</span>`;
           }
           
         } catch (error) {
           console.error('Error during spin execution:', error);
-          banner.innerHTML = `<span style="color:#FFAA00">⚠️ Connection issue. Please try again.</span>`;
+          banner.innerHTML = `<span style="color:#FFAA00">⚠️ Connection issue</span>`;
         }
         
         banner.style.display = 'block';
         this.isSpinning = false;
         btn.disabled = false;
         
-      }, 3000); // Wait 3 seconds for wheel animation
+      }, 3000);
       
     } catch (error) {
       console.error('Spin initialization error:', error);
-      banner.innerHTML = `<span style="color:#FF3333">⚠️ Error initializing spin. Please try again.</span>`;
+      banner.innerHTML = `<span style="color:#FF3333">⚠️ Error initializing spin</span>`;
       banner.style.display = 'block';
       this.isSpinning = false;
       btn.disabled = false;
@@ -724,28 +700,21 @@ const customSpinEngine = {
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('Initializing spin engine...');
-  
-  // Setup wheel with a small delay to ensure DOM is ready
   setTimeout(() => {
     try {
       customSpinEngine.setup();
-      console.log('Spin wheel SVG setup complete');
     } catch (error) {
       console.error('Error setting up spin wheel:', error);
     }
   }, 500);
   
-  // Expose to global scope for other buttons
   if (!window.Games) window.Games = {};
   window.Games.openSpinWheel = () => customSpinEngine.openModal();
   window.Games.spinWheel = () => customSpinEngine.initSpin();
-  
-  console.log('Spin engine initialized and ready');
 });
 </script>
 
-<!-- === MERCHANT CHAT FUNCTION === -->
+<!-- Merchant Chat Function -->
 <script>
 function openMerchantChat() {
   window.open('https://chat-3zot.onrender.com', '_blank');
@@ -757,7 +726,6 @@ function openMerchantChat() {
 document.addEventListener('DOMContentLoaded', function() {
   const requiredFunctions = {
     'updateBalance': (newBalance) => {
-      console.log('Balance update:', newBalance);
       const els = document.querySelectorAll('[id*="balance"], .balance');
       els.forEach(el => {
         if (el.textContent.includes('₦')) {
