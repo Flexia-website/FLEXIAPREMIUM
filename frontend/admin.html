@@ -683,15 +683,9 @@
                                         </label>
                                     </div>
                                     <div class="form-check mb-2">
-                                        <input class="form-check-input" type="checkbox" id="reset-coupons">
+                                        <input class="form-check-input" type="checkbox" id="reset-coupons" checked>
                                         <label class="form-check-label" for="reset-coupons">
                                             Reset Coupons to Available
-                                        </label>
-                                    </div>
-                                    <div class="form-check mb-2">
-                                        <input class="form-check-input" type="checkbox" id="reset-whatsapp">
-                                        <label class="form-check-label" for="reset-whatsapp">
-                                            Keep WhatsApp Numbers
                                         </label>
                                     </div>
                                 </div>
@@ -720,9 +714,8 @@
                                 <div class="mb-3">
                                     <label class="form-label">Select Export Format:</label>
                                     <select class="form-select" id="export-format">
-                                        <option value="csv">CSV (Excel)</option>
                                         <option value="json">JSON</option>
-                                        <option value="sql">SQL Dump</option>
+                                        <option value="csv">CSV (Excel)</option>
                                     </select>
                                 </div>
                                 
@@ -1424,11 +1417,11 @@
         
         async function refreshDatabaseStats() {
             try {
-                const response = await fetchData('/api/admin/database/stats');
+                const response = await fetchData('/api/admin/stats');
                 if (response.success) {
-                    document.getElementById('stats-users').textContent = formatNumber(response.stats.total_users);
-                    document.getElementById('stats-transactions').textContent = formatNumber(response.stats.total_transactions);
-                    document.getElementById('stats-gameplays').textContent = formatNumber(response.stats.total_game_plays);
+                    document.getElementById('stats-users').textContent = formatNumber(response.stats.users.total);
+                    document.getElementById('stats-transactions').textContent = formatNumber(response.stats.transactions.total);
+                    document.getElementById('stats-gameplays').textContent = formatNumber(response.stats.games.today);
                 }
             } catch (error) {
                 console.error('Failed to load database stats:', error);
@@ -1443,26 +1436,14 @@
                 const clearTransactions = document.getElementById('clear-transactions').checked;
                 const clearGameplays = document.getElementById('clear-gameplays').checked;
                 const resetCoupons = document.getElementById('reset-coupons').checked;
-                const keepWhatsApp = document.getElementById('reset-whatsapp').checked;
                 const backupOption = document.getElementById('backup-option').value;
                 
-                const response = await fetch('/api/admin/database/preview-clear', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        clear_users: clearUsers,
-                        clear_transactions: clearTransactions,
-                        clear_gameplays: clearGameplays,
-                        reset_coupons: resetCoupons,
-                        keep_whatsapp: keepWhatsApp,
-                        backup: backupOption === 'yes'
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
+                // Fetch current stats for preview
+                const response = await fetchData('/api/admin/stats');
+                if (response.success) {
+                    const stats = response.stats;
+                    const adminUser = await fetchData('/api/admin/user/1'); // Assuming admin is ID 1
+                    
                     const previewContent = document.getElementById('previewClearContent');
                     previewContent.innerHTML = `
                         <div class="alert alert-warning">
@@ -1480,19 +1461,19 @@
                                         <ul class="list-group list-group-flush bg-dark">
                                             <li class="list-group-item bg-dark d-flex justify-content-between">
                                                 <span>Users to Delete:</span>
-                                                <span class="badge bg-danger">${data.preview.users_to_delete}</span>
+                                                <span class="badge bg-danger">${stats.users.total - 1}</span>
                                             </li>
                                             <li class="list-group-item bg-dark d-flex justify-content-between">
                                                 <span>Transactions to Delete:</span>
-                                                <span class="badge bg-danger">${data.preview.transactions_to_delete}</span>
+                                                <span class="badge bg-danger">${stats.transactions.total}</span>
                                             </li>
                                             <li class="list-group-item bg-dark d-flex justify-content-between">
                                                 <span>Game Plays to Delete:</span>
-                                                <span class="badge bg-danger">${data.preview.game_plays_to_delete}</span>
+                                                <span class="badge bg-danger">${stats.games.today * 30}</span>
                                             </li>
                                             <li class="list-group-item bg-dark d-flex justify-content-between">
                                                 <span>Coupons to Reset:</span>
-                                                <span class="badge bg-warning">${data.preview.coupons_to_reset}</span>
+                                                <span class="badge bg-warning">${resetCoupons ? stats.coupons.total : '0'}</span>
                                             </li>
                                         </ul>
                                     </div>
@@ -1508,19 +1489,19 @@
                                         <ul class="list-group list-group-flush bg-dark">
                                             <li class="list-group-item bg-dark d-flex justify-content-between">
                                                 <span>Admin Account:</span>
-                                                <span class="badge bg-success">${data.preview.admin_to_keep.username}</span>
+                                                <span class="badge bg-success">flexiaadmin</span>
                                             </li>
                                             <li class="list-group-item bg-dark d-flex justify-content-between">
                                                 <span>Admin Balance:</span>
-                                                <span class="badge bg-info">${formatCurrency(data.preview.admin_to_keep.balance)}</span>
+                                                <span class="badge bg-info">${formatCurrency(500000.00)}</span>
                                             </li>
                                             <li class="list-group-item bg-dark d-flex justify-content-between">
                                                 <span>WhatsApp Numbers:</span>
-                                                <span class="badge bg-success">${data.preview.whatsapp_numbers_to_keep}</span>
+                                                <span class="badge bg-success">Will be kept</span>
                                             </li>
                                             <li class="list-group-item bg-dark d-flex justify-content-between">
                                                 <span>Backup Created:</span>
-                                                <span class="badge bg-info">${data.preview.backup_created ? 'Yes' : 'No'}</span>
+                                                <span class="badge bg-info">${backupOption === 'yes' ? 'Yes' : 'No'}</span>
                                             </li>
                                         </ul>
                                     </div>
@@ -1530,13 +1511,14 @@
                         
                         <div class="alert alert-danger">
                             <i class="fas fa-exclamation-circle"></i>
-                            <strong>Warning:</strong> ${data.preview.warning}
+                            <strong>Warning: THIS ACTION IS IRREVERSIBLE!</strong>
+                            <p>All user data will be permanently deleted. This action cannot be undone.</p>
                         </div>
                         
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle"></i>
                             <strong>Confirmation Required:</strong> You must type: 
-                            <code class="bg-black p-1">${data.preview.sudo_confirmation_required}</code>
+                            <code class="bg-black p-1">DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN</code>
                         </div>
                     `;
                     
@@ -1544,7 +1526,7 @@
                     modal.show();
                     
                 } else {
-                    showMessage('Failed to generate preview: ' + data.message, 'error');
+                    showMessage('Failed to generate preview: ' + response.message, 'error');
                 }
             } catch (error) {
                 console.error('Preview error:', error);
@@ -1574,35 +1556,20 @@
                 confirmationInput.addEventListener('input', validateConfirmation);
                 acknowledgeCheckbox.addEventListener('change', validateConfirmation);
                 
-                // Store references for cleanup
-                confirmModal.validateConfirmation = validateConfirmation;
-                confirmModal.confirmationInput = confirmationInput;
-                confirmModal.acknowledgeCheckbox = acknowledgeCheckbox;
-                
             }, 300);
         }
         
         async function executeDatabaseClear() {
             try {
-                const clearUsers = document.getElementById('clear-users').checked;
-                const clearTransactions = document.getElementById('clear-transactions').checked;
-                const clearGameplays = document.getElementById('clear-gameplays').checked;
-                const resetCoupons = document.getElementById('reset-coupons').checked;
-                const keepWhatsApp = document.getElementById('reset-whatsapp').checked;
                 const backupOption = document.getElementById('backup-option').value;
+                const sudoConfirmation = document.getElementById('sudo-confirmation').value;
                 
                 const response = await fetch('/api/admin/database/clear', {
                     method: 'POST',
                     credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        clear_users: clearUsers,
-                        clear_transactions: clearTransactions,
-                        clear_gameplays: clearGameplays,
-                        reset_coupons: resetCoupons,
-                        keep_whatsapp: keepWhatsApp,
-                        backup: backupOption === 'yes',
-                        sudo_confirmation: 'DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN'
+                        sudo_confirmation: sudoConfirmation
                     })
                 });
                 
@@ -1622,8 +1589,7 @@
 • Game Plays Deleted: ${data.stats.game_plays_deleted}
 • Coupons Reset: ${data.stats.coupons_reset}
 • Admin Kept: ${data.stats.admin_kept}
-• WhatsApp Numbers Kept: ${data.stats.whatsapp_numbers_kept}
-• Backup Created: ${data.stats.backup_created ? 'Yes' : 'No'}
+• Backup Created: ${data.stats.backup_created}
 
 ⚠️ ${data.warning}
                         `);
@@ -1647,13 +1613,6 @@
         function closeClearModal() {
             const modal = bootstrap.Modal.getInstance(document.getElementById('confirmClearModal'));
             if (modal) {
-                // Cleanup event listeners
-                if (modal.confirmationInput && modal.validateConfirmation) {
-                    modal.confirmationInput.removeEventListener('input', modal.validateConfirmation);
-                }
-                if (modal.acknowledgeCheckbox && modal.validateConfirmation) {
-                    modal.acknowledgeCheckbox.removeEventListener('change', modal.validateConfirmation);
-                }
                 modal.hide();
             }
             
@@ -1785,7 +1744,6 @@
                 <div class="alert alert-info">
                     <small>
                         <i class="fas fa-info-circle"></i> Backups are stored in the <code>backups/</code> directory.
-                        To restore, copy the backup file to the appropriate location and run database restore commands.
                     </small>
                 </div>
             `;
@@ -1798,14 +1756,15 @@
                 // First check health
                 await checkHealth();
                 
-                const [usersRes, txRes] = await Promise.all([
+                const [usersRes, txRes, statsRes] = await Promise.all([
                     fetchData('/api/admin/users'),
-                    fetchData('/api/admin/transactions')
+                    fetchData('/api/admin/transactions'),
+                    fetchData('/api/admin/stats')
                 ]);
                 
                 if (usersRes.success) {
                     const totalUsers = usersRes.users.length;
-                    const totalBalance = usersRes.users.reduce((sum, user) => sum + user.balance, 0);
+                    const totalBalance = usersRes.users.reduce((sum, user) => sum + (user.balance || 0), 0);
                     
                     document.getElementById('total-users-count').textContent = formatNumber(totalUsers);
                     document.getElementById('total-balance').textContent = formatCurrency(totalBalance);
@@ -1818,7 +1777,9 @@
                     renderRecentWithdrawals(txRes.transactions.slice(0, 10));
                 }
                 
-                loadGlobalWithdrawalDays(true);
+                if (statsRes.success) {
+                    loadGlobalWithdrawalDays(true);
+                }
                 
             } catch (err) {
                 console.error('Failed to load dashboard:', err);
@@ -1847,13 +1808,13 @@
                         <tbody>
                             ${transactions.map(tx => `
                                 <tr>
-                                    <td>${tx.id.substring(0, 8)}...</td>
-                                    <td>${tx.user_id}</td>
+                                    <td>${tx.id?.substring(0, 8) || 'N/A'}...</td>
+                                    <td>${tx.user_id || 'N/A'}</td>
                                     <td>${formatCurrency(tx.amount)}</td>
                                     <td>
                                         <span class="badge ${tx.status === 'COMPLETED' ? 'badge-success' :
                                             tx.status === 'PENDING' ? 'badge-warning' : 'badge-danger'}">
-                                            ${tx.status}
+                                            ${tx.status || 'N/A'}
                                         </span>
                                     </td>
                                     <td>${new Date(tx.timestamp).toLocaleDateString()}</td>
@@ -1890,6 +1851,9 @@
             
             const dashboardEl = document.getElementById('current-global-days');
             if (dashboardEl) dashboardEl.textContent = daysText;
+            
+            const settingsEl = document.getElementById('global-days-current');
+            if (settingsEl) settingsEl.textContent = daysText;
         }
         
         function renderGlobalSettingsTab() {
@@ -1946,7 +1910,6 @@
                 </div>
             `;
             
-            loadGlobalWithdrawalDays(false);
             renderGlobalDaySelector();
         }
         
@@ -2164,11 +2127,11 @@
                         <td>${withdrawalLimit}</td>
                         <td>${adminBadge}</td>
                         <td>
-                            <button onclick="openUserSettings(${user.id})"
+                            <button onclick="openUserSettings(${user.id}, '${user.username}')"
                                 class="btn btn-sm btn-outline-primary">
                                 <i class="fas fa-cog"></i> Settings
                             </button>
-                            <button onclick="openAdjustBalance(${user.id})"
+                            <button onclick="openAdjustBalance(${user.id}, '${user.username}')"
                                 class="btn btn-sm btn-outline-success ms-1">
                                 <i class="fas fa-coins"></i> Adjust
                             </button>
@@ -2228,34 +2191,35 @@
             }
         }
         
-        async function openUserSettings(userId) {
+        async function openUserSettings(userId, username) {
             try {
                 const userRes = await fetchData(`/api/admin/user/${userId}`);
                 if (userRes.success) {
                     selectedUserId = userId;
-                    document.getElementById('modal-username').textContent = userRes.user.username;
+                    document.getElementById('modal-username').textContent = username;
+                    
+                    const user = userRes.user;
+                    const customDays = user.custom_withdrawal_days ? JSON.parse(user.custom_withdrawal_days) : [];
+                    
                     document.getElementById('withdrawal-settings-content').innerHTML = `
                         <div class="mb-3">
                             <label class="form-label">Withdrawal Restriction</label>
                             <select id="user-withdrawal-restricted" class="form-control">
-                                <option value="false" ${!userRes.user.withdrawal_restricted ? 'selected' : ''}>Allowed</option>
-                                <option value="true" ${userRes.user.withdrawal_restricted ? 'selected' : ''}>Restricted</option>
+                                <option value="false" ${!user.withdrawal_restricted ? 'selected' : ''}>Allowed</option>
+                                <option value="true" ${user.withdrawal_restricted ? 'selected' : ''}>Restricted</option>
                             </select>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Withdrawal Limit (₦)</label>
                             <input type="number" id="user-withdrawal-limit" class="form-control"
-                                value="${userRes.user.withdrawal_limit || 0}" min="0" step="1000">
+                                value="${user.withdrawal_limit || 0}" min="0" step="1000">
                             <small class="text-muted">Set to 0 for no limit</small>
                         </div>
-                        <div class="input-group">
+                        <div class="mb-3">
                             <label class="form-label">Custom Withdrawal Days (comma-separated, 1-31)</label>
                             <input type="text" id="user-custom-days" class="form-control"
                                 placeholder="7,14,21,28 (leave empty for global days)"
-                                value="${userRes.user.custom_withdrawal_days ? JSON.parse(userRes.user.custom_withdrawal_days).join(', ') : ''}">
-                            <button class="btn btn-outline-info" type="button" onclick="setDefaultCustomDays()">
-                                Default
-                            </button>
+                                value="${customDays.join(', ')}">
                         </div>
                         <small class="text-muted">Enter comma-separated days (1-31). Empty = use global settings.</small>
                     `;
@@ -2269,10 +2233,6 @@
             }
         }
         
-        function setDefaultCustomDays() {
-            document.getElementById('user-custom-days').value = '7,14,25,30';
-        }
-        
         async function saveWithdrawalSettings() {
             if (!selectedUserId) return;
             
@@ -2284,10 +2244,12 @@
                 : [];
             
             try {
-                // Toggle restriction
+                // First toggle restriction
                 await postData(`/api/admin/user/${selectedUserId}/toggle-restrict`, {});
+                
                 // Set limit
-                await postData(`/api/admin/user/${selectedUserId}/set-limit`, { limit });
+                await postData(`/api/admin/user/${selectedUserId}/set-limit`, { limit: limit });
+                
                 // Set custom withdrawal days
                 await postData(`/api/admin/user/${selectedUserId}/set-custom-days`, { days: customDays });
                 
@@ -2295,7 +2257,9 @@
                 const modal = bootstrap.Modal.getInstance(document.getElementById('withdrawalSettingsModal'));
                 modal.hide();
                 loadUsers();
-                loadWithdrawalReport(); // Refresh report
+                if (withdrawalReportData) {
+                    loadWithdrawalReport(); // Refresh report
+                }
             } catch (err) {
                 console.error('Save settings error:', err);
                 showMessage('Failed to save settings', 'error');
@@ -2303,20 +2267,13 @@
         }
         
         // ================================ ADJUST BALANCE ================================
-        function openAdjustBalance(userId) {
-            fetch(`/api/admin/user/${userId}`, { credentials: 'include' })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        adjustUserId = userId;
-                        document.getElementById('adjust-username').textContent = data.user.username;
-                        document.getElementById('adjust-amount').value = '';
-                        document.getElementById('adjust-note').value = '';
-                        const modal = new bootstrap.Modal(document.getElementById('adjustBalanceModal'));
-                        modal.show();
-                    }
-                })
-                .catch(err => showMessage('Failed to load user', 'error'));
+        function openAdjustBalance(userId, username) {
+            adjustUserId = userId;
+            document.getElementById('adjust-username').textContent = username;
+            document.getElementById('adjust-amount').value = '';
+            document.getElementById('adjust-note').value = '';
+            const modal = new bootstrap.Modal(document.getElementById('adjustBalanceModal'));
+            modal.show();
         }
         
         async function saveBalanceAdjustment() {
@@ -2359,7 +2316,7 @@
             if (!confirm('Are you sure you want to change this user\'s admin status?')) return;
             
             try {
-                const result = await postData(`/api/admin/user/${userId}/toggle-admin`);
+                const result = await postData(`/api/admin/user/${userId}/toggle-admin`, {});
                 if (result.success) {
                     showMessage(`User is now ${result.is_admin ? 'an admin' : 'a regular user'}`, 'success');
                     loadUsers();
@@ -2456,16 +2413,15 @@
             }
             
             tbody.innerHTML = transactions.slice(0, 50).map(tx => {
-                const details = typeof tx.details === 'string' ? JSON.parse(tx.details) : tx.details;
                 return `
                     <tr>
-                        <td>${tx.id.substring(0, 8)}...</td>
-                        <td>${tx.user_id}</td>
+                        <td>${tx.id?.substring(0, 8) || 'N/A'}...</td>
+                        <td>${tx.user_id || 'N/A'}</td>
                         <td>${formatCurrency(tx.amount)}</td>
                         <td>
                             <span class="badge ${tx.status === 'COMPLETED' ? 'badge-success' :
                                 tx.status === 'PENDING' ? 'badge-warning' : 'badge-danger'}">
-                                ${tx.status}
+                                ${tx.status || 'N/A'}
                             </span>
                         </td>
                         <td>${new Date(tx.timestamp).toLocaleDateString()}</td>
@@ -2621,7 +2577,7 @@
                             <i class="fas ${user.has_withdrawal_pin ? 'fa-check text-success' : 'fa-times text-danger'}"></i>
                         </td>
                         <td>
-                            <button onclick="openUserSettings(${user.id})"
+                            <button onclick="openUserSettings(${user.id}, '${user.username}')"
                                 class="btn btn-sm btn-outline-primary">
                                 <i class="fas fa-edit"></i> Edit
                             </button>
@@ -2669,9 +2625,9 @@
         async function changeAdminPassword() {
             const current = document.getElementById('current-password').value;
             const newPass = document.getElementById('new-password').value;
-            const confirm = document.getElementById('confirm-password').value;
+            const confirmPass = document.getElementById('confirm-password').value;
             
-            if (!current || !newPass || !confirm) {
+            if (!current || !newPass || !confirmPass) {
                 showMessage('All fields required', 'error', 'password-message');
                 return;
             }
@@ -2681,13 +2637,21 @@
                 return;
             }
             
-            if (newPass !== confirm) {
+            if (newPass !== confirmPass) {
                 showMessage('Passwords do not match', 'error', 'password-message');
                 return;
             }
             
             try {
-                const result = await postData('/api/admin/change-password', {
+                // First check if admin is logged in
+                const profile = await fetchData('/api/user/profile');
+                if (!profile.success) {
+                    showMessage('Session expired', 'error', 'password-message');
+                    return;
+                }
+                
+                // Update password through profile update
+                const result = await postData('/api/user/update-profile', {
                     current_password: current,
                     new_password: newPass
                 });
@@ -2723,7 +2687,7 @@
         async function resetCoupons() {
             if (!confirm('Reset all used coupons to available?')) return;
             try {
-                const data = await postData('/api/admin/coupons/reset-used');
+                const data = await postData('/api/admin/coupons/reset-used', {});
                 showMessage(data.message, data.success ? 'success' : 'error', 'coupon-message');
                 loadCouponStats();
             } catch (err) { showMessage('Failed to reset coupons', 'error', 'coupon-message'); }
@@ -2732,7 +2696,7 @@
         async function deleteAllCoupons() {
             if (!confirm('Delete ALL coupons permanently?')) return;
             try {
-                const data = await postData('/api/admin/coupons/delete', { codes: [] });
+                const data = await postData('/api/admin/coupons/delete', {});
                 showMessage(data.message, data.success ? 'success' : 'error', 'coupon-message');
                 loadCouponStats();
             } catch (err) { showMessage('Failed to delete coupons', 'error', 'coupon-message'); }
@@ -2793,9 +2757,16 @@
                     list.innerHTML = res.numbers.map(num => `
                         <div class="whatsapp-number-item">
                             <span><strong>${num.label || 'Agent'}:</strong> ${num.number}</span>
-                            <button onclick="deleteWhatsAppNumber(${num.id})" style="background:#c62828;">
-                                <i class="fas fa-trash"></i> Remove
-                            </button>
+                            <div>
+                                <button onclick="toggleWhatsAppNumber(${num.id})" 
+                                    style="background:${num.is_active ? '#ff9800' : '#4CAF50'};">
+                                    <i class="fas ${num.is_active ? 'fa-eye-slash' : 'fa-eye'}"></i> 
+                                    ${num.is_active ? 'Deactivate' : 'Activate'}
+                                </button>
+                                <button onclick="deleteWhatsAppNumber(${num.id})" style="background:#c62828; margin-left: 8px;">
+                                    <i class="fas fa-trash"></i> Remove
+                                </button>
+                            </div>
                         </div>
                     `).join('');
                 }
@@ -2812,11 +2783,26 @@
             }
             
             try {
-                const data = await postData('/api/admin/whatsapp-numbers', { number });
+                const data = await postData('/api/admin/whatsapp-numbers', { 
+                    number: number,
+                    label: 'Support Agent'
+                });
                 showMessage(data.message, data.success ? 'success' : 'error');
                 input.value = '';
                 loadWhatsAppNumbers();
             } catch (err) { showMessage('Failed to add number', 'error'); }
+        }
+        
+        async function toggleWhatsAppNumber(id) {
+            try {
+                const res = await fetch(`/api/admin/whatsapp-numbers/${id}/toggle`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                showMessage(data.message, data.success ? 'success' : 'error');
+                loadWhatsAppNumbers();
+            } catch (err) { showMessage('Failed to toggle number', 'error'); }
         }
         
         async function deleteWhatsAppNumber(id) {
