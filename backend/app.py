@@ -1,5 +1,6 @@
 # backend/app.py - ULTIMATE PRODUCTION FIX - MULTI-USER OPTIMIZED WITH GAME LIMITS
-# FLEXIA Platform - PRODUCTION READY v12.5
+# FLEXIA Platform - PRODUCTION READY v13.0
+# COMPLETE VERSION WITH GAME LIMITS & DATABASE CLEARING
 
 import os
 import json
@@ -40,7 +41,7 @@ class Config:
     SESSION_DURATION_HOURS = 24
     DEFAULT_WITHDRAWAL_DAYS = [7, 14, 25, 30]
     
-    # Game daily limits
+    # Game daily limits - ENFORCED PER REWARD CLAIM
     GAME_DAILY_LIMITS = {
         'snake': 10,
         'coinflip': 5,
@@ -506,6 +507,68 @@ def require_admin(f):
         return f(*args, **kwargs)
     return decorated
 
+# ======================= GAME LIMIT TRACKING FUNCTIONS =======================
+def check_and_record_game_play(user_id, game_type):
+    """Check if user can play and record the play - PER REWARD CLAIM"""
+    conn = get_db()
+    cursor = conn.cursor()
+    today = datetime.utcnow().date()
+    is_postgres = os.environ.get('DATABASE_URL') is not None
+    ph = '%s' if is_postgres else '?'
+    
+    try:
+        # Get max plays for this game
+        max_plays = CONFIG.GAME_DAILY_LIMITS.get(game_type, 5)
+        
+        # Check existing plays today
+        cursor.execute(f'''
+        SELECT COUNT(*) FROM game_plays 
+        WHERE user_id = {ph} AND game_type = {ph} AND play_date = {ph}
+        ''', (user_id, game_type, today))
+        
+        count = cursor.fetchone()[0]
+        
+        if count >= max_plays:
+            app.logger.info(f'Game limit reached: User {user_id}, Game {game_type}, Plays {count}/{max_plays}')
+            return False
+        
+        # Record this play
+        cursor.execute(f'''
+        INSERT INTO game_plays (user_id, game_type, play_date) 
+        VALUES ({ph}, {ph}, {ph})
+        ''', (user_id, game_type, today))
+        
+        conn.commit()
+        app.logger.info(f'Game play recorded: User {user_id}, Game {game_type}, Play #{count+1}')
+        return True
+        
+    except Exception as e:
+        app.logger.error(f"Game play check error: {e}")
+        conn.rollback()
+        return False
+    finally:
+        return_db_connection(conn)
+
+def get_game_plays_today(user_id, game_type):
+    """Get how many times user has played a game today"""
+    conn = get_db()
+    cursor = conn.cursor()
+    today = datetime.utcnow().date()
+    is_postgres = os.environ.get('DATABASE_URL') is not None
+    ph = '%s' if is_postgres else '?'
+    try:
+        cursor.execute(f'''
+        SELECT COUNT(*) FROM game_plays 
+        WHERE user_id = {ph} AND game_type = {ph} AND play_date = {ph}
+        ''', (user_id, game_type, today))
+        count = cursor.fetchone()[0]
+        return count
+    except Exception as e:
+        app.logger.error(f"Get plays error: {e}")
+        return 0
+    finally:
+        return_db_connection(conn)
+
 # ======================= INITIALIZATION =======================
 def add_missing_columns():
     """Add missing columns if they don't exist"""
@@ -607,7 +670,7 @@ def init_db():
             withdrawal_limit REAL DEFAULT 0.00,
             last_game_timestamp TEXT,
             last_achievement_check TEXT,
-            claimed_achievements TEXT DEFAULT '[]'  -- NEW COLUMN FOR TRACKING CLAIMED ACHIEVEMENTS
+            claimed_achievements TEXT DEFAULT '[]'
         )
         ''')
     else:
@@ -635,7 +698,7 @@ def init_db():
             withdrawal_limit REAL DEFAULT 0.00,
             last_game_timestamp TEXT,
             last_achievement_check TEXT,
-            claimed_achievements TEXT DEFAULT '[]'  -- NEW COLUMN FOR TRACKING CLAIMED ACHIEVEMENTS
+            claimed_achievements TEXT DEFAULT '[]'
         )
         ''')
 
@@ -719,11 +782,6 @@ def init_db():
             tiktok_link TEXT NOT NULL,
             reward_amount REAL DEFAULT 150.0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )''',
-        '''CREATE TABLE IF NOT EXISTS user_game_locks (
-            user_id INTEGER PRIMARY KEY,
-            lock_until TEXT,
-            game_type TEXT
         )'''
     ]
     
@@ -823,7 +881,7 @@ def init_db():
                 datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
                 game_stats, False, pin_hash, "", "", "light", 
                 datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
-                '[]'  # Empty array for claimed achievements
+                '[]'
             ))
         else:
             cursor.execute(f'''
@@ -838,7 +896,7 @@ def init_db():
                 datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
                 game_stats, 0, pin_hash, "", "", "light",
                 datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
-                '[]'  # Empty array for claimed achievements
+                '[]'
             ))
         app.logger.warning("\n?? FLEXIA ADMIN ACCOUNT CREATED ??")
         app.logger.warning("Username: flexiaadmin")
@@ -974,68 +1032,6 @@ def update_last_game_timestamp(user_id):
         conn.commit()
     except Exception as e:
         app.logger.error(f"Update last game timestamp error: {e}")
-        conn.rollback()
-    finally:
-        return_db_connection(conn)
-
-def can_play_today(user_id, game_type, max_plays=None):
-    """Check if user can play a game today"""
-    conn = get_db()
-    cursor = conn.cursor()
-    today = datetime.utcnow().date()
-    is_postgres = os.environ.get('DATABASE_URL') is not None
-    ph = '%s' if is_postgres else '?'
-    try:
-        # Get max plays from config if not provided
-        if max_plays is None:
-            max_plays = CONFIG.GAME_DAILY_LIMITS.get(game_type, 5)
-        
-        cursor.execute(f"SELECT COUNT(*) FROM game_plays WHERE user_id = {ph} AND game_type = {ph} AND play_date = {ph}",
-                       (user_id, game_type, today))
-        count = cursor.fetchone()[0]
-        return count < max_plays
-    except Exception as e:
-        app.logger.error(f"Play check error: {e}")
-        return False
-    finally:
-        return_db_connection(conn)
-
-def get_plays_today(user_id, game_type):
-    """Get how many times user has played a game today"""
-    conn = get_db()
-    cursor = conn.cursor()
-    today = datetime.utcnow().date()
-    is_postgres = os.environ.get('DATABASE_URL') is not None
-    ph = '%s' if is_postgres else '?'
-    try:
-        cursor.execute(f"SELECT COUNT(*) FROM game_plays WHERE user_id = {ph} AND game_type = {ph} AND play_date = {ph}",
-                       (user_id, game_type, today))
-        count = cursor.fetchone()[0]
-        return count
-    except Exception as e:
-        app.logger.error(f"Get plays error: {e}")
-        return 0
-    finally:
-        return_db_connection(conn)
-
-def record_game_play(user_id, game_type):
-    """Record a game play (idempotent)"""
-    conn = get_db()
-    cursor = conn.cursor()
-    today = datetime.utcnow().date()
-    is_postgres = os.environ.get('DATABASE_URL') is not None
-    ph = '%s' if is_postgres else '?'
-    try:
-        # Check if already recorded today
-        cursor.execute(f"SELECT COUNT(*) FROM game_plays WHERE user_id = {ph} AND game_type = {ph} AND play_date = {ph}",
-                       (user_id, game_type, today))
-        count = cursor.fetchone()[0]
-        if count == 0:
-            cursor.execute(f"INSERT INTO game_plays (user_id, game_type, play_date) VALUES ({ph}, {ph}, {ph})",
-                           (user_id, game_type, today))
-            conn.commit()
-    except Exception as e:
-        app.logger.error(f"Record game play error: {e}")
         conn.rollback()
     finally:
         return_db_connection(conn)
@@ -1275,229 +1271,40 @@ with app.app_context():
     run_cleanup_scheduler()
     run_backup_scheduler()  # Start backup scheduler
 
-# ======================= DEBUG ENDPOINTS =======================
-@app.route('/api/debug/db-status', methods=['GET'])
-def db_status():
-    try:
-        conn = get_db()
-        cursor = conn.cursor()
-        if os.environ.get('DATABASE_URL'):
-            cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
-        else:
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-        tables = [row[0] for row in cursor.fetchall()]
-        cursor.execute('SELECT COUNT(*) FROM users')
-        user_count = cursor.fetchone()[0]
-        cursor.execute('SELECT COUNT(*) FROM coupons')
-        coupon_count = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(*) FROM coupons WHERE status = 'AVAILABLE'")
-        available_coupons = cursor.fetchone()[0]
-        return_db_connection(conn)
-        return jsonify({
-            "success": True,
-            "tables": tables,
-            "user_count": user_count,
-            "coupon_count": coupon_count,
-            "available_coupons": available_coupons,
-            "database_type": "PostgreSQL" if os.environ.get('DATABASE_URL') else "SQLite",
-            "connection_pool": "active" if db_pool else "inactive"
-        })
-    except Exception as e:
-        app.logger.error(f"DB status error: {str(e)}")
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@app.route('/api/debug/user-claims', methods=['GET'])
-@require_auth
-def debug_user_claims():
-    """Debug endpoint to see recent claims"""
-    user = get_current_user()
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-    SELECT type, amount, timestamp 
-    FROM transactions 
-    WHERE user_id = %s 
-    ORDER BY timestamp DESC 
-    LIMIT 20
-    ''', (user['id'],))
-    
-    claims = []
-    for row in cursor.fetchall():
-        claims.append({
-            'type': row[0],
-            'amount': row[1],
-            'timestamp': row[2]
-        })
-    
-    return_db_connection(conn)
-    return jsonify({"success": True, "claims": claims})
-
-# ======================= ENHANCED HEALTH CHECK =======================
-def get_uptime():
-    """Calculate application uptime"""
-    if not hasattr(get_uptime, 'start_time'):
-        get_uptime.start_time = datetime.utcnow()
-    uptime = datetime.utcnow() - get_uptime.start_time
-    days = uptime.days
-    hours, remainder = divmod(uptime.seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    return f"{days}d {hours}h {minutes}m {seconds}s"
-
-@app.route('/api/health', methods=['GET'])
-def api_health():
-    """Enhanced health check endpoint"""
-    try:
-        # Test database connection
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute('SELECT 1')
-        db_status = 'connected'
-        
-        # Get basic stats
-        cursor.execute('SELECT COUNT(*) FROM users')
-        user_count = cursor.fetchone()[0]
-        
-        cursor.execute('SELECT COUNT(*) FROM transactions WHERE status = %s', ('PENDING',))
-        pending_withdrawals = cursor.fetchone()[0]
-        
-        return_db_connection(conn)
-        
-        health_data = {
-            "status": "online",
-            "service": "FLEXIA API",
-            "timestamp": datetime.utcnow().isoformat(),
-            "uptime": get_uptime(),
-            "database": db_status,
-            "version": "12.5",
-            "stats": {
-                "total_users": user_count,
-                "pending_withdrawals": pending_withdrawals
-            },
-            "environment": os.getenv('ENV', 'development'),
-            "connection_pool": "active" if db_pool else "inactive"
-        }
-        
-        app.logger.info(f"Health check passed: {health_data}")
-        return jsonify(health_data), 200
-        
-    except Exception as e:
-        app.logger.error(f"Health check failed: {str(e)}")
-        return jsonify({
-            "status": "degraded",
-            "service": "FLEXIA API",
-            "timestamp": datetime.utcnow().isoformat(),
-            "database": f"error: {str(e)}",
-            "uptime": get_uptime(),
-            "version": "12.5"
-        }), 503
-
 # ======================= GAME ACCESS CHECK ENDPOINT =======================
-@app.route('/api/games/access', methods=['GET'])
+@app.route('/api/games/check-access/<game_type>', methods=['GET'])
 @require_auth
-def check_game_access():
-    """Check if user can access a specific game (has plays remaining today)"""
+def check_game_access(game_type):
+    """Check if user can access a specific game BEFORE playing"""
     user = get_current_user()
-    game_type = request.args.get('game', '').lower()
     
-    if not game_type:
-        return jsonify({"success": False, "message": "Game type required"}), 400
-    
-    # Get max plays for this game
-    max_plays = CONFIG.GAME_DAILY_LIMITS.get(game_type, 5)
+    if game_type not in ['snake', 'coinflip', 'plinko', 'spin', 'tiktok']:
+        return jsonify({"success": False, "message": "Invalid game type"}), 400
     
     try:
-        # Get plays today
-        played_today = get_plays_today(user['id'], game_type)
-        can_play = played_today < max_plays
+        # Get max plays for this game
+        max_plays = CONFIG.GAME_DAILY_LIMITS.get(game_type, 5)
         
-        if not can_play:
-            return jsonify({
-                "success": True,
-                "can_play": False,
-                "limit_reached": True,
-                "game_name": get_game_friendly_name(game_type),
-                "played_today": played_today,
-                "max_plays": max_plays,
-                "message": f"You've reached your daily limit for {get_game_friendly_name(game_type)}! ({played_today}/{max_plays} plays)",
-                "suggestions": [
-                    "Try a different game",
-                    "Come back tomorrow",
-                    "Check out TikTok Daily for extra earnings"
-                ]
-            })
+        # Get current plays today
+        plays_today = get_game_plays_today(user['id'], game_type)
+        
+        can_play = plays_today < max_plays
+        remaining = max(0, max_plays - plays_today)
         
         return jsonify({
             "success": True,
-            "can_play": True,
-            "limit_reached": False,
-            "game_name": get_game_friendly_name(game_type),
-            "played_today": played_today,
+            "can_play": can_play,
+            "played_today": plays_today,
             "max_plays": max_plays,
-            "remaining_plays": max_plays - played_today,
-            "message": f"You can play {get_game_friendly_name(game_type)} {max_plays - played_today} more times today"
+            "remaining": remaining,
+            "game_type": game_type,
+            "game_name": get_game_friendly_name(game_type),
+            "message": f"You have {remaining} {game_type} plays remaining today" if can_play else f"Daily limit reached: {plays_today}/{max_plays} plays"
         })
         
     except Exception as e:
         app.logger.error(f"Game access check error: {e}")
         return jsonify({"success": False, "message": "Failed to check game access"}), 500
-
-# ======================= BACKUP ENDPOINTS =======================
-@app.route('/api/admin/backup/trigger', methods=['POST'])
-@require_admin
-def trigger_backup():
-    """Manually trigger a database backup"""
-    try:
-        backup_file = backup_database()
-        if backup_file:
-            app.logger.info(f"Manual backup triggered: {backup_file}")
-            return jsonify({
-                "success": True,
-                "message": "Backup created successfully",
-                "backup_file": backup_file
-            })
-        else:
-            return jsonify({
-                "success": False,
-                "message": "Backup creation failed"
-            }), 500
-    except Exception as e:
-        app.logger.error(f"Manual backup error: {str(e)}")
-        return jsonify({
-            "success": False,
-            "message": f"Backup error: {str(e)}"
-        }), 500
-
-@app.route('/api/admin/backup/list', methods=['GET'])
-@require_admin
-def list_backups():
-    """List all available backups"""
-    try:
-        if not os.path.exists('backups'):
-            return jsonify({"success": True, "backups": []})
-        
-        backups = []
-        for filename in sorted(os.listdir('backups'), reverse=True):
-            filepath = os.path.join('backups', filename)
-            if os.path.isfile(filepath):
-                stat = os.stat(filepath)
-                backups.append({
-                    "filename": filename,
-                    "size": stat.st_size,
-                    "created": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                    "size_human": f"{stat.st_size / 1024 / 1024:.2f} MB"
-                })
-        
-        return jsonify({
-            "success": True,
-            "backups": backups
-        })
-    except Exception as e:
-        app.logger.error(f"List backups error: {str(e)}")
-        return jsonify({
-            "success": False,
-            "message": f"Error listing backups: {str(e)}"
-        }), 500
 
 # ======================= AUTH ENDPOINTS =======================
 @app.route('/api/auth/register', methods=['POST'])
@@ -1561,7 +1368,6 @@ def register():
         admin_pw_changed = False if is_postgres else 0
         withdrawal_restricted = False if is_postgres else 0
         
-        # NEW: Initialize with empty claimed achievements array
         cursor.execute(f'''
         INSERT INTO users (
             username, password, balance, referral_code, referred_by, is_admin,
@@ -1578,7 +1384,7 @@ def register():
             datetime.utcnow().isoformat(), datetime.utcnow().isoformat(), game_stats, contact or "", "", "light",
             admin_pw_changed, None, withdrawal_restricted, 0.00, 0, 0, 
             datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
-            '[]'  # Empty array for claimed achievements
+            '[]'
         ))
         
         if is_postgres:
@@ -1669,8 +1475,6 @@ def login():
                        (datetime.utcnow().isoformat(), user['id']))
         conn.commit()
         
-        # REMOVED: grant_achievement_rewards(user['id']) - Achievement rewards now manual only
-        
         resp = jsonify({
             "success": True,
             "user": {
@@ -1752,7 +1556,7 @@ def get_user_profile():
                 "withdrawal_pin": bool(fresh_user.get('withdrawal_pin')),
                 "profile_picture": fresh_user.get('profile_picture', ''),
                 "ui_theme": fresh_user.get('ui_theme', 'light'),
-                "claimed_achievements": json.loads(fresh_user.get('claimed_achievements', '[]'))  # ADDED
+                "claimed_achievements": json.loads(fresh_user.get('claimed_achievements', '[]'))
             },
             "referrals": {
                 "count": referrals,
@@ -1766,202 +1570,11 @@ def get_user_profile():
     finally:
         return_db_connection(conn)
 
-# ================= USER SETTINGS =================
-@app.route('/api/user/set-profile-picture', methods=['POST'])
-@require_auth
-def set_profile_picture():
-    user = get_current_user()
-    data = request.get_json()
-    picture_url = sanitize_input(data.get('picture_url', ''))
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('UPDATE users SET profile_picture = %s WHERE id = %s', (picture_url, user['id']))
-        conn.commit()
-        app.logger.info(f"User {user['username']} updated profile picture")
-        return jsonify({"success": True, "message": "Profile picture updated"})
-    except Exception as e:
-        app.logger.error(f"Profile picture error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to update"}), 500
-    finally:
-        return_db_connection(conn)
-
-@app.route('/api/user/set-theme', methods=['POST'])
-@require_auth
-def set_theme():
-    user = get_current_user()
-    data = request.get_json()
-    theme = 'dark' if data.get('dark_mode') else 'light'
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('UPDATE users SET ui_theme = %s WHERE id = %s', (theme, user['id']))
-        conn.commit()
-        return jsonify({"success": True, "message": "Theme updated"})
-    except Exception as e:
-        app.logger.error(f"Theme error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to update"}), 500
-    finally:
-        return_db_connection(conn)
-
-# ================= PASSWORD & PIN =================
-@app.route('/api/user/change-password', methods=['POST'])
-@require_auth
-def change_password():
-    user = get_current_user()
-    data = request.get_json()
-    old_password = data.get('old_password')
-    new_password = data.get('new_password')
-    
-    if not old_password or not new_password or len(new_password) < 6:
-        return jsonify({"success": False, "message": "Password must be at least 6 characters"}), 400
-    
-    if not check_password_hash(user['password'], old_password):
-        return jsonify({"success": False, "message": "Current password is incorrect"}), 400
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute("UPDATE users SET password = %s WHERE id = %s",
-                       (generate_password_hash(new_password), user['id']))
-        conn.commit()
-        app.logger.info(f"User {user['username']} changed password")
-        return jsonify({"success": True, "message": "Password updated"})
-    except Exception as e:
-        app.logger.error(f"Password change error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to update"}), 500
-    finally:
-        return_db_connection(conn)
-
-@app.route('/api/admin/change-password', methods=['POST'])
-@require_admin
-def admin_change_password():
-    """Admin: Change their own password"""
-    admin_user = get_current_user()
-    data = request.get_json()
-    current_password = data.get('current_password')
-    new_password = data.get('new_password')
-    
-    if not current_password or not new_password:
-        return jsonify({"success": False, "message": "Both fields required"}), 400
-    
-    if len(new_password) < 8:
-        return jsonify({"success": False, "message": "Password must be at least 8 characters"}), 400
-    
-    # Verify current password
-    if not check_password_hash(admin_user['password'], current_password):
-        return jsonify({"success": False, "message": "Current password is incorrect"}), 403
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('UPDATE users SET password = %s, admin_password_changed = %s WHERE id = %s',
-                       (generate_password_hash(new_password), True, admin_user['id']))
-        conn.commit()
-        
-        app.logger.info(f"Admin {admin_user['username']} changed their password")
-        return jsonify({"success": True, "message": "Password changed successfully"})
-        
-    except Exception as e:
-        app.logger.error(f"Admin password change error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to change password"}), 500
-    finally:
-        return_db_connection(conn)
-
-@app.route('/api/user/set-withdrawal-pin', methods=['POST'])
-@require_auth
-def set_withdrawal_pin():
-    user = get_current_user()
-    data = request.get_json()
-    pin = data.get('pin', '')
-    
-    if not pin.isdigit() or not (4 <= len(pin) <= 6):
-        return jsonify({"success": False, "message": "PIN must be 4-6 digits"}), 400
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('UPDATE users SET withdrawal_pin = %s WHERE id = %s', (generate_password_hash(pin), user['id']))
-        conn.commit()
-        app.logger.info(f"User {user['username']} set withdrawal PIN")
-        return jsonify({"success": True, "message": "PIN set successfully"})
-    except Exception as e:
-        app.logger.error(f"PIN error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to set"}), 500
-    finally:
-        return_db_connection(conn)
-
-@app.route('/api/user/verify-withdrawal-pin', methods=['POST'])
-@require_auth
-def verify_withdrawal_pin():
-    user = get_current_user()
-    data = request.get_json()
-    pin = data.get('pin', '')
-    withdrawal_pin = _safe_get(user, 'withdrawal_pin')
-    
-    if not withdrawal_pin:
-        return jsonify({"success": False, "message": "No PIN set"}), 400
-    
-    if not check_password_hash(withdrawal_pin, pin):
-        app.logger.warning(f"Invalid PIN attempt for user: {user['username']}")
-        return jsonify({"success": False, "message": "Invalid PIN"}), 403
-    
-    return jsonify({"success": True, "message": "PIN verified"})
-
-# ================= GAME ENDPOINTS WITH LOCKING =================
-@app.route('/api/games/limit-check', methods=['GET'])
-@require_auth
-def check_game_limits():
-    """Check user's daily game limits"""
-    user = get_current_user()
-    game_type = request.args.get('game', '')
-    
-    limits = CONFIG.GAME_DAILY_LIMITS
-    
-    if game_type not in limits:
-        return jsonify({"success": True, "can_play": True, "remaining": 999})
-    
-    max_plays = limits[game_type]
-    today = datetime.utcnow().date()
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
-        cursor.execute('SELECT COUNT(*) FROM game_plays WHERE user_id = %s AND game_type = %s AND play_date = %s',
-                       (user['id'], game_type, today))
-        played_today = cursor.fetchone()[0]
-        remaining = max(0, max_plays - played_today)
-        
-        return jsonify({
-            "success": True,
-            "can_play": remaining > 0,
-            "played_today": played_today,
-            "remaining": remaining,
-            "max_per_day": max_plays,
-            "game_name": get_game_friendly_name(game_type)
-        })
-    except Exception as e:
-        app.logger.error(f"Limit check error: {e}")
-        return jsonify({"success": False, "message": "Failed to check limits"}), 500
-    finally:
-        return_db_connection(conn)
-
+# ================= GAME ENDPOINTS WITH LIMIT ENFORCEMENT =================
 @app.route('/api/games/snake/report', methods=['POST'])
 @require_auth
 def report_snake():
-    """Snake game reward claiming - FIXED with locking"""
+    """Snake game reward claiming - WITH DAILY LIMIT ENFORCEMENT"""
     user = get_current_user()
     data = request.get_json()
     apples = data.get('apples_eaten', 0)
@@ -1981,9 +1594,14 @@ def report_snake():
         if not check_game_cooldown(user['id'], 'SNAKE'):
             return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
         
-        # Check daily plays
-        if not can_play_today(user['id'], 'snake', max_plays=CONFIG.GAME_DAILY_LIMITS['snake']):
-            return jsonify({"success": False, "message": f"Max {CONFIG.GAME_DAILY_LIMITS['snake']} snake plays per day"}), 403
+        # CHECK GAME LIMIT FIRST - Per reward claim
+        if not check_and_record_game_play(user['id'], 'snake'):
+            return jsonify({
+                "success": False, 
+                "message": f"Daily snake game limit reached ({CONFIG.GAME_DAILY_LIMITS['snake']} plays/day)",
+                "limit_reached": True,
+                "redirect": True
+            }), 403
         
         reward = apples * CONFIG.SNAKE_REWARD
         
@@ -2011,9 +1629,6 @@ def report_snake():
             
             # Update last game timestamp
             update_last_game_timestamp(user['id'])
-            
-            # Record game play
-            record_game_play(user['id'], 'snake')
             
             # Create transaction
             tx_id = f"SNK-{int(time.time())}-{secrets.token_hex(4)}"
@@ -2056,7 +1671,7 @@ def report_snake():
 @app.route('/api/games/coinflip/report', methods=['POST'])
 @require_auth
 def report_coinflip():
-    """Coin flip game report - FIXED with locking"""
+    """Coin flip game report - WITH DAILY LIMIT ENFORCEMENT"""
     user = get_current_user()
     data = request.get_json()
     bet = float(data.get('bet', 0))
@@ -2076,9 +1691,14 @@ def report_coinflip():
         if not check_game_cooldown(user['id'], 'COINFLIP'):
             return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
         
-        # Check daily plays
-        if not can_play_today(user['id'], 'coinflip', max_plays=CONFIG.GAME_DAILY_LIMITS['coinflip']):
-            return jsonify({"success": False, "message": f"Max {CONFIG.GAME_DAILY_LIMITS['coinflip']} coin flips per day"}), 403
+        # CHECK GAME LIMIT FIRST - Per reward claim
+        if not check_and_record_game_play(user['id'], 'coinflip'):
+            return jsonify({
+                "success": False, 
+                "message": f"Daily coin flip limit reached ({CONFIG.GAME_DAILY_LIMITS['coinflip']} plays/day)",
+                "limit_reached": True,
+                "redirect": True
+            }), 403
         
         payout = bet * 2 if won else 0
         net_change = payout - bet
@@ -2109,9 +1729,6 @@ def report_coinflip():
             
             # Update last game timestamp
             update_last_game_timestamp(user['id'])
-            
-            # Record game play
-            record_game_play(user['id'], 'coinflip')
             
             # Record transaction
             tx_type = 'COINFLIP_WIN' if won else 'COINFLIP_LOSS'
@@ -2154,7 +1771,7 @@ def report_coinflip():
 @app.route('/api/games/plinko/report', methods=['POST'])
 @require_auth
 def report_plinko():
-    """Plinko game report - FIXED with locking"""
+    """Plinko game report - WITH DAILY LIMIT ENFORCEMENT"""
     user = get_current_user()
     data = request.get_json()
     bet = float(data.get('bet', 0))
@@ -2177,9 +1794,14 @@ def report_plinko():
         if not check_game_cooldown(user['id'], 'PLINKO'):
             return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
         
-        # Check daily plays
-        if not can_play_today(user['id'], 'plinko', max_plays=CONFIG.GAME_DAILY_LIMITS['plinko']):
-            return jsonify({"success": False, "message": f"Max {CONFIG.GAME_DAILY_LIMITS['plinko']} plinko plays per day"}), 403
+        # CHECK GAME LIMIT FIRST - Per reward claim
+        if not check_and_record_game_play(user['id'], 'plinko'):
+            return jsonify({
+                "success": False, 
+                "message": f"Daily plinko limit reached ({CONFIG.GAME_DAILY_LIMITS['plinko']} plays/day)",
+                "limit_reached": True,
+                "redirect": True
+            }), 403
         
         win_amount = bet * multiplier
         net_change = win_amount - bet  # Positive if win, negative if loss
@@ -2210,9 +1832,6 @@ def report_plinko():
             
             # Update last game timestamp
             update_last_game_timestamp(user['id'])
-            
-            # Record game play
-            record_game_play(user['id'], 'plinko')
             
             # Record transaction
             tx_type = 'PLINKO_WIN' if net_change > 0 else 'PLINKO_LOSS'
@@ -2255,7 +1874,7 @@ def report_plinko():
 @app.route('/api/games/spin/report', methods=['POST'])
 @require_auth
 def report_spin():
-    """Spin wheel game report - FIXED with locking"""
+    """Spin wheel game report - WITH DAILY LIMIT ENFORCEMENT"""
     user = get_current_user()
     data = request.get_json()
     reward = data.get('reward', 0)
@@ -2276,9 +1895,14 @@ def report_spin():
         if not check_game_cooldown(user['id'], 'SPIN'):
             return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
         
-        # Check daily plays
-        if not can_play_today(user['id'], 'spin', max_plays=CONFIG.GAME_DAILY_LIMITS['spin']):
-            return jsonify({"success": False, "message": f"One spin per day only"}), 403
+        # CHECK GAME LIMIT FIRST - Per reward claim
+        if not check_and_record_game_play(user['id'], 'spin'):
+            return jsonify({
+                "success": False, 
+                "message": f"Daily spin limit reached (1 play/day)",
+                "limit_reached": True,
+                "redirect": True
+            }), 403
         
         conn = get_db()
         cursor = conn.cursor()
@@ -2291,9 +1915,6 @@ def report_spin():
             
             # Update last game timestamp
             update_last_game_timestamp(user['id'])
-            
-            # Record game play
-            record_game_play(user['id'], 'spin')
             
             # Record transaction
             tx_id = f"SPIN-{int(time.time())}-{secrets.token_hex(4)}"
@@ -2329,179 +1950,6 @@ def report_spin():
     finally:
         # RELEASE LOCK
         release_claim_lock(user['id'], 'SPIN')
-
-# ================= ACHIEVEMENTS =================
-@app.route('/api/achievements')
-@require_auth
-def get_achievements():
-    """Get user achievements - UPDATED with claimed status"""
-    user = get_current_user()
-    if not user:
-        return jsonify({"success": False, "message": "Not authenticated"}), 401
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        game_stats = json.loads(user.get('game_stats', '{}'))
-        balance = float(user.get('balance', 0))
-        
-        # Get claimed achievements
-        claimed_achievements_str = user.get('claimed_achievements', '[]')
-        try:
-            claimed_achievements = json.loads(claimed_achievements_str)
-        except:
-            claimed_achievements = []
-        
-        cursor.execute('SELECT COUNT(*) FROM transactions WHERE user_id = %s', (user['id'],))
-        total_tx = cursor.fetchone()[0]
-        
-        cursor.execute('SELECT COUNT(*) FROM transactions WHERE user_id = %s AND type = %s', 
-                      (user['id'], 'WITHDRAWAL'))
-        total_withdrawals = cursor.fetchone()[0]
-        
-        cursor.execute('SELECT COUNT(*) FROM users WHERE referred_by = %s', (user.get('referral_code', ''),))
-        referrals = cursor.fetchone()[0]
-        
-        today = datetime.utcnow().date()
-        cursor.execute('SELECT COUNT(*) FROM game_plays WHERE user_id = %s AND play_date = %s', 
-                      (user['id'], today))
-        games_today = cursor.fetchone()[0]
-        
-        cursor.execute('SELECT COUNT(*) FROM game_plays WHERE user_id = %s', (user['id'],))
-        total_games = cursor.fetchone()[0]
-        
-        snake_high = game_stats.get('snake', {}).get('high_score', 0)
-        coin_streak = game_stats.get('coin_flip', {}).get('current_streak', 0)
-        coin_total = game_stats.get('coin_flip', {}).get('wins', 0) + game_stats.get('coin_flip', {}).get('losses', 0)
-        plinko_wins = game_stats.get('plinko', {}).get('total_wins', 0)
-
-        # Define achievements with FULL progress data and claimed status
-        achievements_data = [
-            {"id": 1, "title": "First Game", "description": "Play any game once", "reward": 500, "points": 10, 
-             "unlocked": total_games >= 1, "category": "gaming", "icon": "fas fa-gamepad",
-             "current_value": total_games, "target_value": 1, "progress_percentage": min(100, (total_games / 1) * 100),
-             "cash_reward": 500, "claimed": 1 in claimed_achievements},
-            {"id": 2, "title": "Gamer", "description": "Play 50 games", "reward": 5000, "points": 50, 
-             "unlocked": total_games >= 50, "category": "gaming", "icon": "fas fa-gamepad",
-             "current_value": total_games, "target_value": 50, "progress_percentage": min(100, (total_games / 50) * 100),
-             "cash_reward": 5000, "claimed": 2 in claimed_achievements},
-            {"id": 3, "title": "Game Master", "description": "Play 200 games", "reward": 15000, "points": 150, 
-             "unlocked": total_games >= 200, "category": "gaming", "icon": "fas fa-gamepad",
-             "current_value": total_games, "target_value": 200, "progress_percentage": min(100, (total_games / 200) * 100),
-             "cash_reward": 15000, "claimed": 3 in claimed_achievements},
-            {"id": 4, "title": "Snake Pro", "description": "Snake high score 1000+", "reward": 7500, "points": 75, 
-             "unlocked": snake_high >= 1000, "category": "gaming", "icon": "fas fa-gamepad",
-             "current_value": snake_high, "target_value": 1000, "progress_percentage": min(100, (snake_high / 1000) * 100),
-             "cash_reward": 7500, "claimed": 4 in claimed_achievements},
-            {"id": 5, "title": "Lucky Streak", "description": "10+ coin flip win streak", "reward": 10000, "points": 100, 
-             "unlocked": coin_streak >= 10, "category": "gaming", "icon": "fas fa-coins",
-             "current_value": coin_streak, "target_value": 10, "progress_percentage": min(100, (coin_streak / 10) * 100),
-             "cash_reward": 10000, "claimed": 5 in claimed_achievements},
-            {"id": 6, "title": "Coin Flipper", "description": "100+ coin flips", "reward": 6000, "points": 60, 
-             "unlocked": coin_total >= 100, "category": "gaming", "icon": "fas fa-coins",
-             "current_value": coin_total, "target_value": 100, "progress_percentage": min(100, (coin_total / 100) * 100),
-             "cash_reward": 6000, "claimed": 6 in claimed_achievements},
-            {"id": 7, "title": "Plinko Champion", "description": "50+ Plinko wins", "reward": 8000, "points": 80, 
-             "unlocked": plinko_wins >= 50, "category": "gaming", "icon": "fas fa-bullseye",
-             "current_value": plinko_wins, "target_value": 50, "progress_percentage": min(100, (plinko_wins / 50) * 100),
-             "cash_reward": 8000, "claimed": 7 in claimed_achievements},
-            {"id": 8, "title": "Thousandaire", "description": "Balance ₦1,000+", "reward": 1000, "points": 15, 
-             "unlocked": balance >= 1000, "category": "earnings", "icon": "fas fa-money-bill-wave",
-             "current_value": balance, "target_value": 1000, "progress_percentage": min(100, (balance / 1000) * 100),
-             "cash_reward": 1000, "claimed": 8 in claimed_achievements},
-            {"id": 9, "title": "Millionaire in Progress", "description": "Balance ₦50,000+", "reward": 10000, "points": 100, 
-             "unlocked": balance >= 50000, "category": "earnings", "icon": "fas fa-money-bill-wave",
-             "current_value": balance, "target_value": 50000, "progress_percentage": min(100, (balance / 50000) * 100),
-             "cash_reward": 10000, "claimed": 9 in claimed_achievements},
-            {"id": 10, "title": "High Roller", "description": "Balance ₦200,000+", "reward": 25000, "points": 200, 
-             "unlocked": balance >= 200000, "category": "earnings", "icon": "fas fa-money-bill-wave",
-             "current_value": balance, "target_value": 200000, "progress_percentage": min(100, (balance / 200000) * 100),
-             "cash_reward": 25000, "claimed": 10 in claimed_achievements},
-            {"id": 11, "title": "First Withdrawal", "description": "Make first withdrawal", "reward": 5000, "points": 50, 
-             "unlocked": total_withdrawals >= 1, "category": "earnings", "icon": "fas fa-wallet",
-             "current_value": total_withdrawals, "target_value": 1, "progress_percentage": min(100, (total_withdrawals / 1) * 100),
-             "cash_reward": 5000, "claimed": 11 in claimed_achievements},
-            {"id": 12, "title": "Daily Grinder", "description": "Play 5 games in a day", "reward": 3000, "points": 30, 
-             "unlocked": games_today >= 5, "category": "streaks", "icon": "fas fa-calendar-day",
-             "current_value": games_today, "target_value": 5, "progress_percentage": min(100, (games_today / 5) * 100),
-             "cash_reward": 3000, "claimed": 12 in claimed_achievements},
-            {"id": 13, "title": "Addicted", "description": "Play 20 games in a day", "reward": 8000, "points": 80, 
-             "unlocked": games_today >= 20, "category": "streaks", "icon": "fas fa-calendar-day",
-             "current_value": games_today, "target_value": 20, "progress_percentage": min(100, (games_today / 20) * 100),
-             "cash_reward": 8000, "claimed": 13 in claimed_achievements},
-            {"id": 14, "title": "Referral Starter", "description": "Refer 5 users", "reward": 10000, "points": 100, 
-             "unlocked": referrals >= 5, "category": "special", "icon": "fas fa-users",
-             "current_value": referrals, "target_value": 5, "progress_percentage": min(100, (referrals / 5) * 100),
-             "cash_reward": 10000, "claimed": 14 in claimed_achievements},
-            {"id": 15, "title": "Referral Master", "description": "Refer 20 users", "reward": 30000, "points": 300, 
-             "unlocked": referrals >= 20, "category": "special", "icon": "fas fa-users",
-             "current_value": referrals, "target_value": 20, "progress_percentage": min(100, (referrals / 20) * 100),
-             "cash_reward": 30000, "claimed": 15 in claimed_achievements},
-            {"id": 16, "title": "Transaction Veteran", "description": "10+ transactions", "reward": 4000, "points": 40, 
-             "unlocked": total_tx >= 10, "category": "special", "icon": "fas fa-exchange-alt",
-             "current_value": total_tx, "target_value": 10, "progress_percentage": min(100, (total_tx / 10) * 100),
-             "cash_reward": 4000, "claimed": 16 in claimed_achievements}
-        ]
-        
-        total_achievements = len(achievements_data)
-        unlocked_achievements = sum(1 for a in achievements_data if a['unlocked'])
-        unlocked_not_claimed = sum(1 for a in achievements_data if a['unlocked'] and not a['claimed'])
-        total_points = sum(a['points'] for a in achievements_data if a['unlocked'])
-        
-        # Get fresh balance
-        cursor.execute('SELECT balance FROM users WHERE id = %s', (user['id'],))
-        fresh_balance_row = cursor.fetchone()
-        fresh_balance = float(fresh_balance_row[0]) if fresh_balance_row and fresh_balance_row[0] else balance
-        
-        return jsonify({
-            "success": True,
-            "stats": {
-                "total": total_achievements,
-                "unlocked": unlocked_achievements,
-                "unlocked_not_claimed": unlocked_not_claimed,
-                "points": total_points
-            },
-            "achievements": achievements_data,
-            "current_balance": fresh_balance,
-            "has_unclaimed_rewards": unlocked_not_claimed > 0
-        })
-        
-    except Exception as e:
-        app.logger.error(f"❌ Achievements error: {e}")
-        return jsonify({"success": False, "message": f"Failed to load achievements: {str(e)}"}), 500
-    finally:
-        return_db_connection(conn)
-
-@app.route('/api/achievements/claim', methods=['POST'])
-@require_auth
-def claim_achievement_rewards():
-    """Manual achievement reward claiming - ONE TIME ONLY REWARDS"""
-    user = get_current_user()
-    
-    # ACQUIRE LOCK for achievements
-    if not acquire_claim_lock(user['id'], 'ACHIEVEMENTS'):
-        return jsonify({"success": False, "message": "Please wait before claiming again"}), 429
-    
-    try:
-        # Call the achievement grant function
-        new_balance = grant_achievement_rewards(user['id'])
-        
-        if new_balance is None:
-            return jsonify({"success": False, "message": "Failed to process achievement rewards"}), 500
-        
-        return jsonify({
-            "success": True,
-            "message": "Achievement rewards processed successfully",
-            "new_balance": new_balance
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Claim achievement error: {e}")
-        return jsonify({"success": False, "message": f"Failed to claim: {str(e)}"}), 500
-    finally:
-        # RELEASE LOCK
-        release_claim_lock(user['id'], 'ACHIEVEMENTS')
 
 # ================= TIKTOK DAILY =================
 @app.route('/api/games/tiktok/daily', methods=['GET'])
@@ -2577,6 +2025,15 @@ def follow_tiktok_daily():
         
         reward = float(task_row[0]) if task_row[0] else CONFIG.TIKTOK_REWARD
         
+        # CHECK GAME LIMIT - Per reward claim
+        if not check_and_record_game_play(user['id'], 'tiktok'):
+            return jsonify({
+                "success": False, 
+                "message": f"Daily TikTok limit reached (1 claim/day)",
+                "limit_reached": True,
+                "redirect": True
+            }), 403
+        
         # Use atomic balance update
         new_balance = update_user_balance(user['id'], reward)
         if new_balance is None:
@@ -2606,6 +2063,176 @@ def follow_tiktok_daily():
     finally:
         # RELEASE LOCK
         release_claim_lock(user['id'], 'TIKTOK')
+
+# ======================= ADMIN DATABASE CLEARING =======================
+@app.route('/api/admin/database/clear', methods=['POST'])
+@require_admin
+def admin_clear_database():
+    """Admin: Clear all data except main admin account"""
+    data = request.get_json()
+    sudo_confirmation = data.get('sudo_confirmation', '')
+    
+    # Require sudo confirmation
+    if sudo_confirmation != 'DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN':
+        return jsonify({
+            "success": False,
+            "message": "Sudo confirmation required. Type: DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN"
+        }), 403
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        app.logger.warning("🚨 ADMIN INITIATED DATABASE CLEARING - KEEPING ONLY MAIN ADMIN")
+        
+        # Start transaction
+        if os.environ.get('DATABASE_URL'):
+            cursor.execute("BEGIN")
+        
+        # Get admin user details
+        cursor.execute("SELECT id, username FROM users WHERE username = 'flexiaadmin'")
+        admin_row = cursor.fetchone()
+        
+        if not admin_row:
+            return jsonify({"success": False, "message": "Main admin not found"}), 404
+        
+        admin_id = admin_row[0]
+        admin_username = admin_row[1]
+        
+        # Delete all users except main admin
+        cursor.execute("DELETE FROM users WHERE id != %s", (admin_id,))
+        users_deleted = cursor.rowcount
+        
+        # Reset admin balance and stats
+        cursor.execute('''
+        UPDATE users SET 
+            balance = 500000.00,
+            claimed_bonuses = 0,
+            points = 0,
+            game_stats = %s,
+            last_game_timestamp = %s,
+            last_achievement_check = %s,
+            claimed_achievements = '[]'
+        WHERE id = %s
+        ''', (
+            json.dumps({
+                "snake": {"high_score": 1200, "total_score": 5000},
+                "coin_flip": {"wins": 25, "losses": 18, "current_streak": 3},
+                "plinko": {"total_wins": 15, "total_bets": 25000, "highest_win": 5000}
+            }),
+            datetime.utcnow().isoformat(),
+            datetime.utcnow().isoformat(),
+            admin_id
+        ))
+        
+        # Clear all transactions
+        cursor.execute("DELETE FROM transactions")
+        transactions_deleted = cursor.rowcount
+        
+        # Clear game plays
+        cursor.execute("DELETE FROM game_plays")
+        game_plays_deleted = cursor.rowcount
+        
+        # Reset coupons to AVAILABLE
+        cursor.execute("UPDATE coupons SET status = 'AVAILABLE'")
+        coupons_reset = cursor.rowcount
+        
+        # Keep WhatsApp numbers (optional - you can delete these too if you want)
+        # cursor.execute("DELETE FROM whatsapp_numbers")
+        
+        # Reset TikTok daily tasks
+        cursor.execute("DELETE FROM tiktok_daily")
+        
+        conn.commit()
+        
+        app.logger.warning(f"✅ DATABASE CLEARED: {users_deleted} users, {transactions_deleted} transactions, {game_plays_deleted} game plays removed")
+        app.logger.warning(f"✅ Coupons reset: {coupons_reset}")
+        app.logger.warning(f"✅ Admin account '{admin_username}' kept with reset stats")
+        
+        # Create backup before clearing (optional)
+        backup_file = backup_database()
+        
+        return jsonify({
+            "success": True,
+            "message": "Database cleared successfully!",
+            "stats": {
+                "users_deleted": users_deleted,
+                "transactions_deleted": transactions_deleted,
+                "game_plays_deleted": game_plays_deleted,
+                "coupons_reset": coupons_reset,
+                "admin_kept": admin_username,
+                "backup_created": backup_file if backup_file else "No backup"
+            },
+            "warning": "ALL USER DATA HAS BEEN PERMANENTLY DELETED. This action cannot be undone."
+        })
+        
+    except Exception as e:
+        app.logger.error(f"❌ Database clearing error: {e}")
+        app.logger.error(traceback.format_exc())
+        if conn:
+            conn.rollback()
+        return jsonify({
+            "success": False,
+            "message": f"Failed to clear database: {str(e)}"
+        }), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/database/preview-clear', methods=['GET'])
+@require_admin
+def admin_preview_database_clear():
+    """Preview what will be deleted when clearing database"""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Count all users except admin
+        cursor.execute("SELECT COUNT(*) FROM users WHERE username != 'flexiaadmin'")
+        users_count = cursor.fetchone()[0]
+        
+        # Count transactions
+        cursor.execute("SELECT COUNT(*) FROM transactions")
+        transactions_count = cursor.fetchone()[0]
+        
+        # Count game plays
+        cursor.execute("SELECT COUNT(*) FROM game_plays")
+        game_plays_count = cursor.fetchone()[0]
+        
+        # Count coupons
+        cursor.execute("SELECT COUNT(*) FROM coupons")
+        coupons_count = cursor.fetchone()[0]
+        
+        # Count used coupons
+        cursor.execute("SELECT COUNT(*) FROM coupons WHERE status = 'USED'")
+        used_coupons_count = cursor.fetchone()[0]
+        
+        # Get admin info
+        cursor.execute("SELECT id, username, balance FROM users WHERE username = 'flexiaadmin'")
+        admin_row = cursor.fetchone()
+        
+        return jsonify({
+            "success": True,
+            "preview": {
+                "users_to_delete": users_count,
+                "transactions_to_delete": transactions_count,
+                "game_plays_to_delete": game_plays_count,
+                "coupons_to_reset": coupons_count,
+                "used_coupons_to_reset": used_coupons_count,
+                "admin_to_keep": {
+                    "id": admin_row[0],
+                    "username": admin_row[1],
+                    "balance": float(admin_row[2]) if admin_row[2] else 0
+                },
+                "warning": "This action is irreversible. All user data will be permanently deleted.",
+                "sudo_confirmation_required": "DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN"
+            }
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Preview error: {e}")
+        return jsonify({"success": False, "message": "Failed to generate preview"}), 500
+    finally:
+        return_db_connection(conn)
 
 # ======================= ADMIN TIKTOK ENDPOINTS =======================
 @app.route('/api/admin/tiktok/set-daily', methods=['POST'])
@@ -3388,6 +3015,179 @@ def claim_referral_bonus():
         # RELEASE LOCK
         release_claim_lock(user['id'], 'REFERRAL')
 
+# ================= ACHIEVEMENTS =================
+@app.route('/api/achievements')
+@require_auth
+def get_achievements():
+    """Get user achievements - UPDATED with claimed status"""
+    user = get_current_user()
+    if not user:
+        return jsonify({"success": False, "message": "Not authenticated"}), 401
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        game_stats = json.loads(user.get('game_stats', '{}'))
+        balance = float(user.get('balance', 0))
+        
+        # Get claimed achievements
+        claimed_achievements_str = user.get('claimed_achievements', '[]')
+        try:
+            claimed_achievements = json.loads(claimed_achievements_str)
+        except:
+            claimed_achievements = []
+        
+        cursor.execute('SELECT COUNT(*) FROM transactions WHERE user_id = %s', (user['id'],))
+        total_tx = cursor.fetchone()[0]
+        
+        cursor.execute('SELECT COUNT(*) FROM transactions WHERE user_id = %s AND type = %s', 
+                      (user['id'], 'WITHDRAWAL'))
+        total_withdrawals = cursor.fetchone()[0]
+        
+        cursor.execute('SELECT COUNT(*) FROM users WHERE referred_by = %s', (user.get('referral_code', ''),))
+        referrals = cursor.fetchone()[0]
+        
+        today = datetime.utcnow().date()
+        cursor.execute('SELECT COUNT(*) FROM game_plays WHERE user_id = %s AND play_date = %s', 
+                      (user['id'], today))
+        games_today = cursor.fetchone()[0]
+        
+        cursor.execute('SELECT COUNT(*) FROM game_plays WHERE user_id = %s', (user['id'],))
+        total_games = cursor.fetchone()[0]
+        
+        snake_high = game_stats.get('snake', {}).get('high_score', 0)
+        coin_streak = game_stats.get('coin_flip', {}).get('current_streak', 0)
+        coin_total = game_stats.get('coin_flip', {}).get('wins', 0) + game_stats.get('coin_flip', {}).get('losses', 0)
+        plinko_wins = game_stats.get('plinko', {}).get('total_wins', 0)
+
+        # Define achievements with FULL progress data and claimed status
+        achievements_data = [
+            {"id": 1, "title": "First Game", "description": "Play any game once", "reward": 500, "points": 10, 
+             "unlocked": total_games >= 1, "category": "gaming", "icon": "fas fa-gamepad",
+             "current_value": total_games, "target_value": 1, "progress_percentage": min(100, (total_games / 1) * 100),
+             "cash_reward": 500, "claimed": 1 in claimed_achievements},
+            {"id": 2, "title": "Gamer", "description": "Play 50 games", "reward": 5000, "points": 50, 
+             "unlocked": total_games >= 50, "category": "gaming", "icon": "fas fa-gamepad",
+             "current_value": total_games, "target_value": 50, "progress_percentage": min(100, (total_games / 50) * 100),
+             "cash_reward": 5000, "claimed": 2 in claimed_achievements},
+            {"id": 3, "title": "Game Master", "description": "Play 200 games", "reward": 15000, "points": 150, 
+             "unlocked": total_games >= 200, "category": "gaming", "icon": "fas fa-gamepad",
+             "current_value": total_games, "target_value": 200, "progress_percentage": min(100, (total_games / 200) * 100),
+             "cash_reward": 15000, "claimed": 3 in claimed_achievements},
+            {"id": 4, "title": "Snake Pro", "description": "Snake high score 1000+", "reward": 7500, "points": 75, 
+             "unlocked": snake_high >= 1000, "category": "gaming", "icon": "fas fa-gamepad",
+             "current_value": snake_high, "target_value": 1000, "progress_percentage": min(100, (snake_high / 1000) * 100),
+             "cash_reward": 7500, "claimed": 4 in claimed_achievements},
+            {"id": 5, "title": "Lucky Streak", "description": "10+ coin flip win streak", "reward": 10000, "points": 100, 
+             "unlocked": coin_streak >= 10, "category": "gaming", "icon": "fas fa-coins",
+             "current_value": coin_streak, "target_value": 10, "progress_percentage": min(100, (coin_streak / 10) * 100),
+             "cash_reward": 10000, "claimed": 5 in claimed_achievements},
+            {"id": 6, "title": "Coin Flipper", "description": "100+ coin flips", "reward": 6000, "points": 60, 
+             "unlocked": coin_total >= 100, "category": "gaming", "icon": "fas fa-coins",
+             "current_value": coin_total, "target_value": 100, "progress_percentage": min(100, (coin_total / 100) * 100),
+             "cash_reward": 6000, "claimed": 6 in claimed_achievements},
+            {"id": 7, "title": "Plinko Champion", "description": "50+ Plinko wins", "reward": 8000, "points": 80, 
+             "unlocked": plinko_wins >= 50, "category": "gaming", "icon": "fas fa-bullseye",
+             "current_value": plinko_wins, "target_value": 50, "progress_percentage": min(100, (plinko_wins / 50) * 100),
+             "cash_reward": 8000, "claimed": 7 in claimed_achievements},
+            {"id": 8, "title": "Thousandaire", "description": "Balance ₦1,000+", "reward": 1000, "points": 15, 
+             "unlocked": balance >= 1000, "category": "earnings", "icon": "fas fa-money-bill-wave",
+             "current_value": balance, "target_value": 1000, "progress_percentage": min(100, (balance / 1000) * 100),
+             "cash_reward": 1000, "claimed": 8 in claimed_achievements},
+            {"id": 9, "title": "Millionaire in Progress", "description": "Balance ₦50,000+", "reward": 10000, "points": 100, 
+             "unlocked": balance >= 50000, "category": "earnings", "icon": "fas fa-money-bill-wave",
+             "current_value": balance, "target_value": 50000, "progress_percentage": min(100, (balance / 50000) * 100),
+             "cash_reward": 10000, "claimed": 9 in claimed_achievements},
+            {"id": 10, "title": "High Roller", "description": "Balance ₦200,000+", "reward": 25000, "points": 200, 
+             "unlocked": balance >= 200000, "category": "earnings", "icon": "fas fa-money-bill-wave",
+             "current_value": balance, "target_value": 200000, "progress_percentage": min(100, (balance / 200000) * 100),
+             "cash_reward": 25000, "claimed": 10 in claimed_achievements},
+            {"id": 11, "title": "First Withdrawal", "description": "Make first withdrawal", "reward": 5000, "points": 50, 
+             "unlocked": total_withdrawals >= 1, "category": "earnings", "icon": "fas fa-wallet",
+             "current_value": total_withdrawals, "target_value": 1, "progress_percentage": min(100, (total_withdrawals / 1) * 100),
+             "cash_reward": 5000, "claimed": 11 in claimed_achievements},
+            {"id": 12, "title": "Daily Grinder", "description": "Play 5 games in a day", "reward": 3000, "points": 30, 
+             "unlocked": games_today >= 5, "category": "streaks", "icon": "fas fa-calendar-day",
+             "current_value": games_today, "target_value": 5, "progress_percentage": min(100, (games_today / 5) * 100),
+             "cash_reward": 3000, "claimed": 12 in claimed_achievements},
+            {"id": 13, "title": "Addicted", "description": "Play 20 games in a day", "reward": 8000, "points": 80, 
+             "unlocked": games_today >= 20, "category": "streaks", "icon": "fas fa-calendar-day",
+             "current_value": games_today, "target_value": 20, "progress_percentage": min(100, (games_today / 20) * 100),
+             "cash_reward": 8000, "claimed": 13 in claimed_achievements},
+            {"id": 14, "title": "Referral Starter", "description": "Refer 5 users", "reward": 10000, "points": 100, 
+             "unlocked": referrals >= 5, "category": "special", "icon": "fas fa-users",
+             "current_value": referrals, "target_value": 5, "progress_percentage": min(100, (referrals / 5) * 100),
+             "cash_reward": 10000, "claimed": 14 in claimed_achievements},
+            {"id": 15, "title": "Referral Master", "description": "Refer 20 users", "reward": 30000, "points": 300, 
+             "unlocked": referrals >= 20, "category": "special", "icon": "fas fa-users",
+             "current_value": referrals, "target_value": 20, "progress_percentage": min(100, (referrals / 20) * 100),
+             "cash_reward": 30000, "claimed": 15 in claimed_achievements},
+            {"id": 16, "title": "Transaction Veteran", "description": "10+ transactions", "reward": 4000, "points": 40, 
+             "unlocked": total_tx >= 10, "category": "special", "icon": "fas fa-exchange-alt",
+             "current_value": total_tx, "target_value": 10, "progress_percentage": min(100, (total_tx / 10) * 100),
+             "cash_reward": 4000, "claimed": 16 in claimed_achievements}
+        ]
+        
+        total_achievements = len(achievements_data)
+        unlocked_achievements = sum(1 for a in achievements_data if a['unlocked'])
+        unlocked_not_claimed = sum(1 for a in achievements_data if a['unlocked'] and not a['claimed'])
+        total_points = sum(a['points'] for a in achievements_data if a['unlocked'])
+        
+        # Get fresh balance
+        cursor.execute('SELECT balance FROM users WHERE id = %s', (user['id'],))
+        fresh_balance_row = cursor.fetchone()
+        fresh_balance = float(fresh_balance_row[0]) if fresh_balance_row and fresh_balance_row[0] else balance
+        
+        return jsonify({
+            "success": True,
+            "stats": {
+                "total": total_achievements,
+                "unlocked": unlocked_achievements,
+                "unlocked_not_claimed": unlocked_not_claimed,
+                "points": total_points
+            },
+            "achievements": achievements_data,
+            "current_balance": fresh_balance,
+            "has_unclaimed_rewards": unlocked_not_claimed > 0
+        })
+        
+    except Exception as e:
+        app.logger.error(f"❌ Achievements error: {e}")
+        return jsonify({"success": False, "message": f"Failed to load achievements: {str(e)}"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/achievements/claim', methods=['POST'])
+@require_auth
+def claim_achievement_rewards():
+    """Manual achievement reward claiming - ONE TIME ONLY REWARDS"""
+    user = get_current_user()
+    
+    # ACQUIRE LOCK for achievements
+    if not acquire_claim_lock(user['id'], 'ACHIEVEMENTS'):
+        return jsonify({"success": False, "message": "Please wait before claiming again"}), 429
+    
+    try:
+        # Call the achievement grant function
+        new_balance = grant_achievement_rewards(user['id'])
+        
+        if new_balance is None:
+            return jsonify({"success": False, "message": "Failed to process achievement rewards"}), 500
+        
+        return jsonify({
+            "success": True,
+            "message": "Achievement rewards processed successfully",
+            "new_balance": new_balance
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Claim achievement error: {e}")
+        return jsonify({"success": False, "message": f"Failed to claim: {str(e)}"}), 500
+    finally:
+        # RELEASE LOCK
+        release_claim_lock(user['id'], 'ACHIEVEMENTS')
+
 # ================= BANKING ENDPOINTS =================
 @app.route('/api/banking/banks', methods=['GET'])
 def get_banks():
@@ -3795,6 +3595,122 @@ def admin_get_stats():
     finally:
         return_db_connection(conn)
 
+# ================= HEALTH CHECK =======================
+def get_uptime():
+    """Calculate application uptime"""
+    if not hasattr(get_uptime, 'start_time'):
+        get_uptime.start_time = datetime.utcnow()
+    uptime = datetime.utcnow() - get_uptime.start_time
+    days = uptime.days
+    hours, remainder = divmod(uptime.seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{days}d {hours}h {minutes}m {seconds}s"
+
+@app.route('/api/health', methods=['GET'])
+def api_health():
+    """Enhanced health check endpoint"""
+    try:
+        # Test database connection
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('SELECT 1')
+        db_status = 'connected'
+        
+        # Get basic stats
+        cursor.execute('SELECT COUNT(*) FROM users')
+        user_count = cursor.fetchone()[0]
+        
+        cursor.execute('SELECT COUNT(*) FROM transactions WHERE status = %s', ('PENDING',))
+        pending_withdrawals = cursor.fetchone()[0]
+        
+        return_db_connection(conn)
+        
+        health_data = {
+            "status": "online",
+            "service": "FLEXIA API",
+            "timestamp": datetime.utcnow().isoformat(),
+            "uptime": get_uptime(),
+            "database": db_status,
+            "version": "13.0",
+            "stats": {
+                "total_users": user_count,
+                "pending_withdrawals": pending_withdrawals
+            },
+            "environment": os.getenv('ENV', 'development'),
+            "connection_pool": "active" if db_pool else "inactive"
+        }
+        
+        app.logger.info(f"Health check passed: {health_data}")
+        return jsonify(health_data), 200
+        
+    except Exception as e:
+        app.logger.error(f"Health check failed: {str(e)}")
+        return jsonify({
+            "status": "degraded",
+            "service": "FLEXIA API",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database": f"error: {str(e)}",
+            "uptime": get_uptime(),
+            "version": "13.0"
+        }), 503
+
+# ================= BACKUP ENDPOINTS =======================
+@app.route('/api/admin/backup/trigger', methods=['POST'])
+@require_admin
+def trigger_backup():
+    """Manually trigger a database backup"""
+    try:
+        backup_file = backup_database()
+        if backup_file:
+            app.logger.info(f"Manual backup triggered: {backup_file}")
+            return jsonify({
+                "success": True,
+                "message": "Backup created successfully",
+                "backup_file": backup_file
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "message": "Backup creation failed"
+            }), 500
+    except Exception as e:
+        app.logger.error(f"Manual backup error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Backup error: {str(e)}"
+        }), 500
+
+@app.route('/api/admin/backup/list', methods=['GET'])
+@require_admin
+def list_backups():
+    """List all available backups"""
+    try:
+        if not os.path.exists('backups'):
+            return jsonify({"success": True, "backups": []})
+        
+        backups = []
+        for filename in sorted(os.listdir('backups'), reverse=True):
+            filepath = os.path.join('backups', filename)
+            if os.path.isfile(filepath):
+                stat = os.stat(filepath)
+                backups.append({
+                    "filename": filename,
+                    "size": stat.st_size,
+                    "created": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                    "size_human": f"{stat.st_size / 1024 / 1024:.2f} MB"
+                })
+        
+        return jsonify({
+            "success": True,
+            "backups": backups
+        })
+    except Exception as e:
+        app.logger.error(f"List backups error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error listing backups: {str(e)}"
+        }), 500
+
 # ================= STATIC FILES =======================
 @app.route('/')
 def index():
@@ -3820,7 +3736,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug = os.getenv('ENV') != 'production'
     
-    app.logger.info(f"🚀 Starting Flexia Platform OPTIMIZED v12.5 with Game Limits on port {port} (debug: {debug})")
+    app.logger.info(f"🚀 Starting Flexia Platform v13.0 with Complete Game Limits on port {port} (debug: {debug})")
     app.logger.info(f"📁 Frontend directory: {CONFIG.FRONTEND_DIR}")
     app.logger.info(f"🔒 Secret key set: {'Yes' if CONFIG.SECRET_KEY else 'No'}")
     app.logger.info(f"🗄️ Database: {'PostgreSQL' if os.environ.get('DATABASE_URL') else 'SQLite'}")
@@ -3828,12 +3744,13 @@ if __name__ == '__main__':
     app.logger.info(f"📊 Structured logging: Enabled")
     app.logger.info(f"🔗 Database connection pool: {'Enabled (5-50)' if db_pool else 'Disabled'}")
     app.logger.info(f"💾 Automatic backups: Enabled (daily at 2 AM UTC)")
-    app.logger.info(f"🎮 GAME LIMITS ENABLED:")
+    app.logger.info(f"🎮 GAME LIMITS ENABLED (PER REWARD CLAIM):")
     app.logger.info(f"   • Snake: {CONFIG.GAME_DAILY_LIMITS['snake']} plays/day")
     app.logger.info(f"   • Coin Flip: {CONFIG.GAME_DAILY_LIMITS['coinflip']} plays/day")
     app.logger.info(f"   • Plinko: {CONFIG.GAME_DAILY_LIMITS['plinko']} plays/day")
     app.logger.info(f"   • Spin: {CONFIG.GAME_DAILY_LIMITS['spin']} plays/day")
     app.logger.info(f"   • TikTok: {CONFIG.GAME_DAILY_LIMITS['tiktok']} plays/day")
-    app.logger.info(f"🚀 VERSION 12.5: Complete game limit system with friendly messages")
+    app.logger.info(f"🧹 Database Clearing: Enabled (Admin only)")
+    app.logger.info(f"🚀 VERSION 13.0: Complete game limit system with admin database clearing")
     
     app.run(host='0.0.0.0', port=port, debug=debug)
