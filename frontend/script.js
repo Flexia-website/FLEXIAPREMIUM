@@ -1,5 +1,5 @@
-// script.js - FLEXIA Frontend Logic v12.5 - COMPLETE VERSION WITH GAME LIMITS
-// ? ALL FIXES APPLIED ? DAILY PLAY LIMITS ? BEAUTIFUL UI
+// script.js - FLEXIA Frontend Logic v13.0 - COMPLETE VERSION WITH AUTO-LOGOUT & GAME LIMITS
+// ✅ ALL FIXES APPLIED ✅ DAILY PLAY LIMITS ✅ AUTO-LOGOUT ✅ BEAUTIFUL UI
 
 //========== EMBEDDED CSS ========
 const embeddedCSS = `
@@ -411,6 +411,26 @@ const embeddedCSS = `
     background: rgba(0, 212, 255, 0.1);
   }
   
+  /* Force Logout Modal Styles */
+  .force-logout-modal-content {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-radius: 20px;
+    padding: 30px;
+    max-width: 450px;
+    width: 90%;
+    border: 2px solid #ff4757;
+    box-shadow: 0 20px 40px rgba(255, 71, 87, 0.3);
+    text-align: center;
+    animation: slideIn 0.4s ease-out;
+  }
+  
+  .force-logout-countdown {
+    color: #ff6b6b;
+    font-weight: bold;
+    font-size: 1.2rem;
+    animation: pulse 1s infinite;
+  }
+  
   @keyframes slideIn {
     from {
       opacity: 0;
@@ -545,14 +565,14 @@ const App = {
     
     const withdrawBalance = document.getElementById('withdraw-balance');
     if (withdrawBalance) {
-      withdrawBalance.textContent = `?${this.currentUser.balance.toLocaleString(undefined, { 
+      withdrawBalance.textContent = `₦${this.currentUser.balance.toLocaleString(undefined, { 
         minimumFractionDigits: 2,
         maximumFractionDigits: 2 
       })}`;
     }
     
     const minEl = document.getElementById('withdraw-min');
-    if (minEl) minEl.textContent = `?${CONFIG.MIN_WITHDRAWAL.toLocaleString()}`;
+    if (minEl) minEl.textContent = `₦${CONFIG.MIN_WITHDRAWAL.toLocaleString()}`;
     
     this.lastBalanceUpdate = now;
   },
@@ -810,36 +830,36 @@ const GameLimiter = {
   },
   
   gameEmojis: {
-    'snake': '??',
-    'coinflip': '??',
-    'plinko': '??',
-    'spin': '??',
-    'tiktok': '??'
+    'snake': '🐍',
+    'coinflip': '🪙',
+    'plinko': '🎯',
+    'spin': '🎡',
+    'tiktok': '📱'
   },
   
   gameMessages: {
     'snake': {
-      icon: '??',
+      icon: '🐍',
       title: 'Snake Game Limit Reached',
       message: 'You have played Snake 10 times today. Come back tomorrow for more fun!'
     },
     'coinflip': {
-      icon: '??',
+      icon: '🪙',
       title: 'Coin Flip Limit Reached',
       message: 'You have played Coin Flip 5 times today. Daily limit reached!'
     },
     'plinko': {
-      icon: '??',
+      icon: '🎯',
       title: 'Plinko Limit Reached',
       message: 'You have played Plinko 5 times today. Try again tomorrow!'
     },
     'spin': {
-      icon: '??',
+      icon: '🎡',
       title: 'Daily Spin Limit Reached',
       message: 'You have already used your daily spin today! Come back tomorrow.'
     },
     'tiktok': {
-      icon: '??',
+      icon: '📱',
       title: 'TikTok Daily Limit Reached',
       message: 'You have already claimed TikTok reward today! Come back tomorrow.'
     }
@@ -891,7 +911,7 @@ const GameLimiter = {
     }
     
     const gameInfo = this.gameMessages[gameType] || {
-      icon: '??',
+      icon: '🎮',
       title: 'Game Limit Reached',
       message: 'You have reached your daily limit for this game.'
     };
@@ -982,7 +1002,7 @@ const GameLimiter = {
             font-size: 1.5rem;
             margin-bottom: 20px;
           ">
-            ?? Try These Games Instead
+            🎮 Try These Games Instead
           </h3>
           
           <div style="
@@ -996,7 +1016,7 @@ const GameLimiter = {
     // Add alternative game buttons
     alternativeGames.forEach(gameType => {
       const gameName = this.gameFriendlyNames[gameType];
-      const emoji = this.gameEmojis[gameType] || '??';
+      const emoji = this.gameEmojis[gameType] || '🎮';
       
       let onclick = '';
       if (gameType === 'snake') onclick = 'window.location.href=\'snake.html\'';
@@ -1059,11 +1079,11 @@ const GameLimiter = {
   
   getGameDescription(gameType) {
     const descriptions = {
-      'snake': 'Eat apples, earn ?200 each',
+      'snake': 'Eat apples, earn ₦200 each',
       'coinflip': 'Bet & double your money',
       'plinko': 'Bet & multiply your earnings',
-      'spin': 'Spin & win up to ?1000',
-      'tiktok': 'Follow & earn ?150 daily'
+      'spin': 'Spin & win up to ₦1000',
+      'tiktok': 'Follow & earn ₦150 daily'
     };
     return descriptions[gameType] || 'Earn rewards';
   },
@@ -1074,6 +1094,203 @@ const GameLimiter = {
       modal.remove();
     }
   }
+};
+
+//========== ENHANCED GAME LIMITER WITH AUTO-LOGOUT ===========
+const EnhancedGameLimiter = {
+    async checkAndHandleGameAccess(gameType, targetUrl) {
+        if (!App.currentUser) {
+            App.showMessage('Please login first', 'error');
+            return false;
+        }
+        
+        try {
+            // Check game access with logout capability
+            const response = await App.requestWithTimeout(`/api/games/check-limit-with-logout/${gameType}`, {
+                credentials: 'include',
+                headers: { 'Cache-Control': 'no-cache' }
+            });
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+                if (data.force_logout || data.action_required === 'logout') {
+                    // Show logout modal and force logout
+                    this.showForceLogoutModal(gameType, data);
+                    return false;
+                }
+                
+                App.showMessage(data.message || 'Failed to check game access', 'error');
+                return false;
+            }
+            
+            if (!data.can_play) {
+                // Show limit reached modal with logout option
+                this.showLimitReachedModal(gameType, data);
+                return false;
+            }
+            
+            // User can play, proceed to game
+            window.location.href = targetUrl;
+            return true;
+            
+        } catch (error) {
+            console.error('Game access check error:', error);
+            App.showMessage('Could not verify game limits. Proceeding to game...', 'warning');
+            window.location.href = targetUrl;
+            return true;
+        }
+    },
+    
+    showForceLogoutModal(gameType, data) {
+        const gameInfo = GameLimiter.gameMessages[gameType] || {
+            icon: '🎮',
+            title: 'Daily Limit Reached',
+            message: 'You have reached your daily limit for this game.'
+        };
+        
+        const played = data.played_today || 0;
+        const max = data.max_plays || CONFIG.GAME_DAILY_LIMITS[gameType] || 5;
+        const resetTime = data.reset_time || 'midnight (00:00 UTC)';
+        
+        const modal = document.createElement('div');
+        modal.id = 'force-logout-modal';
+        modal.className = 'game-limit-modal';
+        modal.style.zIndex = '10002';
+        
+        modal.innerHTML = `
+            <div class="force-logout-modal-content">
+                <div class="game-limit-icon">🚫</div>
+                
+                <h3 class="game-limit-title">Daily Limit Reached</h3>
+                
+                <div class="game-limit-message">
+                    <p class="game-limit-text" style="font-size: 1.1rem; line-height: 1.6;">
+                        <strong>You've played ${played}/${max} times today!</strong><br><br>
+                        Daily limits reset at <strong>${resetTime}</strong>.<br>
+                        You will now be logged out automatically.
+                    </p>
+                    
+                    <div class="game-limit-info">
+                        <i class="fas fa-calendar-day"></i>
+                        <span>Played Today: ${played}/${max}</span>
+                    </div>
+                    
+                    <div class="game-limit-info">
+                        <i class="fas fa-clock"></i>
+                        <span>Reset Time: ${resetTime}</span>
+                    </div>
+                    
+                    <div class="game-limit-info" style="color: #ff6b6b;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Auto-logout in <span id="logout-countdown" class="force-logout-countdown">10</span> seconds</span>
+                    </div>
+                </div>
+                
+                <div class="game-limit-buttons">
+                    <button class="game-limit-btn-ok" onclick="EnhancedGameLimiter.performLogout('${gameType}')">
+                        <i class="fas fa-sign-out-alt"></i> Logout Now
+                    </button>
+                    
+                    <button class="game-limit-btn-alternative" onclick="EnhancedGameLimiter.closeModal()">
+                        <i class="fas fa-home"></i> Return to Dashboard
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Start countdown
+        let countdown = 10;
+        const countdownEl = document.getElementById('logout-countdown');
+        const countdownInterval = setInterval(() => {
+            countdown--;
+            if (countdownEl) countdownEl.textContent = countdown;
+            
+            if (countdown <= 0) {
+                clearInterval(countdownInterval);
+                this.performLogout(gameType);
+            }
+        }, 1000);
+        
+        // Store interval for cleanup
+        modal.countdownInterval = countdownInterval;
+    },
+    
+    async performLogout(gameType) {
+        try {
+            // Call force logout endpoint
+            await fetch('/api/games/force-logout/' + gameType, {
+                method: 'POST',
+                credentials: 'include'
+            });
+            
+            // Clear local session
+            document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+            
+            // Show logout message
+            this.showLogoutMessage();
+            
+            // Redirect to login page with reason
+            setTimeout(() => {
+                window.location.href = '/?reason=daily_limit_reached&game=' + gameType;
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Force redirect anyway
+            window.location.href = '/?reason=daily_limit_reached';
+        }
+    },
+    
+    showLogoutMessage() {
+        const message = document.createElement('div');
+        message.className = 'global-message warning';
+        message.style.position = 'fixed';
+        message.style.top = '50%';
+        message.style.left = '50%';
+        message.style.transform = 'translate(-50%, -50%)';
+        message.style.zIndex = '10003';
+        message.style.fontSize = '1.2rem';
+        message.style.padding = '30px';
+        message.innerHTML = `
+            <div style="text-align: center;">
+                <div style="font-size: 3rem; margin-bottom: 20px;">🚫</div>
+                <h3 style="margin-bottom: 15px;">Daily Limit Reached</h3>
+                <p>You have been logged out automatically.<br>Please come back tomorrow!</p>
+                <p style="font-size: 0.9rem; opacity: 0.8;">Redirecting to login page...</p>
+            </div>
+        `;
+        document.body.appendChild(message);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            if (message.parentNode) {
+                message.remove();
+            }
+        }, 3000);
+    },
+    
+    closeModal() {
+        const modal = document.getElementById('force-logout-modal');
+        if (modal) {
+            if (modal.countdownInterval) {
+                clearInterval(modal.countdownInterval);
+            }
+            modal.remove();
+        }
+        
+        // Also close regular limit modal if open
+        GameLimiter.closeModal();
+        
+        // Return to dashboard
+        window.location.href = '/';
+    },
+    
+    showLimitReachedModal(gameType, data) {
+        GameLimiter.showLimitModal(gameType, data);
+    }
 };
 
 //========== AUTHENTICATION =========
@@ -1267,7 +1484,7 @@ const Profile = {
           <div class="profile-section">
             <h4><i class="fas fa-user-circle"></i> Account Information</h4>
             <p><strong>Username:</strong> ${data.user.username}</p>
-            <p><strong>Balance:</strong> ?${data.user.balance.toLocaleString()}</p>
+            <p><strong>Balance:</strong> ₦${data.user.balance.toLocaleString()}</p>
             <p><strong>Referral Code:</strong> ${data.user.referral_code}</p>
             <p><strong>Joined:</strong> ${new Date(data.user.created_at).toLocaleDateString()}</p>
           </div>
@@ -1350,15 +1567,15 @@ const Referral = {
           <div class="referral-section">
             <h4><i class="fas fa-users"></i> Your Referral Program</h4>
             <p><strong>Your Referral Code:</strong> <code style="font-size:1.2em;background:#8000FF;padding:5px 10px;border-radius:5px;">${data.user.referral_code}</code></p>
-            <p>Share this code to earn <strong>?${CONFIG.REFERRAL_BONUS.toLocaleString()}</strong> per friend!</p>
+            <p>Share this code to earn <strong>₦${CONFIG.REFERRAL_BONUS.toLocaleString()}</strong> per friend!</p>
             <p><strong>Referred Users:</strong> ${data.referrals.count}</p>
-            <p><strong>Unclaimed Bonus:</strong> ?${unclaimed.toLocaleString()}</p>
+            <p><strong>Unclaimed Bonus:</strong> ₦${unclaimed.toLocaleString()}</p>
             
             ${unclaimed > 0
               ? `<button class="btn-primary" onclick="Referral.claimBonuses()" style="margin-top:15px;">
-                   <i class="fas fa-gift"></i> Claim ?${unclaimed.toLocaleString()} Bonus
+                   <i class="fas fa-gift"></i> Claim ₦${unclaimed.toLocaleString()} Bonus
                  </button>`
-              : '<p style="color:#00FF55;margin-top:15px;">All bonuses claimed! ??</p>'
+              : '<p style="color:#00FF55;margin-top:15px;">All bonuses claimed! 🎉</p>'
             }
           </div>
           
@@ -1411,7 +1628,7 @@ const Referral = {
         return;
       }
       
-      App.showMessage(`? ?${result.claimed.toLocaleString()} referral bonus claimed!`, 'success');
+      App.showMessage(`🎉 ₦${result.claimed.toLocaleString()} referral bonus claimed!`, 'success');
       App.updateBalance(result.new_balance);
       Referral.open();
     } catch (error) {
@@ -1524,7 +1741,7 @@ const Banking = {
     const accountName = document.getElementById('account-name-manual').value.trim();
     
     if (!amount || amount < CONFIG.MIN_WITHDRAWAL) {
-      App.showMessage(`Minimum withdrawal: ?${CONFIG.MIN_WITHDRAWAL.toLocaleString()}`, 'error');
+      App.showMessage(`Minimum withdrawal: ₦${CONFIG.MIN_WITHDRAWAL.toLocaleString()}`, 'error');
       return;
     }
     
@@ -1566,7 +1783,7 @@ const Banking = {
       
       if (result.success) {
         App.updateBalance(result.new_balance);
-        App.showMessage('? Withdrawal submitted for manual review!', 'success');
+        App.showMessage('✅ Withdrawal submitted for manual review!', 'success');
         setTimeout(() => App.closeModal('withdrawal-modal'), 2000);
       }
     } catch (error) {
@@ -1606,7 +1823,7 @@ const Achievements = {
       );
       
       if (result.success) {
-        App.showMessage(`? Achievement rewards claimed! New balance: ?${result.new_balance.toLocaleString()}`, 'success');
+        App.showMessage(`🎉 Achievement rewards claimed! New balance: ₦${result.new_balance.toLocaleString()}`, 'success');
         App.updateBalance(result.new_balance);
       } else {
         App.showMessage(result.message || 'Failed to claim rewards', 'error');
@@ -1619,10 +1836,10 @@ const Achievements = {
 
 //========== GAMES & TIKTOK DAILY =========
 const Games = {
-  // Updated game opening functions with daily limits
-  openSnake: () => GameLimiter.checkAndNavigate('snake', 'snake.html'),
-  openCoinFlip: () => GameLimiter.checkAndNavigate('coinflip', 'coinflip.html'),
-  openPlinko: () => GameLimiter.checkAndNavigate('plinko', 'plinko.html'),
+  // Updated game opening functions with enhanced limiter (auto-logout)
+  openSnake: () => EnhancedGameLimiter.checkAndHandleGameAccess('snake', 'snake.html'),
+  openCoinFlip: () => EnhancedGameLimiter.checkAndHandleGameAccess('coinflip', 'coinflip.html'),
+  openPlinko: () => EnhancedGameLimiter.checkAndHandleGameAccess('plinko', 'plinko.html'),
   
   // Game reporting functions
   reportSnake: async function (apples) {
@@ -1660,16 +1877,24 @@ const Games = {
   openTikTok: async function () {
     if (!App.currentUser) return;
     
-    // Check TikTok limit first
+    // Check TikTok limit first with enhanced limiter
     try {
-      const response = await App.requestWithTimeout(`/api/games/access?game=tiktok`, {
+      const response = await App.requestWithTimeout(`/api/games/check-limit-with-logout/tiktok`, {
         credentials: 'include',
         headers: { 'Cache-Control': 'no-cache' }
       });
       
       const data = await response.json();
-      if (data.success && !data.can_play) {
-        GameLimiter.showLimitModal('tiktok', data);
+      
+      if (!data.success) {
+        if (data.force_logout || data.action_required === 'logout') {
+          EnhancedGameLimiter.showForceLogoutModal('tiktok', data);
+          return;
+        }
+      }
+      
+      if (!data.can_play) {
+        EnhancedGameLimiter.showLimitReachedModal('tiktok', data);
         return;
       }
     } catch (error) {
@@ -1695,7 +1920,7 @@ const Games = {
       
       if (data.already_claimed) {
         document.getElementById('tiktok-instructions').innerHTML = `
-          <p style="color:#ff9800;">You have already claimed today's TikTok reward! ??</p>
+          <p style="color:#ff9800;">You have already claimed today's TikTok reward! 🎉</p>
         `;
         document.querySelector('.action-buttons').style.display = 'none';
         App.showModal('tiktok-modal');
@@ -1716,7 +1941,7 @@ const Games = {
         const username = url.pathname.split('/')[1] || data.task.tiktok_link;
         document.getElementById('tiktok-account-name').textContent = '@' + username;
         document.getElementById('tiktok-instructions').innerHTML = `
-          <p>Earn <strong>?${data.task.reward_amount}</strong> for following on TikTok</p>
+          <p>Earn <strong>₦${data.task.reward_amount}</strong> for following on TikTok</p>
           <div class="tiktok-account-display">
             <strong>@${username}</strong>
           </div>
@@ -1725,7 +1950,7 @@ const Games = {
       } catch (e) {
         document.getElementById('tiktok-account-name').textContent = data.task.tiktok_link;
         document.getElementById('tiktok-instructions').innerHTML = `
-          <p>Earn <strong>?${data.task.reward_amount}</strong> for following on TikTok</p>
+          <p>Earn <strong>₦${data.task.reward_amount}</strong> for following on TikTok</p>
           <div class="tiktok-account-display">
             <strong>${data.task.tiktok_link}</strong>
           </div>
@@ -1759,12 +1984,12 @@ const Games = {
       
       if (result.success) {
         App.updateBalance(result.new_balance);
-        msgEl.textContent = `? Success! ?${result.reward} added to your balance.`;
+        msgEl.textContent = `✅ Success! ₦${result.reward} added to your balance.`;
         msgEl.className = 'message success';
         
         setTimeout(() => {
           App.closeModal('tiktok-modal');
-          App.showMessage(`? TikTok reward claimed: ?${result.reward}`, 'success');
+          App.showMessage(`🎉 TikTok reward claimed: ₦${result.reward}`, 'success');
         }, 2000);
       } else {
         msgEl.textContent = result.message || 'Failed to claim reward.';
@@ -1790,16 +2015,24 @@ const Games = {
   openSpinWheel: async function() {
     if (!App.currentUser) return;
     
-    // Check spin limit first
+    // Check spin limit first with enhanced limiter
     try {
-      const response = await App.requestWithTimeout(`/api/games/access?game=spin`, {
+      const response = await App.requestWithTimeout(`/api/games/check-limit-with-logout/spin`, {
         credentials: 'include',
         headers: { 'Cache-Control': 'no-cache' }
       });
       
       const data = await response.json();
-      if (data.success && !data.can_play) {
-        GameLimiter.showLimitModal('spin', data);
+      
+      if (!data.success) {
+        if (data.force_logout || data.action_required === 'logout') {
+          EnhancedGameLimiter.showForceLogoutModal('spin', data);
+          return;
+        }
+      }
+      
+      if (!data.can_play) {
+        EnhancedGameLimiter.showLimitReachedModal('spin', data);
         return;
       }
     } catch (error) {
@@ -1885,8 +2118,8 @@ const Games = {
           App.updateBalance(result.new_balance);
           
           const resultMsg = reward > 0 
-            ? `?? Congratulations! You won ?${reward.toLocaleString()}!`
-            : `?? Better luck tomorrow!`;
+            ? `🎉 Congratulations! You won ₦${reward.toLocaleString()}!`
+            : `😢 Better luck tomorrow!`;
           
           if (msgEl) {
             msgEl.textContent = resultMsg;
@@ -1902,7 +2135,7 @@ const Games = {
           button.innerHTML = '<i class="fas fa-check"></i> COME BACK TOMORROW';
           
           if (reward > 0) {
-            App.showMessage(`? Spin wheel: Won ?${reward.toLocaleString()}!`, 'success');
+            App.showMessage(`🎡 Spin wheel: Won ₦${reward.toLocaleString()}!`, 'success');
           }
         } else {
           if (msgEl) {
@@ -1949,7 +2182,7 @@ const Settings = {
         <div class="settings-section">
           <h4><i class="fas fa-user-cog"></i> Account Settings</h4>
           <p><strong>Username:</strong> ${user.username}</p>
-          <p><strong>Balance:</strong> ?${user.balance.toLocaleString()}</p>
+          <p><strong>Balance:</strong> ₦${user.balance.toLocaleString()}</p>
         </div>
       `;
       
@@ -2166,7 +2399,7 @@ function initSpinWheel() {
   const labelsDiv = document.createElement('div');
   labelsDiv.className = 'wheel-labels';
   
-  const labels = ['?1000', '?500', '?200', '?100', '?50', 'TRY AGAIN'];
+  const labels = ['₦1000', '₦500', '₦200', '₦100', '₦50', 'TRY AGAIN'];
   labels.forEach((label, index) => {
     const labelDiv = document.createElement('div');
     labelDiv.className = `wheel-label label-${index + 1}`;
@@ -2202,20 +2435,20 @@ document.addEventListener('DOMContentLoaded', () => {
   Auth.initPasswordToggles();
   App.init();
   
-  // Update game card click handlers for limits
+  // Update game card click handlers for enhanced limiter with auto-logout
   setTimeout(() => {
     const snakeCard = document.querySelector('.activity-card[onclick*="snake.html"]');
     const coinflipCard = document.querySelector('.activity-card[onclick*="coinflip.html"]');
     const plinkoCard = document.querySelector('.activity-card[onclick*="plinko.html"]');
     
     if (snakeCard) {
-      snakeCard.onclick = () => GameLimiter.checkAndNavigate('snake', 'snake.html');
+      snakeCard.onclick = () => EnhancedGameLimiter.checkAndHandleGameAccess('snake', 'snake.html');
     }
     if (coinflipCard) {
-      coinflipCard.onclick = () => GameLimiter.checkAndNavigate('coinflip', 'coinflip.html');
+      coinflipCard.onclick = () => EnhancedGameLimiter.checkAndHandleGameAccess('coinflip', 'coinflip.html');
     }
     if (plinkoCard) {
-      plinkoCard.onclick = () => GameLimiter.checkAndNavigate('plinko', 'plinko.html');
+      plinkoCard.onclick = () => EnhancedGameLimiter.checkAndHandleGameAccess('plinko', 'plinko.html');
     }
   }, 1000);
   
@@ -2246,6 +2479,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.App = App;
     window.GameManager = GameManager;
     window.GameLimiter = GameLimiter;
+    window.EnhancedGameLimiter = EnhancedGameLimiter;
     window.Games = Games;
     window.Auth = Auth;
     window.Profile = Profile;
@@ -2254,10 +2488,10 @@ document.addEventListener('DOMContentLoaded', () => {
     window.Achievements = Achievements;
     window.Settings = Settings;
     
-    // Game navigation with limits
-    window.openSnakeGame = () => GameLimiter.checkAndNavigate('snake', 'snake.html');
-    window.openCoinFlipGame = () => GameLimiter.checkAndNavigate('coinflip', 'coinflip.html');
-    window.openPlinkoGame = () => GameLimiter.checkAndNavigate('plinko', 'plinko.html');
+    // Game navigation with enhanced limits (auto-logout)
+    window.openSnakeGame = () => EnhancedGameLimiter.checkAndHandleGameAccess('snake', 'snake.html');
+    window.openCoinFlipGame = () => EnhancedGameLimiter.checkAndHandleGameAccess('coinflip', 'coinflip.html');
+    window.openPlinkoGame = () => EnhancedGameLimiter.checkAndHandleGameAccess('plinko', 'plinko.html');
     window.openTikTokGame = Games.openTikTok;
     window.openSpinWheelGame = Games.openSpinWheel;
     
@@ -2309,7 +2543,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return await GameManager.safeClaim(endpoint, data, gameType);
     };
     
-    console.log('? FLEXIA Script v12.5 - ALL FUNCTIONS LOADED WITH COMPLETE GAME LIMITS');
+    console.log('✅ FLEXIA Script v13.0 - ALL FUNCTIONS LOADED WITH COMPLETE GAME LIMITS & AUTO-LOGOUT');
 })();
 
 // Emergency fallback loader
@@ -2332,4 +2566,3 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }, 1000);
 });
- 
