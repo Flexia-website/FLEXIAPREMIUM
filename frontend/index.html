@@ -188,7 +188,7 @@
       <div id="register-message" class="message"></div>
       <div class="info-box">
         <h4><i class="fas fa-gift"></i> Referral Program</h4>
-        <p>Earn <strong>?7,500</strong> for each friend you refer!</p>
+        <p>Earn <strong>₦7,500</strong> for each friend you refer!</p>
         <p class="small-text">Share your referral code after registration</p>
       </div>
     </div>
@@ -223,7 +223,7 @@
       <div class="balance-card">
         <div class="balance-label">TOTAL ASSETS</div>
         <div class="balance-amount">
-          <span class="currency">?</span>
+          <span class="currency">₦</span>
           <span id="balance-display" class="amount">0.00</span>
         </div>
         <div class="balance-controls">
@@ -242,37 +242,37 @@
         <div class="activity-card" onclick="window.location.href='snake.html'">
           <div class="card-icon game"><i class="fas fa-gamepad"></i></div>
           <div class="card-title">Snake Mine</div>
-          <div class="card-subtitle">Eat = ?200 Each</div>
+          <div class="card-subtitle">Eat = ₦200 Each</div>
           <div class="card-badge free">FREE</div>
         </div>
         <div class="activity-card" onclick="window.location.href='coinflip.html'">
           <div class="card-icon coin"><i class="fas fa-coins"></i></div>
           <div class="card-title">Coin Flip</div>
           <div class="card-subtitle">Bet & Double</div>
-          <div class="card-badge bet">Min: ?100</div>
+          <div class="card-badge bet">Min: ₦100</div>
         </div>
         <div class="activity-card" onclick="window.location.href='plinko.html'">
           <div class="card-icon play"><i class="fas fa-bowling-ball"></i></div>
           <div class="card-title">Plinko 3D</div>
           <div class="card-subtitle">Bet & Multiply</div>
-          <div class="card-badge bet">Min: ?100</div>
+          <div class="card-badge bet">Min: ₦100</div>
         </div>
         <div class="activity-card" onclick="Games.openTikTok()">
           <div class="card-icon tiktok"><i class="fab fa-tiktok"></i></div>
           <div class="card-title">TikTok Follow</div>
-          <div class="card-subtitle">Follow = ?150</div>
+          <div class="card-subtitle">Follow = ₦150</div>
           <div class="card-badge daily">1/Day</div>
         </div>
         <div class="activity-card" onclick="Referral.open()">
           <div class="card-icon referral"><i class="fas fa-users"></i></div>
           <div class="card-title">Refer & Earn</div>
-          <div class="card-subtitle">?7,500/Friend</div>
+          <div class="card-subtitle">₦7,500/Friend</div>
           <div class="card-badge bonus">Bonus</div>
         </div>
         <div class="activity-card" onclick="customSpinEngine.openModal()">
           <div class="card-icon spin"><i class="fas fa-sync-alt"></i></div>
           <div class="card-title">Daily Spin</div>
-          <div class="card-subtitle">Win Up To ?1000</div>
+          <div class="card-subtitle">Win Up To ₦1000</div>
           <div class="card-badge daily">1/Day</div>
         </div>
       </div>
@@ -336,8 +336,8 @@
         </div>
       </div>
       <h3 class="modal-title">CASH-OUT VAULT</h3>
-      <p class="modal-info">Available Balance: <strong id="withdraw-balance">?0.00</strong></p>
-      <p class="modal-info">Minimum Withdrawal: <strong id="withdraw-min">?100,000.00</strong></p>
+      <p class="modal-info">Available Balance: <strong id="withdraw-balance">₦0.00</strong></p>
+      <p class="modal-info">Minimum Withdrawal: <strong id="withdraw-min">₦100,000.00</strong></p>
       <div class="input-group">
         <input type="number" id="withdraw-amount" class="form-input" placeholder="Amount (e.g., 100000)" required />
       </div>
@@ -405,9 +405,9 @@
         </div>
       </div>
       <h3 class="modal-title">TIKTOK FOLLOW</h3>
-      <p class="modal-info">Earn <strong>?150.00</strong> for following on TikTok</p>
+      <p class="modal-info">Earn <strong>₦150.00</strong> for following on TikTok</p>
       <div id="tiktok-instructions">
-        <p>Follow the account below on TikTok to earn ?150.00</p>
+        <p>Follow the account below on TikTok to earn ₦150.00</p>
         <div class="tiktok-account-display">
           <strong id="tiktok-account-name">Loading...</strong>
         </div>
@@ -498,14 +498,14 @@ Referral.open = function() {
 <script>
 const customSpinEngine = {
   segments: [
-    { label: "?1000", color: "url(#purpleGrad)", val: 1000 },
+    { label: "₦1000", color: "url(#purpleGrad)", val: 1000 },
     { label: "TRY AGAIN", color: "url(#darkGrad)", val: 0 },
-    { label: "?500", color: "url(#purpleGrad)", val: 500 },
-    { label: "?50", color: "url(#darkGrad)", val: 50 },
-    { label: "?1000", color: "url(#purpleGrad)", val: 1000 },
-    { label: "?100", color: "url(#darkGrad)", val: 100 },
-    { label: "?500", color: "url(#purpleGrad)", val: 500 },
-    { label: "?200", color: "url(#darkGrad)", val: 200 }
+    { label: "₦500", color: "url(#purpleGrad)", val: 500 },
+    { label: "₦50", color: "url(#darkGrad)", val: 50 },
+    { label: "₦1000", color: "url(#purpleGrad)", val: 1000 },
+    { label: "₦100", color: "url(#darkGrad)", val: 100 },
+    { label: "₦500", color: "url(#purpleGrad)", val: 500 },
+    { label: "₦200", color: "url(#darkGrad)", val: 200 }
   ],
   currentRot: 0,
   isSpinning: false,
