@@ -1047,5 +1047,185 @@
             await initGame();
         });
     </script>
+
+    <!-- Enhanced Game Limit Checker -->
+    <script>
+    // Check for limit on game page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const gameType = window.location.pathname.includes('snake') ? 'snake' :
+                         window.location.pathname.includes('coinflip') ? 'coinflip' :
+                         window.location.pathname.includes('plinko') ? 'plinko' : 'unknown';
+        
+        if (gameType !== 'unknown') {
+            checkGameLimitOnLoad(gameType);
+        }
+    });
+    
+    async function checkGameLimitOnLoad(gameType) {
+        try {
+            const response = await fetch(`/api/games/check-limit-with-logout/${gameType}`, {
+                credentials: 'include',
+                headers: { 'Cache-Control': 'no-cache' }
+            });
+            
+            if (!response.ok) {
+                // If unauthorized, redirect to login
+                if (response.status === 401) {
+                    window.location.href = '/';
+                    return;
+                }
+            }
+            
+            const data = await response.json();
+            
+            if (data.force_logout || (data.success === false && data.action_required === 'logout')) {
+                // Show logout overlay
+                showGameLimitOverlay(gameType, data);
+                return false;
+            }
+            
+            return true;
+            
+        } catch (error) {
+            console.error('Limit check on load error:', error);
+            return true; // Allow play on error
+        }
+    }
+    
+    function showGameLimitOverlay(gameType, data) {
+        const overlay = document.createElement('div');
+        overlay.id = 'game-limit-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            font-family: 'Arial', sans-serif;
+        `;
+        
+        const played = data.played_today || 0;
+        const max = data.max_plays || 5;
+        const resetTime = data.reset_time || 'midnight (00:00 UTC)';
+        
+        overlay.innerHTML = `
+            <div style="max-width: 500px; padding: 30px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                       border-radius: 20px; border: 3px solid #ff4757; box-shadow: 0 20px 40px rgba(255, 71, 87, 0.3);">
+                <div style="font-size: 4rem; margin-bottom: 20px; color: #ff4757;">??</div>
+                <h2 style="color: #ff6b6b; margin-bottom: 15px; font-size: 2rem;">Daily Limit Reached!</h2>
+                
+                <div style="background: rgba(255, 71, 87, 0.1); padding: 20px; border-radius: 10px; margin: 20px 0;
+                           border: 1px solid rgba(255, 71, 87, 0.3);">
+                    <p style="font-size: 1.2rem; line-height: 1.6; margin-bottom: 15px;">
+                        You've played <strong>${played}/${max}</strong> times today.<br>
+                        Daily limits reset at <strong>${resetTime}</strong>.
+                    </p>
+                    
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 10px; 
+                               margin: 15px 0; color: #ffcc00;">
+                        <i class="fas fa-calendar-day"></i>
+                        <span>Played Today: ${played}/${max}</span>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 10px;
+                               margin: 15px 0; color: #00d4ff;">
+                        <i class="fas fa-clock"></i>
+                        <span>Reset Time: ${resetTime}</span>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 10px;
+                               margin: 15px 0; color: #ff6b6b; font-weight: bold;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Auto-logout in <span id="game-logout-countdown">10</span> seconds</span>
+                    </div>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 25px;">
+                    <button onclick="forceLogoutFromGame('${gameType}')" 
+                            style="background: linear-gradient(135deg, #ff4757 0%, #ff6b6b 100%);
+                                   color: white; border: none; padding: 15px; border-radius: 10px;
+                                   font-weight: bold; cursor: pointer; font-size: 1rem;">
+                        <i class="fas fa-sign-out-alt"></i> Logout Now
+                    </button>
+                    
+                    <button onclick="returnToDashboard()" 
+                            style="background: transparent; color: #00d4ff; border: 1px solid #00d4ff;
+                                   padding: 12px; border-radius: 10px; cursor: pointer; font-size: 0.9rem;">
+                        <i class="fas fa-arrow-left"></i> Return to Dashboard
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(overlay);
+        document.body.style.overflow = 'hidden';
+        
+        // Start countdown
+        let countdown = 10;
+        const countdownInterval = setInterval(() => {
+            countdown--;
+            const countdownEl = document.getElementById('game-logout-countdown');
+            if (countdownEl) countdownEl.textContent = countdown;
+            
+            if (countdown <= 0) {
+                clearInterval(countdownInterval);
+                forceLogoutFromGame(gameType);
+            }
+        }, 1000);
+        
+        overlay.countdownInterval = countdownInterval;
+    }
+    
+    async function forceLogoutFromGame(gameType) {
+        try {
+            // Call logout endpoint
+            await fetch('/api/games/force-logout/' + gameType, {
+                method: 'POST',
+                credentials: 'include'
+            });
+            
+            // Clear session
+            document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+            
+            // Show logout message
+            const overlay = document.getElementById('game-limit-overlay');
+            if (overlay) {
+                overlay.innerHTML = `
+                    <div style="max-width: 400px; text-align: center;">
+                        <div style="font-size: 5rem; color: #00d4ff; margin-bottom: 20px;">??</div>
+                        <h3 style="color: #00d4ff; margin-bottom: 15px;">Logged Out Successfully</h3>
+                        <p style="font-size: 1.1rem;">You have been logged out due to daily limit.<br>Redirecting to login page...</p>
+                    </div>
+                `;
+            }
+            
+            // Redirect after delay
+            setTimeout(() => {
+                window.location.href = '/?reason=daily_limit_reached&game=' + gameType;
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Logout error:', error);
+            window.location.href = '/?reason=daily_limit_reached';
+        }
+    }
+    
+    function returnToDashboard() {
+        const overlay = document.getElementById('game-limit-overlay');
+        if (overlay && overlay.countdownInterval) {
+            clearInterval(overlay.countdownInterval);
+        }
+        window.location.href = '/';
+    }
+    </script>
 </body>
 </html>
