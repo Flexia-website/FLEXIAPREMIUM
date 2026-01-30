@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        /* ====================== FLEXIA ADMIN CSS ====================== */
         * {
             margin: 0;
             padding: 0;
@@ -18,78 +19,12 @@
             background: #050510;
             color: #e0e0ff;
             min-height: 100vh;
-        }
-        
-        .login-container {
-            max-width: 400px;
-            margin: 100px auto;
-            padding: 30px;
-            background: #0d0d1a;
-            border: 1px solid #252540;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        }
-        
-        .login-container h1 {
-            text-align: center;
-            background: linear-gradient(90deg, #00eeff, #7b61ff);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            margin-bottom: 30px;
-        }
-        
-        .form-control {
-            background: #121225;
-            border: 1px solid #252540;
-            color: #e0e0ff;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 15px;
-        }
-        
-        .form-control:focus {
-            border-color: #7b61ff;
-            box-shadow: 0 0 0 0.25rem rgba(123, 97, 255, 0.25);
-        }
-        
-        .btn-login {
-            background: #7b61ff;
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 6px;
-            width: 100%;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        
-        .btn-login:hover {
-            background: #6a50e0;
-        }
-        
-        .message {
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: 500;
-        }
-        
-        .message.error {
-            background: rgba(255, 82, 82, 0.2);
-            color: #ff5252;
-        }
-        
-        .hidden {
-            display: none;
+            padding: 20px;
         }
         
         #admin-container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 20px;
         }
         
         header {
@@ -99,6 +34,8 @@
             padding: 20px 0;
             border-bottom: 1px solid #2a2a4a;
             margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
         }
         
         header h1 {
@@ -144,6 +81,102 @@
             gap: 8px;
         }
         
+        #stats-summary {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            padding: 15px !important;
+            background: #121225 !important;
+            border-radius: 10px;
+            border-left: 3px solid #7b61ff;
+        }
+        
+        #stats-summary div {
+            font-size: 15px;
+        }
+        
+        #stats-summary strong {
+            color: #7b61ff;
+        }
+        
+        .user-item, .withdrawal-item, .whatsapp-number-item, .tiktok-history-item {
+            background: #151528;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            border-left: 2px solid #00eeff;
+            font-size: 14px;
+        }
+        
+        button {
+            background: #7b61ff;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 4px;
+            transition: background 0.2s;
+        }
+        
+        button:hover {
+            background: #6a50e0;
+        }
+        
+        input, textarea {
+            background: #121225;
+            border: 1px solid #252540;
+            color: #e0e0ff;
+            padding: 10px;
+            border-radius: 6px;
+            width: 100%;
+            margin: 5px 0;
+        }
+        
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #7b61ff;
+        }
+        
+        .social-link-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #151528;
+            padding: 10px;
+            margin: 6px 0;
+            border-radius: 6px;
+        }
+        
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .message.success {
+            background: rgba(0, 200, 83, 0.2);
+            color: #00c853;
+        }
+        
+        .message.error {
+            background: rgba(255, 82, 82, 0.2);
+            color: #ff5252;
+        }
+        
+        .message.warning {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        /* Tab Navigation */
         .admin-tabs {
             display: flex;
             gap: 5px;
@@ -182,6 +215,7 @@
             display: block;
         }
         
+        /* Table Styles */
         .table-container {
             overflow-x: auto;
             margin-top: 15px;
@@ -208,6 +242,7 @@
             background: #151528;
         }
         
+        /* Badges */
         .badge {
             padding: 4px 8px;
             border-radius: 12px;
@@ -230,6 +265,12 @@
             color: white;
         }
         
+        .badge-info {
+            background: #2196f3;
+            color: white;
+        }
+        
+        /* Modal Styles */
         .modal-content {
             background: #0d0d1a;
             color: #e0e0ff;
@@ -248,6 +289,41 @@
             filter: invert(1) grayscale(100%) brightness(200%);
         }
         
+        /* Day Selector */
+        .day-selector {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #252540;
+            border-radius: 5px;
+            padding: 10px;
+            background: #121225;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        
+        .day-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            min-width: 60px;
+        }
+        
+        .day-checkbox input[type="checkbox"] {
+            margin: 0;
+        }
+        
+        .day-checkbox label {
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .day-checkbox input:checked + label {
+            color: #7b61ff;
+            font-weight: bold;
+        }
+        
+        /* Stats Cards */
         .stats-card {
             background: #121225;
             border-radius: 10px;
@@ -268,6 +344,77 @@
             font-size: 14px;
         }
         
+        /* Withdrawal Status Report */
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .status-allowed {
+            background: #00c853;
+        }
+        
+        .status-restricted {
+            background: #ff5252;
+        }
+        
+        .status-not-today {
+            background: #ff9800;
+        }
+        
+        /* Global Withdrawal Days Display */
+        .global-days-display {
+            background: #121225;
+            border: 2px solid #7b61ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .global-days-display h4 {
+            color: #00eeff;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .global-days-display .days-list {
+            color: #e0e0ff;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .global-days-display .days-note {
+            color: #a0a0c0;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+        
+        /* Backup Section */
+        .backup-item {
+            background: #151528;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            border-left: 2px solid #00c853;
+        }
+        
+        .backup-stats {
+            background: #121225;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            border: 1px solid #252540;
+        }
+        
+        .backup-stats h5 {
+            color: #00eeff;
+            margin-bottom: 10px;
+        }
+        
+        /* Health Status */
         .health-status {
             padding: 10px;
             border-radius: 8px;
@@ -289,6 +436,15 @@
             border-left: 3px solid #f44336;
         }
         
+        .uptime-display {
+            font-family: 'Courier New', monospace;
+            background: #0d0d1a;
+            padding: 5px 10px;
+            border-radius: 4px;
+            color: #00eeff;
+        }
+        
+        /* Database Management Cards */
         .card.bg-dark {
             background: #121225 !important;
         }
@@ -297,49 +453,82 @@
             border-color: #ff4757 !important;
         }
         
-        .alert {
-            margin: 10px 0;
+        .card.border-info {
+            border-color: #00eeff !important;
+        }
+        
+        .card-header.bg-danger {
+            background: #ff4757 !important;
+        }
+        
+        .card-header.bg-info {
+            background: #00eeff !important;
+            color: #000 !important;
+        }
+        
+        .list-group-item.bg-dark {
+            background: #0d0d1a;
+            color: #e0e0ff;
+            border-color: #252540;
+        }
+        
+        /* Form Elements */
+        .form-check-input:checked {
+            background-color: #7b61ff;
+            border-color: #7b61ff;
+        }
+        
+        .form-select {
+            background: #121225;
+            color: #e0e0ff;
+            border: 1px solid #252540;
+        }
+        
+        .form-select:focus {
+            border-color: #7b61ff;
+            box-shadow: 0 0 0 0.25rem rgba(123, 97, 255, 0.25);
+        }
+        
+        .form-control {
+            background: #121225;
+            color: #e0e0ff;
+            border: 1px solid #252540;
+        }
+        
+        .form-control:focus {
+            border-color: #7b61ff;
+            box-shadow: 0 0 0 0.25rem rgba(123, 97, 255, 0.25);
         }
         
         @media (max-width: 768px) {
+            #stats-summary {
+                flex-direction: column;
+            }
+            
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
             .admin-tabs {
                 overflow-x: auto;
                 white-space: nowrap;
                 padding-bottom: 5px;
             }
             
-            .tab-btn {
-                padding: 8px 12px;
+            .table-container {
                 font-size: 14px;
             }
             
-            .login-container {
-                margin: 50px 20px;
+            .tab-btn {
+                padding: 8px 12px;
+                font-size: 14px;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Login Screen -->
-    <div id="login-container" class="login-container">
-        <h1><i class="fas fa-crown"></i> Flexia Admin Login</h1>
-        <div id="login-message" class="message hidden"></div>
-        <div class="mb-3">
-            <input type="text" id="admin-username" class="form-control" placeholder="Admin Username" />
-        </div>
-        <div class="mb-3">
-            <input type="password" id="admin-password" class="form-control" placeholder="Admin Password" />
-        </div>
-        <button onclick="adminLogin()" class="btn-login">
-            <i class="fas fa-sign-in-alt"></i> Login to Admin Panel
-        </button>
-        <div class="mt-3 text-center">
-            <small class="text-muted">Use your admin credentials</small>
-        </div>
-    </div>
-    
-    <!-- Admin Dashboard (Hidden until login) -->
-    <div id="admin-container" class="hidden">
+    <div id="admin-container">
         <header>
             <h1><i class="fas fa-crown"></i> Flexia Admin Dashboard</h1>
             <div>
@@ -360,17 +549,32 @@
             <button class="tab-btn" onclick="showTab('database')">
                 <i class="fas fa-database"></i> Database
             </button>
+            <button class="tab-btn" onclick="showTab('globalSettings')">
+                <i class="fas fa-globe"></i> Global Settings
+            </button>
+            <button class="tab-btn" onclick="showTab('tiktokDaily')">
+                <i class="fab fa-tiktok"></i> TikTok Daily
+            </button>
             <button class="tab-btn" onclick="showTab('users')">
                 <i class="fas fa-users"></i> Users
             </button>
             <button class="tab-btn" onclick="showTab('withdrawals')">
                 <i class="fas fa-money-bill-wave"></i> Withdrawals
             </button>
+            <button class="tab-btn" onclick="showTab('withdrawalReport')">
+                <i class="fas fa-chart-bar"></i> Withdrawal Report
+            </button>
+            <button class="tab-btn" onclick="showTab('backup')">
+                <i class="fas fa-hdd"></i> Backup
+            </button>
             <button class="tab-btn" onclick="showTab('settings')">
                 <i class="fas fa-cog"></i> Settings
             </button>
             <button class="tab-btn" onclick="showTab('coupons')">
                 <i class="fas fa-ticket-alt"></i> Coupons
+            </button>
+            <button class="tab-btn" onclick="showTab('whatsapp')">
+                <i class="fab fa-whatsapp"></i> WhatsApp
             </button>
         </div>
         
@@ -387,6 +591,7 @@
                         </div>
                         <div class="text-end">
                             <div><small>Database: <span id="db-status" class="badge badge-success">Connected</span></small></div>
+                            <div><small>Connection Pool: <span id="pool-status" class="badge badge-success">Active</span></small></div>
                         </div>
                     </div>
                 </div>
@@ -416,16 +621,29 @@
                         </div>
                     </div>
                 </div>
+                <div class="global-days-display">
+                    <h4><i class="fas fa-calendar-check"></i> Current Global Withdrawal Days</h4>
+                    <div class="days-list" id="current-global-days">Loading...</div>
+                    <div class="days-note">These days apply to all users without custom withdrawal settings</div>
+                </div>
             </div>
             
             <div class="admin-section">
                 <h3><i class="fas fa-history"></i> Recent Withdrawals</h3>
                 <div id="recent-withdrawals">Loading...</div>
             </div>
+            
+            <div class="admin-section">
+                <h3><i class="fas fa-exclamation-triangle"></i> Recent Security Events</h3>
+                <div id="recent-security-events">
+                    <p>Security logging enabled. Check server logs for details.</p>
+                </div>
+            </div>
         </div>
         
         <!-- Database Management Tab -->
         <div id="database" class="tab-content">
+            <!-- Enhanced Database Clearance Section -->
             <div class="admin-section" style="background: linear-gradient(135deg, #1a1a2e 0%, #0f172a 100%); 
                                              border: 2px solid #ff4757; border-left: 5px solid #ff4757;">
                 <h3 style="color: #ff4757;">
@@ -480,8 +698,8 @@
                                     </select>
                                 </div>
                                 
-                                <button class="btn btn-danger w-100" onclick="confirmDatabaseClear()">
-                                    <i class="fas fa-bomb"></i> Clear Database
+                                <button class="btn btn-danger w-100" onclick="previewDatabaseClear()">
+                                    <i class="fas fa-eye"></i> Preview Database Clearance
                                 </button>
                             </div>
                         </div>
@@ -560,6 +778,120 @@
             </div>
         </div>
         
+        <!-- Backup Tab -->
+        <div id="backup" class="tab-content">
+            <div class="admin-section">
+                <h3><i class="fas fa-database"></i> Database Backup Management</h3>
+                <div class="backup-stats">
+                    <h5><i class="fas fa-info-circle"></i> Backup Information</h5>
+                    <p><strong>Automatic Backups:</strong> Daily at 2:00 AM UTC</p>
+                    <p><strong>Retention Policy:</strong> 7 days</p>
+                    <p><strong>Last Backup:</strong> <span id="last-backup-time">Checking...</span></p>
+                    <p><strong>Backup Location:</strong> <code>backups/</code> directory</p>
+                </div>
+                <div class="mb-3">
+                    <button onclick="triggerBackup()" class="btn btn-success">
+                        <i class="fas fa-play-circle"></i> Trigger Manual Backup
+                    </button>
+                    <button onclick="listBackups()" class="btn btn-primary">
+                        <i class="fas fa-sync"></i> Refresh Backup List
+                    </button>
+                </div>
+                <div id="backup-message" class="message hidden"></div>
+            </div>
+            
+            <div class="admin-section">
+                <h3><i class="fas fa-list"></i> Available Backups</h3>
+                <div id="backup-list">
+                    <p>Loading backups...</p>
+                </div>
+            </div>
+            
+            <div class="admin-section">
+                <h3><i class="fas fa-shield-alt"></i> Backup Safety Tips</h3>
+                <ul style="color: #a0a0c0; margin-left: 20px; line-height: 1.8;">
+                    <li>Backups are created automatically every day at 2 AM</li>
+                    <li>Keep backups in a secure location outside the server</li>
+                    <li>Test restore procedures regularly</li>
+                    <li>Monitor backup success/failure in server logs</li>
+                    <li>Consider off-site backup storage for disaster recovery</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Global Settings Tab -->
+        <div id="globalSettings" class="tab-content">
+            <div class="admin-section">
+                <h3><i class="fas fa-globe"></i> Global Withdrawal Settings</h3>
+                <p style="color: #a0a0c0; margin-bottom: 20px;">
+                    Set the default withdrawal days for all users. Users with custom settings will not be affected.
+                </p>
+                <div class="global-days-display">
+                    <h4><i class="fas fa-calendar-alt"></i> Current Global Withdrawal Days</h4>
+                    <div class="days-list" id="global-days-current">Loading...</div>
+                    <div class="days-note">All users without custom settings can withdraw on these days</div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="form-label fw-bold" style="color: #00eeff; font-size: 16px; margin-bottom: 10px;">
+                        <i class="fas fa-edit"></i> Select Global Withdrawal Days (1-31)
+                    </label>
+                    <div class="form-text mb-2" style="color: #a0a0c0;">
+                        Select which days of the month users can make withdrawals. These apply to all users without custom settings.
+                    </div>
+                    <div class="day-selector" id="global-day-selector">
+                        <!-- Generated by JS -->
+                    </div>
+                    <div class="mt-3">
+                        <button onclick="selectAllGlobalDays()" class="btn btn-sm" style="background: #00eeff; color: #000;">
+                            <i class="fas fa-check-square"></i> Select All Days
+                        </button>
+                        <button onclick="clearAllGlobalDays()" class="btn btn-sm" style="background: #ff5252;">
+                            <i class="fas fa-times-circle"></i> Clear All Days
+                        </button>
+                        <button onclick="setDefaultGlobalDays()" class="btn btn-sm" style="background: #ff9800;">
+                            <i class="fas fa-undo"></i> Reset to Default (7, 14, 25, 30)
+                        </button>
+                    </div>
+                </div>
+                
+                <button onclick="saveGlobalWithdrawalDays()" class="btn btn-primary" style="background: #00c853; padding: 12px 24px; font-size: 16px;">
+                    <i class="fas fa-save"></i> Save Global Withdrawal Days
+                </button>
+                <div id="global-settings-message" class="message hidden"></div>
+            </div>
+        </div>
+        
+        <!-- TikTok Daily Tab -->
+        <div id="tiktokDaily" class="tab-content">
+            <div class="admin-section">
+                <h3><i class="fab fa-tiktok"></i> Set Today's TikTok Task</h3>
+                <p>Enter a real TikTok profile link (e.g., https://www.tiktok.com/@username)</p>
+                <div class="mb-3">
+                    <label>TikTok Profile Link</label>
+                    <input type="url" id="tiktok-link-input" placeholder="https://www.tiktok.com/@..." />
+                </div>
+                <button onclick="setTikTokDaily()" class="btn btn-success" style="background:#00c853;">
+                    <i class="fas fa-save"></i> Set Today's TikTok Task
+                </button>
+                <div id="tiktok-message" class="message hidden"></div>
+            </div>
+            
+            <div class="admin-section">
+                <h3><i class="fas fa-eye"></i> Current TikTok Task</h3>
+                <div id="current-tiktok-display">
+                    Loading...
+                </div>
+            </div>
+            
+            <div class="admin-section">
+                <h3><i class="fas fa-history"></i> Recent TikTok Tasks (Last 7 Days)</h3>
+                <div id="tiktok-history-list">
+                    Loading history...
+                </div>
+            </div>
+        </div>
+        
         <!-- Users Tab -->
         <div id="users" class="tab-content">
             <div class="admin-section">
@@ -618,8 +950,86 @@
             </div>
         </div>
         
+        <!-- Withdrawal Report Tab -->
+        <div id="withdrawalReport" class="tab-content">
+            <div class="admin-section">
+                <h3><i class="fas fa-chart-bar"></i> Withdrawal Status Report</h3>
+                <div class="row mb-4">
+                    <div class="col-md-3 mb-3">
+                        <div class="stats-card">
+                            <h3 id="report-total-users">—</h3>
+                            <p>Total Users</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="stats-card">
+                            <h3 id="report-can-withdraw">—</h3>
+                            <p>Can Withdraw Today</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="stats-card">
+                            <h3 id="report-restricted">—</h3>
+                            <p>Restricted Users</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="stats-card">
+                            <h3 id="report-today">—</h3>
+                            <p>Today's Date</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <button onclick="loadWithdrawalReport()" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i> Refresh Report
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Balance</th>
+                                <th>Withdrawal Status</th>
+                                <th>Limit</th>
+                                <th>Withdrawal Days</th>
+                                <th>Has PIN</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="withdrawal-report-users">
+                            <tr><td colspan="8" class="text-center">Loading report...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
         <!-- Settings Tab -->
         <div id="settings" class="tab-content">
+            <div class="admin-section">
+                <h3><i class="fas fa-share-alt"></i> Social Media Links</h3>
+                <p>Users will see these links in the app settings.</p>
+                <div class="mb-3">
+                    <label>WhatsApp Group Link</label>
+                    <input type="url" id="whatsapp-link" placeholder="https://chat.whatsapp.com/..." />
+                </div>
+                <div class="mb-3">
+                    <label>Telegram Group Link</label>
+                    <input type="url" id="telegram-link" placeholder="https://t.me/..." />
+                </div>
+                <div class="mb-3">
+                    <label>Facebook Group Link</label>
+                    <input type="url" id="facebook-link" placeholder="https://facebook.com/groups/..." />
+                </div>
+                <button onclick="saveSocialLinks()" style="background: #4CAF50;">
+                    <i class="fas fa-save"></i> Save Links
+                </button>
+                <div id="social-message" class="message hidden"></div>
+            </div>
+            
             <div class="admin-section">
                 <h3><i class="fas fa-key"></i> Change Admin Password</h3>
                 <div class="mb-3">
@@ -653,6 +1063,9 @@
                     <button onclick="resetCoupons()" style="background:#d32f2f">
                         <i class="fas fa-undo"></i> Reset Used Coupons
                     </button>
+                    <button onclick="deleteAllCoupons()" style="background:#c62828">
+                        <i class="fas fa-trash"></i> Delete All Coupons
+                    </button>
                 </div>
                 <div class="mb-3">
                     <label>Add New Coupons (one per line)</label>
@@ -662,9 +1075,122 @@
                 <div id="coupon-message" class="message hidden"></div>
             </div>
         </div>
+        
+        <!-- WhatsApp Tab -->
+        <div id="whatsapp" class="tab-content">
+            <div class="admin-section">
+                <h3><i class="fab fa-whatsapp"></i> WhatsApp Numbers for Coupons</h3>
+                <div class="mb-3">
+                    <p>Users will contact these numbers for coupons.</p>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <input type="text" id="new-whatsapp-number" placeholder="e.g., 2348123456789" />
+                    </div>
+                    <div class="col-md-4">
+                        <button onclick="addWhatsAppNumber()" class="w-100">
+                            <i class="fas fa-plus"></i> Add Number
+                        </button>
+                    </div>
+                </div>
+                <div id="whatsapp-numbers-list">Loading numbers...</div>
+            </div>
+        </div>
     </div>
     
     <!-- Modals -->
+    
+    <!-- Withdrawal Settings Modal -->
+    <div class="modal fade" id="withdrawalSettingsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">User Settings for <span id="modal-username"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="withdrawal-settings-content">
+                    <!-- Will be populated by JS -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button onclick="saveWithdrawalSettings()" class="btn btn-primary" id="save-settings-btn">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Adjust Balance Modal -->
+    <div class="modal fade" id="adjustBalanceModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Adjust Balance for <span id="adjust-username"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>Amount (Positive = Add, Negative = Deduct)</label>
+                        <input type="number" step="100" id="adjust-amount" class="form-control" placeholder="e.g., 50000" />
+                    </div>
+                    <div class="mb-3">
+                        <label>Reason / Note</label>
+                        <textarea id="adjust-note" class="form-control" placeholder="e.g., Bonus, Correction..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button onclick="saveBalanceAdjustment()" class="btn btn-success">
+                        <i class="fas fa-save"></i> Apply Adjustment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Backup Modal -->
+    <div class="modal fade" id="backupModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Backup Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="backup-details">
+                    <!-- Will be populated by JS -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Preview Database Clear Modal -->
+    <div class="modal fade" id="previewClearModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bg-dark text-light">
+                <div class="modal-header border-danger">
+                    <h5 class="modal-title text-danger">
+                        <i class="fas fa-exclamation-triangle"></i> Database Clearance Preview
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="previewClearContent">
+                    Loading preview...
+                </div>
+                <div class="modal-footer border-danger">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmDatabaseClear()">
+                        <i class="fas fa-trash"></i> Confirm & Clear Database
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Confirmation Database Clear Modal -->
     <div class="modal fade" id="confirmClearModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content bg-dark text-light">
@@ -708,13 +1234,25 @@
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // ================================ GLOBAL VARIABLES ================================
+        let currentUserData = null;
+        let withdrawalReportData = null;
+        let selectedUserId = null;
+        let globalWithdrawalDays = [];
+        let backupListData = [];
+        let adjustUserId = null;
+        
         // ================================ UTILITY FUNCTIONS ================================
-        function showMessage(text, type = 'info', elementId = 'login-message') {
+        function showMessage(text, type = 'info', elementId = 'coupon-message') {
             const el = document.getElementById(elementId);
             el.textContent = text;
             el.className = `message ${type}`;
             el.classList.remove('hidden');
             setTimeout(() => el.classList.add('hidden'), 5000);
+        }
+        
+        function showAlert(message, type = 'info') {
+            alert(`[${type.toUpperCase()}] ${message}`);
         }
         
         function formatCurrency(amount) {
@@ -731,41 +1269,16 @@
             });
         }
         
-        // ================================ AUTH FUNCTIONS ================================
-        async function adminLogin() {
-            const username = document.getElementById('admin-username').value.trim();
-            const password = document.getElementById('admin-password').value;
-            
-            if (!username || !password) {
-                showMessage('Please enter username and password', 'error');
-                return;
-            }
-            
-            try {
-                const response = await fetch('/api/auth/login', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success && data.user.is_admin) {
-                    // Success! Show admin panel
-                    document.getElementById('login-container').classList.add('hidden');
-                    document.getElementById('admin-container').classList.remove('hidden');
-                    showMessage('Admin login successful!', 'success');
-                    loadDashboard();
-                } else {
-                    showMessage('Invalid admin credentials', 'error');
-                }
-            } catch (err) {
-                console.error('Login error:', err);
-                showMessage('Login failed. Please try again.', 'error');
-            }
+        function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
         }
         
+        // ================================ AUTH FUNCTIONS ================================
         function adminLogout() {
             fetch('/api/auth/logout', {
                 method: 'POST',
@@ -778,10 +1291,8 @@
         async function fetchData(endpoint) {
             const res = await fetch(endpoint, { credentials: 'include' });
             if (!res.ok) {
-                if (res.status === 401 || res.status === 403) {
-                    // Not authenticated or not admin
-                    document.getElementById('login-container').classList.remove('hidden');
-                    document.getElementById('admin-container').classList.add('hidden');
+                if (res.status === 401) {
+                    adminLogout();
                     throw new Error('Unauthorized');
                 }
                 throw new Error(`HTTP ${res.status}`);
@@ -797,40 +1308,13 @@
                 body: JSON.stringify(data)
             });
             if (!res.ok) {
-                if (res.status === 401 || res.status === 403) {
-                    document.getElementById('login-container').classList.remove('hidden');
-                    document.getElementById('admin-container').classList.add('hidden');
+                if (res.status === 401) {
+                    adminLogout();
                     throw new Error('Unauthorized');
                 }
                 throw new Error(`HTTP ${res.status}`);
             }
             return await res.json();
-        }
-        
-        // ================================ CHECK IF ALREADY LOGGED IN ================================
-        async function checkAuth() {
-            try {
-                const response = await fetch('/api/admin/check-auth', {
-                    credentials: 'include'
-                });
-                
-                const data = await response.json();
-                
-                if (data.success && data.is_admin) {
-                    // Already logged in as admin
-                    document.getElementById('login-container').classList.add('hidden');
-                    document.getElementById('admin-container').classList.remove('hidden');
-                    loadDashboard();
-                } else {
-                    // Not logged in or not admin
-                    document.getElementById('login-container').classList.remove('hidden');
-                    document.getElementById('admin-container').classList.add('hidden');
-                }
-            } catch (err) {
-                // Not authenticated
-                document.getElementById('login-container').classList.remove('hidden');
-                document.getElementById('admin-container').classList.add('hidden');
-            }
         }
         
         // ================================ HEALTH CHECK ================================
@@ -848,6 +1332,7 @@
         function updateHealthStatus(healthData) {
             const statusEl = document.getElementById('health-status');
             const dbStatusEl = document.getElementById('db-status');
+            const poolStatusEl = document.getElementById('pool-status');
             const uptimeEl = document.getElementById('uptime-display');
             
             if (healthData.status === 'online') {
@@ -861,12 +1346,14 @@
                         </div>
                         <div class="text-end">
                             <div><small>Database: <span class="badge badge-success">${healthData.database || 'Unknown'}</span></small></div>
+                            <div><small>Connection Pool: <span class="badge badge-success">${healthData.connection_pool || 'Unknown'}</span></small></div>
                             <div><small>Version: ${healthData.version || 'Unknown'}</small></div>
                         </div>
                     </div>
                 `;
                 if (uptimeEl) uptimeEl.textContent = healthData.uptime || 'Unknown';
                 if (dbStatusEl) dbStatusEl.textContent = healthData.database || 'Unknown';
+                if (poolStatusEl) poolStatusEl.textContent = healthData.connection_pool || 'Unknown';
             } else if (healthData.status === 'degraded') {
                 statusEl.className = 'health-status health-degraded';
                 statusEl.innerHTML = `
@@ -878,6 +1365,7 @@
                         </div>
                         <div class="text-end">
                             <div><small>Database: <span class="badge badge-warning">${healthData.database || 'Unknown'}</span></small></div>
+                            <div><small>Connection Pool: <span class="badge badge-warning">${healthData.connection_pool || 'Unknown'}</span></small></div>
                         </div>
                     </div>
                 `;
@@ -892,6 +1380,7 @@
                         </div>
                         <div class="text-end">
                             <div><small>Database: <span class="badge badge-danger">${healthData.database || 'Unknown'}</span></small></div>
+                            <div><small>Connection Pool: <span class="badge badge-danger">${healthData.connection_pool || 'Unknown'}</span></small></div>
                         </div>
                     </div>
                 `;
@@ -909,87 +1398,16 @@
             switch(tabId) {
                 case 'dashboard': loadDashboard(); break;
                 case 'database': loadDatabaseTab(); break;
+                case 'globalSettings': loadGlobalWithdrawalDays(); break;
+                case 'tiktokDaily': loadTikTokDailyTab(); break;
                 case 'users': loadUsers(); break;
                 case 'withdrawals': loadWithdrawals(); break;
+                case 'withdrawalReport': loadWithdrawalReport(); break;
+                case 'backup': loadBackupTab(); break;
                 case 'settings': loadSettings(); break;
                 case 'coupons': loadCouponStats(); break;
+                case 'whatsapp': loadWhatsAppNumbers(); break;
             }
-        }
-        
-        // ================================ DASHBOARD FUNCTIONS ================================
-        async function loadDashboard() {
-            try {
-                // First check health
-                await checkHealth();
-                
-                const [usersRes, txRes, statsRes] = await Promise.all([
-                    fetchData('/api/admin/users'),
-                    fetchData('/api/admin/transactions'),
-                    fetchData('/api/admin/stats')
-                ]);
-                
-                if (usersRes.success) {
-                    const totalUsers = usersRes.users.length;
-                    const totalBalance = usersRes.users.reduce((sum, user) => sum + (user.balance || 0), 0);
-                    
-                    document.getElementById('total-users-count').textContent = formatNumber(totalUsers);
-                    document.getElementById('total-balance').textContent = formatCurrency(totalBalance);
-                    document.getElementById('today-date').textContent = new Date().getDate();
-                }
-                
-                if (txRes.success) {
-                    const pending = txRes.transactions.filter(tx => tx.status === 'PENDING');
-                    document.getElementById('pending-withdrawals-count').textContent = pending.length;
-                    renderRecentWithdrawals(txRes.transactions.slice(0, 10));
-                }
-                
-                if (statsRes.success) {
-                    // Update stats cards if needed
-                }
-                
-            } catch (err) {
-                console.error('Failed to load dashboard:', err);
-            }
-        }
-        
-        function renderRecentWithdrawals(transactions) {
-            const container = document.getElementById('recent-withdrawals');
-            if (!transactions.length) {
-                container.innerHTML = '<p>No recent transactions.</p>';
-                return;
-            }
-            
-            container.innerHTML = `
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>User ID</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                                <th>Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${transactions.map(tx => `
-                                <tr>
-                                    <td>${tx.id?.substring(0, 8) || 'N/A'}...</td>
-                                    <td>${tx.user_id || 'N/A'}</td>
-                                    <td>${formatCurrency(tx.amount)}</td>
-                                    <td>
-                                        <span class="badge ${tx.status === 'COMPLETED' ? 'badge-success' :
-                                            tx.status === 'PENDING' ? 'badge-warning' : 'badge-danger'}">
-                                            ${tx.status || 'N/A'}
-                                        </span>
-                                    </td>
-                                    <td>${new Date(tx.timestamp).toLocaleDateString()}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
         }
         
         // ================================ DATABASE MANAGEMENT FUNCTIONS ================================
@@ -999,11 +1417,11 @@
         
         async function refreshDatabaseStats() {
             try {
-                const response = await fetchData('/api/admin/database/stats');
+                const response = await fetchData('/api/admin/stats');
                 if (response.success) {
                     document.getElementById('stats-users').textContent = formatNumber(response.stats.users.total);
                     document.getElementById('stats-transactions').textContent = formatNumber(response.stats.transactions.total);
-                    document.getElementById('stats-gameplays').textContent = formatNumber(response.stats.game_plays.total);
+                    document.getElementById('stats-gameplays').textContent = formatNumber(response.stats.games.today);
                 }
             } catch (error) {
                 console.error('Failed to load database stats:', error);
@@ -1011,23 +1429,134 @@
             }
         }
         
-        function confirmDatabaseClear() {
-            const modal = new bootstrap.Modal(document.getElementById('confirmClearModal'));
-            modal.show();
-            
-            // Enable/disable execute button based on confirmation
-            const confirmationInput = document.getElementById('sudo-confirmation');
-            const acknowledgeCheckbox = document.getElementById('acknowledge-risk');
-            const executeBtn = document.getElementById('execute-clear-btn');
-            
-            function validateConfirmation() {
-                const isConfirmed = confirmationInput.value === 'DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN';
-                const isAcknowledged = acknowledgeCheckbox.checked;
-                executeBtn.disabled = !(isConfirmed && isAcknowledged);
+        async function previewDatabaseClear() {
+            try {
+                // Collect user selections
+                const clearUsers = document.getElementById('clear-users').checked;
+                const clearTransactions = document.getElementById('clear-transactions').checked;
+                const clearGameplays = document.getElementById('clear-gameplays').checked;
+                const resetCoupons = document.getElementById('reset-coupons').checked;
+                const backupOption = document.getElementById('backup-option').value;
+                
+                // Fetch current stats for preview
+                const response = await fetchData('/api/admin/stats');
+                if (response.success) {
+                    const stats = response.stats;
+                    const adminUser = await fetchData('/api/admin/user/1'); // Assuming admin is ID 1
+                    
+                    const previewContent = document.getElementById('previewClearContent');
+                    previewContent.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-database"></i>
+                            <strong>Database Clearance Preview</strong>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card bg-dark mb-3">
+                                    <div class="card-header bg-danger">
+                                        Items to Delete/Reset
+                                    </div>
+                                    <div class="card-body">
+                                        <ul class="list-group list-group-flush bg-dark">
+                                            <li class="list-group-item bg-dark d-flex justify-content-between">
+                                                <span>Users to Delete:</span>
+                                                <span class="badge bg-danger">${stats.users.total - 1}</span>
+                                            </li>
+                                            <li class="list-group-item bg-dark d-flex justify-content-between">
+                                                <span>Transactions to Delete:</span>
+                                                <span class="badge bg-danger">${stats.transactions.total}</span>
+                                            </li>
+                                            <li class="list-group-item bg-dark d-flex justify-content-between">
+                                                <span>Game Plays to Delete:</span>
+                                                <span class="badge bg-danger">${stats.games.today * 30}</span>
+                                            </li>
+                                            <li class="list-group-item bg-dark d-flex justify-content-between">
+                                                <span>Coupons to Reset:</span>
+                                                <span class="badge bg-warning">${resetCoupons ? stats.coupons.total : '0'}</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card bg-dark mb-3">
+                                    <div class="card-header bg-success">
+                                        Items to Keep
+                                    </div>
+                                    <div class="card-body">
+                                        <ul class="list-group list-group-flush bg-dark">
+                                            <li class="list-group-item bg-dark d-flex justify-content-between">
+                                                <span>Admin Account:</span>
+                                                <span class="badge bg-success">flexiaadmin</span>
+                                            </li>
+                                            <li class="list-group-item bg-dark d-flex justify-content-between">
+                                                <span>Admin Balance:</span>
+                                                <span class="badge bg-info">${formatCurrency(500000.00)}</span>
+                                            </li>
+                                            <li class="list-group-item bg-dark d-flex justify-content-between">
+                                                <span>WhatsApp Numbers:</span>
+                                                <span class="badge bg-success">Will be kept</span>
+                                            </li>
+                                            <li class="list-group-item bg-dark d-flex justify-content-between">
+                                                <span>Backup Created:</span>
+                                                <span class="badge bg-info">${backupOption === 'yes' ? 'Yes' : 'No'}</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <strong>Warning: THIS ACTION IS IRREVERSIBLE!</strong>
+                            <p>All user data will be permanently deleted. This action cannot be undone.</p>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Confirmation Required:</strong> You must type: 
+                            <code class="bg-black p-1">DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN</code>
+                        </div>
+                    `;
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('previewClearModal'));
+                    modal.show();
+                    
+                } else {
+                    showMessage('Failed to generate preview: ' + response.message, 'error');
+                }
+            } catch (error) {
+                console.error('Preview error:', error);
+                showMessage('Error generating preview', 'error');
             }
+        }
+        
+        function confirmDatabaseClear() {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('previewClearModal'));
+            if (modal) modal.hide();
             
-            confirmationInput.addEventListener('input', validateConfirmation);
-            acknowledgeCheckbox.addEventListener('change', validateConfirmation);
+            setTimeout(() => {
+                const confirmModal = new bootstrap.Modal(document.getElementById('confirmClearModal'));
+                confirmModal.show();
+                
+                // Enable/disable execute button based on confirmation
+                const confirmationInput = document.getElementById('sudo-confirmation');
+                const acknowledgeCheckbox = document.getElementById('acknowledge-risk');
+                const executeBtn = document.getElementById('execute-clear-btn');
+                
+                function validateConfirmation() {
+                    const isConfirmed = confirmationInput.value === 'DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN';
+                    const isAcknowledged = acknowledgeCheckbox.checked;
+                    executeBtn.disabled = !(isConfirmed && isAcknowledged);
+                }
+                
+                confirmationInput.addEventListener('input', validateConfirmation);
+                acknowledgeCheckbox.addEventListener('change', validateConfirmation);
+                
+            }, 300);
         }
         
         async function executeDatabaseClear() {
@@ -1040,8 +1569,7 @@
                     credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        sudo_confirmation: sudoConfirmation,
-                        backup: backupOption === 'yes'
+                        sudo_confirmation: sudoConfirmation
                     })
                 });
                 
@@ -1061,6 +1589,7 @@
 • Game Plays Deleted: ${data.stats.game_plays_deleted}
 • Coupons Reset: ${data.stats.coupons_reset}
 • Admin Kept: ${data.stats.admin_kept}
+• Backup Created: ${data.stats.backup_created}
 
 ⚠️ ${data.warning}
                         `);
@@ -1141,8 +1670,420 @@
             }
         }
         
-        // ================================ USER MANAGEMENT ================================
+        // ================================ BACKUP FUNCTIONS ================================
+        async function triggerBackup() {
+            if (!confirm('Create a manual database backup?')) return;
+            try {
+                const data = await postData('/api/admin/backup/trigger', {});
+                if (data.success) {
+                    showMessage(`Backup created: ${data.backup_file}`, 'success', 'backup-message');
+                    listBackups();
+                } else {
+                    showMessage(data.message, 'error', 'backup-message');
+                }
+            } catch (err) {
+                showMessage('Failed to trigger backup', 'error', 'backup-message');
+            }
+        }
+        
+        async function listBackups() {
+            try {
+                const data = await fetchData('/api/admin/backup/list');
+                if (data.success) {
+                    backupListData = data.backups || [];
+                    renderBackupList();
+                    if (backupListData.length > 0) {
+                        const latest = backupListData[0];
+                        document.getElementById('last-backup-time').textContent = new Date(latest.created).toLocaleString();
+                    } else {
+                        document.getElementById('last-backup-time').textContent = 'No backups found';
+                    }
+                } else {
+                    showMessage('Failed to load backups', 'error', 'backup-message');
+                }
+            } catch (err) {
+                showMessage('Failed to load backups', 'error', 'backup-message');
+            }
+        }
+        
+        function renderBackupList() {
+            const container = document.getElementById('backup-list');
+            if (!backupListData || backupListData.length === 0) {
+                container.innerHTML = '<p>No backups available.</p>';
+                return;
+            }
+            
+            container.innerHTML = backupListData.map(backup => `
+                <div class="backup-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${backup.filename}</strong><br/>
+                            <small>Created: ${new Date(backup.created).toLocaleString()}</small><br/>
+                            <small>Size: ${backup.size_human || formatBytes(backup.size)}</small>
+                        </div>
+                        <button onclick="showBackupDetails('${backup.filename}')" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-info-circle"></i> Details
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function showBackupDetails(filename) {
+            const backup = backupListData.find(b => b.filename === filename);
+            if (!backup) return;
+            
+            const modal = new bootstrap.Modal(document.getElementById('backupModal'));
+            document.getElementById('backup-details').innerHTML = `
+                <div class="mb-3">
+                    <strong>Filename:</strong> ${backup.filename}<br/>
+                    <strong>Created:</strong> ${new Date(backup.created).toLocaleString()}<br/>
+                    <strong>Size:</strong> ${backup.size_human || formatBytes(backup.size)}<br/>
+                    <strong>Raw Size:</strong> ${backup.size} bytes
+                </div>
+                <div class="alert alert-info">
+                    <small>
+                        <i class="fas fa-info-circle"></i> Backups are stored in the <code>backups/</code> directory.
+                    </small>
+                </div>
+            `;
+            modal.show();
+        }
+        
+        // ================================ DASHBOARD FUNCTIONS ================================
+        async function loadDashboard() {
+            try {
+                // First check health
+                await checkHealth();
+                
+                const [usersRes, txRes, statsRes] = await Promise.all([
+                    fetchData('/api/admin/users'),
+                    fetchData('/api/admin/transactions'),
+                    fetchData('/api/admin/stats')
+                ]);
+                
+                if (usersRes.success) {
+                    const totalUsers = usersRes.users.length;
+                    const totalBalance = usersRes.users.reduce((sum, user) => sum + (user.balance || 0), 0);
+                    
+                    document.getElementById('total-users-count').textContent = formatNumber(totalUsers);
+                    document.getElementById('total-balance').textContent = formatCurrency(totalBalance);
+                    document.getElementById('today-date').textContent = new Date().getDate();
+                }
+                
+                if (txRes.success) {
+                    const pending = txRes.transactions.filter(tx => tx.status === 'PENDING');
+                    document.getElementById('pending-withdrawals-count').textContent = pending.length;
+                    renderRecentWithdrawals(txRes.transactions.slice(0, 10));
+                }
+                
+                if (statsRes.success) {
+                    loadGlobalWithdrawalDays(true);
+                }
+                
+            } catch (err) {
+                console.error('Failed to load dashboard:', err);
+            }
+        }
+        
+        function renderRecentWithdrawals(transactions) {
+            const container = document.getElementById('recent-withdrawals');
+            if (!transactions.length) {
+                container.innerHTML = '<p>No recent transactions.</p>';
+                return;
+            }
+            
+            container.innerHTML = `
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>User ID</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${transactions.map(tx => `
+                                <tr>
+                                    <td>${tx.id?.substring(0, 8) || 'N/A'}...</td>
+                                    <td>${tx.user_id || 'N/A'}</td>
+                                    <td>${formatCurrency(tx.amount)}</td>
+                                    <td>
+                                        <span class="badge ${tx.status === 'COMPLETED' ? 'badge-success' :
+                                            tx.status === 'PENDING' ? 'badge-warning' : 'badge-danger'}">
+                                            ${tx.status || 'N/A'}
+                                        </span>
+                                    </td>
+                                    <td>${new Date(tx.timestamp).toLocaleDateString()}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+        
+        // ================================ GLOBAL WITHDRAWAL DAYS ================================
+        async function loadGlobalWithdrawalDays(dashboardOnly = false) {
+            try {
+                const res = await fetchData('/api/admin/global-withdrawal-days');
+                if (res.success) {
+                    globalWithdrawalDays = res.days || [7, 14, 25, 30];
+                }
+            } catch (err) {
+                console.error('Failed to load global withdrawal days:', err);
+                globalWithdrawalDays = [7, 14, 25, 30];
+            }
+            
+            updateGlobalDaysDisplay();
+            
+            if (!dashboardOnly && document.getElementById('globalSettings').innerHTML === '') {
+                renderGlobalSettingsTab();
+            }
+        }
+        
+        function updateGlobalDaysDisplay() {
+            const sortedDays = [...globalWithdrawalDays].sort((a, b) => a - b);
+            const daysText = sortedDays.length > 0 ? sortedDays.join(', ') : 'Default (7, 14, 25, 30)';
+            
+            const dashboardEl = document.getElementById('current-global-days');
+            if (dashboardEl) dashboardEl.textContent = daysText;
+            
+            const settingsEl = document.getElementById('global-days-current');
+            if (settingsEl) settingsEl.textContent = daysText;
+        }
+        
+        function renderGlobalSettingsTab() {
+            const tab = document.getElementById('globalSettings');
+            tab.innerHTML = `
+                <div class="admin-section">
+                    <h3><i class="fas fa-globe"></i> Global Withdrawal Settings</h3>
+                    <p style="color: #a0a0c0; margin-bottom: 20px;">
+                        Set the default withdrawal days for all users. Users with custom settings will not be affected.
+                    </p>
+                    <div class="global-days-display">
+                        <h4><i class="fas fa-calendar-alt"></i> Current Global Withdrawal Days</h4>
+                        <div class="days-list" id="global-days-current">Loading...</div>
+                        <div class="days-note">All users without custom settings can withdraw on these days</div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold" style="color: #00eeff; font-size: 16px; margin-bottom: 10px;">
+                            <i class="fas fa-edit"></i> Select Global Withdrawal Days (1-31)
+                        </label>
+                        <div class="form-text mb-2" style="color: #a0a0c0;">
+                            Select which days of the month users can make withdrawals. These apply to all users without custom settings.
+                        </div>
+                        <div class="day-selector" id="global-day-selector">
+                            <!-- Generated by JS -->
+                        </div>
+                        <div class="mt-3">
+                            <button onclick="selectAllGlobalDays()" class="btn btn-sm" style="background: #00eeff; color: #000;">
+                                <i class="fas fa-check-square"></i> Select All Days
+                            </button>
+                            <button onclick="clearAllGlobalDays()" class="btn btn-sm" style="background: #ff5252;">
+                                <i class="fas fa-times-circle"></i> Clear All Days
+                            </button>
+                            <button onclick="setDefaultGlobalDays()" class="btn btn-sm" style="background: #ff9800;">
+                                <i class="fas fa-undo"></i> Reset to Default (7, 14, 25, 30)
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <button onclick="saveGlobalWithdrawalDays()" class="btn btn-primary" style="background: #00c853; padding: 12px 24px; font-size: 16px;">
+                        <i class="fas fa-save"></i> Save Global Withdrawal Days
+                    </button>
+                    <div id="global-settings-message" class="message hidden"></div>
+                    
+                    <div class="mt-4" style="background: #151528; padding: 15px; border-radius: 8px; border-left: 3px solid #00eeff;">
+                        <h5 style="color: #7b61ff;"><i class="fas fa-info-circle"></i> Important Notes</h5>
+                        <ul style="color: #a0a0c0; margin: 10px 0 0 20px; line-height: 1.8;">
+                            <li>These days will be used as the default for all new users</li>
+                            <li>Existing users without custom settings will use these days</li>
+                            <li>Users with custom withdrawal day settings will NOT be affected</li>
+                            <li>If no days are selected, the system will use default days: 7, 14, 25, 30</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+            
+            renderGlobalDaySelector();
+        }
+        
+        function renderGlobalDaySelector() {
+            const selector = document.getElementById('global-day-selector');
+            if (!selector) return;
+            
+            selector.innerHTML = '';
+            for (let day = 1; day <= 31; day++) {
+                const isChecked = globalWithdrawalDays.includes(day);
+                selector.innerHTML += `
+                    <div class="day-checkbox">
+                        <input type="checkbox" id="global-day-${day}" ${isChecked ? 'checked' : ''}
+                            onchange="toggleGlobalDay(${day}, this.checked)">
+                        <label for="global-day-${day}">${day}</label>
+                    </div>
+                `;
+            }
+            
+            const currentEl = document.getElementById('global-days-current');
+            if (currentEl) {
+                currentEl.textContent = globalWithdrawalDays.sort((a, b) => a - b).join(', ') || 'Default (7, 14, 25, 30)';
+            }
+        }
+        
+        function toggleGlobalDay(day, isChecked) {
+            if (isChecked) {
+                if (!globalWithdrawalDays.includes(day)) globalWithdrawalDays.push(day);
+            } else {
+                globalWithdrawalDays = globalWithdrawalDays.filter(d => d !== day);
+            }
+        }
+        
+        function selectAllGlobalDays() {
+            globalWithdrawalDays = Array.from({length: 31}, (_, i) => i + 1);
+            renderGlobalDaySelector();
+        }
+        
+        function clearAllGlobalDays() {
+            globalWithdrawalDays = [];
+            renderGlobalDaySelector();
+        }
+        
+        function setDefaultGlobalDays() {
+            globalWithdrawalDays = [7, 14, 25, 30];
+            renderGlobalDaySelector();
+        }
+        
+        async function saveGlobalWithdrawalDays() {
+            if (globalWithdrawalDays.length === 0) {
+                if (!confirm('No days selected. This will use default days (7, 14, 25, 30). Continue?')) {
+                    return;
+                }
+                globalWithdrawalDays = [7, 14, 25, 30];
+            }
+            
+            try {
+                const result = await postData('/api/admin/global-withdrawal-days', { days: globalWithdrawalDays });
+                if (result.success) {
+                    showMessage('Global withdrawal days updated!', 'success', 'global-settings-message');
+                    updateGlobalDaysDisplay();
+                    renderGlobalDaySelector();
+                } else {
+                    showMessage(result.message || 'Failed to save', 'error', 'global-settings-message');
+                }
+            } catch (err) {
+                console.error('Save error:', err);
+                showMessage('Failed to save global withdrawal days', 'error', 'global-settings-message');
+            }
+        }
+        
+        // ================================ BACKUP TAB ================================
+        function loadBackupTab() {
+            listBackups();
+        }
+        
+        // ================================ TIKTOK DAILY FUNCTIONS ================================
+        async function setTikTokDaily() {
+            const link = document.getElementById('tiktok-link-input').value.trim();
+            if (!link) {
+                showMessage('Please enter a TikTok link', 'error', 'tiktok-message');
+                return;
+            }
+            
+            if (!link.startsWith('https://www.tiktok.com/@')) {
+                showMessage('Link must start with https://www.tiktok.com/@', 'error', 'tiktok-message');
+                return;
+            }
+            
+            try {
+                const res = await postData('/api/admin/tiktok/set-daily', { tiktok_link: link });
+                if (res.success) {
+                    showMessage('TikTok task set successfully!', 'success', 'tiktok-message');
+                    loadTikTokDailyTab();
+                    document.getElementById('tiktok-link-input').value = '';
+                } else {
+                    showMessage(res.message || 'Failed to set TikTok task', 'error', 'tiktok-message');
+                }
+            } catch (err) {
+                showMessage('Network error', 'error', 'tiktok-message');
+            }
+        }
+        
+        async function loadTikTokDailyTab() {
+            try {
+                const currentRes = await fetchData('/api/admin/tiktok/get-daily');
+                const historyRes = await fetchData('/api/admin/tiktok/history');
+                
+                if (currentRes.success) {
+                    const currentEl = document.getElementById('current-tiktok-display');
+                    if (currentRes.task) {
+                        currentEl.innerHTML = `
+                            <p><strong>Active since:</strong> ${new Date(currentRes.task.date).toLocaleDateString()}</p>
+                            <p><strong>Link:</strong> <a href="${currentRes.task.tiktok_link}" target="_blank">${currentRes.task.tiktok_link}</a></p>
+                            <p><strong>Reward:</strong> ₦${currentRes.task.reward_amount}</p>
+                        `;
+                    } else {
+                        currentEl.innerHTML = '<p>No TikTok task set for today.</p>';
+                    }
+                }
+                
+                if (historyRes.success) {
+                    const historyEl = document.getElementById('tiktok-history-list');
+                    if (historyRes.history && historyRes.history.length > 0) {
+                        historyEl.innerHTML = historyRes.history.map(item => `
+                            <div class="tiktok-history-item">
+                                <strong>${new Date(item.date).toLocaleDateString()}</strong><br/>
+                                <a href="${item.tiktok_link}" target="_blank">${item.tiktok_link}</a><br/>
+                                Reward: ₦${item.reward_amount}
+                            </div>
+                        `).join('');
+                    } else {
+                        historyEl.innerHTML = '<p>No history found.</p>';
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to load TikTok ', err);
+                document.getElementById('current-tiktok-display').innerHTML = '<p>Error loading current task</p>';
+                document.getElementById('tiktok-history-list').innerHTML = '<p>Error loading history</p>';
+            }
+        }
+        
+        // ================================ LOAD USERS ================================
         async function loadUsers() {
+            if (document.getElementById('users').innerHTML === '') {
+                document.getElementById('users').innerHTML = `
+                    <div class="admin-section">
+                        <h3><i class="fas fa-users"></i> User Management</h3>
+                        <div class="mb-3">
+                            <input type="text" id="user-search" placeholder="Search users by username or ID..."
+                                onkeyup="searchUsers()" style="max-width: 300px;">
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Username</th>
+                                        <th>Balance</th>
+                                        <th>Withdrawal Status</th>
+                                        <th>Withdrawal Limit</th>
+                                        <th>Admin</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="user-list">
+                                    <tr><td colspan="7" class="text-center">Loading users...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+            
             try {
                 const usersRes = await fetchData('/api/admin/users');
                 if (usersRes.success) {
@@ -1186,9 +2127,29 @@
                         <td>${withdrawalLimit}</td>
                         <td>${adminBadge}</td>
                         <td>
+                            <button onclick="openUserSettings(${user.id}, '${user.username}')"
+                                class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-cog"></i> Settings
+                            </button>
+                            <button onclick="openAdjustBalance(${user.id}, '${user.username}')"
+                                class="btn btn-sm btn-outline-success ms-1">
+                                <i class="fas fa-coins"></i> Adjust
+                            </button>
+                            ${!isFlexiaAdmin && !user.is_admin ? `
+                                <button onclick="toggleAdminStatus(${user.id})"
+                                    class="btn btn-sm btn-outline-warning ms-1">
+                                    <i class="fas fa-user-shield"></i> Make Admin
+                                </button>
+                            ` : ''}
+                            ${!isFlexiaAdmin && user.is_admin ? `
+                                <button onclick="toggleAdminStatus(${user.id})"
+                                    class="btn btn-sm btn-outline-secondary ms-1">
+                                    <i class="fas fa-user"></i> Remove Admin
+                                </button>
+                            ` : ''}
                             ${isFlexiaAdmin ? '' : `
                                 <button onclick="deleteUser(${user.id})"
-                                    class="btn btn-sm btn-outline-danger">
+                                    class="btn btn-sm btn-outline-danger ms-1">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             `}
@@ -1230,8 +2191,175 @@
             }
         }
         
+        async function openUserSettings(userId, username) {
+            try {
+                const userRes = await fetchData(`/api/admin/user/${userId}`);
+                if (userRes.success) {
+                    selectedUserId = userId;
+                    document.getElementById('modal-username').textContent = username;
+                    
+                    const user = userRes.user;
+                    const customDays = user.custom_withdrawal_days ? JSON.parse(user.custom_withdrawal_days) : [];
+                    
+                    document.getElementById('withdrawal-settings-content').innerHTML = `
+                        <div class="mb-3">
+                            <label class="form-label">Withdrawal Restriction</label>
+                            <select id="user-withdrawal-restricted" class="form-control">
+                                <option value="false" ${!user.withdrawal_restricted ? 'selected' : ''}>Allowed</option>
+                                <option value="true" ${user.withdrawal_restricted ? 'selected' : ''}>Restricted</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Withdrawal Limit (₦)</label>
+                            <input type="number" id="user-withdrawal-limit" class="form-control"
+                                value="${user.withdrawal_limit || 0}" min="0" step="1000">
+                            <small class="text-muted">Set to 0 for no limit</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Custom Withdrawal Days (comma-separated, 1-31)</label>
+                            <input type="text" id="user-custom-days" class="form-control"
+                                placeholder="7,14,21,28 (leave empty for global days)"
+                                value="${customDays.join(', ')}">
+                        </div>
+                        <small class="text-muted">Enter comma-separated days (1-31). Empty = use global settings.</small>
+                    `;
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('withdrawalSettingsModal'));
+                    modal.show();
+                }
+            } catch (err) {
+                console.error('Open user settings error:', err);
+                showMessage('Failed to load user settings', 'error');
+            }
+        }
+        
+        async function saveWithdrawalSettings() {
+            if (!selectedUserId) return;
+            
+            const restricted = document.getElementById('user-withdrawal-restricted').value === 'true';
+            const limit = parseFloat(document.getElementById('user-withdrawal-limit').value) || 0;
+            const customDaysInput = document.getElementById('user-custom-days').value;
+            const customDays = customDaysInput
+                ? customDaysInput.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d) && d >= 1 && d <= 31)
+                : [];
+            
+            try {
+                // First toggle restriction
+                await postData(`/api/admin/user/${selectedUserId}/toggle-restrict`, {});
+                
+                // Set limit
+                await postData(`/api/admin/user/${selectedUserId}/set-limit`, { limit: limit });
+                
+                // Set custom withdrawal days
+                await postData(`/api/admin/user/${selectedUserId}/set-custom-days`, { days: customDays });
+                
+                showMessage('User settings updated!', 'success');
+                const modal = bootstrap.Modal.getInstance(document.getElementById('withdrawalSettingsModal'));
+                modal.hide();
+                loadUsers();
+                if (withdrawalReportData) {
+                    loadWithdrawalReport(); // Refresh report
+                }
+            } catch (err) {
+                console.error('Save settings error:', err);
+                showMessage('Failed to save settings', 'error');
+            }
+        }
+        
+        // ================================ ADJUST BALANCE ================================
+        function openAdjustBalance(userId, username) {
+            adjustUserId = userId;
+            document.getElementById('adjust-username').textContent = username;
+            document.getElementById('adjust-amount').value = '';
+            document.getElementById('adjust-note').value = '';
+            const modal = new bootstrap.Modal(document.getElementById('adjustBalanceModal'));
+            modal.show();
+        }
+        
+        async function saveBalanceAdjustment() {
+            const amount = parseFloat(document.getElementById('adjust-amount').value);
+            const note = document.getElementById('adjust-note').value.trim();
+            
+            if (isNaN(amount)) {
+                showMessage('Please enter a valid amount', 'error');
+                return;
+            }
+            
+            if (!note) {
+                showMessage('Please add a note for the adjustment', 'error');
+                return;
+            }
+            
+            try {
+                const result = await postData(`/api/admin/user/${adjustUserId}/adjust-balance`, {
+                    amount: amount,
+                    note: note
+                });
+                
+                if (result.success) {
+                    showMessage(`Balance adjusted by ${formatCurrency(amount)}`, 'success');
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('adjustBalanceModal'));
+                    modal.hide();
+                    loadUsers();
+                    loadDashboard();
+                } else {
+                    showMessage(result.message || 'Failed to adjust balance', 'error');
+                }
+            } catch (err) {
+                console.error('Adjust balance error:', err);
+                showMessage('Network error', 'error');
+            }
+        }
+        
+        // ================================ TOGGLE ADMIN STATUS ================================
+        async function toggleAdminStatus(userId) {
+            if (!confirm('Are you sure you want to change this user\'s admin status?')) return;
+            
+            try {
+                const result = await postData(`/api/admin/user/${userId}/toggle-admin`, {});
+                if (result.success) {
+                    showMessage(`User is now ${result.is_admin ? 'an admin' : 'a regular user'}`, 'success');
+                    loadUsers();
+                } else {
+                    showMessage(result.message, 'error');
+                }
+            } catch (err) {
+                console.error('Toggle admin error:', err);
+                showMessage('Failed to update admin status', 'error');
+            }
+        }
+        
         // ================================ LOAD WITHDRAWALS ================================
         async function loadWithdrawals() {
+            if (document.getElementById('withdrawals').innerHTML === '') {
+                document.getElementById('withdrawals').innerHTML = `
+                    <div class="admin-section">
+                        <h3><i class="fas fa-money-bill-wave"></i> Pending Withdrawals</h3>
+                        <div id="pending-withdrawals-list">Loading...</div>
+                    </div>
+                    <div class="admin-section">
+                        <h3><i class="fas fa-history"></i> Recent Transactions</h3>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>User</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="all-transactions">
+                                    <tr><td colspan="6" class="text-center">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+            
             try {
                 const txRes = await fetchData('/api/admin/transactions');
                 if (txRes.success) {
@@ -1255,18 +2383,20 @@
             container.innerHTML = pending.map(tx => {
                 const details = typeof tx.details === 'string' ? JSON.parse(tx.details) : tx.details;
                 return `
-                    <div style="background: #151528; padding: 12px; margin: 8px 0; border-radius: 8px; border-left: 2px solid #00eeff;">
+                    <div class="withdrawal-item">
                         <div><strong>Transaction ID:</strong> ${tx.id}</div>
                         <div><strong>User ID:</strong> ${tx.user_id}</div>
                         <div><strong>Amount:</strong> ${formatCurrency(tx.amount)}</div>
+                        <div><strong>Bank:</strong> ${details.bank_code || 'N/A'}</div>
+                        <div><strong>Account:</strong> ${details.account_number || 'N/A'}</div>
                         <div><strong>Date:</strong> ${new Date(tx.timestamp).toLocaleString()}</div>
                         <div style="margin-top: 8px;">
                             <button onclick="processWithdrawal('${tx.id}', 'approve')"
-                                style="background:#00c853; padding: 8px 12px; border-radius: 6px; border: none; color: white;">
+                                style="background:#00c853;">
                                 <i class="fas fa-check"></i> Approve
                             </button>
                             <button onclick="processWithdrawal('${tx.id}', 'reject')"
-                                style="background:#c62828; padding: 8px 12px; border-radius: 6px; border: none; color: white; margin-left: 8px;">
+                                style="background:#c62828; margin-left: 8px;">
                                 <i class="fas fa-times"></i> Reject
                             </button>
                         </div>
@@ -1334,9 +2464,162 @@
             }
         }
         
+        // ================================ WITHDRAWAL REPORT ================================
+        async function loadWithdrawalReport() {
+            if (document.getElementById('withdrawalReport').innerHTML === '') {
+                document.getElementById('withdrawalReport').innerHTML = `
+                    <div class="admin-section">
+                        <h3><i class="fas fa-chart-bar"></i> Withdrawal Status Report</h3>
+                        <div class="row mb-4">
+                            <div class="col-md-3 mb-3">
+                                <div class="stats-card">
+                                    <h3 id="report-total-users">—</h3>
+                                    <p>Total Users</p>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="stats-card">
+                                    <h3 id="report-can-withdraw">—</h3>
+                                    <p>Can Withdraw Today</p>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="stats-card">
+                                    <h3 id="report-restricted">—</h3>
+                                    <p>Restricted Users</p>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="stats-card">
+                                    <h3 id="report-today">—</h3>
+                                    <p>Today's Date</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <button onclick="loadWithdrawalReport()" class="btn btn-primary">
+                                <i class="fas fa-sync-alt"></i> Refresh Report
+                            </button>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Username</th>
+                                        <th>Balance</th>
+                                        <th>Withdrawal Status</th>
+                                        <th>Limit</th>
+                                        <th>Withdrawal Days</th>
+                                        <th>Has PIN</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="withdrawal-report-users">
+                                    <tr><td colspan="8" class="text-center">Loading report...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            try {
+                const reportRes = await fetchData('/api/admin/withdrawal-status-report');
+                if (reportRes.success) {
+                    withdrawalReportData = reportRes;
+                    renderWithdrawalReport(reportRes);
+                }
+            } catch (err) {
+                console.error('Load report error:', err);
+            }
+        }
+        
+        function renderWithdrawalReport(report) {
+            document.getElementById('report-total-users').textContent = formatNumber(report.total_users);
+            document.getElementById('report-can-withdraw').textContent = formatNumber(report.users_withdrawal_today);
+            document.getElementById('report-restricted').textContent = formatNumber(report.users_restricted);
+            document.getElementById('report-today').textContent = report.today;
+            
+            const tbody = document.getElementById('withdrawal-report-users');
+            if (!report.users || report.users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center">No users found</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = report.users.map(user => {
+                let statusBadge, statusText;
+                if (user.withdrawal_restricted) {
+                    statusBadge = 'badge-danger';
+                    statusText = 'Restricted';
+                } else if (user.can_withdraw_today) {
+                    statusBadge = 'badge-success';
+                    statusText = 'Allowed Today';
+                } else {
+                    statusBadge = 'badge-warning';
+                    statusText = 'Not Today';
+                }
+                
+                const withdrawalDays = user.custom_withdrawal_days && user.custom_withdrawal_days.length > 0 ?
+                    user.custom_withdrawal_days.sort((a, b) => a - b).join(', ') : 'Default';
+                
+                return `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td>${user.username}</td>
+                        <td>${formatCurrency(user.balance)}</td>
+                        <td>
+                            <span class="badge ${statusBadge}">${statusText}</span>
+                        </td>
+                        <td>${user.withdrawal_limit > 0 ? formatCurrency(user.withdrawal_limit) : 'No Limit'}</td>
+                        <td><small>${withdrawalDays}</small></td>
+                        <td>
+                            <i class="fas ${user.has_withdrawal_pin ? 'fa-check text-success' : 'fa-times text-danger'}"></i>
+                        </td>
+                        <td>
+                            <button onclick="openUserSettings(${user.id}, '${user.username}')"
+                                class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
         // ================================ SETTINGS ================================
         async function loadSettings() {
-            // Settings tab loaded
+            try {
+                const settingsRes = await fetchData('/api/admin/settings');
+                if (settingsRes.success) {
+                    const s = settingsRes.settings;
+                    document.getElementById('whatsapp-link').value = s.whatsapp_link || '';
+                    document.getElementById('telegram-link').value = s.telegram_link || '';
+                    document.getElementById('facebook-link').value = s.facebook_link || '';
+                }
+            } catch (err) {
+                console.error('Load settings error:', err);
+            }
+        }
+        
+        async function saveSocialLinks() {
+            const data = {
+                whatsapp_link: document.getElementById('whatsapp-link').value.trim(),
+                telegram_link: document.getElementById('telegram-link').value.trim(),
+                facebook_link: document.getElementById('facebook-link').value.trim()
+            };
+            
+            try {
+                const result = await postData('/api/admin/settings', data);
+                if (result.success) {
+                    showMessage('Social links updated!', 'success', 'social-message');
+                } else {
+                    showMessage('Failed to save links.', 'error', 'social-message');
+                }
+            } catch (err) {
+                console.error('Save links error:', err);
+                showMessage('Network error.', 'error', 'social-message');
+            }
         }
         
         async function changeAdminPassword() {
@@ -1360,7 +2643,15 @@
             }
             
             try {
-                const result = await postData('/api/admin/change-password', {
+                // First check if admin is logged in
+                const profile = await fetchData('/api/user/profile');
+                if (!profile.success) {
+                    showMessage('Session expired', 'error', 'password-message');
+                    return;
+                }
+                
+                // Update password through profile update
+                const result = await postData('/api/user/update-profile', {
                     current_password: current,
                     new_password: newPass
                 });
@@ -1402,6 +2693,15 @@
             } catch (err) { showMessage('Failed to reset coupons', 'error', 'coupon-message'); }
         }
         
+        async function deleteAllCoupons() {
+            if (!confirm('Delete ALL coupons permanently?')) return;
+            try {
+                const data = await postData('/api/admin/coupons/delete', {});
+                showMessage(data.message, data.success ? 'success' : 'error', 'coupon-message');
+                loadCouponStats();
+            } catch (err) { showMessage('Failed to delete coupons', 'error', 'coupon-message'); }
+        }
+        
         async function addCoupons() {
             const textarea = document.getElementById('new-coupons');
             const codes = textarea.value
@@ -1422,17 +2722,121 @@
             } catch (err) { showMessage('Failed to add coupons', 'error', 'coupon-message'); }
         }
         
+        // ================================ WHATSAPP ================================
+        async function loadWhatsAppNumbers() {
+            if (document.getElementById('whatsapp').innerHTML === '') {
+                document.getElementById('whatsapp').innerHTML = `
+                    <div class="admin-section">
+                        <h3><i class="fab fa-whatsapp"></i> WhatsApp Numbers for Coupons</h3>
+                        <div class="mb-3">
+                            <p>Users will contact these numbers for coupons.</p>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <input type="text" id="new-whatsapp-number" placeholder="e.g., 2348123456789" />
+                            </div>
+                            <div class="col-md-4">
+                                <button onclick="addWhatsAppNumber()" class="w-100">
+                                    <i class="fas fa-plus"></i> Add Number
+                                </button>
+                            </div>
+                        </div>
+                        <div id="whatsapp-numbers-list">Loading numbers...</div>
+                    </div>
+                `;
+            }
+            
+            try {
+                const res = await fetchData('/api/admin/whatsapp-numbers');
+                if (res.success) {
+                    const list = document.getElementById('whatsapp-numbers-list');
+                    if (res.numbers.length === 0) {
+                        list.innerHTML = '<p>No WhatsApp numbers configured.</p>';
+                        return;
+                    }
+                    list.innerHTML = res.numbers.map(num => `
+                        <div class="whatsapp-number-item">
+                            <span><strong>${num.label || 'Agent'}:</strong> ${num.number}</span>
+                            <div>
+                                <button onclick="toggleWhatsAppNumber(${num.id})" 
+                                    style="background:${num.is_active ? '#ff9800' : '#4CAF50'};">
+                                    <i class="fas ${num.is_active ? 'fa-eye-slash' : 'fa-eye'}"></i> 
+                                    ${num.is_active ? 'Deactivate' : 'Activate'}
+                                </button>
+                                <button onclick="deleteWhatsAppNumber(${num.id})" style="background:#c62828; margin-left: 8px;">
+                                    <i class="fas fa-trash"></i> Remove
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) { console.error(err); }
+        }
+        
+        async function addWhatsAppNumber() {
+            const input = document.getElementById('new-whatsapp-number');
+            const number = input.value.trim();
+            
+            if (!number || !/^\d+$/.test(number) || !number.startsWith('234')) {
+                showMessage('Enter a valid Nigerian number starting with 234', 'error');
+                return;
+            }
+            
+            try {
+                const data = await postData('/api/admin/whatsapp-numbers', { 
+                    number: number,
+                    label: 'Support Agent'
+                });
+                showMessage(data.message, data.success ? 'success' : 'error');
+                input.value = '';
+                loadWhatsAppNumbers();
+            } catch (err) { showMessage('Failed to add number', 'error'); }
+        }
+        
+        async function toggleWhatsAppNumber(id) {
+            try {
+                const res = await fetch(`/api/admin/whatsapp-numbers/${id}/toggle`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                showMessage(data.message, data.success ? 'success' : 'error');
+                loadWhatsAppNumbers();
+            } catch (err) { showMessage('Failed to toggle number', 'error'); }
+        }
+        
+        async function deleteWhatsAppNumber(id) {
+            if (!confirm('Remove this WhatsApp number?')) return;
+            
+            try {
+                const res = await fetch(`/api/admin/whatsapp-numbers/${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                showMessage(data.message, data.success ? 'success' : 'error');
+                loadWhatsAppNumbers();
+            } catch (err) { showMessage('Failed to delete number', 'error'); }
+        }
+        
         // ================================ INIT ================================
         document.addEventListener('DOMContentLoaded', () => {
-            // Check if already logged in as admin
-            checkAuth();
-            
-            // Add Enter key support for login
-            document.getElementById('admin-password').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    adminLogin();
-                }
-            });
+            fetchData('/api/user/profile')
+                .then(data => {
+                    if (!data.success || !data.user.is_admin) {
+                        window.location.href = '/';
+                    }
+                    currentUserData = data.user;
+                    loadDashboard();
+                    
+                    // Start auto-refresh for dashboard
+                    setInterval(() => {
+                        if (document.querySelector('.tab-content.active').id === 'dashboard') {
+                            loadDashboard();
+                        }
+                    }, 30000); // Refresh every 30 seconds
+                })
+                .catch(() => window.location.href = '/');
         });
     </script>
 </body>
