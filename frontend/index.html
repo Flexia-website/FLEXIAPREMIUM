@@ -17,6 +17,45 @@
 <!-- Main CSS -->
 <link rel="stylesheet" href="style.css" />
 
+<!-- === AUTO-LOGOUT SCRIPT === -->
+<script>
+// Check for logout reason on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const reason = urlParams.get('reason');
+    const game = urlParams.get('game');
+    
+    if (reason === 'daily_limit_reached') {
+        showWelcomeBackMessage(game);
+    }
+});
+
+function showWelcomeBackMessage(gameType) {
+    const gameNames = {
+        'snake': 'Snake Game',
+        'coinflip': 'Coin Flip',
+        'plinko': 'Plinko 3D',
+        'spin': 'Daily Spin',
+        'tiktok': 'TikTok Follow'
+    };
+    
+    const gameName = gameNames[gameType] || 'the game';
+    
+    // Show toast notification
+    setTimeout(() => {
+        if (typeof App !== 'undefined' && App.showMessage) {
+            App.showMessage(`Welcome back! You were logged out from ${gameName} due to daily limit. Limits reset at midnight.`, 'info', 8000);
+        } else {
+            // Fallback alert
+            alert(`Welcome back! You were logged out from ${gameName} due to daily limit.\n\nDaily game limits reset at midnight (00:00 UTC).`);
+        }
+    }, 1500);
+    
+    // Clean URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+}
+</script>
+
 <!-- === EMBEDDED CUSTOM STYLES (Spin + Merchant Button) === -->
 <style>
 /* --- MERCHANT BUTTON STYLE --- */
@@ -660,7 +699,7 @@ const customSpinEngine = {
       console.log('Can spin today?', canSpin);
       
       if (!canSpin) {
-        banner.innerHTML = `<span style="color:#FF3333">?? You already spun today! Come back tomorrow.</span>`;
+        banner.innerHTML = `<span style="color:#FF3333">⚠️ You already spun today! Come back tomorrow.</span>`;
         banner.style.display = 'block';
         this.isSpinning = false;
         btn.disabled = false;
@@ -696,14 +735,14 @@ const customSpinEngine = {
               window.updateBalance(result.reward);
             }
             
-            banner.innerHTML = `<span style="color:#00FF00">?? CONGRATULATIONS! WON: ?${result.reward.toLocaleString()}</span>`;
+            banner.innerHTML = `<span style="color:#00FF00">🎉 CONGRATULATIONS! WON: ₦${result.reward.toLocaleString()}</span>`;
           } else {
             banner.innerHTML = `<span style="color:#FF3333">${result.message || 'Spin failed. Try again.'}</span>`;
           }
           
         } catch (error) {
           console.error('Error during spin execution:', error);
-          banner.innerHTML = `<span style="color:#FFAA00">?? Connection issue. Please try again.</span>`;
+          banner.innerHTML = `<span style="color:#FFAA00">⚠️ Connection issue. Please try again.</span>`;
         }
         
         banner.style.display = 'block';
@@ -714,7 +753,7 @@ const customSpinEngine = {
       
     } catch (error) {
       console.error('Spin initialization error:', error);
-      banner.innerHTML = `<span style="color:#FF3333">?? Error initializing spin. Please try again.</span>`;
+      banner.innerHTML = `<span style="color:#FF3333">❌ Error initializing spin. Please try again.</span>`;
       banner.style.display = 'block';
       this.isSpinning = false;
       btn.disabled = false;
@@ -760,8 +799,8 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log('Balance update:', newBalance);
       const els = document.querySelectorAll('[id*="balance"], .balance');
       els.forEach(el => {
-        if (el.textContent.includes('?')) {
-          el.textContent = `?${newBalance.toLocaleString()}`;
+        if (el.textContent.includes('₦')) {
+          el.textContent = `₦${newBalance.toLocaleString()}`;
         }
       });
     },
