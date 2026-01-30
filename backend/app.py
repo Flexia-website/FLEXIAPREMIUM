@@ -1,6 +1,7 @@
 # backend/app.py - ULTIMATE PRODUCTION FIX - MULTI-USER OPTIMIZED WITH GAME LIMITS
 # FLEXIA Platform - PRODUCTION READY v13.0
 # COMPLETE VERSION WITH GAME LIMITS & DATABASE CLEARING
+# ENHANCED WITH LOGOUT TRACKING FOR LIMIT ENFORCEMENT
 
 import os
 import json
@@ -11,7 +12,7 @@ import logging
 import traceback
 import hashlib
 from datetime import datetime, timedelta, date
-from flask import Flask, jsonify, request, send_from_directory, redirect
+from flask import Flask, jsonify, request, send_from_directory, redirect, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from functools import wraps
@@ -507,6 +508,162 @@ def require_admin(f):
         return f(*args, **kwargs)
     return decorated
 
+# ======================= ENHANCED GAME LIMIT SYSTEM WITH LOGOUT =======================
+def check_game_limit_with_logout(user_id, game_type):
+    """Check if user can play and log them out if limit reached"""
+    conn = get_db()
+    cursor = conn.cursor()
+    today = datetime.utcnow().date()
+    is_postgres = os.environ.get('DATABASE_URL') is not None
+    ph = '%s' if is_postgres else '?'
+    
+    try:
+        # Get max plays for this game
+        max_plays = CONFIG.GAME_DAILY_LIMITS.get(game_type, 5)
+        
+        # Check existing plays today
+        cursor.execute(f'''
+        SELECT COUNT(*) FROM game_plays 
+        WHERE user_id = {ph} AND game_type = {ph} AND play_date = {ph}
+        ''', (user_id, game_type, today))
+        
+        count = cursor.fetchone()[0]
+        
+        if count >= max_plays:
+            app.logger.info(f'🚫 GAME LIMIT REACHED: User {user_id}, Game {game_type}, Plays {count}/{max_plays}')
+            
+            # Record limit reached in database
+            limit_log_id = f"LIMIT-{secrets.token_hex(8)}"
+            cursor.execute(f'''
+            INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp)
+            VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+            ''', (
+                limit_log_id, user_id, 'GAME_LIMIT_REACHED', 0, 'COMPLETED',
+                json.dumps({
+                    "game_type": game_type,
+                    "played_today": count,
+                    "max_plays": max_plays,
+                    "limit_reached": True,
+                    "action": "auto_logout_required",
+                    "message": f"Daily {game_type} limit reached: {count}/{max_plays} plays"
+                }),
+                datetime.utcnow().isoformat()
+            ))
+            
+            conn.commit()
+            return {
+                "can_play": False,
+                "reason": f"Daily limit reached ({count}/{max_plays} plays)",
+                "action_required": "logout",
+                "game_type": game_type,
+                "played_today": count,
+                "max_plays": max_plays,
+                "reset_time": "00:00 UTC (Midnight)"
+            }
+        
+        # Record this play
+        cursor.execute(f'''
+        INSERT INTO game_plays (user_id, game_type, play_date) 
+        VALUES ({ph}, {ph}, {ph})
+        ''', (user_id, game_type, today))
+        
+        conn.commit()
+        return {
+            "can_play": True,
+            "played_today": count + 1,
+            "max_plays": max_plays,
+            "remaining": max_plays - (count + 1)
+        }
+        
+    except Exception as e:
+        app.logger.error(f"Game limit check error: {e}")
+        conn.rollback()
+        return {"can_play": False, "reason": "System error"}
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/games/check-limit-with-logout/<game_type>', methods=['GET'])
+@require_auth
+def check_game_limit_with_logout_endpoint(game_type):
+    """Check if user can play a game - returns logout instruction if limit reached"""
+    user = get_current_user()
+    
+    if game_type not in ['snake', 'coinflip', 'plinko', 'spin', 'tiktok']:
+        return jsonify({"success": False, "message": "Invalid game type"}), 400
+    
+    try:
+        result = check_game_limit_with_logout(user['id'], game_type)
+        
+        if result.get("can_play", False):
+            return jsonify({
+                "success": True,
+                "can_play": True,
+                "played_today": result.get("played_today", 0),
+                "max_plays": result.get("max_plays", 5),
+                "remaining": result.get("remaining", 0),
+                "game_type": game_type,
+                "game_name": get_game_friendly_name(game_type)
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "can_play": False,
+                "reason": result.get("reason", "Daily limit reached"),
+                "action_required": result.get("action_required", "logout"),
+                "game_type": game_type,
+                "played_today": result.get("played_today", 0),
+                "max_plays": result.get("max_plays", 5),
+                "reset_time": result.get("reset_time", "00:00 UTC"),
+                "force_logout": True,
+                "message": f"Daily limit reached! You've played {result.get('played_today', 0)}/{result.get('max_plays', 5)} times today. Please come back tomorrow after 00:00 UTC."
+            }), 403
+            
+    except Exception as e:
+        app.logger.error(f"Game limit check error: {e}")
+        return jsonify({"success": False, "message": "Failed to check game limit"}), 500
+
+@app.route('/api/games/force-logout/<game_type>', methods=['POST'])
+@require_auth
+def force_logout_from_game(game_type):
+    """Force logout user from a game with detailed reason"""
+    user = get_current_user()
+    
+    # Record forced logout
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        tx_id = f"LOGOUT-{secrets.token_hex(8)}"
+        cursor.execute('''
+        INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ''', (
+            tx_id, user['id'], 'FORCE_LOGOUT', 0, 'COMPLETED',
+            json.dumps({
+                "game_type": game_type,
+                "reason": "daily_limit_reached",
+                "action": "auto_logged_out",
+                "redirect_to": "/?reason=daily_limit"
+            }),
+            datetime.utcnow().isoformat()
+        ))
+        conn.commit()
+    except Exception as e:
+        app.logger.error(f"Force logout logging error: {e}")
+        conn.rollback()
+    finally:
+        return_db_connection(conn)
+    
+    # Invalidate session
+    resp = jsonify({
+        "success": True,
+        "force_logout": True,
+        "reason": f"Daily {game_type} limit reached",
+        "redirect": "/?reason=daily_limit_reached",
+        "message": "You have reached your daily limit. Please come back tomorrow!"
+    })
+    resp.set_cookie('session_token', '', expires=0)
+    return resp
+
 # ======================= GAME LIMIT TRACKING FUNCTIONS =======================
 def check_and_record_game_play(user_id, game_type):
     """Check if user can play and record the play - PER REWARD CLAIM"""
@@ -898,11 +1055,11 @@ def init_db():
                 datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
                 '[]'
             ))
-        app.logger.warning("\n?? FLEXIA ADMIN ACCOUNT CREATED ??")
+        app.logger.warning("\n⚠️ FLEXIA ADMIN ACCOUNT CREATED ⚠️")
         app.logger.warning("Username: flexiaadmin")
         app.logger.warning("Initial Password: Flexiaadmin")
         app.logger.warning("Default Withdrawal PIN: 4567")
-        app.logger.warning("?? Change both after first login!\n")
+        app.logger.warning("⚠️ Change both after first login!\n")
 
     # WhatsApp number
     cursor.execute('SELECT COUNT(*) as count FROM whatsapp_numbers')
@@ -1573,8 +1730,8 @@ def get_user_profile():
 # ================= GAME ENDPOINTS WITH LIMIT ENFORCEMENT =================
 @app.route('/api/games/snake/report', methods=['POST'])
 @require_auth
-def report_snake():
-    """Snake game reward claiming - WITH DAILY LIMIT ENFORCEMENT"""
+def report_snake_enhanced():
+    """Snake game with enhanced limit checking"""
     user = get_current_user()
     data = request.get_json()
     apples = data.get('apples_eaten', 0)
@@ -1595,12 +1752,14 @@ def report_snake():
             return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
         
         # CHECK GAME LIMIT FIRST - Per reward claim
-        if not check_and_record_game_play(user['id'], 'snake'):
+        limit_check = check_game_limit_with_logout(user['id'], 'snake')
+        if not limit_check.get("can_play", False):
             return jsonify({
-                "success": False, 
-                "message": f"Daily snake game limit reached ({CONFIG.GAME_DAILY_LIMITS['snake']} plays/day)",
-                "limit_reached": True,
-                "redirect": True
+                "success": False,
+                "message": f"Daily snake game limit reached! {limit_check.get('reason', '')}",
+                "force_logout": True,
+                "redirect": True,
+                "details": limit_check
             }), 403
         
         reward = apples * CONFIG.SNAKE_REWARD
@@ -1670,8 +1829,8 @@ def report_snake():
 
 @app.route('/api/games/coinflip/report', methods=['POST'])
 @require_auth
-def report_coinflip():
-    """Coin flip game report - WITH DAILY LIMIT ENFORCEMENT"""
+def report_coinflip_enhanced():
+    """Coin flip game report - WITH ENHANCED LIMIT CHECKING"""
     user = get_current_user()
     data = request.get_json()
     bet = float(data.get('bet', 0))
@@ -1692,12 +1851,14 @@ def report_coinflip():
             return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
         
         # CHECK GAME LIMIT FIRST - Per reward claim
-        if not check_and_record_game_play(user['id'], 'coinflip'):
+        limit_check = check_game_limit_with_logout(user['id'], 'coinflip')
+        if not limit_check.get("can_play", False):
             return jsonify({
-                "success": False, 
-                "message": f"Daily coin flip limit reached ({CONFIG.GAME_DAILY_LIMITS['coinflip']} plays/day)",
-                "limit_reached": True,
-                "redirect": True
+                "success": False,
+                "message": f"Daily coin flip limit reached! {limit_check.get('reason', '')}",
+                "force_logout": True,
+                "redirect": True,
+                "details": limit_check
             }), 403
         
         payout = bet * 2 if won else 0
@@ -1770,8 +1931,8 @@ def report_coinflip():
 
 @app.route('/api/games/plinko/report', methods=['POST'])
 @require_auth
-def report_plinko():
-    """Plinko game report - WITH DAILY LIMIT ENFORCEMENT"""
+def report_plinko_enhanced():
+    """Plinko game report - WITH ENHANCED LIMIT CHECKING"""
     user = get_current_user()
     data = request.get_json()
     bet = float(data.get('bet', 0))
@@ -1795,12 +1956,14 @@ def report_plinko():
             return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
         
         # CHECK GAME LIMIT FIRST - Per reward claim
-        if not check_and_record_game_play(user['id'], 'plinko'):
+        limit_check = check_game_limit_with_logout(user['id'], 'plinko')
+        if not limit_check.get("can_play", False):
             return jsonify({
-                "success": False, 
-                "message": f"Daily plinko limit reached ({CONFIG.GAME_DAILY_LIMITS['plinko']} plays/day)",
-                "limit_reached": True,
-                "redirect": True
+                "success": False,
+                "message": f"Daily plinko limit reached! {limit_check.get('reason', '')}",
+                "force_logout": True,
+                "redirect": True,
+                "details": limit_check
             }), 403
         
         win_amount = bet * multiplier
@@ -1873,8 +2036,8 @@ def report_plinko():
 
 @app.route('/api/games/spin/report', methods=['POST'])
 @require_auth
-def report_spin():
-    """Spin wheel game report - WITH DAILY LIMIT ENFORCEMENT"""
+def report_spin_enhanced():
+    """Spin wheel game report - WITH ENHANCED LIMIT CHECKING"""
     user = get_current_user()
     data = request.get_json()
     reward = data.get('reward', 0)
@@ -1896,12 +2059,14 @@ def report_spin():
             return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
         
         # CHECK GAME LIMIT FIRST - Per reward claim
-        if not check_and_record_game_play(user['id'], 'spin'):
+        limit_check = check_game_limit_with_logout(user['id'], 'spin')
+        if not limit_check.get("can_play", False):
             return jsonify({
-                "success": False, 
-                "message": f"Daily spin limit reached (1 play/day)",
-                "limit_reached": True,
-                "redirect": True
+                "success": False,
+                "message": f"Daily spin limit reached! {limit_check.get('reason', '')}",
+                "force_logout": True,
+                "redirect": True,
+                "details": limit_check
             }), 403
         
         conn = get_db()
@@ -1994,8 +2159,8 @@ def get_tiktok_daily_task():
 
 @app.route('/api/games/tiktok/follow-daily', methods=['POST'])
 @require_auth
-def follow_tiktok_daily():
-    """TikTok daily follow with locking"""
+def follow_tiktok_daily_enhanced():
+    """TikTok daily follow with enhanced limit checking"""
     ip = request.remote_addr
     if not rate_limit(game_action_attempts, ip, max_per_min=3):
         app.logger.warning(f"Rate limit exceeded for TikTok follow from {ip}")
@@ -2026,12 +2191,14 @@ def follow_tiktok_daily():
         reward = float(task_row[0]) if task_row[0] else CONFIG.TIKTOK_REWARD
         
         # CHECK GAME LIMIT - Per reward claim
-        if not check_and_record_game_play(user['id'], 'tiktok'):
+        limit_check = check_game_limit_with_logout(user['id'], 'tiktok')
+        if not limit_check.get("can_play", False):
             return jsonify({
-                "success": False, 
-                "message": f"Daily TikTok limit reached (1 claim/day)",
-                "limit_reached": True,
-                "redirect": True
+                "success": False,
+                "message": f"Daily TikTok limit reached! {limit_check.get('reason', '')}",
+                "force_logout": True,
+                "redirect": True,
+                "details": limit_check
             }), 403
         
         # Use atomic balance update
@@ -2231,6 +2398,92 @@ def admin_preview_database_clear():
     except Exception as e:
         app.logger.error(f"Preview error: {e}")
         return jsonify({"success": False, "message": "Failed to generate preview"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ======================= ADMIN EXPORT DATA =======================
+@app.route('/api/admin/export-data', methods=['POST'])
+@require_admin
+def admin_export_data():
+    """Export database data in various formats"""
+    data = request.get_json()
+    export_format = data.get('format', 'csv')
+    export_users = data.get('users', True)
+    export_transactions = data.get('transactions', True)
+    export_game_plays = data.get('game_plays', False)
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        export_data = {}
+        
+        if export_users:
+            cursor.execute('SELECT * FROM users')
+            users = [row_to_dict(cursor, row) for row in cursor.fetchall()]
+            export_data['users'] = users
+        
+        if export_transactions:
+            cursor.execute('SELECT * FROM transactions ORDER BY timestamp DESC LIMIT 10000')
+            transactions = [row_to_dict(cursor, row) for row in cursor.fetchall()]
+            export_data['transactions'] = transactions
+        
+        if export_game_plays:
+            cursor.execute('SELECT * FROM game_plays ORDER BY created_at DESC')
+            game_plays = [row_to_dict(cursor, row) for row in cursor.fetchall()]
+            export_data['game_plays'] = game_plays
+        
+        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        
+        if export_format == 'json':
+            response = jsonify(export_data)
+            response.headers['Content-Disposition'] = f'attachment; filename=flexia_export_{timestamp}.json'
+            response.headers['Content-Type'] = 'application/json'
+            return response
+        
+        elif export_format == 'csv':
+            import csv
+            import io
+            
+            # Create CSV in memory
+            output = io.StringIO()
+            writer = csv.writer(output)
+            
+            # Write users CSV
+            if 'users' in export_data:
+                writer.writerow(['=== USERS ==='])
+                if export_data['users']:
+                    headers = export_data['users'][0].keys()
+                    writer.writerow(headers)
+                    for user in export_data['users']:
+                        writer.writerow([user.get(h, '') for h in headers])
+                writer.writerow([])
+            
+            # Write transactions CSV
+            if 'transactions' in export_data:
+                writer.writerow(['=== TRANSACTIONS ==='])
+                if export_data['transactions']:
+                    headers = export_data['transactions'][0].keys()
+                    writer.writerow(headers)
+                    for tx in export_data['transactions']:
+                        writer.writerow([tx.get(h, '') for h in headers])
+                writer.writerow([])
+            
+            # Convert to bytes for response
+            csv_data = output.getvalue()
+            output.close()
+            
+            response = make_response(csv_data)
+            response.headers['Content-Disposition'] = f'attachment; filename=flexia_export_{timestamp}.csv'
+            response.headers['Content-Type'] = 'text/csv'
+            return response
+        
+        else:
+            return jsonify({"success": False, "message": "Unsupported export format"}), 400
+            
+    except Exception as e:
+        app.logger.error(f"Export data error: {e}")
+        return jsonify({"success": False, "message": f"Export failed: {str(e)}"}), 500
     finally:
         return_db_connection(conn)
 
@@ -3751,6 +4004,7 @@ if __name__ == '__main__':
     app.logger.info(f"   • Spin: {CONFIG.GAME_DAILY_LIMITS['spin']} plays/day")
     app.logger.info(f"   • TikTok: {CONFIG.GAME_DAILY_LIMITS['tiktok']} plays/day")
     app.logger.info(f"🧹 Database Clearing: Enabled (Admin only)")
+    app.logger.info(f"📤 Data Export: Enabled (Admin only - JSON/CSV)")
     app.logger.info(f"🚀 VERSION 13.0: Complete game limit system with admin database clearing")
     
     app.run(host='0.0.0.0', port=port, debug=debug)
