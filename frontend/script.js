@@ -1,5 +1,5 @@
-// script.js - FLEXIA Frontend Logic v13.0 - COMPLETE VERSION WITH AUTO-LOGOUT & GAME LIMITS
-// ✅ ALL FIXES APPLIED ✅ DAILY PLAY LIMITS ✅ AUTO-LOGOUT ✅ BEAUTIFUL UI
+// script.js - FLEXIA Frontend Logic v14.0 - COMPLETE VERSION
+// ✅ ALL FIXES APPLIED ✅ DAILY PLAY LIMITS ✅ AUTO-LOGOUT ✅ WITHDRAWAL DAY CHECK ✅ BEAUTIFUL UI
 
 //========== EMBEDDED CSS ========
 const embeddedCSS = `
@@ -431,6 +431,145 @@ const embeddedCSS = `
     animation: pulse 1s infinite;
   }
   
+  /* Withdrawal Day Check Modal */
+  .withdrawal-day-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+    backdrop-filter: blur(10px);
+  }
+  
+  .withdrawal-day-modal-content {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-radius: 20px;
+    padding: 30px;
+    max-width: 450px;
+    width: 90%;
+    border: 2px solid #ffcc00;
+    box-shadow: 0 20px 40px rgba(255, 204, 0, 0.3);
+    text-align: center;
+    animation: slideIn 0.4s ease-out;
+  }
+  
+  .withdrawal-day-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+  }
+  
+  .withdrawal-day-icon.allowed {
+    color: #00ff88;
+  }
+  
+  .withdrawal-day-icon.not-allowed {
+    color: #ff6b6b;
+  }
+  
+  .withdrawal-day-title {
+    color: white;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+  }
+  
+  .withdrawal-day-message {
+    background: rgba(255, 204, 0, 0.1);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+    border: 1px solid rgba(255, 204, 0, 0.3);
+  }
+  
+  .withdrawal-day-text {
+    color: #ffd166;
+    font-size: 1.1rem;
+    line-height: 1.5;
+    margin-bottom: 15px;
+  }
+  
+  .withdrawal-day-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
+    color: #00D4FF;
+  }
+  
+  .withdrawal-day-days {
+    background: rgba(128, 0, 255, 0.2);
+    border-radius: 8px;
+    padding: 10px;
+    margin: 15px 0;
+    border: 1px solid #8000FF;
+  }
+  
+  .withdrawal-day-days strong {
+    color: #8000FF;
+    display: block;
+    margin-bottom: 5px;
+  }
+  
+  .withdrawal-day-day {
+    display: inline-block;
+    padding: 5px 10px;
+    margin: 3px;
+    background: rgba(128, 0, 255, 0.3);
+    border-radius: 5px;
+    font-weight: bold;
+  }
+  
+  .withdrawal-day-day.current {
+    background: #00ff88;
+    color: #000;
+  }
+  
+  .withdrawal-day-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 25px;
+  }
+  
+  .withdrawal-day-btn-primary {
+    background: linear-gradient(135deg, #8000FF 0%, #6C00FF 100%);
+    color: white;
+    border: none;
+    padding: 15px;
+    border-radius: 10px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+  }
+  
+  .withdrawal-day-btn-primary:hover {
+    transform: translateY(-2px);
+  }
+  
+  .withdrawal-day-btn-secondary {
+    background: transparent;
+    color: #A0A0B5;
+    border: 1px solid #A0A0B5;
+    padding: 12px;
+    border-radius: 10px;
+    font-family: 'Orbitron', sans-serif;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+  }
+  
+  .withdrawal-day-btn-secondary:hover {
+    background: rgba(160, 160, 181, 0.1);
+  }
+  
   @keyframes slideIn {
     from {
       opacity: 0;
@@ -729,6 +868,143 @@ const App = {
     }
   }
 };
+
+//========== WITHDRAWAL DAY CHECK FUNCTION ==========
+async function checkWithdrawalDay() {
+    try {
+        const response = await fetch('/api/withdrawal/check-day', {
+            credentials: 'include'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Show notification to user
+            const today = new Date().getDate();
+            const days = data.custom_withdrawal_days.length > 0 
+                ? data.custom_withdrawal_days 
+                : data.global_withdrawal_days;
+            
+            if (!data.can_withdraw) {
+                // Show detailed modal
+                showWithdrawalDayModal(false, today, days);
+                return false;
+            } else {
+                // Show success modal
+                showWithdrawalDayModal(true, today, days);
+                return true;
+            }
+        }
+    } catch (error) {
+        console.error('Withdrawal day check error:', error);
+        // Show error notification
+        App.showMessage('⚠️ Unable to check withdrawal day. Please try again.', 'warning', 5000);
+        return true; // Allow withdrawal on error
+    }
+}
+
+function showWithdrawalDayModal(canWithdraw, today, days) {
+    // Remove existing modal
+    const existingModal = document.getElementById('withdrawal-day-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    const isCustom = days && days.length > 0;
+    const sortedDays = days ? [...days].sort((a,b) => a-b) : [];
+    
+    const modal = document.createElement('div');
+    modal.id = 'withdrawal-day-modal';
+    modal.className = 'withdrawal-day-modal';
+    
+    modal.innerHTML = `
+        <div class="withdrawal-day-modal-content">
+            <div class="withdrawal-day-icon ${canWithdraw ? 'allowed' : 'not-allowed'}">
+                ${canWithdraw ? '✅' : '❌'}
+            </div>
+            
+            <h3 class="withdrawal-day-title">
+                ${canWithdraw ? 'Withdrawal Allowed Today!' : 'Withdrawal Not Allowed Today'}
+            </h3>
+            
+            <div class="withdrawal-day-message">
+                <p class="withdrawal-day-text">
+                    ${canWithdraw 
+                        ? `You <strong>CAN</strong> withdraw today (Day ${today})!`
+                        : `You <strong>cannot</strong> withdraw today (Day ${today}).`
+                    }
+                </p>
+                
+                <div class="withdrawal-day-info">
+                    <i class="fas fa-calendar-day"></i>
+                    <span>Today: Day ${today}</span>
+                </div>
+                
+                ${days && days.length > 0 ? `
+                    <div class="withdrawal-day-days">
+                        <strong>${isCustom ? 'Your Allowed Withdrawal Days:' : 'Global Allowed Days:'}</strong>
+                        <div style="margin-top: 8px;">
+                            ${sortedDays.map(day => `
+                                <span class="withdrawal-day-day ${day === today ? 'current' : ''}">
+                                    Day ${day}${day === today ? ' (Today)' : ''}
+                                </span>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${!canWithdraw ? `
+                    <div class="withdrawal-day-info" style="color: #ff6b6b;">
+                        <i class="fas fa-clock"></i>
+                        <span>Next allowed day: ${getNextAllowedDay(today, sortedDays)}</span>
+                    </div>
+                ` : ''}
+            </div>
+            
+            <div class="withdrawal-day-buttons">
+                ${canWithdraw ? `
+                    <button class="withdrawal-day-btn-primary" onclick="closeWithdrawalDayModal(); Banking.openWithdraw();">
+                        <i class="fas fa-money-bill-wave"></i> Proceed to Withdrawal
+                    </button>
+                ` : `
+                    <button class="withdrawal-day-btn-primary" onclick="closeWithdrawalDayModal();">
+                        <i class="fas fa-check-circle"></i> OK, I Understand
+                    </button>
+                `}
+                
+                <button class="withdrawal-day-btn-secondary" onclick="closeWithdrawalDayModal()">
+                    Close
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function closeWithdrawalDayModal() {
+    const modal = document.getElementById('withdrawal-day-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function getNextAllowedDay(currentDay, allowedDays) {
+    if (!allowedDays || allowedDays.length === 0) return 'Unknown';
+    
+    // Sort days
+    const sorted = [...allowedDays].sort((a,b) => a-b);
+    
+    // Find next day after current
+    for (const day of sorted) {
+        if (day > currentDay) {
+            return `Day ${day}`;
+        }
+    }
+    
+    // Wrap around to first day of next month
+    return `Day ${sorted[0]} (next month)`;
+}
 
 //========== GAME MANAGER WITH LOCKING ==========
 const GameManager = {
@@ -1706,6 +1982,16 @@ const Banking = {
   
   openWithdraw: async function () {
     if (!App.currentUser) return;
+    
+    // First check withdrawal day
+    const canWithdraw = await checkWithdrawalDay();
+    
+    if (!canWithdraw) {
+        // The modal is already shown by checkWithdrawalDay()
+        return;
+    }
+    
+    // Clear withdrawal form
     document.getElementById('withdrawal-message').textContent = '';
     
     if (this.banks.length === 0) {
@@ -2487,6 +2773,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.Banking = Banking;
     window.Achievements = Achievements;
     window.Settings = Settings;
+    window.checkWithdrawalDay = checkWithdrawalDay;
+    window.closeWithdrawalDayModal = closeWithdrawalDayModal;
     
     // Game navigation with enhanced limits (auto-logout)
     window.openSnakeGame = () => EnhancedGameLimiter.checkAndHandleGameAccess('snake', 'snake.html');
@@ -2543,7 +2831,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return await GameManager.safeClaim(endpoint, data, gameType);
     };
     
-    console.log('✅ FLEXIA Script v13.0 - ALL FUNCTIONS LOADED WITH COMPLETE GAME LIMITS & AUTO-LOGOUT');
+    console.log('✅ FLEXIA Script v14.0 - ALL FUNCTIONS LOADED WITH COMPLETE WITHDRAWAL DAY CHECK');
 })();
 
 // Emergency fallback loader
