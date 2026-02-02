@@ -748,6 +748,31 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Add to Database Management section -->
+                <div class="admin-section mt-4">
+                    <h3><i class="fas fa-file-export"></i> Complete Database Backup</h3>
+                    <div class="mb-3">
+                        <p>Export ALL data including users, transactions, and settings to a .flexia file.</p>
+                    </div>
+                    <div class="mb-3">
+                        <button onclick="exportFullDatabase()" class="btn btn-success">
+                            <i class="fas fa-download"></i> Export Full Database (.flexia)
+                        </button>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h4><i class="fas fa-file-import"></i> Restore Database</h4>
+                        <p>Import from previously exported .flexia file.</p>
+                        <input type="file" id="restore-file" accept=".flexia" style="display: none;">
+                        <button onclick="document.getElementById('restore-file').click()" class="btn btn-warning">
+                            <i class="fas fa-upload"></i> Select .flexia File
+                        </button>
+                        <button onclick="restoreDatabase()" class="btn btn-danger" id="restore-btn" disabled>
+                            <i class="fas fa-history"></i> Restore Database
+                        </button>
+                    </div>
+                </div>
             </div>
             
             <div class="admin-section">
@@ -1241,6 +1266,7 @@
         let globalWithdrawalDays = [];
         let backupListData = [];
         let adjustUserId = null;
+        let selectedRestoreFile = null;
         
         // ================================ UTILITY FUNCTIONS ================================
         function showMessage(text, type = 'info', elementId = 'coupon-message') {
@@ -1410,6 +1436,102 @@
             }
         }
         
+        // ================================ DATABASE BACKUP/RESTORE FUNCTIONS ================================
+        // Export full database
+        async function exportFullDatabase() {
+            try {
+                showMessage('Preparing database export...', 'info');
+                
+                const response = await fetch('/api/admin/database/export-all', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const today = new Date().toISOString().split('T')[0];
+                    a.download = `flexia_complete_backup_${today}.flexia`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    
+                    showMessage('✅ Full database exported successfully!', 'success');
+                } else {
+                    const error = await response.json();
+                    showMessage('Failed to export database: ' + (error.message || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                console.error('Export error:', error);
+                showMessage('Error exporting database: ' + error.message, 'error');
+            }
+        }
+        
+        // Restore database functions
+        document.getElementById('restore-file').addEventListener('change', function(e) {
+            selectedRestoreFile = e.target.files[0];
+            const restoreBtn = document.getElementById('restore-btn');
+            if (selectedRestoreFile && selectedRestoreFile.name.endsWith('.flexia')) {
+                restoreBtn.disabled = false;
+                restoreBtn.innerHTML = `<i class="fas fa-history"></i> Restore: ${selectedRestoreFile.name}`;
+            } else {
+                restoreBtn.disabled = true;
+                restoreBtn.innerHTML = `<i class="fas fa-history"></i> Restore Database`;
+                if (selectedRestoreFile) {
+                    showMessage('Please select a .flexia file', 'error');
+                }
+            }
+        });
+        
+        async function restoreDatabase() {
+            if (!selectedRestoreFile) {
+                showMessage('Please select a .flexia file first', 'error');
+                return;
+            }
+            
+            if (!confirm('⚠️ WARNING: This will replace ALL current data with the backup data. This action cannot be undone! Proceed?')) {
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', selectedRestoreFile);
+            
+            try {
+                showMessage('Restoring database... This may take a moment.', 'info');
+                
+                const response = await fetch('/api/admin/database/import-all', {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    let importedText = '';
+                    if (data.imported_counts) {
+                        const counts = data.imported_counts;
+                        importedText = `Imported: ${counts.users || 0} users, ${counts.transactions || 0} transactions, ${counts.game_plays || 0} game plays`;
+                    }
+                    
+                    showMessage(`✅ Database restored successfully! ${importedText}`, 'success');
+                    
+                    setTimeout(() => {
+                        alert('Database restore complete! Page will refresh in 5 seconds to show updated data.');
+                        setTimeout(() => window.location.reload(), 5000);
+                    }, 1000);
+                } else {
+                    showMessage('Restore failed: ' + (data.message || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                console.error('Restore error:', error);
+                showMessage('Error restoring database: ' + error.message, 'error');
+            }
+        }
+        
         // ================================ DATABASE MANAGEMENT FUNCTIONS ================================
         async function loadDatabaseTab() {
             await refreshDatabaseStats();
@@ -1569,7 +1691,8 @@
                     credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        sudo_confirmation: sudoConfirmation
+                        sudo_confirmation: sudoConfirmation,
+                        backup_option: backupOption
                     })
                 });
                 
