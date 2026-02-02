@@ -1,7 +1,6 @@
-# backend/app.py - ULTIMATE PRODUCTION FIX - MULTI-USER OPTIMIZED WITH GAME LIMITS
-# FLEXIA Platform - PRODUCTION READY v13.0
-# COMPLETE VERSION WITH GAME LIMITS & DATABASE CLEARING
-# ENHANCED WITH LOGOUT TRACKING FOR LIMIT ENFORCEMENT
+# backend/app.py - COMPLETE PRODUCTION VERSION WITH ALL ENDPOINTS
+# FLEXIA Platform - PRODUCTION READY v14.0
+# COMPLETE VERSION WITH ALL FIXES AND ENDPOINTS
 
 import os
 import json
@@ -42,7 +41,7 @@ class Config:
     SESSION_DURATION_HOURS = 24
     DEFAULT_WITHDRAWAL_DAYS = [7, 14, 25, 30]
     
-    # Game daily limits - ENFORCED PER REWARD CLAIM
+    # Game daily limits
     GAME_DAILY_LIMITS = {
         'snake': 10,
         'coinflip': 5,
@@ -315,10 +314,10 @@ def init_db_pool():
     
     if os.environ.get('DATABASE_URL'):
         try:
-            # INCREASED CONNECTIONS FOR RENDER - allows more simultaneous claims
+            # INCREASED CONNECTIONS FOR RENDER
             db_pool = SimpleConnectionPool(
-                5,  # min connections (increased from 1)
-                50, # max connections (increased from 20)
+                5,  # min connections
+                50, # max connections
                 dsn=os.environ['DATABASE_URL']
             )
             app.logger.info('✅ Database connection pool initialized: 5-50 connections')
@@ -582,88 +581,6 @@ def check_game_limit_with_logout(user_id, game_type):
     finally:
         return_db_connection(conn)
 
-@app.route('/api/games/check-limit-with-logout/<game_type>', methods=['GET'])
-@require_auth
-def check_game_limit_with_logout_endpoint(game_type):
-    """Check if user can play a game - returns logout instruction if limit reached"""
-    user = get_current_user()
-    
-    if game_type not in ['snake', 'coinflip', 'plinko', 'spin', 'tiktok']:
-        return jsonify({"success": False, "message": "Invalid game type"}), 400
-    
-    try:
-        result = check_game_limit_with_logout(user['id'], game_type)
-        
-        if result.get("can_play", False):
-            return jsonify({
-                "success": True,
-                "can_play": True,
-                "played_today": result.get("played_today", 0),
-                "max_plays": result.get("max_plays", 5),
-                "remaining": result.get("remaining", 0),
-                "game_type": game_type,
-                "game_name": get_game_friendly_name(game_type)
-            })
-        else:
-            return jsonify({
-                "success": False,
-                "can_play": False,
-                "reason": result.get("reason", "Daily limit reached"),
-                "action_required": result.get("action_required", "logout"),
-                "game_type": game_type,
-                "played_today": result.get("played_today", 0),
-                "max_plays": result.get("max_plays", 5),
-                "reset_time": result.get("reset_time", "00:00 UTC"),
-                "force_logout": True,
-                "message": f"Daily limit reached! You've played {result.get('played_today', 0)}/{result.get('max_plays', 5)} times today. Please come back tomorrow after 00:00 UTC."
-            }), 403
-            
-    except Exception as e:
-        app.logger.error(f"Game limit check error: {e}")
-        return jsonify({"success": False, "message": "Failed to check game limit"}), 500
-
-@app.route('/api/games/force-logout/<game_type>', methods=['POST'])
-@require_auth
-def force_logout_from_game(game_type):
-    """Force logout user from a game with detailed reason"""
-    user = get_current_user()
-    
-    # Record forced logout
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
-        tx_id = f"LOGOUT-{secrets.token_hex(8)}"
-        cursor.execute('''
-        INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-        ''', (
-            tx_id, user['id'], 'FORCE_LOGOUT', 0, 'COMPLETED',
-            json.dumps({
-                "game_type": game_type,
-                "reason": "daily_limit_reached",
-                "action": "auto_logged_out",
-                "redirect_to": "/?reason=daily_limit"
-            }),
-            datetime.utcnow().isoformat()
-        ))
-        conn.commit()
-    except Exception as e:
-        app.logger.error(f"Force logout logging error: {e}")
-        conn.rollback()
-    finally:
-        return_db_connection(conn)
-    
-    # Invalidate session
-    resp = jsonify({
-        "success": True,
-        "force_logout": True,
-        "reason": f"Daily {game_type} limit reached",
-        "redirect": "/?reason=daily_limit_reached",
-        "message": "You have reached your daily limit. Please come back tomorrow!"
-    })
-    resp.set_cookie('session_token', '', expires=0)
-    return resp
-
 # ======================= GAME LIMIT TRACKING FUNCTIONS =======================
 def check_and_record_game_play(user_id, game_type):
     """Check if user can play and record the play - PER REWARD CLAIM"""
@@ -801,7 +718,7 @@ def init_db():
     cursor = conn.cursor()
     is_postgres = os.environ.get('DATABASE_URL') is not None
 
-    # Users table - FIXED WITH ALL COLUMNS INCLUDING claimed_achievements
+    # Users table
     if is_postgres:
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
@@ -948,7 +865,7 @@ def init_db():
         except Exception as e:
             app.logger.error(f"Error creating table: {e}")
 
-    # Insert default banks - FIXED
+    # Insert default banks
     ph = '%s' if is_postgres else '?'
     cursor.execute('SELECT COUNT(*) as count FROM banks')
     bank_count = cursor.fetchone()
@@ -1157,7 +1074,7 @@ def update_user_balance(user_id, amount_change):
             return_db_connection(conn)
 
 def check_game_cooldown(user_id, game_type):
-    """Check if user is in cooldown for a specific game - FIXED"""
+    """Check if user is in cooldown for a specific game"""
     conn = get_db()
     cursor = conn.cursor()
     try:
@@ -1193,26 +1110,52 @@ def update_last_game_timestamp(user_id):
     finally:
         return_db_connection(conn)
 
+# ======================= FIXED: WITHDRAWAL DAY CHECK =======================
 def is_withdrawal_day(user_id=None):
+    """Check if today is a withdrawal day for the user - FIXED VERSION"""
     today = datetime.utcnow().day
+    
+    # If no user_id provided, check global days
     if user_id is None:
         return today in get_global_withdrawal_days()
+    
     conn = get_db()
     cursor = conn.cursor()
-    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+    
     try:
-        cursor.execute(f'SELECT withdrawal_restricted, custom_withdrawal_days FROM users WHERE id = {ph}', (user_id,))
+        ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+        
+        # Get user's withdrawal settings
+        cursor.execute(f'''
+        SELECT withdrawal_restricted, custom_withdrawal_days 
+        FROM users WHERE id = {ph}
+        ''', (user_id,))
+        
         row = cursor.fetchone()
-        if row:
-            restricted, custom_days_str = row[0], row[1]
-            if restricted:
-                return False
-            if custom_days_str:
-                try:
-                    return today in json.loads(custom_days_str)
-                except:
-                    pass
-            return today in get_global_withdrawal_days()
+        if not row:
+            return False
+        
+        withdrawal_restricted = bool(row[0])
+        custom_days_str = row[1] if row[1] else ''
+        
+        # If user is restricted, cannot withdraw
+        if withdrawal_restricted:
+            return False
+        
+        # Check custom withdrawal days
+        if custom_days_str and custom_days_str.strip():
+            try:
+                custom_days = json.loads(custom_days_str)
+                if isinstance(custom_days, list) and custom_days:
+                    return today in custom_days
+            except:
+                pass  # Fall through to global days
+        
+        # Fall back to global withdrawal days
+        return today in get_global_withdrawal_days()
+        
+    except Exception as e:
+        app.logger.error(f"Error checking withdrawal day: {e}")
         return False
     finally:
         return_db_connection(conn)
@@ -1428,6 +1371,488 @@ with app.app_context():
     run_cleanup_scheduler()
     run_backup_scheduler()  # Start backup scheduler
 
+# ======================= FIXED: CHECK WITHDRAWAL DAY STATUS =======================
+@app.route('/api/withdrawal/check-day', methods=['GET'])
+@require_auth
+def check_withdrawal_day():
+    """Check if user can withdraw today - FIXED VERSION"""
+    user = get_current_user()
+    today = datetime.utcnow().day
+    
+    try:
+        can_withdraw = is_withdrawal_day(user['id'])
+        global_days = get_global_withdrawal_days()
+        
+        # Get user's custom days if any
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('SELECT custom_withdrawal_days FROM users WHERE id = %s', (user['id'],))
+        row = cursor.fetchone()
+        custom_days = []
+        if row and row[0]:
+            try:
+                custom_days = json.loads(row[0]) if row[0] else []
+            except:
+                pass
+        
+        return jsonify({
+            "success": True,
+            "can_withdraw": can_withdraw,
+            "today": today,
+            "global_withdrawal_days": global_days,
+            "custom_withdrawal_days": custom_days if custom_days else [],
+            "message": f"You {'CAN' if can_withdraw else 'CANNOT'} withdraw today. Withdrawal days: {', '.join(map(str, sorted(custom_days if custom_days else global_days)))}"
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Check withdrawal day error: {e}")
+        return jsonify({"success": False, "message": "Failed to check withdrawal day"}), 500
+
+# ======================= FIXED: ADMIN PASSWORD CHANGE =======================
+@app.route('/api/admin/change-password', methods=['POST'])
+@require_admin
+def admin_change_password():
+    """Change admin password - FIXED VERSION"""
+    user = get_current_user()
+    data = request.get_json()
+    
+    current_password = data.get('current_password')
+    new_password = data.get('new_password')
+    
+    if not current_password or not new_password:
+        return jsonify({"success": False, "message": "Current and new password required"}), 400
+    
+    if len(new_password) < 8:
+        return jsonify({"success": False, "message": "New password must be at least 8 characters"}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Get current password hash
+        cursor.execute('SELECT password FROM users WHERE id = %s', (user['id'],))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"success": False, "message": "User not found"}), 404
+        
+        stored_password = row[0]
+        
+        # Verify current password
+        if not check_password_hash(stored_password, current_password):
+            return jsonify({"success": False, "message": "Current password is incorrect"}), 403
+        
+        # Update password
+        new_password_hash = generate_password_hash(new_password)
+        cursor.execute('UPDATE users SET password = %s, admin_password_changed = TRUE WHERE id = %s',
+                      (new_password_hash, user['id']))
+        
+        conn.commit()
+        
+        app.logger.info(f"Admin password changed for user: {user['username']}")
+        
+        return jsonify({
+            "success": True,
+            "message": "Password changed successfully! Please login again."
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Change admin password error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to change password"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ======================= FIXED: SPIN WHEEL MODAL =======================
+@app.route('/api/spin/daily-status', methods=['GET'])
+@require_auth
+def get_spin_daily_status():
+    """Check if user can spin today - FIXED VERSION"""
+    user = get_current_user()
+    today = datetime.utcnow().date().isoformat()
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('''
+        SELECT 1 FROM transactions 
+        WHERE user_id = %s AND type = 'SPIN_REWARD' 
+        AND DATE(timestamp) = %s
+        ''', (user['id'], today))
+        
+        already_spun = cursor.fetchone() is not None
+        
+        return jsonify({
+            "success": True,
+            "can_spin": not already_spun,
+            "already_spun": already_spun,
+            "today": today,
+            "message": "You have already spun today" if already_spun else "You can spin now"
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Spin status error: {e}")
+        return jsonify({"success": False, "message": "Failed to check spin status"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/spin/execute', methods=['POST'])
+@require_auth
+def execute_spin():
+    """Execute spin wheel game - FIXED VERSION"""
+    user = get_current_user()
+    
+    # Check daily limit first
+    today = datetime.utcnow().date().isoformat()
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('''
+        SELECT 1 FROM transactions 
+        WHERE user_id = %s AND type = 'SPIN_REWARD' 
+        AND DATE(timestamp) = %s
+        ''', (user['id'], today))
+        
+        if cursor.fetchone() is not None:
+            return jsonify({
+                "success": False,
+                "message": "You have already spun today. Come back tomorrow!"
+            }), 400
+        
+        # Generate spin result
+        rewards = [1000, 500, 200, 100, 50, 0]
+        weights = [0.05, 0.1, 0.15, 0.2, 0.25, 0.25]  # Probabilities
+        
+        import random
+        reward = random.choices(rewards, weights=weights, k=1)[0]
+        
+        # Update balance
+        new_balance = update_user_balance(user['id'], reward)
+        if new_balance is None:
+            return jsonify({"success": False, "message": "Failed to update balance"}), 500
+        
+        # Record transaction
+        tx_id = f"SPIN-{secrets.token_hex(8)}"
+        cursor.execute('''
+        INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ''', (
+            tx_id, user['id'], 'SPIN_REWARD', reward, 'COMPLETED',
+            json.dumps({"game": "spin", "reward": reward}),
+            datetime.utcnow().isoformat()
+        ))
+        
+        conn.commit()
+        
+        app.logger.info(f"Spin executed for {user['username']}: reward {reward}")
+        
+        return jsonify({
+            "success": True,
+            "reward": reward,
+            "new_balance": new_balance,
+            "message": f"Congratulations! You won ₦{reward}!"
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Spin execute error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to process spin"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ======================= NEW: DATABASE EXPORT/IMPORT WITH .FLEXIA FILES =======================
+@app.route('/api/admin/database/export-all', methods=['POST'])
+@require_admin
+def admin_export_all_data():
+    """Export ALL database data to .flexia file format - NEW ENDPOINT"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Get all data
+        data = {}
+        
+        # Users (exclude password hashes for security)
+        cursor.execute('''
+        SELECT id, username, balance, referral_code, referred_by, is_admin,
+               created_at, last_login, claimed_bonuses, points, game_stats,
+               contact, profile_picture, ui_theme, withdrawal_restricted,
+               custom_withdrawal_days, withdrawal_limit, last_game_timestamp,
+               last_achievement_check, claimed_achievements
+        FROM users
+        ''')
+        users = []
+        for row in cursor.fetchall():
+            user_dict = {}
+            columns = [col[0] for col in cursor.description]
+            for i, col in enumerate(columns):
+                user_dict[col] = row[i]
+            users.append(user_dict)
+        data['users'] = users
+        
+        # Transactions
+        cursor.execute('SELECT * FROM transactions')
+        transactions = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+        data['transactions'] = transactions
+        
+        # Game plays
+        cursor.execute('SELECT * FROM game_plays')
+        game_plays = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+        data['game_plays'] = game_plays
+        
+        # Coupons
+        cursor.execute('SELECT * FROM coupons')
+        coupons = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+        data['coupons'] = coupons
+        
+        # WhatsApp numbers
+        cursor.execute('SELECT * FROM whatsapp_numbers')
+        whatsapp_numbers = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+        data['whatsapp_numbers'] = whatsapp_numbers
+        
+        # TikTok daily
+        cursor.execute('SELECT * FROM tiktok_daily')
+        tiktok_daily = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+        data['tiktok_daily'] = tiktok_daily
+        
+        # Banks
+        cursor.execute('SELECT * FROM banks')
+        banks = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+        data['banks'] = banks
+        
+        # Admin settings
+        cursor.execute('SELECT * FROM admin_settings')
+        admin_settings = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+        data['admin_settings'] = admin_settings
+        
+        # Add metadata
+        data['_metadata'] = {
+            'export_date': datetime.utcnow().isoformat(),
+            'version': 'FLEXIA_BACKUP_v1.0',
+            'total_records': {
+                'users': len(users),
+                'transactions': len(transactions),
+                'game_plays': len(game_plays),
+                'coupons': len(coupons)
+            }
+        }
+        
+        return_db_connection(conn)
+        
+        # Convert to JSON
+        json_data = json.dumps(data, indent=2, default=str)
+        
+        # Create response
+        response = make_response(json_data)
+        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        response.headers['Content-Disposition'] = f'attachment; filename=flexia_backup_{timestamp}.flexia'
+        response.headers['Content-Type'] = 'application/json'
+        
+        app.logger.info(f"Database exported: {len(users)} users, {len(transactions)} transactions")
+        
+        return response
+        
+    except Exception as e:
+        app.logger.error(f"Export all data error: {e}")
+        return jsonify({"success": False, "message": f"Export failed: {str(e)}"}), 500
+
+@app.route('/api/admin/database/import-all', methods=['POST'])
+@require_admin
+def admin_import_all_data():
+    """Import data from .flexia file (complete restore) - NEW ENDPOINT"""
+    try:
+        # Check if file was uploaded
+        if 'file' not in request.files:
+            return jsonify({"success": False, "message": "No file uploaded"}), 400
+        
+        file = request.files['file']
+        
+        if file.filename == '':
+            return jsonify({"success": False, "message": "No file selected"}), 400
+        
+        # Check file extension
+        if not file.filename.endswith('.flexia'):
+            return jsonify({"success": False, "message": "File must be .flexia format"}), 400
+        
+        # Read and parse JSON
+        json_data = file.read().decode('utf-8')
+        data = json.loads(json_data)
+        
+        # Verify it's a valid FLEXIA backup
+        if '_metadata' not in data:
+            return jsonify({"success": False, "message": "Invalid .flexia file format"}), 400
+        
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        try:
+            # Start transaction
+            if os.environ.get('DATABASE_URL'):
+                cursor.execute("BEGIN")
+            
+            # Clear existing data (keep admin settings structure)
+            tables_to_clear = ['users', 'transactions', 'game_plays', 'coupons', 
+                              'whatsapp_numbers', 'tiktok_daily']
+            
+            for table in tables_to_clear:
+                try:
+                    cursor.execute(f'DELETE FROM {table}')
+                except:
+                    pass
+            
+            # Import data
+            imported_counts = {}
+            
+            # Import users
+            if 'users' in data:
+                for user in data['users']:
+                    try:
+                        # Handle is_admin for different DB types
+                        is_admin_value = user.get('is_admin', False)
+                        if os.environ.get('DATABASE_URL'):
+                            is_admin_value = bool(is_admin_value)
+                        else:
+                            is_admin_value = 1 if is_admin_value else 0
+                        
+                        # Handle withdrawal_restricted
+                        withdrawal_restricted = user.get('withdrawal_restricted', False)
+                        if os.environ.get('DATABASE_URL'):
+                            withdrawal_restricted = bool(withdrawal_restricted)
+                        else:
+                            withdrawal_restricted = 1 if withdrawal_restricted else 0
+                        
+                        cursor.execute('''
+                        INSERT INTO users (
+                            id, username, balance, referral_code, referred_by, is_admin,
+                            created_at, last_login, claimed_bonuses, points, game_stats,
+                            contact, profile_picture, ui_theme, withdrawal_restricted,
+                            custom_withdrawal_days, withdrawal_limit, last_game_timestamp,
+                            last_achievement_check, claimed_achievements
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ''', (
+                            user.get('id'), user.get('username'), user.get('balance', 0),
+                            user.get('referral_code'), user.get('referred_by'), is_admin_value,
+                            user.get('created_at'), user.get('last_login'), user.get('claimed_bonuses', 0),
+                            user.get('points', 0), user.get('game_stats'), user.get('contact'),
+                            user.get('profile_picture'), user.get('ui_theme', 'light'),
+                            withdrawal_restricted, user.get('custom_withdrawal_days'),
+                            user.get('withdrawal_limit', 0), user.get('last_game_timestamp'),
+                            user.get('last_achievement_check'), user.get('claimed_achievements', '[]')
+                        ))
+                        imported_counts['users'] = imported_counts.get('users', 0) + 1
+                    except Exception as e:
+                        app.logger.warning(f"Skipping user {user.get('username')}: {e}")
+            
+            # Import transactions
+            if 'transactions' in data:
+                for tx in data['transactions']:
+                    try:
+                        cursor.execute('''
+                        INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        ''', (
+                            tx.get('id'), tx.get('user_id'), tx.get('type'), tx.get('amount'),
+                            tx.get('status'), tx.get('details'), tx.get('timestamp')
+                        ))
+                        imported_counts['transactions'] = imported_counts.get('transactions', 0) + 1
+                    except Exception as e:
+                        app.logger.warning(f"Skipping transaction {tx.get('id')}: {e}")
+            
+            # Import game plays
+            if 'game_plays' in data:
+                for play in data['game_plays']:
+                    try:
+                        cursor.execute('''
+                        INSERT INTO game_plays (id, user_id, game_type, play_date, created_at)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ''', (
+                            play.get('id'), play.get('user_id'), play.get('game_type'),
+                            play.get('play_date'), play.get('created_at')
+                        ))
+                        imported_counts['game_plays'] = imported_counts.get('game_plays', 0) + 1
+                    except Exception as e:
+                        app.logger.warning(f"Skipping game play {play.get('id')}: {e}")
+            
+            # Import coupons
+            if 'coupons' in data:
+                for coupon in data['coupons']:
+                    try:
+                        cursor.execute('''
+                        INSERT INTO coupons (code, status)
+                        VALUES (%s, %s)
+                        ''', (
+                            coupon.get('code'), coupon.get('status', 'AVAILABLE')
+                        ))
+                        imported_counts['coupons'] = imported_counts.get('coupons', 0) + 1
+                    except Exception as e:
+                        app.logger.warning(f"Skipping coupon {coupon.get('code')}: {e}")
+            
+            # Import WhatsApp numbers
+            if 'whatsapp_numbers' in data:
+                for num in data['whatsapp_numbers']:
+                    try:
+                        cursor.execute('''
+                        INSERT INTO whatsapp_numbers (id, number, label, is_active, created_at)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ''', (
+                            num.get('id'), num.get('number'), num.get('label'),
+                            num.get('is_active'), num.get('created_at')
+                        ))
+                        imported_counts['whatsapp_numbers'] = imported_counts.get('whatsapp_numbers', 0) + 1
+                    except Exception as e:
+                        app.logger.warning(f"Skipping WhatsApp number {num.get('number')}: {e}")
+            
+            # Import TikTok daily
+            if 'tiktok_daily' in data:
+                for tiktok in data['tiktok_daily']:
+                    try:
+                        cursor.execute('''
+                        INSERT INTO tiktok_daily (id, date, tiktok_link, reward_amount, created_at)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ''', (
+                            tiktok.get('id'), tiktok.get('date'), tiktok.get('tiktok_link'),
+                            tiktok.get('reward_amount'), tiktok.get('created_at')
+                        ))
+                        imported_counts['tiktok_daily'] = imported_counts.get('tiktok_daily', 0) + 1
+                    except Exception as e:
+                        app.logger.warning(f"Skipping TikTok daily {tiktok.get('date')}: {e}")
+            
+            # Import admin settings
+            if 'admin_settings' in data:
+                for setting in data['admin_settings']:
+                    try:
+                        cursor.execute('''
+                        INSERT INTO admin_settings (id, whatsapp_link, telegram_link, facebook_link, global_withdrawal_days)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ''', (
+                            setting.get('id'), setting.get('whatsapp_link'), setting.get('telegram_link'),
+                            setting.get('facebook_link'), setting.get('global_withdrawal_days')
+                        ))
+                        imported_counts['admin_settings'] = imported_counts.get('admin_settings', 0) + 1
+                    except Exception as e:
+                        app.logger.warning(f"Skipping admin setting: {e}")
+            
+            conn.commit()
+            
+            app.logger.info(f"Database imported successfully: {imported_counts}")
+            
+            return jsonify({
+                "success": True,
+                "message": "Database imported successfully!",
+                "imported_counts": imported_counts,
+                "metadata": data.get('_metadata', {})
+            })
+            
+        except Exception as e:
+            conn.rollback()
+            app.logger.error(f"Import error: {e}")
+            return jsonify({"success": False, "message": f"Import failed: {str(e)}"}), 500
+            
+    except Exception as e:
+        app.logger.error(f"Import all data error: {e}")
+        return jsonify({"success": False, "message": f"Import failed: {str(e)}"}), 500
+
 # ======================= GAME ACCESS CHECK ENDPOINT =======================
 @app.route('/api/games/check-access/<game_type>', methods=['GET'])
 @require_auth
@@ -1462,6 +1887,89 @@ def check_game_access(game_type):
     except Exception as e:
         app.logger.error(f"Game access check error: {e}")
         return jsonify({"success": False, "message": "Failed to check game access"}), 500
+
+# ======================= GAME LIMIT WITH LOGOUT ENDPOINTS =======================
+@app.route('/api/games/check-limit-with-logout/<game_type>', methods=['GET'])
+@require_auth
+def check_game_limit_with_logout_endpoint(game_type):
+    """Check if user can play a game - returns logout instruction if limit reached"""
+    user = get_current_user()
+    
+    if game_type not in ['snake', 'coinflip', 'plinko', 'spin', 'tiktok']:
+        return jsonify({"success": False, "message": "Invalid game type"}), 400
+    
+    try:
+        result = check_game_limit_with_logout(user['id'], game_type)
+        
+        if result.get("can_play", False):
+            return jsonify({
+                "success": True,
+                "can_play": True,
+                "played_today": result.get("played_today", 0),
+                "max_plays": result.get("max_plays", 5),
+                "remaining": result.get("remaining", 0),
+                "game_type": game_type,
+                "game_name": get_game_friendly_name(game_type)
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "can_play": False,
+                "reason": result.get("reason", "Daily limit reached"),
+                "action_required": result.get("action_required", "logout"),
+                "game_type": game_type,
+                "played_today": result.get("played_today", 0),
+                "max_plays": result.get("max_plays", 5),
+                "reset_time": result.get("reset_time", "00:00 UTC"),
+                "force_logout": True,
+                "message": f"Daily limit reached! You've played {result.get('played_today', 0)}/{result.get('max_plays', 5)} times today. Please come back tomorrow after 00:00 UTC."
+            }), 403
+            
+    except Exception as e:
+        app.logger.error(f"Game limit check error: {e}")
+        return jsonify({"success": False, "message": "Failed to check game limit"}), 500
+
+@app.route('/api/games/force-logout/<game_type>', methods=['POST'])
+@require_auth
+def force_logout_from_game(game_type):
+    """Force logout user from a game with detailed reason"""
+    user = get_current_user()
+    
+    # Record forced logout
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        tx_id = f"LOGOUT-{secrets.token_hex(8)}"
+        cursor.execute('''
+        INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ''', (
+            tx_id, user['id'], 'FORCE_LOGOUT', 0, 'COMPLETED',
+            json.dumps({
+                "game_type": game_type,
+                "reason": "daily_limit_reached",
+                "action": "auto_logged_out",
+                "redirect_to": "/?reason=daily_limit"
+            }),
+            datetime.utcnow().isoformat()
+        ))
+        conn.commit()
+    except Exception as e:
+        app.logger.error(f"Force logout logging error: {e}")
+        conn.rollback()
+    finally:
+        return_db_connection(conn)
+    
+    # Invalidate session
+    resp = jsonify({
+        "success": True,
+        "force_logout": True,
+        "reason": f"Daily {game_type} limit reached",
+        "redirect": "/?reason=daily_limit_reached",
+        "message": "You have reached your daily limit. Please come back tomorrow!"
+    })
+    resp.set_cookie('session_token', '', expires=0)
+    return resp
 
 # ======================= AUTH ENDPOINTS =======================
 @app.route('/api/auth/register', methods=['POST'])
@@ -2034,88 +2542,6 @@ def report_plinko_enhanced():
         # RELEASE LOCK
         release_claim_lock(user['id'], 'PLINKO')
 
-@app.route('/api/games/spin/report', methods=['POST'])
-@require_auth
-def report_spin_enhanced():
-    """Spin wheel game report - WITH ENHANCED LIMIT CHECKING"""
-    user = get_current_user()
-    data = request.get_json()
-    reward = data.get('reward', 0)
-    
-    app.logger.info(f"🎡 Spin wheel from {user['username']}: reward {reward}")
-    
-    # Validate reward amount
-    valid_rewards = [0, 50, 100, 200, 500, 1000]
-    if reward not in valid_rewards:
-        return jsonify({"success": False, "message": "Invalid spin reward"}), 400
-    
-    # ACQUIRE LOCK
-    if not acquire_claim_lock(user['id'], 'SPIN'):
-        return jsonify({"success": False, "message": "Please wait 2 seconds between claims"}), 429
-    
-    try:
-        # Check game cooldown
-        if not check_game_cooldown(user['id'], 'SPIN'):
-            return jsonify({"success": False, "message": "Please wait 1 second between games"}), 429
-        
-        # CHECK GAME LIMIT FIRST - Per reward claim
-        limit_check = check_game_limit_with_logout(user['id'], 'spin')
-        if not limit_check.get("can_play", False):
-            return jsonify({
-                "success": False,
-                "message": f"Daily spin limit reached! {limit_check.get('reason', '')}",
-                "force_logout": True,
-                "redirect": True,
-                "details": limit_check
-            }), 403
-        
-        conn = get_db()
-        cursor = conn.cursor()
-        
-        try:
-            # Use atomic balance update
-            new_balance = update_user_balance(user['id'], reward)
-            if new_balance is None:
-                return jsonify({"success": False, "message": "Failed to update balance"}), 500
-            
-            # Update last game timestamp
-            update_last_game_timestamp(user['id'])
-            
-            # Record transaction
-            tx_id = f"SPIN-{int(time.time())}-{secrets.token_hex(4)}"
-            cursor.execute('''
-            INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            ''', (
-                tx_id, user['id'], 'SPIN_REWARD', reward, 'COMPLETED',
-                json.dumps({"game": "spin", "reward": reward}),
-                datetime.utcnow().isoformat()
-            ))
-            
-            conn.commit()
-            
-            app.logger.info(f"✅ Spin wheel processed for {user['username']}: reward {reward}")
-            
-            return jsonify({
-                "success": True,
-                "reward": reward,
-                "new_balance": new_balance,
-                "message": f"Congratulations! You won ₦{reward}!"
-            })
-            
-        except Exception as e:
-            app.logger.error(f"❌ Spin error: {e}")
-            if conn:
-                conn.rollback()
-            return jsonify({"success": False, "message": f"Failed to process: {str(e)}"}), 500
-        finally:
-            if conn:
-                return_db_connection(conn)
-                
-    finally:
-        # RELEASE LOCK
-        release_claim_lock(user['id'], 'SPIN')
-
 # ================= TIKTOK DAILY =================
 @app.route('/api/games/tiktok/daily', methods=['GET'])
 @require_auth
@@ -2303,9 +2729,6 @@ def admin_clear_database():
         # Reset coupons to AVAILABLE
         cursor.execute("UPDATE coupons SET status = 'AVAILABLE'")
         coupons_reset = cursor.rowcount
-        
-        # Keep WhatsApp numbers (optional - you can delete these too if you want)
-        # cursor.execute("DELETE FROM whatsapp_numbers")
         
         # Reset TikTok daily tasks
         cursor.execute("DELETE FROM tiktok_daily")
@@ -3884,7 +4307,7 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "uptime": get_uptime(),
             "database": db_status,
-            "version": "13.0",
+            "version": "14.0",
             "stats": {
                 "total_users": user_count,
                 "pending_withdrawals": pending_withdrawals
@@ -3904,7 +4327,7 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "database": f"error: {str(e)}",
             "uptime": get_uptime(),
-            "version": "13.0"
+            "version": "14.0"
         }), 503
 
 # ================= BACKUP ENDPOINTS =======================
@@ -3989,7 +4412,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug = os.getenv('ENV') != 'production'
     
-    app.logger.info(f"🚀 Starting Flexia Platform v13.0 with Complete Game Limits on port {port} (debug: {debug})")
+    app.logger.info(f"🚀 Starting Flexia Platform v14.0 with Complete Game Limits on port {port} (debug: {debug})")
     app.logger.info(f"📁 Frontend directory: {CONFIG.FRONTEND_DIR}")
     app.logger.info(f"🔒 Secret key set: {'Yes' if CONFIG.SECRET_KEY else 'No'}")
     app.logger.info(f"🗄️ Database: {'PostgreSQL' if os.environ.get('DATABASE_URL') else 'SQLite'}")
@@ -4004,7 +4427,7 @@ if __name__ == '__main__':
     app.logger.info(f"   • Spin: {CONFIG.GAME_DAILY_LIMITS['spin']} plays/day")
     app.logger.info(f"   • TikTok: {CONFIG.GAME_DAILY_LIMITS['tiktok']} plays/day")
     app.logger.info(f"🧹 Database Clearing: Enabled (Admin only)")
-    app.logger.info(f"📤 Data Export: Enabled (Admin only - JSON/CSV)")
-    app.logger.info(f"🚀 VERSION 13.0: Complete game limit system with admin database clearing")
+    app.logger.info(f"📤 Data Export/Import: Enabled (Admin only - .flexia format)")
+    app.logger.info(f"🚀 VERSION 14.0: Complete with all fixes and endpoints")
     
     app.run(host='0.0.0.0', port=port, debug=debug)
