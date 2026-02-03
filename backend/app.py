@@ -43,9 +43,9 @@ class Config:
     
     # Game daily limits
     GAME_DAILY_LIMITS = {
-        'snake': 5,
-        'coinflip': 2,
-        'plinko': 2,
+        'snake': 17,
+        'coinflip': 7,
+        'plinko': 7,
         'spin': 1,
         'tiktok': 1
     }
@@ -935,7 +935,7 @@ def init_db():
     cursor.execute('SELECT COUNT(*) as count FROM users WHERE username = %s' if is_postgres else 'SELECT COUNT(*) as count FROM users WHERE username = ?', ("flexiaadmin",))
     admin_count = cursor.fetchone()[0]
     if admin_count == 0:
-        admin_pass = generate_password_hash("Flexiaadmin")
+        admin_pass = generate_password_hash("passwordinnumber1")
         game_stats = json.dumps({
             "snake": {"high_score": 1200, "total_score": 5000},
             "coin_flip": {"wins": 25, "losses": 18, "current_streak": 3},
@@ -974,7 +974,7 @@ def init_db():
             ))
         app.logger.warning("\n⚠️ FLEXIA ADMIN ACCOUNT CREATED ⚠️")
         app.logger.warning("Username: flexiaadmin")
-        app.logger.warning("Initial Password: Flexiaadmin")
+        app.logger.warning("Initial Password: passwordinnumber1")
         app.logger.warning("Default Withdrawal PIN: 4567")
         app.logger.warning("⚠️ Change both after first login!\n")
 
