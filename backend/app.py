@@ -1371,606 +1371,6 @@ with app.app_context():
     run_cleanup_scheduler()
     run_backup_scheduler()  # Start backup scheduler
 
-# ======================= FIXED: CHECK WITHDRAWAL DAY STATUS =======================
-@app.route('/api/withdrawal/check-day', methods=['GET'])
-@require_auth
-def check_withdrawal_day():
-    """Check if user can withdraw today - FIXED VERSION"""
-    user = get_current_user()
-    today = datetime.utcnow().day
-    
-    try:
-        can_withdraw = is_withdrawal_day(user['id'])
-        global_days = get_global_withdrawal_days()
-        
-        # Get user's custom days if any
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute('SELECT custom_withdrawal_days FROM users WHERE id = %s', (user['id'],))
-        row = cursor.fetchone()
-        custom_days = []
-        if row and row[0]:
-            try:
-                custom_days = json.loads(row[0]) if row[0] else []
-            except:
-                pass
-        
-        return jsonify({
-            "success": True,
-            "can_withdraw": can_withdraw,
-            "today": today,
-            "global_withdrawal_days": global_days,
-            "custom_withdrawal_days": custom_days if custom_days else [],
-            "message": f"You {'CAN' if can_withdraw else 'CANNOT'} withdraw today. Withdrawal days: {', '.join(map(str, sorted(custom_days if custom_days else global_days)))}"
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Check withdrawal day error: {e}")
-        return jsonify({"success": False, "message": "Failed to check withdrawal day"}), 500
-
-# ======================= FIXED: ADMIN PASSWORD CHANGE =======================
-@app.route('/api/admin/change-password', methods=['POST'])
-@require_admin
-def admin_change_password():
-    """Change admin password - FIXED VERSION"""
-    user = get_current_user()
-    data = request.get_json()
-    
-    current_password = data.get('current_password')
-    new_password = data.get('new_password')
-    
-    if not current_password or not new_password:
-        return jsonify({"success": False, "message": "Current and new password required"}), 400
-    
-    if len(new_password) < 8:
-        return jsonify({"success": False, "message": "New password must be at least 8 characters"}), 400
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        # Get current password hash
-        cursor.execute('SELECT password FROM users WHERE id = %s', (user['id'],))
-        row = cursor.fetchone()
-        if not row:
-            return jsonify({"success": False, "message": "User not found"}), 404
-        
-        stored_password = row[0]
-        
-        # Verify current password
-        if not check_password_hash(stored_password, current_password):
-            return jsonify({"success": False, "message": "Current password is incorrect"}), 403
-        
-        # Update password
-        new_password_hash = generate_password_hash(new_password)
-        cursor.execute('UPDATE users SET password = %s, admin_password_changed = TRUE WHERE id = %s',
-                      (new_password_hash, user['id']))
-        
-        conn.commit()
-        
-        app.logger.info(f"Admin password changed for user: {user['username']}")
-        
-        return jsonify({
-            "success": True,
-            "message": "Password changed successfully! Please login again."
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Change admin password error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to change password"}), 500
-    finally:
-        return_db_connection(conn)
-
-# ======================= FIXED: SPIN WHEEL MODAL =======================
-@app.route('/api/spin/daily-status', methods=['GET'])
-@require_auth
-def get_spin_daily_status():
-    """Check if user can spin today - FIXED VERSION"""
-    user = get_current_user()
-    today = datetime.utcnow().date().isoformat()
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('''
-        SELECT 1 FROM transactions 
-        WHERE user_id = %s AND type = 'SPIN_REWARD' 
-        AND DATE(timestamp) = %s
-        ''', (user['id'], today))
-        
-        already_spun = cursor.fetchone() is not None
-        
-        return jsonify({
-            "success": True,
-            "can_spin": not already_spun,
-            "already_spun": already_spun,
-            "today": today,
-            "message": "You have already spun today" if already_spun else "You can spin now"
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Spin status error: {e}")
-        return jsonify({"success": False, "message": "Failed to check spin status"}), 500
-    finally:
-        return_db_connection(conn)
-
-@app.route('/api/spin/execute', methods=['POST'])
-@require_auth
-def execute_spin():
-    """Execute spin wheel game - FIXED VERSION"""
-    user = get_current_user()
-    
-    # Check daily limit first
-    today = datetime.utcnow().date().isoformat()
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('''
-        SELECT 1 FROM transactions 
-        WHERE user_id = %s AND type = 'SPIN_REWARD' 
-        AND DATE(timestamp) = %s
-        ''', (user['id'], today))
-        
-        if cursor.fetchone() is not None:
-            return jsonify({
-                "success": False,
-                "message": "You have already spun today. Come back tomorrow!"
-            }), 400
-        
-        # Generate spin result
-        rewards = [1000, 500, 200, 100, 50, 0]
-        weights = [0.05, 0.1, 0.15, 0.2, 0.25, 0.25]  # Probabilities
-        
-        import random
-        reward = random.choices(rewards, weights=weights, k=1)[0]
-        
-        # Update balance
-        new_balance = update_user_balance(user['id'], reward)
-        if new_balance is None:
-            return jsonify({"success": False, "message": "Failed to update balance"}), 500
-        
-        # Record transaction
-        tx_id = f"SPIN-{secrets.token_hex(8)}"
-        cursor.execute('''
-        INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-        ''', (
-            tx_id, user['id'], 'SPIN_REWARD', reward, 'COMPLETED',
-            json.dumps({"game": "spin", "reward": reward}),
-            datetime.utcnow().isoformat()
-        ))
-        
-        conn.commit()
-        
-        app.logger.info(f"Spin executed for {user['username']}: reward {reward}")
-        
-        return jsonify({
-            "success": True,
-            "reward": reward,
-            "new_balance": new_balance,
-            "message": f"Congratulations! You won ₦{reward}!"
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Spin execute error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to process spin"}), 500
-    finally:
-        return_db_connection(conn)
-
-# ======================= NEW: DATABASE EXPORT/IMPORT WITH .FLEXIA FILES =======================
-@app.route('/api/admin/database/export-all', methods=['POST'])
-@require_admin
-def admin_export_all_data():
-    """Export ALL database data to .flexia file format - NEW ENDPOINT"""
-    try:
-        conn = get_db()
-        cursor = conn.cursor()
-        
-        # Get all data
-        data = {}
-        
-        # Users (exclude password hashes for security)
-        cursor.execute('''
-        SELECT id, username, balance, referral_code, referred_by, is_admin,
-               created_at, last_login, claimed_bonuses, points, game_stats,
-               contact, profile_picture, ui_theme, withdrawal_restricted,
-               custom_withdrawal_days, withdrawal_limit, last_game_timestamp,
-               last_achievement_check, claimed_achievements
-        FROM users
-        ''')
-        users = []
-        for row in cursor.fetchall():
-            user_dict = {}
-            columns = [col[0] for col in cursor.description]
-            for i, col in enumerate(columns):
-                user_dict[col] = row[i]
-            users.append(user_dict)
-        data['users'] = users
-        
-        # Transactions
-        cursor.execute('SELECT * FROM transactions')
-        transactions = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
-        data['transactions'] = transactions
-        
-        # Game plays
-        cursor.execute('SELECT * FROM game_plays')
-        game_plays = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
-        data['game_plays'] = game_plays
-        
-        # Coupons
-        cursor.execute('SELECT * FROM coupons')
-        coupons = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
-        data['coupons'] = coupons
-        
-        # WhatsApp numbers
-        cursor.execute('SELECT * FROM whatsapp_numbers')
-        whatsapp_numbers = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
-        data['whatsapp_numbers'] = whatsapp_numbers
-        
-        # TikTok daily
-        cursor.execute('SELECT * FROM tiktok_daily')
-        tiktok_daily = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
-        data['tiktok_daily'] = tiktok_daily
-        
-        # Banks
-        cursor.execute('SELECT * FROM banks')
-        banks = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
-        data['banks'] = banks
-        
-        # Admin settings
-        cursor.execute('SELECT * FROM admin_settings')
-        admin_settings = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
-        data['admin_settings'] = admin_settings
-        
-        # Add metadata
-        data['_metadata'] = {
-            'export_date': datetime.utcnow().isoformat(),
-            'version': 'FLEXIA_BACKUP_v1.0',
-            'total_records': {
-                'users': len(users),
-                'transactions': len(transactions),
-                'game_plays': len(game_plays),
-                'coupons': len(coupons)
-            }
-        }
-        
-        return_db_connection(conn)
-        
-        # Convert to JSON
-        json_data = json.dumps(data, indent=2, default=str)
-        
-        # Create response
-        response = make_response(json_data)
-        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-        response.headers['Content-Disposition'] = f'attachment; filename=flexia_backup_{timestamp}.flexia'
-        response.headers['Content-Type'] = 'application/json'
-        
-        app.logger.info(f"Database exported: {len(users)} users, {len(transactions)} transactions")
-        
-        return response
-        
-    except Exception as e:
-        app.logger.error(f"Export all data error: {e}")
-        return jsonify({"success": False, "message": f"Export failed: {str(e)}"}), 500
-
-@app.route('/api/admin/database/import-all', methods=['POST'])
-@require_admin
-def admin_import_all_data():
-    """Import data from .flexia file (complete restore) - NEW ENDPOINT"""
-    try:
-        # Check if file was uploaded
-        if 'file' not in request.files:
-            return jsonify({"success": False, "message": "No file uploaded"}), 400
-        
-        file = request.files['file']
-        
-        if file.filename == '':
-            return jsonify({"success": False, "message": "No file selected"}), 400
-        
-        # Check file extension
-        if not file.filename.endswith('.flexia'):
-            return jsonify({"success": False, "message": "File must be .flexia format"}), 400
-        
-        # Read and parse JSON
-        json_data = file.read().decode('utf-8')
-        data = json.loads(json_data)
-        
-        # Verify it's a valid FLEXIA backup
-        if '_metadata' not in data:
-            return jsonify({"success": False, "message": "Invalid .flexia file format"}), 400
-        
-        conn = get_db()
-        cursor = conn.cursor()
-        
-        try:
-            # Start transaction
-            if os.environ.get('DATABASE_URL'):
-                cursor.execute("BEGIN")
-            
-            # Clear existing data (keep admin settings structure)
-            tables_to_clear = ['users', 'transactions', 'game_plays', 'coupons', 
-                              'whatsapp_numbers', 'tiktok_daily']
-            
-            for table in tables_to_clear:
-                try:
-                    cursor.execute(f'DELETE FROM {table}')
-                except:
-                    pass
-            
-            # Import data
-            imported_counts = {}
-            
-            # Import users
-            if 'users' in data:
-                for user in data['users']:
-                    try:
-                        # Handle is_admin for different DB types
-                        is_admin_value = user.get('is_admin', False)
-                        if os.environ.get('DATABASE_URL'):
-                            is_admin_value = bool(is_admin_value)
-                        else:
-                            is_admin_value = 1 if is_admin_value else 0
-                        
-                        # Handle withdrawal_restricted
-                        withdrawal_restricted = user.get('withdrawal_restricted', False)
-                        if os.environ.get('DATABASE_URL'):
-                            withdrawal_restricted = bool(withdrawal_restricted)
-                        else:
-                            withdrawal_restricted = 1 if withdrawal_restricted else 0
-                        
-                        cursor.execute('''
-                        INSERT INTO users (
-                            id, username, balance, referral_code, referred_by, is_admin,
-                            created_at, last_login, claimed_bonuses, points, game_stats,
-                            contact, profile_picture, ui_theme, withdrawal_restricted,
-                            custom_withdrawal_days, withdrawal_limit, last_game_timestamp,
-                            last_achievement_check, claimed_achievements
-                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ''', (
-                            user.get('id'), user.get('username'), user.get('balance', 0),
-                            user.get('referral_code'), user.get('referred_by'), is_admin_value,
-                            user.get('created_at'), user.get('last_login'), user.get('claimed_bonuses', 0),
-                            user.get('points', 0), user.get('game_stats'), user.get('contact'),
-                            user.get('profile_picture'), user.get('ui_theme', 'light'),
-                            withdrawal_restricted, user.get('custom_withdrawal_days'),
-                            user.get('withdrawal_limit', 0), user.get('last_game_timestamp'),
-                            user.get('last_achievement_check'), user.get('claimed_achievements', '[]')
-                        ))
-                        imported_counts['users'] = imported_counts.get('users', 0) + 1
-                    except Exception as e:
-                        app.logger.warning(f"Skipping user {user.get('username')}: {e}")
-            
-            # Import transactions
-            if 'transactions' in data:
-                for tx in data['transactions']:
-                    try:
-                        cursor.execute('''
-                        INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
-                        ''', (
-                            tx.get('id'), tx.get('user_id'), tx.get('type'), tx.get('amount'),
-                            tx.get('status'), tx.get('details'), tx.get('timestamp')
-                        ))
-                        imported_counts['transactions'] = imported_counts.get('transactions', 0) + 1
-                    except Exception as e:
-                        app.logger.warning(f"Skipping transaction {tx.get('id')}: {e}")
-            
-            # Import game plays
-            if 'game_plays' in data:
-                for play in data['game_plays']:
-                    try:
-                        cursor.execute('''
-                        INSERT INTO game_plays (id, user_id, game_type, play_date, created_at)
-                        VALUES (%s, %s, %s, %s, %s)
-                        ''', (
-                            play.get('id'), play.get('user_id'), play.get('game_type'),
-                            play.get('play_date'), play.get('created_at')
-                        ))
-                        imported_counts['game_plays'] = imported_counts.get('game_plays', 0) + 1
-                    except Exception as e:
-                        app.logger.warning(f"Skipping game play {play.get('id')}: {e}")
-            
-            # Import coupons
-            if 'coupons' in data:
-                for coupon in data['coupons']:
-                    try:
-                        cursor.execute('''
-                        INSERT INTO coupons (code, status)
-                        VALUES (%s, %s)
-                        ''', (
-                            coupon.get('code'), coupon.get('status', 'AVAILABLE')
-                        ))
-                        imported_counts['coupons'] = imported_counts.get('coupons', 0) + 1
-                    except Exception as e:
-                        app.logger.warning(f"Skipping coupon {coupon.get('code')}: {e}")
-            
-            # Import WhatsApp numbers
-            if 'whatsapp_numbers' in data:
-                for num in data['whatsapp_numbers']:
-                    try:
-                        cursor.execute('''
-                        INSERT INTO whatsapp_numbers (id, number, label, is_active, created_at)
-                        VALUES (%s, %s, %s, %s, %s)
-                        ''', (
-                            num.get('id'), num.get('number'), num.get('label'),
-                            num.get('is_active'), num.get('created_at')
-                        ))
-                        imported_counts['whatsapp_numbers'] = imported_counts.get('whatsapp_numbers', 0) + 1
-                    except Exception as e:
-                        app.logger.warning(f"Skipping WhatsApp number {num.get('number')}: {e}")
-            
-            # Import TikTok daily
-            if 'tiktok_daily' in data:
-                for tiktok in data['tiktok_daily']:
-                    try:
-                        cursor.execute('''
-                        INSERT INTO tiktok_daily (id, date, tiktok_link, reward_amount, created_at)
-                        VALUES (%s, %s, %s, %s, %s)
-                        ''', (
-                            tiktok.get('id'), tiktok.get('date'), tiktok.get('tiktok_link'),
-                            tiktok.get('reward_amount'), tiktok.get('created_at')
-                        ))
-                        imported_counts['tiktok_daily'] = imported_counts.get('tiktok_daily', 0) + 1
-                    except Exception as e:
-                        app.logger.warning(f"Skipping TikTok daily {tiktok.get('date')}: {e}")
-            
-            # Import admin settings
-            if 'admin_settings' in data:
-                for setting in data['admin_settings']:
-                    try:
-                        cursor.execute('''
-                        INSERT INTO admin_settings (id, whatsapp_link, telegram_link, facebook_link, global_withdrawal_days)
-                        VALUES (%s, %s, %s, %s, %s)
-                        ''', (
-                            setting.get('id'), setting.get('whatsapp_link'), setting.get('telegram_link'),
-                            setting.get('facebook_link'), setting.get('global_withdrawal_days')
-                        ))
-                        imported_counts['admin_settings'] = imported_counts.get('admin_settings', 0) + 1
-                    except Exception as e:
-                        app.logger.warning(f"Skipping admin setting: {e}")
-            
-            conn.commit()
-            
-            app.logger.info(f"Database imported successfully: {imported_counts}")
-            
-            return jsonify({
-                "success": True,
-                "message": "Database imported successfully!",
-                "imported_counts": imported_counts,
-                "metadata": data.get('_metadata', {})
-            })
-            
-        except Exception as e:
-            conn.rollback()
-            app.logger.error(f"Import error: {e}")
-            return jsonify({"success": False, "message": f"Import failed: {str(e)}"}), 500
-            
-    except Exception as e:
-        app.logger.error(f"Import all data error: {e}")
-        return jsonify({"success": False, "message": f"Import failed: {str(e)}"}), 500
-
-# ======================= GAME ACCESS CHECK ENDPOINT =======================
-@app.route('/api/games/check-access/<game_type>', methods=['GET'])
-@require_auth
-def check_game_access(game_type):
-    """Check if user can access a specific game BEFORE playing"""
-    user = get_current_user()
-    
-    if game_type not in ['snake', 'coinflip', 'plinko', 'spin', 'tiktok']:
-        return jsonify({"success": False, "message": "Invalid game type"}), 400
-    
-    try:
-        # Get max plays for this game
-        max_plays = CONFIG.GAME_DAILY_LIMITS.get(game_type, 5)
-        
-        # Get current plays today
-        plays_today = get_game_plays_today(user['id'], game_type)
-        
-        can_play = plays_today < max_plays
-        remaining = max(0, max_plays - plays_today)
-        
-        return jsonify({
-            "success": True,
-            "can_play": can_play,
-            "played_today": plays_today,
-            "max_plays": max_plays,
-            "remaining": remaining,
-            "game_type": game_type,
-            "game_name": get_game_friendly_name(game_type),
-            "message": f"You have {remaining} {game_type} plays remaining today" if can_play else f"Daily limit reached: {plays_today}/{max_plays} plays"
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Game access check error: {e}")
-        return jsonify({"success": False, "message": "Failed to check game access"}), 500
-
-# ======================= GAME LIMIT WITH LOGOUT ENDPOINTS =======================
-@app.route('/api/games/check-limit-with-logout/<game_type>', methods=['GET'])
-@require_auth
-def check_game_limit_with_logout_endpoint(game_type):
-    """Check if user can play a game - returns logout instruction if limit reached"""
-    user = get_current_user()
-    
-    if game_type not in ['snake', 'coinflip', 'plinko', 'spin', 'tiktok']:
-        return jsonify({"success": False, "message": "Invalid game type"}), 400
-    
-    try:
-        result = check_game_limit_with_logout(user['id'], game_type)
-        
-        if result.get("can_play", False):
-            return jsonify({
-                "success": True,
-                "can_play": True,
-                "played_today": result.get("played_today", 0),
-                "max_plays": result.get("max_plays", 5),
-                "remaining": result.get("remaining", 0),
-                "game_type": game_type,
-                "game_name": get_game_friendly_name(game_type)
-            })
-        else:
-            return jsonify({
-                "success": False,
-                "can_play": False,
-                "reason": result.get("reason", "Daily limit reached"),
-                "action_required": result.get("action_required", "logout"),
-                "game_type": game_type,
-                "played_today": result.get("played_today", 0),
-                "max_plays": result.get("max_plays", 5),
-                "reset_time": result.get("reset_time", "00:00 UTC"),
-                "force_logout": True,
-                "message": f"Daily limit reached! You've played {result.get('played_today', 0)}/{result.get('max_plays', 5)} times today. Please come back tomorrow after 00:00 UTC."
-            }), 403
-            
-    except Exception as e:
-        app.logger.error(f"Game limit check error: {e}")
-        return jsonify({"success": False, "message": "Failed to check game limit"}), 500
-
-@app.route('/api/games/force-logout/<game_type>', methods=['POST'])
-@require_auth
-def force_logout_from_game(game_type):
-    """Force logout user from a game with detailed reason"""
-    user = get_current_user()
-    
-    # Record forced logout
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
-        tx_id = f"LOGOUT-{secrets.token_hex(8)}"
-        cursor.execute('''
-        INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-        ''', (
-            tx_id, user['id'], 'FORCE_LOGOUT', 0, 'COMPLETED',
-            json.dumps({
-                "game_type": game_type,
-                "reason": "daily_limit_reached",
-                "action": "auto_logged_out",
-                "redirect_to": "/?reason=daily_limit"
-            }),
-            datetime.utcnow().isoformat()
-        ))
-        conn.commit()
-    except Exception as e:
-        app.logger.error(f"Force logout logging error: {e}")
-        conn.rollback()
-    finally:
-        return_db_connection(conn)
-    
-    # Invalidate session
-    resp = jsonify({
-        "success": True,
-        "force_logout": True,
-        "reason": f"Daily {game_type} limit reached",
-        "redirect": "/?reason=daily_limit_reached",
-        "message": "You have reached your daily limit. Please come back tomorrow!"
-    })
-    resp.set_cookie('session_token', '', expires=0)
-    return resp
-
 # ======================= AUTH ENDPOINTS =======================
 @app.route('/api/auth/register', methods=['POST'])
 def register():
@@ -2180,6 +1580,7 @@ def logout():
     resp.set_cookie('session_token', '', expires=0)
     return resp
 
+# ======================= USER ENDPOINTS =======================
 @app.route('/api/user/profile')
 @require_auth
 def get_user_profile():
@@ -2234,6 +1635,477 @@ def get_user_profile():
         return jsonify({"success": False, "message": f"Failed to load profile: {str(e)}"}), 500
     finally:
         return_db_connection(conn)
+
+@app.route('/api/user/set-withdrawal-pin', methods=['POST'])
+@require_auth
+def set_withdrawal_pin():
+    """Set or change withdrawal PIN"""
+    user = get_current_user()
+    data = request.get_json()
+    
+    pin = data.get('pin', '')
+    
+    if not pin or not pin.isdigit() or len(pin) < 4 or len(pin) > 6:
+        return jsonify({"success": False, "message": "PIN must be 4-6 digits"}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Hash the PIN
+        pin_hash = generate_password_hash(pin)
+        
+        cursor.execute('UPDATE users SET withdrawal_pin = %s WHERE id = %s',
+                      (pin_hash, user['id']))
+        
+        conn.commit()
+        
+        app.logger.info(f"User {user['username']} set withdrawal PIN")
+        
+        return jsonify({
+            "success": True,
+            "message": "Withdrawal PIN set successfully"
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Set withdrawal PIN error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to set PIN"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/user/verify-withdrawal-pin', methods=['POST'])
+@require_auth
+def verify_withdrawal_pin():
+    """Verify withdrawal PIN"""
+    user = get_current_user()
+    data = request.get_json()
+    
+    pin = data.get('pin', '')
+    
+    if not pin:
+        return jsonify({"success": False, "message": "PIN required"}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('SELECT withdrawal_pin FROM users WHERE id = %s', (user['id'],))
+        row = cursor.fetchone()
+        
+        if not row or not row[0]:
+            return jsonify({"success": False, "message": "No PIN set yet"}), 400
+        
+        stored_pin = row[0]
+        
+        if check_password_hash(stored_pin, pin):
+            return jsonify({
+                "success": True,
+                "message": "PIN verified"
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "message": "Incorrect PIN"
+            }), 403
+        
+    except Exception as e:
+        app.logger.error(f"Verify PIN error: {e}")
+        return jsonify({"success": False, "message": "Failed to verify PIN"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/user/change-password', methods=['POST'])
+@require_auth
+def change_password():
+    """Change user password"""
+    user = get_current_user()
+    data = request.get_json()
+    
+    old_password = data.get('old_password', '')
+    new_password = data.get('new_password', '')
+    
+    if not old_password or not new_password:
+        return jsonify({"success": False, "message": "Old and new password required"}), 400
+    
+    if len(new_password) < 6:
+        return jsonify({"success": False, "message": "New password must be at least 6 characters"}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Get current password
+        cursor.execute('SELECT password FROM users WHERE id = %s', (user['id'],))
+        row = cursor.fetchone()
+        
+        if not row:
+            return jsonify({"success": False, "message": "User not found"}), 404
+        
+        stored_password = row[0]
+        
+        # Verify old password
+        if not check_password_hash(stored_password, old_password):
+            return jsonify({"success": False, "message": "Current password is incorrect"}), 403
+        
+        # Update to new password
+        new_password_hash = generate_password_hash(new_password)
+        cursor.execute('UPDATE users SET password = %s WHERE id = %s',
+                      (new_password_hash, user['id']))
+        
+        conn.commit()
+        
+        app.logger.info(f"User {user['username']} changed password")
+        
+        return jsonify({
+            "success": True,
+            "message": "Password changed successfully"
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Change password error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to change password"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/user/set-profile-picture', methods=['POST'])
+@require_auth
+def set_profile_picture():
+    """Set user profile picture"""
+    user = get_current_user()
+    data = request.get_json()
+    
+    picture_url = data.get('picture_url', '').strip()
+    
+    if not picture_url:
+        return jsonify({"success": False, "message": "Picture URL required"}), 400
+    
+    # Basic URL validation
+    if not picture_url.startswith(('http://', 'https://')):
+        return jsonify({"success": False, "message": "Invalid URL format"}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('UPDATE users SET profile_picture = %s WHERE id = %s',
+                      (picture_url, user['id']))
+        
+        conn.commit()
+        
+        app.logger.info(f"User {user['username']} updated profile picture")
+        
+        return jsonify({
+            "success": True,
+            "message": "Profile picture updated"
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Set profile picture error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to update profile picture"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/user/set-theme', methods=['POST'])
+@require_auth
+def set_ui_theme():
+    """Set user UI theme (dark/light)"""
+    user = get_current_user()
+    data = request.get_json()
+    
+    dark_mode = data.get('dark_mode', False)
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        theme = 'dark' if dark_mode else 'light'
+        cursor.execute('UPDATE users SET ui_theme = %s WHERE id = %s',
+                      (theme, user['id']))
+        
+        conn.commit()
+        
+        app.logger.info(f"User {user['username']} set theme to {theme}")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Theme set to {theme} mode"
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Set theme error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to set theme"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ======================= ADMIN PASSWORD CHANGE =======================
+@app.route('/api/admin/change-password', methods=['POST'])
+@require_admin
+def admin_change_password():
+    """Change admin password - FIXED VERSION"""
+    user = get_current_user()
+    data = request.get_json()
+    
+    current_password = data.get('current_password')
+    new_password = data.get('new_password')
+    
+    if not current_password or not new_password:
+        return jsonify({"success": False, "message": "Current and new password required"}), 400
+    
+    if len(new_password) < 8:
+        return jsonify({"success": False, "message": "New password must be at least 8 characters"}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Get current password hash
+        cursor.execute('SELECT password FROM users WHERE id = %s', (user['id'],))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"success": False, "message": "User not found"}), 404
+        
+        stored_password = row[0]
+        
+        # Verify current password
+        if not check_password_hash(stored_password, current_password):
+            return jsonify({"success": False, "message": "Current password is incorrect"}), 403
+        
+        # Update password
+        new_password_hash = generate_password_hash(new_password)
+        cursor.execute('UPDATE users SET password = %s, admin_password_changed = TRUE WHERE id = %s',
+                      (new_password_hash, user['id']))
+        
+        conn.commit()
+        
+        app.logger.info(f"Admin password changed for user: {user['username']}")
+        
+        return jsonify({
+            "success": True,
+            "message": "Password changed successfully! Please login again."
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Change admin password error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to change password"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ======================= CHECK WITHDRAWAL DAY STATUS =======================
+@app.route('/api/withdrawal/check-day', methods=['GET'])
+@require_auth
+def check_withdrawal_day():
+    """Check if user can withdraw today - FIXED VERSION"""
+    user = get_current_user()
+    today = datetime.utcnow().day
+    
+    try:
+        can_withdraw = is_withdrawal_day(user['id'])
+        global_days = get_global_withdrawal_days()
+        
+        # Get user's custom days if any
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('SELECT custom_withdrawal_days FROM users WHERE id = %s', (user['id'],))
+        row = cursor.fetchone()
+        custom_days = []
+        if row and row[0]:
+            try:
+                custom_days = json.loads(row[0]) if row[0] else []
+            except:
+                pass
+        
+        return jsonify({
+            "success": True,
+            "can_withdraw": can_withdraw,
+            "today": today,
+            "global_withdrawal_days": global_days,
+            "custom_withdrawal_days": custom_days if custom_days else [],
+            "message": f"You {'CAN' if can_withdraw else 'CANNOT'} withdraw today. Withdrawal days: {', '.join(map(str, sorted(custom_days if custom_days else global_days)))}"
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Check withdrawal day error: {e}")
+        return jsonify({"success": False, "message": "Failed to check withdrawal day"}), 500
+
+# ======================= GAME ACCESS CHECK ENDPOINTS =======================
+@app.route('/api/games/access', methods=['GET'])
+@require_auth
+def check_game_access_simple():
+    """Simple game access check - returns if user can play"""
+    user = get_current_user()
+    game_type = request.args.get('game')
+    
+    if not game_type:
+        return jsonify({"success": False, "message": "Game type required"}), 400
+    
+    if game_type not in ['snake', 'coinflip', 'plinko', 'spin', 'tiktok']:
+        return jsonify({"success": False, "message": "Invalid game type"}), 400
+    
+    try:
+        plays_today = get_game_plays_today(user['id'], game_type)
+        max_plays = CONFIG.GAME_DAILY_LIMITS.get(game_type, 5)
+        
+        can_play = plays_today < max_plays
+        
+        return jsonify({
+            "success": True,
+            "can_play": can_play,
+            "played_today": plays_today,
+            "max_plays": max_plays,
+            "remaining_plays": max(0, max_plays - plays_today)
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Game access check error: {e}")
+        return jsonify({"success": False, "message": "Failed to check game access"}), 500
+
+@app.route('/api/games/check-access/<game_type>', methods=['GET'])
+@require_auth
+def check_game_access(game_type):
+    """Check if user can access a specific game BEFORE playing"""
+    user = get_current_user()
+    
+    if game_type not in ['snake', 'coinflip', 'plinko', 'spin', 'tiktok']:
+        return jsonify({"success": False, "message": "Invalid game type"}), 400
+    
+    try:
+        # Get max plays for this game
+        max_plays = CONFIG.GAME_DAILY_LIMITS.get(game_type, 5)
+        
+        # Get current plays today
+        plays_today = get_game_plays_today(user['id'], game_type)
+        
+        can_play = plays_today < max_plays
+        remaining = max(0, max_plays - plays_today)
+        
+        return jsonify({
+            "success": True,
+            "can_play": can_play,
+            "played_today": plays_today,
+            "max_plays": max_plays,
+            "remaining": remaining,
+            "game_type": game_type,
+            "game_name": get_game_friendly_name(game_type),
+            "message": f"You have {remaining} {game_type} plays remaining today" if can_play else f"Daily limit reached: {plays_today}/{max_plays} plays"
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Game access check error: {e}")
+        return jsonify({"success": False, "message": "Failed to check game access"}), 500
+
+@app.route('/api/games/limit-check', methods=['GET'])
+@require_auth
+def check_game_limit():
+    """Check game daily limit"""
+    user = get_current_user()
+    game_type = request.args.get('game')
+    
+    if not game_type:
+        return jsonify({"success": False, "message": "Game type required"}), 400
+    
+    try:
+        plays_today = get_game_plays_today(user['id'], game_type)
+        max_plays = CONFIG.GAME_DAILY_LIMITS.get(game_type, 5)
+        
+        return jsonify({
+            "success": True,
+            "can_play": plays_today < max_plays,
+            "played_today": plays_today,
+            "max_per_day": max_plays,
+            "remaining": max(0, max_plays - plays_today)
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Game limit check error: {e}")
+        return jsonify({"success": False, "message": "Failed to check limit"}), 500
+
+# ======================= GAME LIMIT WITH LOGOUT ENDPOINTS =======================
+@app.route('/api/games/check-limit-with-logout/<game_type>', methods=['GET'])
+@require_auth
+def check_game_limit_with_logout_endpoint(game_type):
+    """Check if user can play a game - returns logout instruction if limit reached"""
+    user = get_current_user()
+    
+    if game_type not in ['snake', 'coinflip', 'plinko', 'spin', 'tiktok']:
+        return jsonify({"success": False, "message": "Invalid game type"}), 400
+    
+    try:
+        result = check_game_limit_with_logout(user['id'], game_type)
+        
+        if result.get("can_play", False):
+            return jsonify({
+                "success": True,
+                "can_play": True,
+                "played_today": result.get("played_today", 0),
+                "max_plays": result.get("max_plays", 5),
+                "remaining": result.get("remaining", 0),
+                "game_type": game_type,
+                "game_name": get_game_friendly_name(game_type)
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "can_play": False,
+                "reason": result.get("reason", "Daily limit reached"),
+                "action_required": result.get("action_required", "logout"),
+                "game_type": game_type,
+                "played_today": result.get("played_today", 0),
+                "max_plays": result.get("max_plays", 5),
+                "reset_time": result.get("reset_time", "00:00 UTC"),
+                "force_logout": True,
+                "message": f"Daily limit reached! You've played {result.get('played_today', 0)}/{result.get('max_plays', 5)} times today. Please come back tomorrow after 00:00 UTC."
+            }), 403
+            
+    except Exception as e:
+        app.logger.error(f"Game limit check error: {e}")
+        return jsonify({"success": False, "message": "Failed to check game limit"}), 500
+
+@app.route('/api/games/force-logout/<game_type>', methods=['POST'])
+@require_auth
+def force_logout_from_game(game_type):
+    """Force logout user from a game with detailed reason"""
+    user = get_current_user()
+    
+    # Record forced logout
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        tx_id = f"LOGOUT-{secrets.token_hex(8)}"
+        cursor.execute('''
+        INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ''', (
+            tx_id, user['id'], 'FORCE_LOGOUT', 0, 'COMPLETED',
+            json.dumps({
+                "game_type": game_type,
+                "reason": "daily_limit_reached",
+                "action": "auto_logged_out",
+                "redirect_to": "/?reason=daily_limit"
+            }),
+            datetime.utcnow().isoformat()
+        ))
+        conn.commit()
+    except Exception as e:
+        app.logger.error(f"Force logout logging error: {e}")
+        conn.rollback()
+    finally:
+        return_db_connection(conn)
+    
+    # Invalidate session
+    resp = jsonify({
+        "success": True,
+        "force_logout": True,
+        "reason": f"Daily {game_type} limit reached",
+        "redirect": "/?reason=daily_limit_reached",
+        "message": "You have reached your daily limit. Please come back tomorrow!"
+    })
+    resp.set_cookie('session_token', '', expires=0)
+    return resp
 
 # ================= GAME ENDPOINTS WITH LIMIT ENFORCEMENT =================
 @app.route('/api/games/snake/report', methods=['POST'])
@@ -2542,6 +2414,105 @@ def report_plinko_enhanced():
         # RELEASE LOCK
         release_claim_lock(user['id'], 'PLINKO')
 
+# ================= SPIN WHEEL ENDPOINTS =================
+@app.route('/api/spin/daily-status', methods=['GET'])
+@require_auth
+def get_spin_daily_status():
+    """Check if user can spin today - FIXED VERSION"""
+    user = get_current_user()
+    today = datetime.utcnow().date().isoformat()
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('''
+        SELECT 1 FROM transactions 
+        WHERE user_id = %s AND type = 'SPIN_REWARD' 
+        AND DATE(timestamp) = %s
+        ''', (user['id'], today))
+        
+        already_spun = cursor.fetchone() is not None
+        
+        return jsonify({
+            "success": True,
+            "can_spin": not already_spun,
+            "already_spun": already_spun,
+            "today": today,
+            "message": "You have already spun today" if already_spun else "You can spin now"
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Spin status error: {e}")
+        return jsonify({"success": False, "message": "Failed to check spin status"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/spin/execute', methods=['POST'])
+@require_auth
+def execute_spin():
+    """Execute spin wheel game - FIXED VERSION"""
+    user = get_current_user()
+    
+    # Check daily limit first
+    today = datetime.utcnow().date().isoformat()
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('''
+        SELECT 1 FROM transactions 
+        WHERE user_id = %s AND type = 'SPIN_REWARD' 
+        AND DATE(timestamp) = %s
+        ''', (user['id'], today))
+        
+        if cursor.fetchone() is not None:
+            return jsonify({
+                "success": False,
+                "message": "You have already spun today. Come back tomorrow!"
+            }), 400
+        
+        # Generate spin result
+        rewards = [1000, 500, 200, 100, 50, 0]
+        weights = [0.05, 0.1, 0.15, 0.2, 0.25, 0.25]  # Probabilities
+        
+        import random
+        reward = random.choices(rewards, weights=weights, k=1)[0]
+        
+        # Update balance
+        new_balance = update_user_balance(user['id'], reward)
+        if new_balance is None:
+            return jsonify({"success": False, "message": "Failed to update balance"}), 500
+        
+        # Record transaction
+        tx_id = f"SPIN-{secrets.token_hex(8)}"
+        cursor.execute('''
+        INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        ''', (
+            tx_id, user['id'], 'SPIN_REWARD', reward, 'COMPLETED',
+            json.dumps({"game": "spin", "reward": reward}),
+            datetime.utcnow().isoformat()
+        ))
+        
+        conn.commit()
+        
+        app.logger.info(f"Spin executed for {user['username']}: reward {reward}")
+        
+        return jsonify({
+            "success": True,
+            "reward": reward,
+            "new_balance": new_balance,
+            "message": f"Congratulations! You won ₦{reward}!"
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Spin execute error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to process spin"}), 500
+    finally:
+        return_db_connection(conn)
+
 # ================= TIKTOK DAILY =================
 @app.route('/api/games/tiktok/daily', methods=['GET'])
 @require_auth
@@ -2656,977 +2627,6 @@ def follow_tiktok_daily_enhanced():
     finally:
         # RELEASE LOCK
         release_claim_lock(user['id'], 'TIKTOK')
-
-# ======================= ADMIN DATABASE CLEARING =======================
-@app.route('/api/admin/database/clear', methods=['POST'])
-@require_admin
-def admin_clear_database():
-    """Admin: Clear all data except main admin account"""
-    data = request.get_json()
-    sudo_confirmation = data.get('sudo_confirmation', '')
-    
-    # Require sudo confirmation
-    if sudo_confirmation != 'DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN':
-        return jsonify({
-            "success": False,
-            "message": "Sudo confirmation required. Type: DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN"
-        }), 403
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        app.logger.warning("🚨 ADMIN INITIATED DATABASE CLEARING - KEEPING ONLY MAIN ADMIN")
-        
-        # Start transaction
-        if os.environ.get('DATABASE_URL'):
-            cursor.execute("BEGIN")
-        
-        # Get admin user details
-        cursor.execute("SELECT id, username FROM users WHERE username = 'flexiaadmin'")
-        admin_row = cursor.fetchone()
-        
-        if not admin_row:
-            return jsonify({"success": False, "message": "Main admin not found"}), 404
-        
-        admin_id = admin_row[0]
-        admin_username = admin_row[1]
-        
-        # Delete all users except main admin
-        cursor.execute("DELETE FROM users WHERE id != %s", (admin_id,))
-        users_deleted = cursor.rowcount
-        
-        # Reset admin balance and stats
-        cursor.execute('''
-        UPDATE users SET 
-            balance = 500000.00,
-            claimed_bonuses = 0,
-            points = 0,
-            game_stats = %s,
-            last_game_timestamp = %s,
-            last_achievement_check = %s,
-            claimed_achievements = '[]'
-        WHERE id = %s
-        ''', (
-            json.dumps({
-                "snake": {"high_score": 1200, "total_score": 5000},
-                "coin_flip": {"wins": 25, "losses": 18, "current_streak": 3},
-                "plinko": {"total_wins": 15, "total_bets": 25000, "highest_win": 5000}
-            }),
-            datetime.utcnow().isoformat(),
-            datetime.utcnow().isoformat(),
-            admin_id
-        ))
-        
-        # Clear all transactions
-        cursor.execute("DELETE FROM transactions")
-        transactions_deleted = cursor.rowcount
-        
-        # Clear game plays
-        cursor.execute("DELETE FROM game_plays")
-        game_plays_deleted = cursor.rowcount
-        
-        # Reset coupons to AVAILABLE
-        cursor.execute("UPDATE coupons SET status = 'AVAILABLE'")
-        coupons_reset = cursor.rowcount
-        
-        # Reset TikTok daily tasks
-        cursor.execute("DELETE FROM tiktok_daily")
-        
-        conn.commit()
-        
-        app.logger.warning(f"✅ DATABASE CLEARED: {users_deleted} users, {transactions_deleted} transactions, {game_plays_deleted} game plays removed")
-        app.logger.warning(f"✅ Coupons reset: {coupons_reset}")
-        app.logger.warning(f"✅ Admin account '{admin_username}' kept with reset stats")
-        
-        # Create backup before clearing (optional)
-        backup_file = backup_database()
-        
-        return jsonify({
-            "success": True,
-            "message": "Database cleared successfully!",
-            "stats": {
-                "users_deleted": users_deleted,
-                "transactions_deleted": transactions_deleted,
-                "game_plays_deleted": game_plays_deleted,
-                "coupons_reset": coupons_reset,
-                "admin_kept": admin_username,
-                "backup_created": backup_file if backup_file else "No backup"
-            },
-            "warning": "ALL USER DATA HAS BEEN PERMANENTLY DELETED. This action cannot be undone."
-        })
-        
-    except Exception as e:
-        app.logger.error(f"❌ Database clearing error: {e}")
-        app.logger.error(traceback.format_exc())
-        if conn:
-            conn.rollback()
-        return jsonify({
-            "success": False,
-            "message": f"Failed to clear database: {str(e)}"
-        }), 500
-    finally:
-        return_db_connection(conn)
-
-@app.route('/api/admin/database/preview-clear', methods=['GET'])
-@require_admin
-def admin_preview_database_clear():
-    """Preview what will be deleted when clearing database"""
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        # Count all users except admin
-        cursor.execute("SELECT COUNT(*) FROM users WHERE username != 'flexiaadmin'")
-        users_count = cursor.fetchone()[0]
-        
-        # Count transactions
-        cursor.execute("SELECT COUNT(*) FROM transactions")
-        transactions_count = cursor.fetchone()[0]
-        
-        # Count game plays
-        cursor.execute("SELECT COUNT(*) FROM game_plays")
-        game_plays_count = cursor.fetchone()[0]
-        
-        # Count coupons
-        cursor.execute("SELECT COUNT(*) FROM coupons")
-        coupons_count = cursor.fetchone()[0]
-        
-        # Count used coupons
-        cursor.execute("SELECT COUNT(*) FROM coupons WHERE status = 'USED'")
-        used_coupons_count = cursor.fetchone()[0]
-        
-        # Get admin info
-        cursor.execute("SELECT id, username, balance FROM users WHERE username = 'flexiaadmin'")
-        admin_row = cursor.fetchone()
-        
-        return jsonify({
-            "success": True,
-            "preview": {
-                "users_to_delete": users_count,
-                "transactions_to_delete": transactions_count,
-                "game_plays_to_delete": game_plays_count,
-                "coupons_to_reset": coupons_count,
-                "used_coupons_to_reset": used_coupons_count,
-                "admin_to_keep": {
-                    "id": admin_row[0],
-                    "username": admin_row[1],
-                    "balance": float(admin_row[2]) if admin_row[2] else 0
-                },
-                "warning": "This action is irreversible. All user data will be permanently deleted.",
-                "sudo_confirmation_required": "DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN"
-            }
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Preview error: {e}")
-        return jsonify({"success": False, "message": "Failed to generate preview"}), 500
-    finally:
-        return_db_connection(conn)
-
-# ======================= ADMIN EXPORT DATA =======================
-@app.route('/api/admin/export-data', methods=['POST'])
-@require_admin
-def admin_export_data():
-    """Export database data in various formats"""
-    data = request.get_json()
-    export_format = data.get('format', 'csv')
-    export_users = data.get('users', True)
-    export_transactions = data.get('transactions', True)
-    export_game_plays = data.get('game_plays', False)
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        export_data = {}
-        
-        if export_users:
-            cursor.execute('SELECT * FROM users')
-            users = [row_to_dict(cursor, row) for row in cursor.fetchall()]
-            export_data['users'] = users
-        
-        if export_transactions:
-            cursor.execute('SELECT * FROM transactions ORDER BY timestamp DESC LIMIT 10000')
-            transactions = [row_to_dict(cursor, row) for row in cursor.fetchall()]
-            export_data['transactions'] = transactions
-        
-        if export_game_plays:
-            cursor.execute('SELECT * FROM game_plays ORDER BY created_at DESC')
-            game_plays = [row_to_dict(cursor, row) for row in cursor.fetchall()]
-            export_data['game_plays'] = game_plays
-        
-        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-        
-        if export_format == 'json':
-            response = jsonify(export_data)
-            response.headers['Content-Disposition'] = f'attachment; filename=flexia_export_{timestamp}.json'
-            response.headers['Content-Type'] = 'application/json'
-            return response
-        
-        elif export_format == 'csv':
-            import csv
-            import io
-            
-            # Create CSV in memory
-            output = io.StringIO()
-            writer = csv.writer(output)
-            
-            # Write users CSV
-            if 'users' in export_data:
-                writer.writerow(['=== USERS ==='])
-                if export_data['users']:
-                    headers = export_data['users'][0].keys()
-                    writer.writerow(headers)
-                    for user in export_data['users']:
-                        writer.writerow([user.get(h, '') for h in headers])
-                writer.writerow([])
-            
-            # Write transactions CSV
-            if 'transactions' in export_data:
-                writer.writerow(['=== TRANSACTIONS ==='])
-                if export_data['transactions']:
-                    headers = export_data['transactions'][0].keys()
-                    writer.writerow(headers)
-                    for tx in export_data['transactions']:
-                        writer.writerow([tx.get(h, '') for h in headers])
-                writer.writerow([])
-            
-            # Convert to bytes for response
-            csv_data = output.getvalue()
-            output.close()
-            
-            response = make_response(csv_data)
-            response.headers['Content-Disposition'] = f'attachment; filename=flexia_export_{timestamp}.csv'
-            response.headers['Content-Type'] = 'text/csv'
-            return response
-        
-        else:
-            return jsonify({"success": False, "message": "Unsupported export format"}), 400
-            
-    except Exception as e:
-        app.logger.error(f"Export data error: {e}")
-        return jsonify({"success": False, "message": f"Export failed: {str(e)}"}), 500
-    finally:
-        return_db_connection(conn)
-
-# ======================= ADMIN TIKTOK ENDPOINTS =======================
-@app.route('/api/admin/tiktok/set-daily', methods=['POST'])
-@require_admin
-def admin_set_tiktok_daily():
-    data = request.get_json()
-    tiktok_link = data.get('tiktok_link', '')
-    
-    if not tiktok_link:
-        return jsonify({"success": False, "message": "TikTok link required"}), 400
-    
-    if not tiktok_link.startswith('https://www.tiktok.com/@'):
-        return jsonify({"success": False, "message": "Link must start with https://www.tiktok.com/@"}), 400
-    
-    today = datetime.utcnow().date().isoformat()
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('''
-        INSERT INTO tiktok_daily (date, tiktok_link, reward_amount) 
-        VALUES (%s, %s, %s)
-        ON CONFLICT (date) 
-        DO UPDATE SET tiktok_link = EXCLUDED.tiktok_link, reward_amount = EXCLUDED.reward_amount
-        ''', (today, tiktok_link, CONFIG.TIKTOK_REWARD))
-        
-        conn.commit()
-        app.logger.info(f"Admin set TikTok daily task: {tiktok_link}")
-        return jsonify({"success": True, "message": "TikTok daily task set"})
-        
-    except Exception as e:
-        app.logger.error(f"Set TikTok daily error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": f"Failed to set task: {str(e)}"}), 500
-    finally:
-        return_db_connection(conn)
-
-@app.route('/api/admin/tiktok/get-daily', methods=['GET'])
-@require_admin
-def admin_get_tiktok_daily():
-    today = datetime.utcnow().date().isoformat()
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('SELECT date, tiktok_link, reward_amount FROM tiktok_daily WHERE date = %s', (today,))
-        row = cursor.fetchone()
-        
-        if row:
-            task = {
-                'date': row[0],
-                'tiktok_link': row[1],
-                'reward_amount': float(row[2]) if row[2] else CONFIG.TIKTOK_REWARD
-            }
-            return jsonify({"success": True, "task": task})
-        else:
-            return jsonify({"success": False, "message": "No TikTok task set for today"})
-            
-    except Exception as e:
-        app.logger.error(f"Get TikTok daily error: {e}")
-        return jsonify({"success": False, "message": "Failed to get task"}), 500
-    finally:
-        return_db_connection(conn)
-
-@app.route('/api/admin/tiktok/history', methods=['GET'])
-@require_admin
-def admin_get_tiktok_history():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('''
-        SELECT date, tiktok_link, reward_amount 
-        FROM tiktok_daily 
-        WHERE date >= %s 
-        ORDER BY date DESC 
-        LIMIT 7
-        ''', ((datetime.utcnow().date() - timedelta(days=7)).isoformat(),))
-        
-        history = []
-        for row in cursor.fetchall():
-            history.append({
-                'date': row[0],
-                'tiktok_link': row[1],
-                'reward_amount': float(row[2]) if row[2] else CONFIG.TIKTOK_REWARD
-            })
-        
-        return jsonify({"success": True, "history": history})
-        
-    except Exception as e:
-        app.logger.error(f"Get TikTok history error: {e}")
-        return jsonify({"success": False, "message": "Failed to load history"}), 500
-    finally:
-        return_db_connection(conn)
-
-# ======================= ADMIN WITHDRAWAL DAYS =======================
-@app.route('/api/admin/global-withdrawal-days', methods=['GET'])
-@require_admin
-def admin_get_global_withdrawal_days():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('SELECT global_withdrawal_days FROM admin_settings LIMIT 1')
-        row = cursor.fetchone()
-        if row and row[0]:
-            days = json.loads(row[0])
-            return jsonify({"success": True, "days": days})
-        else:
-            return jsonify({"success": True, "days": CONFIG.DEFAULT_WITHDRAWAL_DAYS})
-    except Exception as e:
-        app.logger.error(f"Get global withdrawal days error: {e}")
-        return jsonify({"success": False, "message": "Failed to load"}), 500
-    finally:
-        return_db_connection(conn)
-
-@app.route('/api/admin/global-withdrawal-days', methods=['POST'])
-@require_admin
-def admin_set_global_withdrawal_days():
-    data = request.get_json()
-    days = data.get('days', [])
-    
-    if not isinstance(days, list):
-        return jsonify({"success": False, "message": "Invalid days format"}), 400
-    
-    # Validate days (1-31)
-    valid_days = [day for day in days if isinstance(day, int) and 1 <= day <= 31]
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('UPDATE admin_settings SET global_withdrawal_days = %s', (json.dumps(valid_days),))
-        conn.commit()
-        app.logger.info(f"Admin updated global withdrawal days: {valid_days}")
-        return jsonify({"success": True, "message": "Global withdrawal days updated", "days": valid_days})
-    except Exception as e:
-        app.logger.error(f"Set global withdrawal days error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to update"}), 500
-    finally:
-        return_db_connection(conn)
-
-# ======================= ADMIN USER CUSTOM WITHDRAWAL DAYS =======================
-@app.route('/api/admin/user/<int:user_id>/set-custom-days', methods=['POST'])
-@require_admin
-def admin_set_user_custom_days(user_id):
-    """Set custom withdrawal days for a specific user"""
-    data = request.get_json()
-    days = data.get('days', [])
-    
-    if not isinstance(days, list):
-        return jsonify({"success": False, "message": "Invalid days format"}), 400
-    
-    # Validate days (1-31)
-    valid_days = [day for day in days if isinstance(day, int) and 1 <= day <= 31]
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        # Check if user exists
-        cursor.execute('SELECT username FROM users WHERE id = %s', (user_id,))
-        if not cursor.fetchone():
-            return jsonify({"success": False, "message": "User not found"}), 404
-        
-        cursor.execute('UPDATE users SET custom_withdrawal_days = %s WHERE id = %s',
-                       (json.dumps(valid_days) if valid_days else None, user_id))
-        conn.commit()
-        
-        app.logger.info(f"Admin set custom withdrawal days for user {user_id}: {valid_days}")
-        return jsonify({"success": True, "message": "Custom withdrawal days updated"})
-        
-    except Exception as e:
-        app.logger.error(f"Set user custom days error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to update"}), 500
-    finally:
-        return_db_connection(conn)
-
-# ======================= ADMIN USER SET LIMIT =======================
-@app.route('/api/admin/user/<int:user_id>/set-limit', methods=['POST'])
-@require_admin
-def admin_set_user_limit(user_id):
-    data = request.get_json()
-    limit = data.get('limit', 0)
-    
-    if limit < 0:
-        return jsonify({"success": False, "message": "Invalid limit"}), 400
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        # Check if user exists
-        cursor.execute('SELECT username FROM users WHERE id = %s', (user_id,))
-        user_row = cursor.fetchone()
-        if not user_row:
-            return jsonify({"success": False, "message": "User not found"}), 404
-        
-        cursor.execute('UPDATE users SET withdrawal_limit = %s WHERE id = %s', (limit, user_id))
-        conn.commit()
-        
-        app.logger.info(f"Admin set withdrawal limit for user {user_id} to: {limit}")
-        return jsonify({"success": True, "message": "Limit updated"})
-    except Exception as e:
-        app.logger.error(f"Set limit error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to update"}), 500
-    finally:
-        return_db_connection(conn)
-
-# ======================= ADMIN WITHDRAWAL APPROVAL =======================
-@app.route('/api/admin/approve-withdrawal', methods=['POST'])
-@require_admin
-def admin_approve_withdrawal():
-    data = request.get_json()
-    transaction_id = data.get('transaction_id')
-    action = data.get('action', '').upper()
-    
-    if not transaction_id or action not in ['APPROVE', 'REJECT']:
-        return jsonify({"success": False, "message": "Invalid request"}), 400
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        # Get transaction details
-        cursor.execute('SELECT user_id, amount, status FROM transactions WHERE id = %s', (transaction_id,))
-        row = cursor.fetchone()
-        if not row:
-            return jsonify({"success": False, "message": "Transaction not found"}), 404
-        
-        user_id, amount, current_status = row[0], float(row[1]), row[2]
-        
-        if current_status != 'PENDING':
-            return jsonify({"success": False, "message": f"Transaction already {current_status}"}), 400
-        
-        new_status = 'COMPLETED' if action == 'APPROVE' else 'FAILED'
-        
-        # If rejecting, refund the amount to user balance
-        if action == 'REJECT':
-            # Use atomic balance update
-            update_user_balance(user_id, amount)
-        
-        # Update transaction status
-        cursor.execute('UPDATE transactions SET status = %s WHERE id = %s', (new_status, transaction_id))
-        
-        conn.commit()
-        
-        app.logger.info(f"Admin {action}d withdrawal {transaction_id} for user {user_id}, amount: {amount}")
-        
-        return jsonify({
-            "success": True,
-            "message": f"Withdrawal {action.lower()}ed successfully",
-            "status": new_status
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Approve withdrawal error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": f"Failed to process: {str(e)}"}), 500
-    finally:
-        return_db_connection(conn)
-
-# ======================= ADMIN WITHDRAWAL STATUS REPORT =======================
-@app.route('/api/admin/withdrawal-status-report', methods=['GET'])
-@require_admin
-def admin_withdrawal_status_report():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        # Get all users
-        cursor.execute('''
-        SELECT id, username, balance, withdrawal_restricted, custom_withdrawal_days, 
-               withdrawal_limit, withdrawal_pin
-        FROM users
-        ORDER BY id
-        ''')
-        
-        users = []
-        total_users = 0
-        users_withdrawal_today = 0
-        users_restricted = 0
-        
-        today_day = datetime.utcnow().day
-        global_days = get_global_withdrawal_days()
-        
-        for row in cursor.fetchall():
-            total_users += 1
-            
-            user_id = row[0]
-            username = row[1]
-            balance = float(row[2]) if row[2] else 0
-            withdrawal_restricted = bool(row[3])
-            custom_days_str = row[4] if row[4] else ''
-            withdrawal_limit = float(row[5]) if row[5] else 0
-            has_withdrawal_pin = bool(row[6])
-            
-            if withdrawal_restricted:
-                users_restricted += 1
-                can_withdraw_today = False
-            else:
-                if custom_days_str:
-                    try:
-                        custom_days = json.loads(custom_days_str)
-                        can_withdraw_today = today_day in custom_days
-                    except:
-                        can_withdraw_today = today_day in global_days
-                else:
-                    can_withdraw_today = today_day in global_days
-            
-            if can_withdraw_today:
-                users_withdrawal_today += 1
-            
-            users.append({
-                'id': user_id,
-                'username': username,
-                'balance': balance,
-                'withdrawal_restricted': withdrawal_restricted,
-                'custom_withdrawal_days': json.loads(custom_days_str) if custom_days_str else [],
-                'withdrawal_limit': withdrawal_limit,
-                'has_withdrawal_pin': has_withdrawal_pin,
-                'can_withdraw_today': can_withdraw_today
-            })
-        
-        return jsonify({
-            "success": True,
-            "today": datetime.utcnow().strftime("%d %B %Y"),
-            "total_users": total_users,
-            "users_withdrawal_today": users_withdrawal_today,
-            "users_restricted": users_restricted,
-            "global_withdrawal_days": global_days,
-            "users": users
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Withdrawal status report error: {e}")
-        return jsonify({"success": False, "message": "Failed to generate report"}), 500
-    finally:
-        return_db_connection(conn)
-
-# ======================= ADMIN TOGGLE USER ADMIN STATUS =======================
-@app.route('/api/admin/user/<int:user_id>/toggle-admin', methods=['POST'])
-@require_admin
-def admin_toggle_user_admin(user_id):
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        # Check if trying to modify original admin
-        cursor.execute('SELECT username, is_admin FROM users WHERE id = %s', (user_id,))
-        row = cursor.fetchone()
-        if not row:
-            return jsonify({"success": False, "message": "User not found"}), 404
-        
-        username = row[0]
-        is_currently_admin = bool(row[1])
-        
-        if username == 'flexiaadmin':
-            return jsonify({"success": False, "message": "Cannot modify original admin"}), 403
-        
-        new_admin_status = not is_currently_admin
-        
-        cursor.execute('UPDATE users SET is_admin = %s WHERE id = %s', (new_admin_status, user_id))
-        conn.commit()
-        
-        action = "promoted to admin" if new_admin_status else "demoted from admin"
-        app.logger.info(f"Admin toggled user {username} ({user_id}) admin status to: {new_admin_status}")
-        
-        return jsonify({
-            "success": True,
-            "message": f"User {username} {action}",
-            "is_admin": new_admin_status
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Toggle admin error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to update admin status"}), 500
-    finally:
-        return_db_connection(conn)
-
-# ======================= ADMIN DELETE USER =======================
-@app.route('/api/admin/user/<int:user_id>', methods=['DELETE'])
-@require_admin
-def admin_delete_user(user_id):
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        # Check if trying to delete original admin
-        cursor.execute('SELECT username FROM users WHERE id = %s', (user_id,))
-        row = cursor.fetchone()
-        if not row:
-            return jsonify({"success": False, "message": "User not found"}), 404
-        
-        username = row[0]
-        
-        if username == 'flexiaadmin':
-            return jsonify({"success": False, "message": "Cannot delete original admin"}), 403
-        
-        # Delete user's transactions
-        cursor.execute('DELETE FROM transactions WHERE user_id = %s', (user_id,))
-        # Delete user's game plays
-        cursor.execute('DELETE FROM game_plays WHERE user_id = %s', (user_id,))
-        # Delete user
-        cursor.execute('DELETE FROM users WHERE id = %s', (user_id,))
-        
-        conn.commit()
-        
-        app.logger.warning(f"Admin deleted user: {username} (ID: {user_id})")
-        
-        return jsonify({
-            "success": True,
-            "message": f"User {username} deleted successfully"
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Delete user error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to delete user"}), 500
-    finally:
-        return_db_connection(conn)
-
-# ======================= ADMIN COUPON MANAGEMENT =======================
-@app.route('/api/admin/coupons', methods=['GET'])
-@require_admin
-def admin_get_coupons():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('SELECT code, status FROM coupons ORDER BY code')
-        coupons = []
-        for row in cursor.fetchall():
-            coupons.append({
-                'code': row[0],
-                'status': row[1]
-            })
-        return jsonify({"success": True, "coupons": coupons})
-    except Exception as e:
-        app.logger.error(f"Admin coupons error: {e}")
-        return jsonify({"success": False, "message": "Failed to load coupons"}), 500
-    finally:
-        return_db_connection(conn)
-
-@app.route('/api/admin/coupons/reset-used', methods=['POST'])
-@require_admin
-def admin_reset_used_coupons():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute("UPDATE coupons SET status = 'AVAILABLE' WHERE status = 'USED'")
-        updated_count = cursor.rowcount
-        
-        conn.commit()
-        
-        app.logger.info(f"Admin reset {updated_count} used coupons to available")
-        
-        return jsonify({
-            "success": True,
-            "message": f"Reset {updated_count} used coupons to available"
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Reset coupons error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to reset coupons"}), 500
-    finally:
-        return_db_connection(conn)
-
-@app.route('/api/admin/coupons/delete', methods=['POST'])
-@require_admin
-def admin_delete_all_coupons():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('DELETE FROM coupons')
-        deleted_count = cursor.rowcount
-        
-        conn.commit()
-        
-        app.logger.warning(f"Admin deleted all {deleted_count} coupons")
-        
-        return jsonify({
-            "success": True,
-            "message": f"Deleted all {deleted_count} coupons"
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Delete all coupons error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to delete coupons"}), 500
-    finally:
-        return_db_connection(conn)
-
-@app.route('/api/admin/coupons/add', methods=['POST'])
-@require_admin
-def admin_add_bulk_coupons():
-    data = request.get_json()
-    codes = data.get('codes', [])
-    
-    if not isinstance(codes, list):
-        return jsonify({"success": False, "message": "Invalid codes format"}), 400
-    
-    # Clean and validate codes
-    valid_codes = []
-    for code in codes:
-        clean_code = sanitize_input(str(code).strip().upper())
-        if clean_code and len(clean_code) >= 4:
-            valid_codes.append(clean_code)
-    
-    if not valid_codes:
-        return jsonify({"success": False, "message": "No valid coupon codes provided"}), 400
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        added_count = 0
-        for code in valid_codes:
-            try:
-                cursor.execute('INSERT INTO coupons (code, status) VALUES (%s, %s) ON CONFLICT (code) DO NOTHING', 
-                             (code, 'AVAILABLE'))
-                if cursor.rowcount > 0:
-                    added_count += 1
-            except:
-                continue
-        
-        conn.commit()
-        
-        app.logger.info(f"Admin added {added_count} new coupon codes")
-        
-        return jsonify({
-            "success": True,
-            "message": f"Added {added_count} new coupon codes",
-            "added": added_count
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Add bulk coupons error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to add coupons"}), 500
-    finally:
-        return_db_connection(conn)
-
-@app.route('/api/admin/coupons/load-file', methods=['POST'])
-@require_admin
-def admin_load_coupons_from_file():
-    try:
-        if not os.path.exists(CONFIG.COUPON_FILE):
-            return jsonify({"success": False, "message": "coupon.txt file not found"}), 404
-        
-        with open(CONFIG.COUPON_FILE, 'r') as f:
-            codes = [line.strip().upper() for line in f if line.strip()]
-        
-        if not codes:
-            return jsonify({"success": False, "message": "No coupons in file"}), 400
-        
-        conn = get_db()
-        cursor = conn.cursor()
-        
-        loaded = 0
-        for code in codes:
-            try:
-                cursor.execute('INSERT INTO coupons (code, status) VALUES (%s, %s) ON CONFLICT (code) DO NOTHING', 
-                             (code, 'AVAILABLE'))
-                loaded += 1
-            except:
-                continue
-        
-        conn.commit()
-        return_db_connection(conn)
-        
-        app.logger.info(f"Admin loaded {loaded} coupons from file")
-        
-        return jsonify({
-            "success": True, 
-            "message": f"Loaded {loaded} coupons from file",
-            "count": loaded
-        })
-        
-    except Exception as e:
-        app.logger.error(f"Load coupons from file error: {e}")
-        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
-
-@app.route('/api/admin/coupons/<code>/delete', methods=['DELETE'])
-@require_admin
-def admin_delete_coupon(code):
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('DELETE FROM coupons WHERE code = %s', (code,))
-        conn.commit()
-        if cursor.rowcount == 0:
-            return jsonify({"success": False, "message": "Coupon not found"}), 404
-        
-        app.logger.info(f"Admin deleted coupon: {code}")
-        
-        return jsonify({"success": True, "message": "Coupon deleted"})
-    except Exception as e:
-        app.logger.error(f"Delete coupon error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to delete"}), 500
-    finally:
-        return_db_connection(conn)
-
-# ======================= ADMIN WHATSAPP NUMBERS =======================
-@app.route('/api/admin/whatsapp-numbers', methods=['GET'])
-@require_admin
-def admin_get_whatsapp_numbers():
-    """Admin: Get all WhatsApp numbers"""
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('SELECT id, number, label, is_active, created_at FROM whatsapp_numbers ORDER BY created_at DESC')
-        numbers = []
-        for row in cursor.fetchall():
-            num = {
-                'id': row[0],
-                'number': row[1],
-                'label': row[2],
-                'is_active': bool(row[3]),
-                'created_at': row[4]
-            }
-            numbers.append(num)
-        return jsonify({"success": True, "numbers": numbers})
-    except Exception as e:
-        app.logger.error(f"Admin WhatsApp numbers error: {e}")
-        return jsonify({"success": False, "message": "Failed to load numbers"}), 500
-    finally:
-        return_db_connection(conn)
-
-@app.route('/api/admin/whatsapp-numbers', methods=['POST'])
-@require_admin
-def admin_add_whatsapp_number():
-    """Admin: Add new WhatsApp number"""
-    data = request.get_json()
-    number = sanitize_input(data.get('number', ''))
-    label = sanitize_input(data.get('label', ''))
-    
-    if not number or len(number) < 10:
-        return jsonify({"success": False, "message": "Valid phone number required"}), 400
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('INSERT INTO whatsapp_numbers (number, label, is_active, created_at) VALUES (%s, %s, %s, %s)',
-                       (number, label, True, datetime.utcnow().isoformat()))
-        conn.commit()
-        
-        app.logger.info(f"Admin added WhatsApp number: {number} ({label})")
-        
-        return jsonify({"success": True, "message": "WhatsApp number added"})
-    except Exception as e:
-        app.logger.error(f"Add WhatsApp number error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to add number"}), 500
-    finally:
-        return_db_connection(conn)
-
-@app.route('/api/admin/whatsapp-numbers/<int:number_id>/toggle', methods=['POST'])
-@require_admin
-def admin_toggle_whatsapp_number(number_id):
-    """Admin: Toggle WhatsApp number active status"""
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('SELECT is_active FROM whatsapp_numbers WHERE id = %s', (number_id,))
-        row = cursor.fetchone()
-        if not row:
-            return jsonify({"success": False, "message": "Number not found"}), 404
-        
-        current = bool(row[0])
-        new_value = not current
-        cursor.execute('UPDATE whatsapp_numbers SET is_active = %s WHERE id = %s', (new_value, number_id))
-        conn.commit()
-        
-        app.logger.info(f"Admin toggled WhatsApp number {number_id} active status to: {new_value}")
-        
-        return jsonify({"success": True, "is_active": new_value})
-    except Exception as e:
-        app.logger.error(f"Toggle WhatsApp number error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to toggle"}), 500
-    finally:
-        return_db_connection(conn)
-
-@app.route('/api/admin/whatsapp-numbers/<int:number_id>', methods=['DELETE'])
-@require_admin
-def admin_delete_whatsapp_number(number_id):
-    """Admin: Delete WhatsApp number"""
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        cursor.execute('DELETE FROM whatsapp_numbers WHERE id = %s', (number_id,))
-        conn.commit()
-        if cursor.rowcount == 0:
-            return jsonify({"success": False, "message": "Number not found"}), 404
-        
-        app.logger.info(f"Admin deleted WhatsApp number ID: {number_id}")
-        
-        return jsonify({"success": True, "message": "Number deleted"})
-    except Exception as e:
-        app.logger.error(f"Delete WhatsApp number error: {e}")
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to delete"}), 500
-    finally:
-        return_db_connection(conn)
 
 # ================= REFERRAL ENDPOINTS =================
 @app.route('/api/referral/claim', methods=['POST'])
@@ -4271,6 +3271,1326 @@ def admin_get_stats():
     finally:
         return_db_connection(conn)
 
+# ================= ADMIN WITHDRAWAL DAYS =======================
+@app.route('/api/admin/global-withdrawal-days', methods=['GET'])
+@require_admin
+def admin_get_global_withdrawal_days():
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('SELECT global_withdrawal_days FROM admin_settings LIMIT 1')
+        row = cursor.fetchone()
+        if row and row[0]:
+            days = json.loads(row[0])
+            return jsonify({"success": True, "days": days})
+        else:
+            return jsonify({"success": True, "days": CONFIG.DEFAULT_WITHDRAWAL_DAYS})
+    except Exception as e:
+        app.logger.error(f"Get global withdrawal days error: {e}")
+        return jsonify({"success": False, "message": "Failed to load"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/global-withdrawal-days', methods=['POST'])
+@require_admin
+def admin_set_global_withdrawal_days():
+    data = request.get_json()
+    days = data.get('days', [])
+    
+    if not isinstance(days, list):
+        return jsonify({"success": False, "message": "Invalid days format"}), 400
+    
+    # Validate days (1-31)
+    valid_days = [day for day in days if isinstance(day, int) and 1 <= day <= 31]
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('UPDATE admin_settings SET global_withdrawal_days = %s', (json.dumps(valid_days),))
+        conn.commit()
+        app.logger.info(f"Admin updated global withdrawal days: {valid_days}")
+        return jsonify({"success": True, "message": "Global withdrawal days updated", "days": valid_days})
+    except Exception as e:
+        app.logger.error(f"Set global withdrawal days error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to update"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ================= ADMIN USER CUSTOM WITHDRAWAL DAYS =======================
+@app.route('/api/admin/user/<int:user_id>/set-custom-days', methods=['POST'])
+@require_admin
+def admin_set_user_custom_days(user_id):
+    """Set custom withdrawal days for a specific user"""
+    data = request.get_json()
+    days = data.get('days', [])
+    
+    if not isinstance(days, list):
+        return jsonify({"success": False, "message": "Invalid days format"}), 400
+    
+    # Validate days (1-31)
+    valid_days = [day for day in days if isinstance(day, int) and 1 <= day <= 31]
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if user exists
+        cursor.execute('SELECT username FROM users WHERE id = %s', (user_id,))
+        if not cursor.fetchone():
+            return jsonify({"success": False, "message": "User not found"}), 404
+        
+        cursor.execute('UPDATE users SET custom_withdrawal_days = %s WHERE id = %s',
+                       (json.dumps(valid_days) if valid_days else None, user_id))
+        conn.commit()
+        
+        app.logger.info(f"Admin set custom withdrawal days for user {user_id}: {valid_days}")
+        return jsonify({"success": True, "message": "Custom withdrawal days updated"})
+        
+    except Exception as e:
+        app.logger.error(f"Set user custom days error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to update"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ================= ADMIN USER SET LIMIT =======================
+@app.route('/api/admin/user/<int:user_id>/set-limit', methods=['POST'])
+@require_admin
+def admin_set_user_limit(user_id):
+    data = request.get_json()
+    limit = data.get('limit', 0)
+    
+    if limit < 0:
+        return jsonify({"success": False, "message": "Invalid limit"}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if user exists
+        cursor.execute('SELECT username FROM users WHERE id = %s', (user_id,))
+        user_row = cursor.fetchone()
+        if not user_row:
+            return jsonify({"success": False, "message": "User not found"}), 404
+        
+        cursor.execute('UPDATE users SET withdrawal_limit = %s WHERE id = %s', (limit, user_id))
+        conn.commit()
+        
+        app.logger.info(f"Admin set withdrawal limit for user {user_id} to: {limit}")
+        return jsonify({"success": True, "message": "Limit updated"})
+    except Exception as e:
+        app.logger.error(f"Set limit error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to update"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ================= ADMIN WITHDRAWAL APPROVAL =======================
+@app.route('/api/admin/approve-withdrawal', methods=['POST'])
+@require_admin
+def admin_approve_withdrawal():
+    data = request.get_json()
+    transaction_id = data.get('transaction_id')
+    action = data.get('action', '').upper()
+    
+    if not transaction_id or action not in ['APPROVE', 'REJECT']:
+        return jsonify({"success": False, "message": "Invalid request"}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Get transaction details
+        cursor.execute('SELECT user_id, amount, status FROM transactions WHERE id = %s', (transaction_id,))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"success": False, "message": "Transaction not found"}), 404
+        
+        user_id, amount, current_status = row[0], float(row[1]), row[2]
+        
+        if current_status != 'PENDING':
+            return jsonify({"success": False, "message": f"Transaction already {current_status}"}), 400
+        
+        new_status = 'COMPLETED' if action == 'APPROVE' else 'FAILED'
+        
+        # If rejecting, refund the amount to user balance
+        if action == 'REJECT':
+            # Use atomic balance update
+            update_user_balance(user_id, amount)
+        
+        # Update transaction status
+        cursor.execute('UPDATE transactions SET status = %s WHERE id = %s', (new_status, transaction_id))
+        
+        conn.commit()
+        
+        app.logger.info(f"Admin {action}d withdrawal {transaction_id} for user {user_id}, amount: {amount}")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Withdrawal {action.lower()}ed successfully",
+            "status": new_status
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Approve withdrawal error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": f"Failed to process: {str(e)}"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ================= ADMIN WITHDRAWAL STATUS REPORT =======================
+@app.route('/api/admin/withdrawal-status-report', methods=['GET'])
+@require_admin
+def admin_withdrawal_status_report():
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Get all users
+        cursor.execute('''
+        SELECT id, username, balance, withdrawal_restricted, custom_withdrawal_days, 
+               withdrawal_limit, withdrawal_pin
+        FROM users
+        ORDER BY id
+        ''')
+        
+        users = []
+        total_users = 0
+        users_withdrawal_today = 0
+        users_restricted = 0
+        
+        today_day = datetime.utcnow().day
+        global_days = get_global_withdrawal_days()
+        
+        for row in cursor.fetchall():
+            total_users += 1
+            
+            user_id = row[0]
+            username = row[1]
+            balance = float(row[2]) if row[2] else 0
+            withdrawal_restricted = bool(row[3])
+            custom_days_str = row[4] if row[4] else ''
+            withdrawal_limit = float(row[5]) if row[5] else 0
+            has_withdrawal_pin = bool(row[6])
+            
+            if withdrawal_restricted:
+                users_restricted += 1
+                can_withdraw_today = False
+            else:
+                if custom_days_str:
+                    try:
+                        custom_days = json.loads(custom_days_str)
+                        can_withdraw_today = today_day in custom_days
+                    except:
+                        can_withdraw_today = today_day in global_days
+                else:
+                    can_withdraw_today = today_day in global_days
+            
+            if can_withdraw_today:
+                users_withdrawal_today += 1
+            
+            users.append({
+                'id': user_id,
+                'username': username,
+                'balance': balance,
+                'withdrawal_restricted': withdrawal_restricted,
+                'custom_withdrawal_days': json.loads(custom_days_str) if custom_days_str else [],
+                'withdrawal_limit': withdrawal_limit,
+                'has_withdrawal_pin': has_withdrawal_pin,
+                'can_withdraw_today': can_withdraw_today
+            })
+        
+        return jsonify({
+            "success": True,
+            "today": datetime.utcnow().strftime("%d %B %Y"),
+            "total_users": total_users,
+            "users_withdrawal_today": users_withdrawal_today,
+            "users_restricted": users_restricted,
+            "global_withdrawal_days": global_days,
+            "users": users
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Withdrawal status report error: {e}")
+        return jsonify({"success": False, "message": "Failed to generate report"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ================= ADMIN TOGGLE USER ADMIN STATUS =======================
+@app.route('/api/admin/user/<int:user_id>/toggle-admin', methods=['POST'])
+@require_admin
+def admin_toggle_user_admin(user_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if trying to modify original admin
+        cursor.execute('SELECT username, is_admin FROM users WHERE id = %s', (user_id,))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"success": False, "message": "User not found"}), 404
+        
+        username = row[0]
+        is_currently_admin = bool(row[1])
+        
+        if username == 'flexiaadmin':
+            return jsonify({"success": False, "message": "Cannot modify original admin"}), 403
+        
+        new_admin_status = not is_currently_admin
+        
+        cursor.execute('UPDATE users SET is_admin = %s WHERE id = %s', (new_admin_status, user_id))
+        conn.commit()
+        
+        action = "promoted to admin" if new_admin_status else "demoted from admin"
+        app.logger.info(f"Admin toggled user {username} ({user_id}) admin status to: {new_admin_status}")
+        
+        return jsonify({
+            "success": True,
+            "message": f"User {username} {action}",
+            "is_admin": new_admin_status
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Toggle admin error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to update admin status"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ================= ADMIN DELETE USER =======================
+@app.route('/api/admin/user/<int:user_id>', methods=['DELETE'])
+@require_admin
+def admin_delete_user(user_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if trying to delete original admin
+        cursor.execute('SELECT username FROM users WHERE id = %s', (user_id,))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"success": False, "message": "User not found"}), 404
+        
+        username = row[0]
+        
+        if username == 'flexiaadmin':
+            return jsonify({"success": False, "message": "Cannot delete original admin"}), 403
+        
+        # Delete user's transactions
+        cursor.execute('DELETE FROM transactions WHERE user_id = %s', (user_id,))
+        # Delete user's game plays
+        cursor.execute('DELETE FROM game_plays WHERE user_id = %s', (user_id,))
+        # Delete user
+        cursor.execute('DELETE FROM users WHERE id = %s', (user_id,))
+        
+        conn.commit()
+        
+        app.logger.warning(f"Admin deleted user: {username} (ID: {user_id})")
+        
+        return jsonify({
+            "success": True,
+            "message": f"User {username} deleted successfully"
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Delete user error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to delete user"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ================= ADMIN COUPON MANAGEMENT =======================
+@app.route('/api/admin/coupons', methods=['GET'])
+@require_admin
+def admin_get_coupons():
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('SELECT code, status FROM coupons ORDER BY code')
+        coupons = []
+        for row in cursor.fetchall():
+            coupons.append({
+                'code': row[0],
+                'status': row[1]
+            })
+        return jsonify({"success": True, "coupons": coupons})
+    except Exception as e:
+        app.logger.error(f"Admin coupons error: {e}")
+        return jsonify({"success": False, "message": "Failed to load coupons"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/coupons/reset-used', methods=['POST'])
+@require_admin
+def admin_reset_used_coupons():
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("UPDATE coupons SET status = 'AVAILABLE' WHERE status = 'USED'")
+        updated_count = cursor.rowcount
+        
+        conn.commit()
+        
+        app.logger.info(f"Admin reset {updated_count} used coupons to available")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Reset {updated_count} used coupons to available"
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Reset coupons error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to reset coupons"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/coupons/delete', methods=['POST'])
+@require_admin
+def admin_delete_all_coupons():
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('DELETE FROM coupons')
+        deleted_count = cursor.rowcount
+        
+        conn.commit()
+        
+        app.logger.warning(f"Admin deleted all {deleted_count} coupons")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Deleted all {deleted_count} coupons"
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Delete all coupons error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to delete coupons"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/coupons/add', methods=['POST'])
+@require_admin
+def admin_add_bulk_coupons():
+    data = request.get_json()
+    codes = data.get('codes', [])
+    
+    if not isinstance(codes, list):
+        return jsonify({"success": False, "message": "Invalid codes format"}), 400
+    
+    # Clean and validate codes
+    valid_codes = []
+    for code in codes:
+        clean_code = sanitize_input(str(code).strip().upper())
+        if clean_code and len(clean_code) >= 4:
+            valid_codes.append(clean_code)
+    
+    if not valid_codes:
+        return jsonify({"success": False, "message": "No valid coupon codes provided"}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        added_count = 0
+        for code in valid_codes:
+            try:
+                cursor.execute('INSERT INTO coupons (code, status) VALUES (%s, %s) ON CONFLICT (code) DO NOTHING', 
+                             (code, 'AVAILABLE'))
+                if cursor.rowcount > 0:
+                    added_count += 1
+            except:
+                continue
+        
+        conn.commit()
+        
+        app.logger.info(f"Admin added {added_count} new coupon codes")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Added {added_count} new coupon codes",
+            "added": added_count
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Add bulk coupons error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to add coupons"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/coupons/load-file', methods=['POST'])
+@require_admin
+def admin_load_coupons_from_file():
+    try:
+        if not os.path.exists(CONFIG.COUPON_FILE):
+            return jsonify({"success": False, "message": "coupon.txt file not found"}), 404
+        
+        with open(CONFIG.COUPON_FILE, 'r') as f:
+            codes = [line.strip().upper() for line in f if line.strip()]
+        
+        if not codes:
+            return jsonify({"success": False, "message": "No coupons in file"}), 400
+        
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        loaded = 0
+        for code in codes:
+            try:
+                cursor.execute('INSERT INTO coupons (code, status) VALUES (%s, %s) ON CONFLICT (code) DO NOTHING', 
+                             (code, 'AVAILABLE'))
+                loaded += 1
+            except:
+                continue
+        
+        conn.commit()
+        return_db_connection(conn)
+        
+        app.logger.info(f"Admin loaded {loaded} coupons from file")
+        
+        return jsonify({
+            "success": True, 
+            "message": f"Loaded {loaded} coupons from file",
+            "count": loaded
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Load coupons from file error: {e}")
+        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
+
+@app.route('/api/admin/coupons/<code>/delete', methods=['DELETE'])
+@require_admin
+def admin_delete_coupon(code):
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('DELETE FROM coupons WHERE code = %s', (code,))
+        conn.commit()
+        if cursor.rowcount == 0:
+            return jsonify({"success": False, "message": "Coupon not found"}), 404
+        
+        app.logger.info(f"Admin deleted coupon: {code}")
+        
+        return jsonify({"success": True, "message": "Coupon deleted"})
+    except Exception as e:
+        app.logger.error(f"Delete coupon error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to delete"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ================= ADMIN WHATSAPP NUMBERS =======================
+@app.route('/api/admin/whatsapp-numbers', methods=['GET'])
+@require_admin
+def admin_get_whatsapp_numbers():
+    """Admin: Get all WhatsApp numbers"""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('SELECT id, number, label, is_active, created_at FROM whatsapp_numbers ORDER BY created_at DESC')
+        numbers = []
+        for row in cursor.fetchall():
+            num = {
+                'id': row[0],
+                'number': row[1],
+                'label': row[2],
+                'is_active': bool(row[3]),
+                'created_at': row[4]
+            }
+            numbers.append(num)
+        return jsonify({"success": True, "numbers": numbers})
+    except Exception as e:
+        app.logger.error(f"Admin WhatsApp numbers error: {e}")
+        return jsonify({"success": False, "message": "Failed to load numbers"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/whatsapp-numbers', methods=['POST'])
+@require_admin
+def admin_add_whatsapp_number():
+    """Admin: Add new WhatsApp number"""
+    data = request.get_json()
+    number = sanitize_input(data.get('number', ''))
+    label = sanitize_input(data.get('label', ''))
+    
+    if not number or len(number) < 10:
+        return jsonify({"success": False, "message": "Valid phone number required"}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('INSERT INTO whatsapp_numbers (number, label, is_active, created_at) VALUES (%s, %s, %s, %s)',
+                       (number, label, True, datetime.utcnow().isoformat()))
+        conn.commit()
+        
+        app.logger.info(f"Admin added WhatsApp number: {number} ({label})")
+        
+        return jsonify({"success": True, "message": "WhatsApp number added"})
+    except Exception as e:
+        app.logger.error(f"Add WhatsApp number error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to add number"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/whatsapp-numbers/<int:number_id>/toggle', methods=['POST'])
+@require_admin
+def admin_toggle_whatsapp_number(number_id):
+    """Admin: Toggle WhatsApp number active status"""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('SELECT is_active FROM whatsapp_numbers WHERE id = %s', (number_id,))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"success": False, "message": "Number not found"}), 404
+        
+        current = bool(row[0])
+        new_value = not current
+        cursor.execute('UPDATE whatsapp_numbers SET is_active = %s WHERE id = %s', (new_value, number_id))
+        conn.commit()
+        
+        app.logger.info(f"Admin toggled WhatsApp number {number_id} active status to: {new_value}")
+        
+        return jsonify({"success": True, "is_active": new_value})
+    except Exception as e:
+        app.logger.error(f"Toggle WhatsApp number error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to toggle"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/whatsapp-numbers/<int:number_id>', methods=['DELETE'])
+@require_admin
+def admin_delete_whatsapp_number(number_id):
+    """Admin: Delete WhatsApp number"""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('DELETE FROM whatsapp_numbers WHERE id = %s', (number_id,))
+        conn.commit()
+        if cursor.rowcount == 0:
+            return jsonify({"success": False, "message": "Number not found"}), 404
+        
+        app.logger.info(f"Admin deleted WhatsApp number ID: {number_id}")
+        
+        return jsonify({"success": True, "message": "Number deleted"})
+    except Exception as e:
+        app.logger.error(f"Delete WhatsApp number error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to delete"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ================= ADMIN TIKTOK ENDPOINTS =======================
+@app.route('/api/admin/tiktok/set-daily', methods=['POST'])
+@require_admin
+def admin_set_tiktok_daily():
+    data = request.get_json()
+    tiktok_link = data.get('tiktok_link', '')
+    
+    if not tiktok_link:
+        return jsonify({"success": False, "message": "TikTok link required"}), 400
+    
+    if not tiktok_link.startswith('https://www.tiktok.com/@'):
+        return jsonify({"success": False, "message": "Link must start with https://www.tiktok.com/@"}), 400
+    
+    today = datetime.utcnow().date().isoformat()
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('''
+        INSERT INTO tiktok_daily (date, tiktok_link, reward_amount) 
+        VALUES (%s, %s, %s)
+        ON CONFLICT (date) 
+        DO UPDATE SET tiktok_link = EXCLUDED.tiktok_link, reward_amount = EXCLUDED.reward_amount
+        ''', (today, tiktok_link, CONFIG.TIKTOK_REWARD))
+        
+        conn.commit()
+        app.logger.info(f"Admin set TikTok daily task: {tiktok_link}")
+        return jsonify({"success": True, "message": "TikTok daily task set"})
+        
+    except Exception as e:
+        app.logger.error(f"Set TikTok daily error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": f"Failed to set task: {str(e)}"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/tiktok/get-daily', methods=['GET'])
+@require_admin
+def admin_get_tiktok_daily():
+    today = datetime.utcnow().date().isoformat()
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('SELECT date, tiktok_link, reward_amount FROM tiktok_daily WHERE date = %s', (today,))
+        row = cursor.fetchone()
+        
+        if row:
+            task = {
+                'date': row[0],
+                'tiktok_link': row[1],
+                'reward_amount': float(row[2]) if row[2] else CONFIG.TIKTOK_REWARD
+            }
+            return jsonify({"success": True, "task": task})
+        else:
+            return jsonify({"success": False, "message": "No TikTok task set for today"})
+            
+    except Exception as e:
+        app.logger.error(f"Get TikTok daily error: {e}")
+        return jsonify({"success": False, "message": "Failed to get task"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/tiktok/history', methods=['GET'])
+@require_admin
+def admin_get_tiktok_history():
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('''
+        SELECT date, tiktok_link, reward_amount 
+        FROM tiktok_daily 
+        WHERE date >= %s 
+        ORDER BY date DESC 
+        LIMIT 7
+        ''', ((datetime.utcnow().date() - timedelta(days=7)).isoformat(),))
+        
+        history = []
+        for row in cursor.fetchall():
+            history.append({
+                'date': row[0],
+                'tiktok_link': row[1],
+                'reward_amount': float(row[2]) if row[2] else CONFIG.TIKTOK_REWARD
+            })
+        
+        return jsonify({"success": True, "history": history})
+        
+    except Exception as e:
+        app.logger.error(f"Get TikTok history error: {e}")
+        return jsonify({"success": False, "message": "Failed to load history"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ================= ADMIN DATABASE CLEARING =======================
+@app.route('/api/admin/database/clear', methods=['POST'])
+@require_admin
+def admin_clear_database():
+    """Admin: Clear all data except main admin account"""
+    data = request.get_json()
+    sudo_confirmation = data.get('sudo_confirmation', '')
+    
+    # Require sudo confirmation
+    if sudo_confirmation != 'DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN':
+        return jsonify({
+            "success": False,
+            "message": "Sudo confirmation required. Type: DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN"
+        }), 403
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        app.logger.warning("🚨 ADMIN INITIATED DATABASE CLEARING - KEEPING ONLY MAIN ADMIN")
+        
+        # Start transaction
+        if os.environ.get('DATABASE_URL'):
+            cursor.execute("BEGIN")
+        
+        # Get admin user details
+        cursor.execute("SELECT id, username FROM users WHERE username = 'flexiaadmin'")
+        admin_row = cursor.fetchone()
+        
+        if not admin_row:
+            return jsonify({"success": False, "message": "Main admin not found"}), 404
+        
+        admin_id = admin_row[0]
+        admin_username = admin_row[1]
+        
+        # Delete all users except main admin
+        cursor.execute("DELETE FROM users WHERE id != %s", (admin_id,))
+        users_deleted = cursor.rowcount
+        
+        # Reset admin balance and stats
+        cursor.execute('''
+        UPDATE users SET 
+            balance = 500000.00,
+            claimed_bonuses = 0,
+            points = 0,
+            game_stats = %s,
+            last_game_timestamp = %s,
+            last_achievement_check = %s,
+            claimed_achievements = '[]'
+        WHERE id = %s
+        ''', (
+            json.dumps({
+                "snake": {"high_score": 1200, "total_score": 5000},
+                "coin_flip": {"wins": 25, "losses": 18, "current_streak": 3},
+                "plinko": {"total_wins": 15, "total_bets": 25000, "highest_win": 5000}
+            }),
+            datetime.utcnow().isoformat(),
+            datetime.utcnow().isoformat(),
+            admin_id
+        ))
+        
+        # Clear all transactions
+        cursor.execute("DELETE FROM transactions")
+        transactions_deleted = cursor.rowcount
+        
+        # Clear game plays
+        cursor.execute("DELETE FROM game_plays")
+        game_plays_deleted = cursor.rowcount
+        
+        # Reset coupons to AVAILABLE
+        cursor.execute("UPDATE coupons SET status = 'AVAILABLE'")
+        coupons_reset = cursor.rowcount
+        
+        # Reset TikTok daily tasks
+        cursor.execute("DELETE FROM tiktok_daily")
+        
+        conn.commit()
+        
+        app.logger.warning(f"✅ DATABASE CLEARED: {users_deleted} users, {transactions_deleted} transactions, {game_plays_deleted} game plays removed")
+        app.logger.warning(f"✅ Coupons reset: {coupons_reset}")
+        app.logger.warning(f"✅ Admin account '{admin_username}' kept with reset stats")
+        
+        # Create backup before clearing (optional)
+        backup_file = backup_database()
+        
+        return jsonify({
+            "success": True,
+            "message": "Database cleared successfully!",
+            "stats": {
+                "users_deleted": users_deleted,
+                "transactions_deleted": transactions_deleted,
+                "game_plays_deleted": game_plays_deleted,
+                "coupons_reset": coupons_reset,
+                "admin_kept": admin_username,
+                "backup_created": backup_file if backup_file else "No backup"
+            },
+            "warning": "ALL USER DATA HAS BEEN PERMANENTLY DELETED. This action cannot be undone."
+        })
+        
+    except Exception as e:
+        app.logger.error(f"❌ Database clearing error: {e}")
+        app.logger.error(traceback.format_exc())
+        if conn:
+            conn.rollback()
+        return jsonify({
+            "success": False,
+            "message": f"Failed to clear database: {str(e)}"
+        }), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/admin/database/preview-clear', methods=['GET'])
+@require_admin
+def admin_preview_database_clear():
+    """Preview what will be deleted when clearing database"""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Count all users except admin
+        cursor.execute("SELECT COUNT(*) FROM users WHERE username != 'flexiaadmin'")
+        users_count = cursor.fetchone()[0]
+        
+        # Count transactions
+        cursor.execute("SELECT COUNT(*) FROM transactions")
+        transactions_count = cursor.fetchone()[0]
+        
+        # Count game plays
+        cursor.execute("SELECT COUNT(*) FROM game_plays")
+        game_plays_count = cursor.fetchone()[0]
+        
+        # Count coupons
+        cursor.execute("SELECT COUNT(*) FROM coupons")
+        coupons_count = cursor.fetchone()[0]
+        
+        # Count used coupons
+        cursor.execute("SELECT COUNT(*) FROM coupons WHERE status = 'USED'")
+        used_coupons_count = cursor.fetchone()[0]
+        
+        # Get admin info
+        cursor.execute("SELECT id, username, balance FROM users WHERE username = 'flexiaadmin'")
+        admin_row = cursor.fetchone()
+        
+        return jsonify({
+            "success": True,
+            "preview": {
+                "users_to_delete": users_count,
+                "transactions_to_delete": transactions_count,
+                "game_plays_to_delete": game_plays_count,
+                "coupons_to_reset": coupons_count,
+                "used_coupons_to_reset": used_coupons_count,
+                "admin_to_keep": {
+                    "id": admin_row[0],
+                    "username": admin_row[1],
+                    "balance": float(admin_row[2]) if admin_row[2] else 0
+                },
+                "warning": "This action is irreversible. All user data will be permanently deleted.",
+                "sudo_confirmation_required": "DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN"
+            }
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Preview error: {e}")
+        return jsonify({"success": False, "message": "Failed to generate preview"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ================= ADMIN EXPORT DATA =======================
+@app.route('/api/admin/export-data', methods=['POST'])
+@require_admin
+def admin_export_data():
+    """Export database data in various formats"""
+    data = request.get_json()
+    export_format = data.get('format', 'csv')
+    export_users = data.get('users', True)
+    export_transactions = data.get('transactions', True)
+    export_game_plays = data.get('game_plays', False)
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        export_data = {}
+        
+        if export_users:
+            cursor.execute('SELECT * FROM users')
+            users = [row_to_dict(cursor, row) for row in cursor.fetchall()]
+            export_data['users'] = users
+        
+        if export_transactions:
+            cursor.execute('SELECT * FROM transactions ORDER BY timestamp DESC LIMIT 10000')
+            transactions = [row_to_dict(cursor, row) for row in cursor.fetchall()]
+            export_data['transactions'] = transactions
+        
+        if export_game_plays:
+            cursor.execute('SELECT * FROM game_plays ORDER BY created_at DESC')
+            game_plays = [row_to_dict(cursor, row) for row in cursor.fetchall()]
+            export_data['game_plays'] = game_plays
+        
+        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        
+        if export_format == 'json':
+            response = jsonify(export_data)
+            response.headers['Content-Disposition'] = f'attachment; filename=flexia_export_{timestamp}.json'
+            response.headers['Content-Type'] = 'application/json'
+            return response
+        
+        elif export_format == 'csv':
+            import csv
+            import io
+            
+            # Create CSV in memory
+            output = io.StringIO()
+            writer = csv.writer(output)
+            
+            # Write users CSV
+            if 'users' in export_data:
+                writer.writerow(['=== USERS ==='])
+                if export_data['users']:
+                    headers = export_data['users'][0].keys()
+                    writer.writerow(headers)
+                    for user in export_data['users']:
+                        writer.writerow([user.get(h, '') for h in headers])
+                writer.writerow([])
+            
+            # Write transactions CSV
+            if 'transactions' in export_data:
+                writer.writerow(['=== TRANSACTIONS ==='])
+                if export_data['transactions']:
+                    headers = export_data['transactions'][0].keys()
+                    writer.writerow(headers)
+                    for tx in export_data['transactions']:
+                        writer.writerow([tx.get(h, '') for h in headers])
+                writer.writerow([])
+            
+            # Convert to bytes for response
+            csv_data = output.getvalue()
+            output.close()
+            
+            response = make_response(csv_data)
+            response.headers['Content-Disposition'] = f'attachment; filename=flexia_export_{timestamp}.csv'
+            response.headers['Content-Type'] = 'text/csv'
+            return response
+        
+        else:
+            return jsonify({"success": False, "message": "Unsupported export format"}), 400
+            
+    except Exception as e:
+        app.logger.error(f"Export data error: {e}")
+        return jsonify({"success": False, "message": f"Export failed: {str(e)}"}), 500
+    finally:
+        return_db_connection(conn)
+
+# ================= NEW: DATABASE EXPORT/IMPORT WITH .FLEXIA FILES =======================
+@app.route('/api/admin/database/export-all', methods=['POST'])
+@require_admin
+def admin_export_all_data():
+    """Export ALL database data to .flexia file format - NEW ENDPOINT"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Get all data
+        data = {}
+        
+        # Users (exclude password hashes for security)
+        cursor.execute('''
+        SELECT id, username, balance, referral_code, referred_by, is_admin,
+               created_at, last_login, claimed_bonuses, points, game_stats,
+               contact, profile_picture, ui_theme, withdrawal_restricted,
+               custom_withdrawal_days, withdrawal_limit, last_game_timestamp,
+               last_achievement_check, claimed_achievements
+        FROM users
+        ''')
+        users = []
+        for row in cursor.fetchall():
+            user_dict = {}
+            columns = [col[0] for col in cursor.description]
+            for i, col in enumerate(columns):
+                user_dict[col] = row[i]
+            users.append(user_dict)
+        data['users'] = users
+        
+        # Transactions
+        cursor.execute('SELECT * FROM transactions')
+        transactions = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+        data['transactions'] = transactions
+        
+        # Game plays
+        cursor.execute('SELECT * FROM game_plays')
+        game_plays = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+        data['game_plays'] = game_plays
+        
+        # Coupons
+        cursor.execute('SELECT * FROM coupons')
+        coupons = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+        data['coupons'] = coupons
+        
+        # WhatsApp numbers
+        cursor.execute('SELECT * FROM whatsapp_numbers')
+        whatsapp_numbers = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+        data['whatsapp_numbers'] = whatsapp_numbers
+        
+        # TikTok daily
+        cursor.execute('SELECT * FROM tiktok_daily')
+        tiktok_daily = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+        data['tiktok_daily'] = tiktok_daily
+        
+        # Banks
+        cursor.execute('SELECT * FROM banks')
+        banks = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+        data['banks'] = banks
+        
+        # Admin settings
+        cursor.execute('SELECT * FROM admin_settings')
+        admin_settings = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+        data['admin_settings'] = admin_settings
+        
+        # Add metadata
+        data['_metadata'] = {
+            'export_date': datetime.utcnow().isoformat(),
+            'version': 'FLEXIA_BACKUP_v1.0',
+            'total_records': {
+                'users': len(users),
+                'transactions': len(transactions),
+                'game_plays': len(game_plays),
+                'coupons': len(coupons)
+            }
+        }
+        
+        return_db_connection(conn)
+        
+        # Convert to JSON
+        json_data = json.dumps(data, indent=2, default=str)
+        
+        # Create response
+        response = make_response(json_data)
+        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        response.headers['Content-Disposition'] = f'attachment; filename=flexia_backup_{timestamp}.flexia'
+        response.headers['Content-Type'] = 'application/json'
+        
+        app.logger.info(f"Database exported: {len(users)} users, {len(transactions)} transactions")
+        
+        return response
+        
+    except Exception as e:
+        app.logger.error(f"Export all data error: {e}")
+        return jsonify({"success": False, "message": f"Export failed: {str(e)}"}), 500
+
+@app.route('/api/admin/database/import-all', methods=['POST'])
+@require_admin
+def admin_import_all_data():
+    """Import data from .flexia file (complete restore) - NEW ENDPOINT"""
+    try:
+        # Check if file was uploaded
+        if 'file' not in request.files:
+            return jsonify({"success": False, "message": "No file uploaded"}), 400
+        
+        file = request.files['file']
+        
+        if file.filename == '':
+            return jsonify({"success": False, "message": "No file selected"}), 400
+        
+        # Check file extension
+        if not file.filename.endswith('.flexia'):
+            return jsonify({"success": False, "message": "File must be .flexia format"}), 400
+        
+        # Read and parse JSON
+        json_data = file.read().decode('utf-8')
+        data = json.loads(json_data)
+        
+        # Verify it's a valid FLEXIA backup
+        if '_metadata' not in data:
+            return jsonify({"success": False, "message": "Invalid .flexia file format"}), 400
+        
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        try:
+            # Start transaction
+            if os.environ.get('DATABASE_URL'):
+                cursor.execute("BEGIN")
+            
+            # Clear existing data (keep admin settings structure)
+            tables_to_clear = ['users', 'transactions', 'game_plays', 'coupons', 
+                              'whatsapp_numbers', 'tiktok_daily']
+            
+            for table in tables_to_clear:
+                try:
+                    cursor.execute(f'DELETE FROM {table}')
+                except:
+                    pass
+            
+            # Import data
+            imported_counts = {}
+            
+            # Import users
+            if 'users' in data:
+                for user in data['users']:
+                    try:
+                        # Handle is_admin for different DB types
+                        is_admin_value = user.get('is_admin', False)
+                        if os.environ.get('DATABASE_URL'):
+                            is_admin_value = bool(is_admin_value)
+                        else:
+                            is_admin_value = 1 if is_admin_value else 0
+                        
+                        # Handle withdrawal_restricted
+                        withdrawal_restricted = user.get('withdrawal_restricted', False)
+                        if os.environ.get('DATABASE_URL'):
+                            withdrawal_restricted = bool(withdrawal_restricted)
+                        else:
+                            withdrawal_restricted = 1 if withdrawal_restricted else 0
+                        
+                        cursor.execute('''
+                        INSERT INTO users (
+                            id, username, balance, referral_code, referred_by, is_admin,
+                            created_at, last_login, claimed_bonuses, points, game_stats,
+                            contact, profile_picture, ui_theme, withdrawal_restricted,
+                            custom_withdrawal_days, withdrawal_limit, last_game_timestamp,
+                            last_achievement_check, claimed_achievements
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ''', (
+                            user.get('id'), user.get('username'), user.get('balance', 0),
+                            user.get('referral_code'), user.get('referred_by'), is_admin_value,
+                            user.get('created_at'), user.get('last_login'), user.get('claimed_bonuses', 0),
+                            user.get('points', 0), user.get('game_stats'), user.get('contact'),
+                            user.get('profile_picture'), user.get('ui_theme', 'light'),
+                            withdrawal_restricted, user.get('custom_withdrawal_days'),
+                            user.get('withdrawal_limit', 0), user.get('last_game_timestamp'),
+                            user.get('last_achievement_check'), user.get('claimed_achievements', '[]')
+                        ))
+                        imported_counts['users'] = imported_counts.get('users', 0) + 1
+                    except Exception as e:
+                        app.logger.warning(f"Skipping user {user.get('username')}: {e}")
+            
+            # Import transactions
+            if 'transactions' in data:
+                for tx in data['transactions']:
+                    try:
+                        cursor.execute('''
+                        INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        ''', (
+                            tx.get('id'), tx.get('user_id'), tx.get('type'), tx.get('amount'),
+                            tx.get('status'), tx.get('details'), tx.get('timestamp')
+                        ))
+                        imported_counts['transactions'] = imported_counts.get('transactions', 0) + 1
+                    except Exception as e:
+                        app.logger.warning(f"Skipping transaction {tx.get('id')}: {e}")
+            
+            # Import game plays
+            if 'game_plays' in data:
+                for play in data['game_plays']:
+                    try:
+                        cursor.execute('''
+                        INSERT INTO game_plays (id, user_id, game_type, play_date, created_at)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ''', (
+                            play.get('id'), play.get('user_id'), play.get('game_type'),
+                            play.get('play_date'), play.get('created_at')
+                        ))
+                        imported_counts['game_plays'] = imported_counts.get('game_plays', 0) + 1
+                    except Exception as e:
+                        app.logger.warning(f"Skipping game play {play.get('id')}: {e}")
+            
+            # Import coupons
+            if 'coupons' in data:
+                for coupon in data['coupons']:
+                    try:
+                        cursor.execute('''
+                        INSERT INTO coupons (code, status)
+                        VALUES (%s, %s)
+                        ''', (
+                            coupon.get('code'), coupon.get('status', 'AVAILABLE')
+                        ))
+                        imported_counts['coupons'] = imported_counts.get('coupons', 0) + 1
+                    except Exception as e:
+                        app.logger.warning(f"Skipping coupon {coupon.get('code')}: {e}")
+            
+            # Import WhatsApp numbers
+            if 'whatsapp_numbers' in data:
+                for num in data['whatsapp_numbers']:
+                    try:
+                        cursor.execute('''
+                        INSERT INTO whatsapp_numbers (id, number, label, is_active, created_at)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ''', (
+                            num.get('id'), num.get('number'), num.get('label'),
+                            num.get('is_active'), num.get('created_at')
+                        ))
+                        imported_counts['whatsapp_numbers'] = imported_counts.get('whatsapp_numbers', 0) + 1
+                    except Exception as e:
+                        app.logger.warning(f"Skipping WhatsApp number {num.get('number')}: {e}")
+            
+            # Import TikTok daily
+            if 'tiktok_daily' in data:
+                for tiktok in data['tiktok_daily']:
+                    try:
+                        cursor.execute('''
+                        INSERT INTO tiktok_daily (id, date, tiktok_link, reward_amount, created_at)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ''', (
+                            tiktok.get('id'), tiktok.get('date'), tiktok.get('tiktok_link'),
+                            tiktok.get('reward_amount'), tiktok.get('created_at')
+                        ))
+                        imported_counts['tiktok_daily'] = imported_counts.get('tiktok_daily', 0) + 1
+                    except Exception as e:
+                        app.logger.warning(f"Skipping TikTok daily {tiktok.get('date')}: {e}")
+            
+            # Import admin settings
+            if 'admin_settings' in data:
+                for setting in data['admin_settings']:
+                    try:
+                        cursor.execute('''
+                        INSERT INTO admin_settings (id, whatsapp_link, telegram_link, facebook_link, global_withdrawal_days)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ''', (
+                            setting.get('id'), setting.get('whatsapp_link'), setting.get('telegram_link'),
+                            setting.get('facebook_link'), setting.get('global_withdrawal_days')
+                        ))
+                        imported_counts['admin_settings'] = imported_counts.get('admin_settings', 0) + 1
+                    except Exception as e:
+                        app.logger.warning(f"Skipping admin setting: {e}")
+            
+            conn.commit()
+            
+            app.logger.info(f"Database imported successfully: {imported_counts}")
+            
+            return jsonify({
+                "success": True,
+                "message": "Database imported successfully!",
+                "imported_counts": imported_counts,
+                "metadata": data.get('_metadata', {})
+            })
+            
+        except Exception as e:
+            conn.rollback()
+            app.logger.error(f"Import error: {e}")
+            return jsonify({"success": False, "message": f"Import failed: {str(e)}"}), 500
+            
+    except Exception as e:
+        app.logger.error(f"Import all data error: {e}")
+        return jsonify({"success": False, "message": f"Import failed: {str(e)}"}), 500
+
+# ================= BACKUP ENDPOINTS =======================
+@app.route('/api/admin/backup/trigger', methods=['POST'])
+@require_admin
+def trigger_backup():
+    """Manually trigger a database backup"""
+    try:
+        backup_file = backup_database()
+        if backup_file:
+            app.logger.info(f"Manual backup triggered: {backup_file}")
+            return jsonify({
+                "success": True,
+                "message": "Backup created successfully",
+                "backup_file": backup_file
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "message": "Backup creation failed"
+            }), 500
+    except Exception as e:
+        app.logger.error(f"Manual backup error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Backup error: {str(e)}"
+        }), 500
+
+@app.route('/api/admin/backup/list', methods=['GET'])
+@require_admin
+def list_backups():
+    """List all available backups"""
+    try:
+        if not os.path.exists('backups'):
+            return jsonify({"success": True, "backups": []})
+        
+        backups = []
+        for filename in sorted(os.listdir('backups'), reverse=True):
+            filepath = os.path.join('backups', filename)
+            if os.path.isfile(filepath):
+                stat = os.stat(filepath)
+                backups.append({
+                    "filename": filename,
+                    "size": stat.st_size,
+                    "created": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                    "size_human": f"{stat.st_size / 1024 / 1024:.2f} MB"
+                })
+        
+        return jsonify({
+            "success": True,
+            "backups": backups
+        })
+    except Exception as e:
+        app.logger.error(f"List backups error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error listing backups: {str(e)}"
+        }), 500
+
 # ================= HEALTH CHECK =======================
 def get_uptime():
     """Calculate application uptime"""
@@ -4329,63 +4649,6 @@ def api_health():
             "uptime": get_uptime(),
             "version": "14.0"
         }), 503
-
-# ================= BACKUP ENDPOINTS =======================
-@app.route('/api/admin/backup/trigger', methods=['POST'])
-@require_admin
-def trigger_backup():
-    """Manually trigger a database backup"""
-    try:
-        backup_file = backup_database()
-        if backup_file:
-            app.logger.info(f"Manual backup triggered: {backup_file}")
-            return jsonify({
-                "success": True,
-                "message": "Backup created successfully",
-                "backup_file": backup_file
-            })
-        else:
-            return jsonify({
-                "success": False,
-                "message": "Backup creation failed"
-            }), 500
-    except Exception as e:
-        app.logger.error(f"Manual backup error: {str(e)}")
-        return jsonify({
-            "success": False,
-            "message": f"Backup error: {str(e)}"
-        }), 500
-
-@app.route('/api/admin/backup/list', methods=['GET'])
-@require_admin
-def list_backups():
-    """List all available backups"""
-    try:
-        if not os.path.exists('backups'):
-            return jsonify({"success": True, "backups": []})
-        
-        backups = []
-        for filename in sorted(os.listdir('backups'), reverse=True):
-            filepath = os.path.join('backups', filename)
-            if os.path.isfile(filepath):
-                stat = os.stat(filepath)
-                backups.append({
-                    "filename": filename,
-                    "size": stat.st_size,
-                    "created": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                    "size_human": f"{stat.st_size / 1024 / 1024:.2f} MB"
-                })
-        
-        return jsonify({
-            "success": True,
-            "backups": backups
-        })
-    except Exception as e:
-        app.logger.error(f"List backups error: {str(e)}")
-        return jsonify({
-            "success": False,
-            "message": f"Error listing backups: {str(e)}"
-        }), 500
 
 # ================= STATIC FILES =======================
 @app.route('/')
