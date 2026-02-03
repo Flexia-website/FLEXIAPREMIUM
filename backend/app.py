@@ -44,8 +44,8 @@ class Config:
     # Game daily limits
     GAME_DAILY_LIMITS = {
         'snake': 17,
-        'coinflip': 7,
-        'plinko': 7,
+        'coinflip': 12,
+        'plinko': 12,
         'spin': 1,
         'tiktok': 1
     }
