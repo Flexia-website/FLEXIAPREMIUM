@@ -1,6 +1,7 @@
 # backend/app.py - COMPLETE PRODUCTION VERSION WITH ALL ENDPOINTS
 # FLEXIA Platform - PRODUCTION READY v14.0
 # COMPLETE VERSION WITH ALL FIXES AND ENDPOINTS
+# ADMIN CREDENTIALS VIA ENVIRONMENT VARIABLES
 
 import os
 import json
@@ -40,6 +41,11 @@ class Config:
     PLINKO_MIN_BET = 100
     SESSION_DURATION_HOURS = 24
     DEFAULT_WITHDRAWAL_DAYS = [7, 14, 25, 30]
+    
+    # Admin credentials from environment variables with defaults
+    ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'flexiaadmin')
+    ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'passwordinnumber1')
+    ADMIN_WITHDRAWAL_PIN = os.environ.get('ADMIN_WITHDRAWAL_PIN', '4567')
     
     # Game daily limits
     GAME_DAILY_LIMITS = {
@@ -931,17 +937,17 @@ def init_db():
                 pass
         app.logger.info(f"Created {len(default_coupons)} default coupons")
 
-    # Admin user
-    cursor.execute('SELECT COUNT(*) as count FROM users WHERE username = %s' if is_postgres else 'SELECT COUNT(*) as count FROM users WHERE username = ?', ("flexiaadmin",))
+    # Admin user - USING ENVIRONMENT VARIABLES
+    cursor.execute('SELECT COUNT(*) as count FROM users WHERE username = %s' if is_postgres else 'SELECT COUNT(*) as count FROM users WHERE username = ?', (CONFIG.ADMIN_USERNAME,))
     admin_count = cursor.fetchone()[0]
     if admin_count == 0:
-        admin_pass = generate_password_hash("passwordinnumber1")
+        admin_pass = generate_password_hash(CONFIG.ADMIN_PASSWORD)
         game_stats = json.dumps({
             "snake": {"high_score": 1200, "total_score": 5000},
             "coin_flip": {"wins": 25, "losses": 18, "current_streak": 3},
             "plinko": {"total_wins": 15, "total_bets": 25000, "highest_win": 5000}
         })
-        pin_hash = generate_password_hash("4567")
+        pin_hash = generate_password_hash(CONFIG.ADMIN_WITHDRAWAL_PIN)
         if is_postgres:
             cursor.execute(f'''
             INSERT INTO users (
@@ -951,7 +957,7 @@ def init_db():
                 last_game_timestamp, last_achievement_check, claimed_achievements
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ''', (
-                "flexiaadmin", admin_pass, 500000.00, "ADM0001", True,
+                CONFIG.ADMIN_USERNAME, admin_pass, 500000.00, "ADM0001", True,
                 datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
                 game_stats, False, pin_hash, "", "", "light", 
                 datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
@@ -966,17 +972,21 @@ def init_db():
                 last_game_timestamp, last_achievement_check, claimed_achievements
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                "flexiaadmin", admin_pass, 500000.00, "ADM0001", 1,
+                CONFIG.ADMIN_USERNAME, admin_pass, 500000.00, "ADM0001", 1,
                 datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
                 game_stats, 0, pin_hash, "", "", "light",
                 datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
                 '[]'
             ))
         app.logger.warning("\n⚠️ FLEXIA ADMIN ACCOUNT CREATED ⚠️")
-        app.logger.warning("Username: flexiaadmin")
-        app.logger.warning("Initial Password: passwordinnumber1")
-        app.logger.warning("Default Withdrawal PIN: 4567")
+        app.logger.warning(f"Username: {CONFIG.ADMIN_USERNAME}")
+        app.logger.warning(f"Initial Password: {CONFIG.ADMIN_PASSWORD}")
+        app.logger.warning(f"Default Withdrawal PIN: {CONFIG.ADMIN_WITHDRAWAL_PIN}")
         app.logger.warning("⚠️ Change both after first login!\n")
+        app.logger.warning("ℹ️ Admin credentials can be changed via environment variables:")
+        app.logger.warning("  - ADMIN_USERNAME")
+        app.logger.warning("  - ADMIN_PASSWORD") 
+        app.logger.warning("  - ADMIN_WITHDRAWAL_PIN")
 
     # WhatsApp number
     cursor.execute('SELECT COUNT(*) as count FROM whatsapp_numbers')
@@ -2406,10 +2416,6 @@ def report_plinko_enhanced():
             if conn:
                 conn.rollback()
             return jsonify({"success": False, "message": f"Failed to process: {str(e)}"}), 500
-        finally:
-            if conn:
-                return_db_connection(conn)
-                
     finally:
         # RELEASE LOCK
         release_claim_lock(user['id'], 'PLINKO')
@@ -3536,7 +3542,7 @@ def admin_toggle_user_admin(user_id):
         username = row[0]
         is_currently_admin = bool(row[1])
         
-        if username == 'flexiaadmin':
+        if username == CONFIG.ADMIN_USERNAME:
             return jsonify({"success": False, "message": "Cannot modify original admin"}), 403
         
         new_admin_status = not is_currently_admin
@@ -3576,7 +3582,7 @@ def admin_delete_user(user_id):
         
         username = row[0]
         
-        if username == 'flexiaadmin':
+        if username == CONFIG.ADMIN_USERNAME:
             return jsonify({"success": False, "message": "Cannot delete original admin"}), 403
         
         # Delete user's transactions
@@ -4015,7 +4021,7 @@ def admin_clear_database():
             cursor.execute("BEGIN")
         
         # Get admin user details
-        cursor.execute("SELECT id, username FROM users WHERE username = 'flexiaadmin'")
+        cursor.execute("SELECT id, username FROM users WHERE username = %s", (CONFIG.ADMIN_USERNAME,))
         admin_row = cursor.fetchone()
         
         if not admin_row:
@@ -4109,7 +4115,7 @@ def admin_preview_database_clear():
     
     try:
         # Count all users except admin
-        cursor.execute("SELECT COUNT(*) FROM users WHERE username != 'flexiaadmin'")
+        cursor.execute("SELECT COUNT(*) FROM users WHERE username != %s", (CONFIG.ADMIN_USERNAME,))
         users_count = cursor.fetchone()[0]
         
         # Count transactions
@@ -4129,7 +4135,7 @@ def admin_preview_database_clear():
         used_coupons_count = cursor.fetchone()[0]
         
         # Get admin info
-        cursor.execute("SELECT id, username, balance FROM users WHERE username = 'flexiaadmin'")
+        cursor.execute("SELECT id, username, balance FROM users WHERE username = %s", (CONFIG.ADMIN_USERNAME,))
         admin_row = cursor.fetchone()
         
         return jsonify({
@@ -4691,6 +4697,10 @@ if __name__ == '__main__':
     app.logger.info(f"   • TikTok: {CONFIG.GAME_DAILY_LIMITS['tiktok']} plays/day")
     app.logger.info(f"🧹 Database Clearing: Enabled (Admin only)")
     app.logger.info(f"📤 Data Export/Import: Enabled (Admin only - .flexia format)")
+    app.logger.info(f"👑 ADMIN CREDENTIALS VIA ENVIRONMENT VARIABLES:")
+    app.logger.info(f"   • ADMIN_USERNAME: {CONFIG.ADMIN_USERNAME}")
+    app.logger.info(f"   • ADMIN_PASSWORD: [SET VIA ENV VAR]")
+    app.logger.info(f"   • ADMIN_WITHDRAWAL_PIN: [SET VIA ENV VAR]")
     app.logger.info(f"🚀 VERSION 14.0: Complete with all fixes and endpoints")
     
     app.run(host='0.0.0.0', port=port, debug=debug)
