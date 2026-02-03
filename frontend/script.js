@@ -739,9 +739,9 @@ const CONFIG = {
   PLINKO_MIN_BET: 100,
   CLAIM_COOLDOWN: 2000,
   GAME_DAILY_LIMITS: {
-    'snake': 10,
-    'coinflip': 5,
-    'plinko': 5,
+    'snake': 5,
+    'coinflip': 2,
+    'plinko': 2,
     'spin': 1,
     'tiktok': 1
   }
@@ -1227,17 +1227,17 @@ const GameLimiter = {
     'snake': {
       icon: '🐍',
       title: 'Snake Game Limit Reached',
-      message: 'You have played Snake 10 times today. Come back tomorrow for more fun!'
+      message: 'You have played Snake 5 times today. Come back tomorrow for more fun!'
     },
     'coinflip': {
       icon: '🪙',
       title: 'Coin Flip Limit Reached',
-      message: 'You have played Coin Flip 5 times today. Daily limit reached!'
+      message: 'You have played Coin Flip 2 times today. Daily limit reached!'
     },
     'plinko': {
       icon: '🎯',
       title: 'Plinko Limit Reached',
-      message: 'You have played Plinko 5 times today. Try again tomorrow!'
+      message: 'You have played Plinko 2 times today. Try again tomorrow!'
     },
     'spin': {
       icon: '🎡',
