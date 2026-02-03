@@ -612,6 +612,116 @@ const embeddedCSS = `
   .activity-card.disabled .card-badge {
     background: #ff4757 !important;
   }
+  
+  /* PIN Change Modal Styles */
+  .pin-change-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10002;
+    backdrop-filter: blur(10px);
+  }
+  
+  .pin-change-modal-content {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-radius: 20px;
+    padding: 30px;
+    max-width: 400px;
+    width: 90%;
+    border: 2px solid #8000FF;
+    box-shadow: 0 20px 40px rgba(128, 0, 255, 0.3);
+    text-align: center;
+    animation: slideIn 0.4s ease-out;
+  }
+  
+  .pin-change-icon {
+    font-size: 3rem;
+    margin-bottom: 20px;
+    color: #8000FF;
+  }
+  
+  .pin-change-title {
+    color: white;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+  }
+  
+  .pin-input-group {
+    margin-bottom: 20px;
+    text-align: left;
+  }
+  
+  .pin-input-group label {
+    display: block;
+    color: #A0A0B5;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+  }
+  
+  .pin-input {
+    width: 100%;
+    padding: 12px 15px;
+    background: rgba(30, 30, 69, 0.8);
+    border: 2px solid #252540;
+    border-radius: 10px;
+    color: white;
+    font-size: 1.1rem;
+    font-family: monospace;
+    letter-spacing: 3px;
+    text-align: center;
+  }
+  
+  .pin-input:focus {
+    border-color: #8000FF;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(128, 0, 255, 0.2);
+  }
+  
+  .pin-change-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 25px;
+  }
+  
+  .pin-change-btn-primary {
+    flex: 1;
+    background: linear-gradient(135deg, #8000FF 0%, #6C00FF 100%);
+    color: white;
+    border: none;
+    padding: 15px;
+    border-radius: 10px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .pin-change-btn-primary:hover {
+    transform: translateY(-2px);
+  }
+  
+  .pin-change-btn-secondary {
+    flex: 1;
+    background: transparent;
+    color: #A0A0B5;
+    border: 1px solid #A0A0B5;
+    padding: 15px;
+    border-radius: 10px;
+    font-family: 'Orbitron', sans-serif;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .pin-change-btn-secondary:hover {
+    background: rgba(160, 160, 181, 0.1);
+  }
 `;
 
 // Inject CSS into document
@@ -1529,7 +1639,6 @@ const EnhancedGameLimiter = {
         message.style.transform = 'translate(-50%, -50%)';
         message.style.zIndex = '10003';
         message.style.fontSize = '1.2rem';
-        message.style.padding = '30px';
         message.innerHTML = `
             <div style="text-align: center;">
                 <div style="font-size: 3rem; margin-bottom: 20px;">🚫</div>
@@ -2624,20 +2733,39 @@ const Settings = {
     }
     
     try {
-      const result = await GameManager.safeClaim(
-        '/api/user/change-password',
-        { old_password: oldPass, new_password: newPass },
-        'changepassword'
-      );
+      // Check if user is admin
+      const isAdmin = App.currentUser && App.currentUser.is_admin;
+      const endpoint = isAdmin ? '/api/admin/change-password' : '/api/user/change-password';
       
-      if (result.success) {
-        App.showMessage("Password changed successfully!", "success");
+      const response = await App.requestWithTimeout(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          current_password: oldPass,
+          new_password: newPass
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        App.showMessage("✅ Password changed successfully!", "success");
         App.closeModal('settings-modal');
+        
+        // If admin, suggest logout
+        if (isAdmin && data.message && data.message.includes('login again')) {
+          setTimeout(() => {
+            if (confirm("Admin password changed. Logout and login again?")) {
+              Settings.logout();
+            }
+          }, 1000);
+        }
       } else {
-        App.showMessage(result.message, "error");
+        App.showMessage(data.message || "Failed to change password", "error");
       }
     } catch (error) {
-      App.showMessage("Failed to change password. Please try again.", "error");
+      App.showMessage("Network error. Please try again.", "error");
     }
   },
   
