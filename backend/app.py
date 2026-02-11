@@ -53,7 +53,7 @@ class Config:
         'coinflip': 12,
         'plinko': 12,
         'spin': 1,
-        'tiktok': 1
+        'tiktok': 3
     }
     
     # Security settings
