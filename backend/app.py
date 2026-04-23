@@ -68,40 +68,43 @@ app.secret_key = CONFIG.SECRET_KEY
 
 # ======================= SETUP LOGGING =======================
 def setup_logging():
-    """Setup structured logging for the application"""
-    if not os.path.exists('logs'):
-        os.makedirs('logs')
-    
-    # File handler with rotation
-    file_handler = RotatingFileHandler(
-        'logs/flexia.log', 
-        maxBytes=10485760,  # 10MB
-        backupCount=10
-    )
-    file_handler.setFormatter(logging.Formatter(
-        '%(asctime)s [%(levelname)s] %(name)s: %(message)s '
-        '[in %(pathname)s:%(lineno)d]'
-    ))
-    file_handler.setLevel(logging.INFO)
-    
-    # Console handler
+    """Setup structured logging - console only on Render, file+console locally"""
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(logging.Formatter(
         '%(asctime)s [%(levelname)s] %(message)s'
     ))
     console_handler.setLevel(logging.DEBUG)
-    
-    # Configure app logger
-    app.logger.addHandler(file_handler)
+
     app.logger.addHandler(console_handler)
     app.logger.setLevel(logging.INFO)
-    
-    # Set werkzeug logger
+
     werkzeug_logger = logging.getLogger('werkzeug')
-    werkzeug_logger.addHandler(file_handler)
+    werkzeug_logger.addHandler(console_handler)
     werkzeug_logger.setLevel(logging.WARNING)
 
-setup_logging()
+    if os.getenv('ENV') != 'production':
+        try:
+            if not os.path.exists('logs'):
+                os.makedirs('logs')
+            file_handler = RotatingFileHandler(
+                'logs/flexia.log',
+                maxBytes=10485760,
+                backupCount=10
+            )
+            file_handler.setFormatter(logging.Formatter(
+                '%(asctime)s [%(levelname)s] %(name)s: %(message)s '
+                '[in %(pathname)s:%(lineno)d]'
+            ))
+            file_handler.setLevel(logging.INFO)
+            app.logger.addHandler(file_handler)
+            werkzeug_logger.addHandler(file_handler)
+        except Exception:
+            pass
+
+try:
+    setup_logging()
+except Exception:
+    pass
 
 # ======================= SECURITY HEADERS =======================
 @app.after_request
@@ -204,6 +207,10 @@ def handle_all_exceptions(error):
 # ======================= BACKUP SYSTEM =======================
 def backup_database():
     """Create a backup of the database"""
+    # Skip file-based backups on production (Render has read-only filesystem)
+    if os.getenv('ENV') == 'production':
+        app.logger.info('Production environment - skipping local file backup')
+        return None
     try:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         
