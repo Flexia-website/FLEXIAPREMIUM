@@ -1087,14 +1087,14 @@ def check_game_cooldown(user_id, game_type):
     """Check if user is in cooldown for a specific game"""
     conn = get_db()
     cursor = conn.cursor()
+    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
     try:
-        cursor.execute('SELECT last_game_timestamp FROM users WHERE id = %s', (user_id,))
+        cursor.execute(f'SELECT last_game_timestamp FROM users WHERE id = {ph}', (user_id,))
         row = cursor.fetchone()
         if row and row[0]:
             try:
                 last_game = datetime.fromisoformat(row[0])
                 now = datetime.utcnow()
-                # 1 second cooldown between games
                 if (now - last_game).total_seconds() < 1:
                     return False
             except:
@@ -1110,8 +1110,9 @@ def update_last_game_timestamp(user_id):
     """Update user's last game timestamp"""
     conn = get_db()
     cursor = conn.cursor()
+    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
     try:
-        cursor.execute('UPDATE users SET last_game_timestamp = %s WHERE id = %s',
+        cursor.execute(f'UPDATE users SET last_game_timestamp = {ph} WHERE id = {ph}',
                        (datetime.utcnow().isoformat(), user_id))
         conn.commit()
     except Exception as e:
@@ -1665,7 +1666,8 @@ def set_withdrawal_pin():
         # Hash the PIN
         pin_hash = generate_password_hash(pin)
         
-        cursor.execute('UPDATE users SET withdrawal_pin = %s WHERE id = %s',
+        ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+        cursor.execute(f'UPDATE users SET withdrawal_pin = {ph} WHERE id = {ph}',
                       (pin_hash, user['id']))
         
         conn.commit()
@@ -1700,7 +1702,8 @@ def verify_withdrawal_pin():
     cursor = conn.cursor()
     
     try:
-        cursor.execute('SELECT withdrawal_pin FROM users WHERE id = %s', (user['id'],))
+        ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+        cursor.execute(f'SELECT withdrawal_pin FROM users WHERE id = {ph}', (user['id'],))
         row = cursor.fetchone()
         
         if not row or not row[0]:
@@ -1746,7 +1749,8 @@ def change_password():
     
     try:
         # Get current password
-        cursor.execute('SELECT password FROM users WHERE id = %s', (user['id'],))
+        ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+        cursor.execute(f'SELECT password FROM users WHERE id = {ph}', (user['id'],))
         row = cursor.fetchone()
         
         if not row:
@@ -1760,7 +1764,7 @@ def change_password():
         
         # Update to new password
         new_password_hash = generate_password_hash(new_password)
-        cursor.execute('UPDATE users SET password = %s WHERE id = %s',
+        cursor.execute(f'UPDATE users SET password = {ph} WHERE id = {ph}',
                       (new_password_hash, user['id']))
         
         conn.commit()
@@ -1799,7 +1803,8 @@ def set_profile_picture():
     cursor = conn.cursor()
     
     try:
-        cursor.execute('UPDATE users SET profile_picture = %s WHERE id = %s',
+        ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+        cursor.execute(f'UPDATE users SET profile_picture = {ph} WHERE id = {ph}',
                       (picture_url, user['id']))
         
         conn.commit()
@@ -1832,7 +1837,8 @@ def set_ui_theme():
     
     try:
         theme = 'dark' if dark_mode else 'light'
-        cursor.execute('UPDATE users SET ui_theme = %s WHERE id = %s',
+        ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+        cursor.execute(f'UPDATE users SET ui_theme = {ph} WHERE id = {ph}',
                       (theme, user['id']))
         
         conn.commit()
@@ -1873,7 +1879,8 @@ def admin_change_password():
     
     try:
         # Get current password hash
-        cursor.execute('SELECT password FROM users WHERE id = %s', (user['id'],))
+        ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+        cursor.execute(f'SELECT password FROM users WHERE id = {ph}', (user['id'],))
         row = cursor.fetchone()
         if not row:
             return jsonify({"success": False, "message": "User not found"}), 404
@@ -1886,8 +1893,12 @@ def admin_change_password():
         
         # Update password
         new_password_hash = generate_password_hash(new_password)
-        cursor.execute('UPDATE users SET password = %s, admin_password_changed = TRUE WHERE id = %s',
-                      (new_password_hash, user['id']))
+        if os.environ.get('DATABASE_URL'):
+            cursor.execute(f'UPDATE users SET password = {ph}, admin_password_changed = TRUE WHERE id = {ph}',
+                          (new_password_hash, user['id']))
+        else:
+            cursor.execute(f'UPDATE users SET password = {ph}, admin_password_changed = 1 WHERE id = {ph}',
+                          (new_password_hash, user['id']))
         
         conn.commit()
         
@@ -1912,15 +1923,15 @@ def check_withdrawal_day():
     """Check if user can withdraw today - FIXED VERSION"""
     user = get_current_user()
     today = datetime.utcnow().day
-    
+    conn = None
     try:
         can_withdraw = is_withdrawal_day(user['id'])
         global_days = get_global_withdrawal_days()
-        
-        # Get user's custom days if any
+
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute('SELECT custom_withdrawal_days FROM users WHERE id = %s', (user['id'],))
+        ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+        cursor.execute(f'SELECT custom_withdrawal_days FROM users WHERE id = {ph}', (user['id'],))
         row = cursor.fetchone()
         custom_days = []
         if row and row[0]:
@@ -1928,7 +1939,7 @@ def check_withdrawal_day():
                 custom_days = json.loads(row[0]) if row[0] else []
             except:
                 pass
-        
+
         return jsonify({
             "success": True,
             "can_withdraw": can_withdraw,
@@ -1937,10 +1948,13 @@ def check_withdrawal_day():
             "custom_withdrawal_days": custom_days if custom_days else [],
             "message": f"You {'CAN' if can_withdraw else 'CANNOT'} withdraw today. Withdrawal days: {', '.join(map(str, sorted(custom_days if custom_days else global_days)))}"
         })
-        
+
     except Exception as e:
         app.logger.error(f"Check withdrawal day error: {e}")
         return jsonify({"success": False, "message": "Failed to check withdrawal day"}), 500
+    finally:
+        if conn:
+            return_db_connection(conn)
 
 # ======================= GAME ACCESS CHECK ENDPOINTS =======================
 @app.route('/api/games/access', methods=['GET'])
@@ -4656,25 +4670,18 @@ def api_health():
             "version": "14.0"
         }), 503
 
-# ================= STATIC FILES =======================
-@app.route('/')
-def index():
-    return send_from_directory(CONFIG.FRONTEND_DIR, 'index.html')
-
-@app.route('/<path:filename>')
-def serve_static(filename):
-    try:
-        return send_from_directory(CONFIG.FRONTEND_DIR, filename)
-    except FileNotFoundError:
-        return send_from_directory(CONFIG.FRONTEND_DIR, 'index.html')
-
-# ================= CATCH-ALL =================
+# ================= STATIC FILES & CATCH-ALL =================
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def catch_all(path):
     if path.startswith('api/'):
         return jsonify({"success": False, "message": "API endpoint not found"}), 404
-    return send_from_directory(CONFIG.FRONTEND_DIR, 'index.html')
+    if path == '' or path is None:
+        return send_from_directory(CONFIG.FRONTEND_DIR, 'index.html')
+    try:
+        return send_from_directory(CONFIG.FRONTEND_DIR, path)
+    except FileNotFoundError:
+        return send_from_directory(CONFIG.FRONTEND_DIR, 'index.html')
 
 # ================= MAIN =================
 if __name__ == '__main__':
