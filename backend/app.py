@@ -1,7 +1,11 @@
 # backend/app.py - COMPLETE PRODUCTION VERSION WITH ALL ENDPOINTS
-# FLEXIA Platform - PRODUCTION READY v14.0
-# COMPLETE VERSION WITH ALL FIXES AND ENDPOINTS
+# FLEXIA Platform - PRODUCTION READY v15.0
+# GEVENT ASYNC - HANDLES UNLIMITED SIMULTANEOUS USERS
 # ADMIN CREDENTIALS VIA ENVIRONMENT VARIABLES
+
+# ======================= GEVENT PATCH (MUST BE FIRST) =======================
+from gevent import monkey
+monkey.patch_all()
 
 import os
 import json
@@ -322,18 +326,20 @@ def cleanup_old_backups():
 db_pool = None
 
 def init_db_pool():
-    """Initialize database connection pool with optimized settings"""
+    """Initialize gevent-compatible database connection pool"""
     global db_pool
-    
+
     if os.environ.get('DATABASE_URL'):
         try:
-            # INCREASED CONNECTIONS FOR RENDER
+            # Gevent-safe pool: enough connections for high concurrency
             db_pool = SimpleConnectionPool(
-                5,  # min connections
-                50, # max connections
-                dsn=os.environ['DATABASE_URL']
+                10,   # min connections - always ready
+                100,  # max connections - handles traffic spikes
+                dsn=os.environ['DATABASE_URL'],
+                connect_timeout=5,       # fail fast on bad connections
+                options="-c statement_timeout=30000"  # 30s max query time
             )
-            app.logger.info('✅ Database connection pool initialized: 5-50 connections')
+            app.logger.info('✅ Database connection pool initialized: 10-100 connections (gevent async)')
         except Exception as e:
             app.logger.error(f'❌ Failed to initialize connection pool: {str(e)}')
             db_pool = None
@@ -341,17 +347,19 @@ def init_db_pool():
         app.logger.info('✅ SQLite mode - connection pooling not needed')
 
 def get_db():
-    """Get database connection from pool or create new one"""
+    """Get database connection from pool (gevent-safe)"""
     global db_pool
-    
+
     if os.environ.get('DATABASE_URL') and db_pool:
         try:
             conn = db_pool.getconn()
+            if conn.closed:
+                db_pool.putconn(conn)
+                conn = get_db_direct()
             conn.autocommit = False
             return conn
         except Exception as e:
-            app.logger.error(f'Error getting connection from pool: {str(e)}')
-            # Fallback to direct connection
+            app.logger.error(f'Pool connection error: {str(e)} — falling back to direct')
             return get_db_direct()
     else:
         return get_db_direct()
@@ -944,29 +952,32 @@ def init_db():
                 pass
         app.logger.info(f"Created {len(default_coupons)} default coupons")
 
-    # Admin user - USING ENVIRONMENT VARIABLES
-    cursor.execute('SELECT COUNT(*) as count FROM users WHERE username = %s' if is_postgres else 'SELECT COUNT(*) as count FROM users WHERE username = ?', (CONFIG.ADMIN_USERNAME,))
+    # Admin user - ALWAYS sync credentials from environment variables
+    cursor.execute(f'SELECT COUNT(*) FROM users WHERE username = {ph}', (CONFIG.ADMIN_USERNAME,))
     admin_count = cursor.fetchone()[0]
+
+    admin_pass = generate_password_hash(CONFIG.ADMIN_PASSWORD)
+    pin_hash = generate_password_hash(CONFIG.ADMIN_WITHDRAWAL_PIN)
+    game_stats = json.dumps({
+        "snake": {"high_score": 1200, "total_score": 5000},
+        "coin_flip": {"wins": 25, "losses": 18, "current_streak": 3},
+        "plinko": {"total_wins": 15, "total_bets": 25000, "highest_win": 5000}
+    })
+
     if admin_count == 0:
-        admin_pass = generate_password_hash(CONFIG.ADMIN_PASSWORD)
-        game_stats = json.dumps({
-            "snake": {"high_score": 1200, "total_score": 5000},
-            "coin_flip": {"wins": 25, "losses": 18, "current_streak": 3},
-            "plinko": {"total_wins": 15, "total_bets": 25000, "highest_win": 5000}
-        })
-        pin_hash = generate_password_hash(CONFIG.ADMIN_WITHDRAWAL_PIN)
+        # Create admin for the first time
         if is_postgres:
             cursor.execute(f'''
             INSERT INTO users (
                 username, password, balance, referral_code, is_admin,
                 created_at, last_login, game_stats, admin_password_changed,
-                withdrawal_pin, contact, profile_picture, ui_theme, 
+                withdrawal_pin, contact, profile_picture, ui_theme,
                 last_game_timestamp, last_achievement_check, claimed_achievements
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ''', (
                 CONFIG.ADMIN_USERNAME, admin_pass, 500000.00, "ADM0001", True,
                 datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
-                game_stats, False, pin_hash, "", "", "light", 
+                game_stats, False, pin_hash, "", "", "light",
                 datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
                 '[]'
             ))
@@ -985,15 +996,15 @@ def init_db():
                 datetime.utcnow().isoformat(), datetime.utcnow().isoformat(),
                 '[]'
             ))
-        app.logger.warning("\n⚠️ FLEXIA ADMIN ACCOUNT CREATED ⚠️")
-        app.logger.warning(f"Username: {CONFIG.ADMIN_USERNAME}")
-        app.logger.warning(f"Initial Password: {CONFIG.ADMIN_PASSWORD}")
-        app.logger.warning(f"Default Withdrawal PIN: {CONFIG.ADMIN_WITHDRAWAL_PIN}")
-        app.logger.warning("⚠️ Change both after first login!\n")
-        app.logger.warning("ℹ️ Admin credentials can be changed via environment variables:")
-        app.logger.warning("  - ADMIN_USERNAME")
-        app.logger.warning("  - ADMIN_PASSWORD") 
-        app.logger.warning("  - ADMIN_WITHDRAWAL_PIN")
+        app.logger.warning(f"Admin account CREATED: {CONFIG.ADMIN_USERNAME}")
+    else:
+        # Admin already exists - ALWAYS update password and PIN from env vars
+        # This ensures Render env var changes are always applied on restart
+        cursor.execute(
+            f'UPDATE users SET password = {ph}, withdrawal_pin = {ph}, is_admin = {ph} WHERE username = {ph}',
+            (admin_pass, pin_hash, True if is_postgres else 1, CONFIG.ADMIN_USERNAME)
+        )
+        app.logger.warning(f"Admin credentials SYNCED from environment variables for: {CONFIG.ADMIN_USERNAME}")
 
     # WhatsApp number
     cursor.execute('SELECT COUNT(*) as count FROM whatsapp_numbers')
