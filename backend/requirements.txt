@@ -1,12 +1,8 @@
 flask
 flask-cors
-flask-limiter
 psycopg2-binary
-bcrypt
-pyotp
-qrcode
 itsdangerous
-tenacity
 gunicorn
-redis
+gevent
 requests
+werkzeug
