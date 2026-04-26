@@ -386,7 +386,7 @@ font-size: 1rem;
 </div>
 <div>
 <h1 class="game-title">COIN FLIP</h1>
-<p class="game-subtitle">Bet and double your money! (Max 5 plays/day)</p>
+<p class="game-subtitle">Win 1.8x your bet! Daily cap: ₦1000 wins</p>
 </div>
 </div>
 </div>
@@ -433,7 +433,7 @@ Your Balance: <span id="balance">₦0.00</span>
 <p>• Choose Heads or Tails</p>
 <p>• Enter your bet amount (minimum ₦100)</p>
 <p>• Flip the coin - 50/50 chance to win</p>
-<p>• If you win, you double your money!</p>
+<p>• If you win, you get 1.8x your bet back!</p>
 <p>• Max 5 plays per day</p>
 </div>
 </div>
@@ -544,11 +544,21 @@ async function flipCoin() {
             const result = await processCoinFlip(bet, win);
             
             if (result.success) {
-                // Update user balance
-                userBalance = result.new_balance;
-                
+                // Update user balance from backend (authoritative source)
+                userBalance = parseFloat(result.new_balance);
+
                 // Update balance display
                 document.getElementById('balance').textContent = `₦${userBalance.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+
+                // Show daily cap warning if close
+                if (result.daily_won !== undefined && result.daily_cap !== undefined) {
+                    const remaining = result.daily_cap - result.daily_won;
+                    if (remaining <= 0) {
+                        showMessage('🚫 Daily win cap reached (₦1000). Come back tomorrow!', 'error');
+                        flipBtn.disabled = true;
+                        flipBtn.innerHTML = '<i class="fas fa-lock"></i> DAILY CAP REACHED';
+                    }
+                }
 
                 // Update streak for display only
                 winningStreak.push(win ? 'win' : 'loss');
@@ -557,8 +567,8 @@ async function flipCoin() {
                 }
                 updateWinningStreak();
 
-                // Show result
-                showResult(win, coinResult, bet, result.payout, result.message);
+                // Show result - use backend payout (1.8x house edge)
+                showResult(win, coinResult, bet, result.payout || 0, result.message, result.daily_won, result.daily_cap);
 
             } else {
                 throw new Error(result.message || 'Failed to process coin flip');
@@ -613,7 +623,7 @@ async function processCoinFlip(bet, won) {
 }
 
 // ==================== SHOW RESULT ====================
-function showResult(win, coinResult, bet, payout, message) {
+function showResult(win, coinResult, bet, payout, message, dailyWon, dailyCap) {
     const resultMessage = document.getElementById('result-message');
     const coinResultEl = document.getElementById('coin-result');
     const winningsEl = document.getElementById('winnings');
@@ -622,9 +632,15 @@ function showResult(win, coinResult, bet, payout, message) {
         resultMessage.textContent = 'YOU WIN! 🎉';
         resultMessage.style.color = '#00FF55';
         coinResultEl.textContent = `The coin landed on ${coinResult.toUpperCase()}!`;
-        winningsEl.textContent = `+₦${payout.toLocaleString()}`;
+        // Use actual payout from backend (1.8x)
+        const actualProfit = payout - bet;
+        winningsEl.textContent = `+₦${actualProfit.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
         winningsEl.style.color = '#00FF55';
-        showMessage(`✅ You won ₦${bet}! ${message || ''}`, 'success');
+        let msg = `✅ You won ₦${actualProfit.toFixed(2)}!`;
+        if (dailyWon !== undefined && dailyCap !== undefined) {
+            msg += ` Daily wins: ₦${dailyWon.toFixed(0)}/₦${dailyCap}`;
+        }
+        showMessage(msg, 'success');
     } else {
         resultMessage.textContent = 'YOU LOSE! 💔';
         resultMessage.style.color = '#FF0055';
