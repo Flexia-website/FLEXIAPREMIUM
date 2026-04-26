@@ -2261,10 +2261,11 @@ const Games = {
     );
   },
   
-  reportSpin: async function (reward) {
+  reportSpin: async function (_unused) {
+    // Backend decides the reward - frontend just triggers the spin
     return await GameManager.safeClaim(
-      '/api/games/spin/report',
-      { reward: reward },
+      '/api/games/spin/execute',
+      {},
       'spin'
     );
   },
@@ -2468,92 +2469,99 @@ const Games = {
     const button = document.getElementById('spin-button');
     const wheel = document.getElementById('wheel');
     const msgEl = document.getElementById('spin-message');
-    
+
     if (!button || !wheel || button.disabled) return;
-    
-    try {
-      const limitCheck = await GameManager.checkDailyLimit('spin');
-      if (!limitCheck.can_play) {
-        App.showMessage(`Daily spin limit reached! You've already spun today.`, 'error');
-        return;
-      }
-    } catch (error) {
-      console.error('Limit check failed:', error);
-    }
-    
+
+    // Disable button immediately to prevent double-spin
+    button.disabled = true;
     GameManager.setButtonLoading('spin-button', true);
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SPINNING...';
-    
+
     if (msgEl) {
       msgEl.textContent = '';
       msgEl.className = 'message';
     }
-    
-    const prizes = [1000, 500, 200, 100, 50, 0];
-    const prizeIndex = Math.floor(Math.random() * prizes.length);
-    const reward = prizes[prizeIndex];
-    
-    const degreesPerSegment = 60;
-    const targetAngle = prizeIndex * degreesPerSegment;
-    const randomOffset = (Math.random() - 0.5) * 30;
-    
-    const fullSpins = 5 + Math.floor(Math.random() * 3);
-    const totalRotation = (fullSpins * 360) + (360 - targetAngle + randomOffset);
-    
-    wheel.style.transition = 'transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)';
-    wheel.style.transform = `rotate(${totalRotation}deg)`;
-    
+
+    // Reset wheel to 0 cleanly
+    wheel.style.transition = 'none';
+    wheel.style.transform = 'rotate(0deg)';
+    void wheel.offsetWidth; // force reflow
+
     try {
-      const result = await this.reportSpin(reward);
-      
-      setTimeout(() => {
+      // ✅ STEP 1: Call backend FIRST — backend decides the winner
+      const result = await this.reportSpin(null);
+
+      if (!result.success) {
+        button.disabled = false;
         GameManager.setButtonLoading('spin-button', false);
-        
-        if (result.success) {
-          App.updateBalance(result.new_balance);
-          
-          const resultMsg = reward > 0 
-            ? `🎉 Congratulations! You won ₦${reward.toLocaleString()}!`
-            : `😢 Better luck tomorrow!`;
-          
-          if (msgEl) {
-            msgEl.textContent = resultMsg;
-            msgEl.className = reward > 0 ? 'message success' : 'message warning';
-          }
-          
-          const resultEl = document.getElementById('spin-result');
-          if (resultEl) {
-            resultEl.innerHTML = `<p style="font-size: 1.1rem; font-weight: bold;">${resultMsg}</p>`;
-            resultEl.classList.remove('hidden');
-          }
-          
-          button.innerHTML = '<i class="fas fa-check"></i> COME BACK TOMORROW';
-          
-          if (reward > 0) {
-            App.showMessage(`🎡 Spin wheel: Won ₦${reward.toLocaleString()}!`, 'success');
-          }
-        } else {
-          if (msgEl) {
-            msgEl.textContent = result.message || 'Spin failed. Please try again.';
-            msgEl.className = 'message error';
-          }
-          button.innerHTML = '<i class="fas fa-sync-alt"></i> TRY AGAIN';
-          
-          App.showMessage(result.message || 'Spin failed', 'error');
-        }
-      }, 4200);
-      
-    } catch (err) {
-      console.error('Spin error:', err);
-      setTimeout(() => {
-        GameManager.setButtonLoading('spin-button', false);
+        button.innerHTML = '<i class="fas fa-sync-alt"></i> TRY AGAIN';
         if (msgEl) {
-          msgEl.textContent = 'Network error. Please try again later.';
+          msgEl.textContent = result.message || 'Spin failed. Please try again.';
           msgEl.className = 'message error';
         }
-        button.innerHTML = '<i class="fas fa-sync-alt"></i> TRY AGAIN';
-        App.showMessage('Network error during spin', 'error');
-      }, 4200);
+        App.showMessage(result.message || 'Spin failed', 'error');
+        return;
+      }
+
+      const reward = result.reward;
+      const prizeIndex = result.prize_index !== undefined ? result.prize_index : 5;
+
+      // ✅ STEP 2: Calculate exact rotation to land on the winning segment
+      // Segments: [1000=0°, 500=60°, 200=120°, 100=180°, 50=240°, 0=300°]
+      const degreesPerSegment = 60;
+      const segmentStartAngle = prizeIndex * degreesPerSegment;
+
+      // Land in the MIDDLE of the winning segment (not the edge)
+      const segmentMidpoint = segmentStartAngle + (degreesPerSegment / 2);
+
+      // Pointer is at top. To bring a segment to the top, rotate (360 - angle)
+      const angleToTop = (360 - segmentMidpoint) % 360;
+
+      // Add 5-7 full spins for visual effect
+      const fullSpins = 5 + Math.floor(Math.random() * 3);
+      const totalRotation = (fullSpins * 360) + angleToTop;
+
+      // ✅ STEP 3: Animate wheel to land EXACTLY on the winning segment
+      wheel.style.transition = 'transform 5s cubic-bezier(0.25, 0.1, 0.1, 1.0)';
+      wheel.style.transform = `rotate(${totalRotation}deg)`;
+
+      // ✅ STEP 4: Show result after animation completes
+      setTimeout(() => {
+        GameManager.setButtonLoading('spin-button', false);
+        App.updateBalance(result.new_balance);
+
+        const resultMsg = reward > 0
+          ? `🎉 Congratulations! You won ₦${reward.toLocaleString()}!`
+          : `😢 Better luck tomorrow!`;
+
+        if (msgEl) {
+          msgEl.textContent = resultMsg;
+          msgEl.className = reward > 0 ? 'message success' : 'message warning';
+        }
+
+        const resultEl = document.getElementById('spin-result');
+        if (resultEl) {
+          resultEl.innerHTML = `<p style="font-size: 1.1rem; font-weight: bold;">${resultMsg}</p>`;
+          resultEl.classList.remove('hidden');
+        }
+
+        button.innerHTML = '<i class="fas fa-check"></i> COME BACK TOMORROW';
+
+        if (reward > 0) {
+          App.showMessage(`🎡 You won ₦${reward.toLocaleString()}!`, 'success');
+        }
+      }, 5200); // match the 5s animation duration + 200ms buffer
+
+    } catch (err) {
+      console.error('Spin error:', err);
+      button.disabled = false;
+      GameManager.setButtonLoading('spin-button', false);
+      if (msgEl) {
+        msgEl.textContent = 'Network error. Please try again.';
+        msgEl.className = 'message error';
+      }
+      button.innerHTML = '<i class="fas fa-sync-alt"></i> TRY AGAIN';
+      App.showMessage('Network error during spin', 'error');
     }
   }
 };
@@ -2982,3 +2990,117 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }, 1000);
 });
+
+
+// ==================== DAILY LOGIN BONUS ====================
+const LoginBonus = {
+  async checkAndClaim() {
+    try {
+      // Check status first
+      const statusRes = await fetch('/api/daily-login-bonus/status', {
+        credentials: 'include'
+      });
+      if (!statusRes.ok) return;
+      const status = await statusRes.json();
+      if (!status.success || status.already_claimed) return;
+
+      // Auto-claim
+      const claimRes = await fetch('/api/daily-login-bonus', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      if (!claimRes.ok) return;
+      const data = await claimRes.json();
+      if (!data.success) return;
+
+      // Show popup
+      LoginBonus.showPopup(data);
+    } catch (e) {
+      console.log('Login bonus check failed:', e);
+    }
+  },
+
+  showPopup(data) {
+    const existing = document.getElementById('login-bonus-popup');
+    if (existing) existing.remove();
+
+    const reward = data.reward || 20;
+    const streak = data.streak || 1;
+    const milestone = data.milestone || null;
+    const nextMilestone = data.next_milestone || null;
+
+    const popup = document.createElement('div');
+    popup.id = 'login-bonus-popup';
+    popup.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85); z-index: 99999;
+      display: flex; align-items: center; justify-content: center;
+      animation: fadeIn 0.3s ease;
+    `;
+
+    const streakDots = Array.from({length: Math.min(streak, 7)}, (_, i) =>
+      `<div style="width:12px;height:12px;border-radius:50%;background:${i < streak ? '#00FF55' : '#333'};
+       box-shadow:${i < streak ? '0 0 8px #00FF55' : 'none'};"></div>`
+    ).join('');
+
+    popup.innerHTML = `
+      <div style="background:linear-gradient(135deg,#0A0A1F,#151535);
+                  border:2px solid ${milestone ? '#FFD700' : '#8000FF'};
+                  border-radius:20px; padding:30px; max-width:340px; width:90%;
+                  text-align:center; box-shadow:0 20px 60px rgba(128,0,255,0.4);">
+        <div style="font-size:3rem;margin-bottom:10px;">${milestone ? '🏆' : '🎁'}</div>
+        <h2 style="color:${milestone ? '#FFD700' : '#8000FF'};margin-bottom:5px;font-size:1.5rem;">
+          ${milestone ? milestone : 'Daily Login Bonus!'}
+        </h2>
+        <div style="font-size:2.5rem;font-weight:bold;color:#00FF55;
+                    text-shadow:0 0 15px rgba(0,255,85,0.7);margin:15px 0;">
+          +₦${reward.toLocaleString()}
+        </div>
+        <div style="color:#A0A0B5;margin-bottom:15px;">added to your balance</div>
+
+        <div style="background:rgba(128,0,255,0.1);border-radius:10px;padding:12px;margin-bottom:15px;
+                    border:1px solid rgba(128,0,255,0.3);">
+          <div style="color:#A0A0B5;font-size:0.85rem;margin-bottom:8px;">LOGIN STREAK</div>
+          <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:6px;">
+            ${streakDots}
+          </div>
+          <div style="color:#00CCFF;font-weight:bold;">${streak} day${streak !== 1 ? 's' : ''} in a row! 🔥</div>
+          ${nextMilestone ? `<div style="color:#FFD700;font-size:0.8rem;margin-top:6px;">${nextMilestone}</div>` : ''}
+        </div>
+
+        <button onclick="document.getElementById('login-bonus-popup').remove()"
+          style="background:linear-gradient(45deg,#8000FF,#00CCFF);border:none;border-radius:10px;
+                 color:#0A0A1F;padding:14px 30px;font-size:1rem;font-weight:bold;
+                 cursor:pointer;width:100%;margin-top:5px;">
+          CLAIM & CONTINUE
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(popup);
+    popup.addEventListener('click', (e) => {
+      if (e.target === popup) popup.remove();
+    });
+
+    // Update balance in UI if App object available
+    if (typeof App !== 'undefined' && App.updateBalance && data.new_balance) {
+      App.updateBalance(data.new_balance);
+    }
+
+    // Auto-close after 10 seconds
+    setTimeout(() => {
+      const p = document.getElementById('login-bonus-popup');
+      if (p) p.remove();
+    }, 10000);
+  }
+};
+
+// Auto-check login bonus when page loads (dashboard only)
+document.addEventListener('DOMContentLoaded', () => {
+  // Only run on main dashboard page
+  if (window.location.pathname === '/' || window.location.pathname.endsWith('index.html')) {
+    // Slight delay so main content loads first
+    setTimeout(() => LoginBonus.checkAndClaim(), 1500);
+  }
+});
+
