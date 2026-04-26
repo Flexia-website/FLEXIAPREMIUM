@@ -26,7 +26,7 @@ import subprocess
 import shutil
 from logging.handlers import RotatingFileHandler
 import psycopg2
-from psycopg2.pool import SimpleConnectionPool
+from psycopg2.pool import ThreadedConnectionPool
 
 # ======================= CONFIGURATION =======================
 class Config:
@@ -324,22 +324,24 @@ def cleanup_old_backups():
 # ======================= DATABASE CONNECTION POOLING =======================
 # Connection pool for PostgreSQL
 db_pool = None
+db_pool_lock = threading.Lock()  # Extra safety for pool access
 
 def init_db_pool():
-    """Initialize gevent-compatible database connection pool"""
+    """Initialize thread-safe database connection pool"""
     global db_pool
 
     if os.environ.get('DATABASE_URL'):
         try:
-            # Gevent-safe pool: enough connections for high concurrency
-            db_pool = SimpleConnectionPool(
-                10,   # min connections - always ready
-                100,  # max connections - handles traffic spikes
+            # ThreadedConnectionPool is thread-safe (SimpleConnectionPool is NOT)
+            # Keep pool small: Neon free tier has ~100 connection limit
+            db_pool = ThreadedConnectionPool(
+                4,   # min connections
+                30,  # max connections - handles 8 concurrent threads
                 dsn=os.environ['DATABASE_URL'],
-                connect_timeout=5,       # fail fast on bad connections
+                connect_timeout=10,
                 options="-c statement_timeout=30000"  # 30s max query time
             )
-            app.logger.info('✅ Database connection pool initialized: 10-100 connections (gevent async)')
+            app.logger.info('✅ Database connection pool initialized: 2-20 connections (thread-safe)')
         except Exception as e:
             app.logger.error(f'❌ Failed to initialize connection pool: {str(e)}')
             db_pool = None
@@ -347,15 +349,28 @@ def init_db_pool():
         app.logger.info('✅ SQLite mode - connection pooling not needed')
 
 def get_db():
-    """Get database connection from pool (gevent-safe)"""
+    """Get a thread-safe database connection from pool"""
     global db_pool
 
     if os.environ.get('DATABASE_URL') and db_pool:
         try:
-            conn = db_pool.getconn()
+            with db_pool_lock:
+                conn = db_pool.getconn()
+            # Test connection is alive
             if conn.closed:
-                db_pool.putconn(conn)
-                conn = get_db_direct()
+                with db_pool_lock:
+                    db_pool.putconn(conn)
+                return get_db_direct()
+            try:
+                conn.cursor().execute('SELECT 1')
+            except Exception:
+                # Connection is dead - get a fresh one
+                try:
+                    with db_pool_lock:
+                        db_pool.putconn(conn)
+                except Exception:
+                    pass
+                return get_db_direct()
             conn.autocommit = False
             return conn
         except Exception as e:
@@ -391,21 +406,22 @@ def get_db_direct():
         return conn
 
 def return_db_connection(conn):
-    """Return connection to pool"""
+    """Return connection to pool (thread-safe)"""
     global db_pool
-    
+
     if os.environ.get('DATABASE_URL') and db_pool:
         try:
-            db_pool.putconn(conn)
-        except:
+            with db_pool_lock:
+                db_pool.putconn(conn)
+        except Exception:
             try:
                 conn.close()
-            except:
+            except Exception:
                 pass
     else:
         try:
             conn.close()
-        except:
+        except Exception:
             pass
 
 # ======================= RATE LIMITING =======================
@@ -427,25 +443,33 @@ def rate_limit(store, key, max_per_min=5):
 # ======================= CLAIM LOCKING SYSTEM =======================
 # Global claim lock to prevent duplicate claims
 claim_locks = {}
-claim_lock_timeout = 2  # seconds
+claim_locks_mutex = threading.Lock()  # Protect the dict itself
+claim_lock_timeout = 5  # seconds - increased for cross-device/slow connections
 
 def acquire_claim_lock(user_id, game_type):
-    """Prevent duplicate claims from same user for same game"""
+    """Prevent duplicate claims from same user for same game (thread-safe)"""
     key = f"{user_id}_{game_type}"
     now = time.time()
-    
-    if key in claim_locks:
-        lock_time = claim_locks[key]
-        if now - lock_time < claim_lock_timeout:
-            return False
-    
-    claim_locks[key] = now
-    return True
+
+    with claim_locks_mutex:
+        # Clean up expired locks while we have the mutex (prevent memory leak)
+        expired = [k for k, t in claim_locks.items() if now - t > claim_lock_timeout * 2]
+        for k in expired:
+            claim_locks.pop(k, None)
+
+        if key in claim_locks:
+            lock_time = claim_locks[key]
+            if now - lock_time < claim_lock_timeout:
+                return False
+
+        claim_locks[key] = now
+        return True
 
 def release_claim_lock(user_id, game_type):
-    """Release claim lock"""
+    """Release claim lock (thread-safe)"""
     key = f"{user_id}_{game_type}"
-    claim_locks.pop(key, None)
+    with claim_locks_mutex:
+        claim_locks.pop(key, None)
 
 # ======================= SESSION MANAGER =======================
 def create_session_token(user_id):
@@ -559,14 +583,7 @@ def check_game_limit_with_logout(user_id, game_type):
             VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
             ''', (
                 limit_log_id, user_id, 'GAME_LIMIT_REACHED', 0, 'COMPLETED',
-                json.dumps({
-                    "game_type": game_type,
-                    "played_today": count,
-                    "max_plays": max_plays,
-                    "limit_reached": True,
-                    "action": "auto_logout_required",
-                    "message": f"Daily {game_type} limit reached: {count}/{max_plays} plays"
-                }),
+                json.dumps({"t": game_type, "p": count, "m": max_plays}),
                 datetime.utcnow().isoformat()
             ))
             
@@ -674,7 +691,8 @@ def add_missing_columns():
         
         if is_postgres:
             # Check and add missing columns for PostgreSQL
-            columns_to_add = ['last_achievement_check', 'last_game_timestamp', 'claimed_achievements']
+            columns_to_add = ['last_achievement_check', 'last_game_timestamp', 'claimed_achievements',
+                               'login_streak', 'last_login_date']
             for column in columns_to_add:
                 cursor.execute(f"""
                 SELECT column_name 
@@ -682,14 +700,16 @@ def add_missing_columns():
                 WHERE table_name='users' and column_name='{column}'
                 """)
                 if not cursor.fetchone():
-                    cursor.execute(f"ALTER TABLE users ADD COLUMN {column} TEXT")
+                    default = 'DEFAULT 0' if column == 'login_streak' else ''
+                    cursor.execute(f"ALTER TABLE users ADD COLUMN {column} TEXT {default}")
                     app.logger.info(f"Added missing column: {column} to users table")
         else:
             # SQLite - check pragma
             cursor.execute("PRAGMA table_info(users)")
             columns = [col[1] for col in cursor.fetchall()]
-            
-            columns_to_add = ['last_achievement_check', 'last_game_timestamp', 'claimed_achievements']
+
+            columns_to_add = ['last_achievement_check', 'last_game_timestamp', 'claimed_achievements',
+                               'login_streak', 'last_login_date']
             for column in columns_to_add:
                 if column not in columns:
                     cursor.execute(f"ALTER TABLE users ADD COLUMN {column} TEXT")
@@ -1340,7 +1360,7 @@ def grant_achievement_rewards(user_id):
             VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
             ''', (
                 tx_id, user_id, 'ACHIEVEMENT_REWARD', total_reward, 'COMPLETED',
-                json.dumps({"source": "manual_claim", "points": total_points, "achievement_ids": new_achievement_ids}),
+                json.dumps({"pts": total_points, "ids": new_achievement_ids}),
                 datetime.utcnow().isoformat()
             ))
         
@@ -1390,6 +1410,56 @@ def run_cleanup_scheduler():
     thread = threading.Thread(target=schedule, daemon=True)
     thread.start()
 
+
+# ======================= TRANSACTION CLEANUP =======================
+def cleanup_old_transactions():
+    """Keep only last 50 transactions per user to save DB storage"""
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        if os.environ.get('DATABASE_URL'):
+            # PostgreSQL - efficient delete using ctid
+            cursor.execute("""
+                DELETE FROM transactions
+                WHERE id NOT IN (
+                    SELECT id FROM (
+                        SELECT id, ROW_NUMBER() OVER (
+                            PARTITION BY user_id ORDER BY timestamp DESC
+                        ) as rn
+                        FROM transactions
+                    ) ranked
+                    WHERE rn <= 50
+                )
+            """)
+        deleted = cursor.rowcount
+        conn.commit()
+        if deleted > 0:
+            app.logger.info(f"✅ Cleaned up {deleted} old transactions")
+    except Exception as e:
+        app.logger.error(f"Transaction cleanup error: {e}")
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+    finally:
+        return_db_connection(conn)
+
+def start_cleanup_scheduler():
+    """Run transaction cleanup every hour in background"""
+    def run():
+        # Wait 5 minutes after startup before first cleanup
+        time.sleep(300)
+        while True:
+            try:
+                cleanup_old_transactions()
+            except Exception as e:
+                app.logger.error(f"Cleanup scheduler error: {e}")
+            time.sleep(3600)  # every 1 hour
+    t = threading.Thread(target=run, daemon=True)
+    t.start()
+    app.logger.info("✅ Transaction cleanup scheduler started")
+
+
 # ======================= CRITICAL: DB INIT =======================
 with app.app_context():
     init_db_pool()  # Initialize connection pool
@@ -1399,6 +1469,7 @@ with app.app_context():
     cleanup_old_tiktok_tasks()
     run_cleanup_scheduler()
     run_backup_scheduler()  # Start backup scheduler
+    start_cleanup_scheduler()  # Trim old transactions hourly
 
 # ======================= AUTH ENDPOINTS =======================
 @app.route('/api/auth/register', methods=['POST'])
@@ -2123,12 +2194,7 @@ def force_logout_from_game(game_type):
         VALUES (%s, %s, %s, %s, %s, %s, %s)
         ''', (
             tx_id, user['id'], 'FORCE_LOGOUT', 0, 'COMPLETED',
-            json.dumps({
-                "game_type": game_type,
-                "reason": "daily_limit_reached",
-                "action": "auto_logged_out",
-                "redirect_to": "/?reason=daily_limit"
-            }),
+            json.dumps({"gt":game_type,"r":"limit"}),
             datetime.utcnow().isoformat()
         ))
         conn.commit()
@@ -2185,11 +2251,34 @@ def report_snake_enhanced():
             }), 403
         
         reward = apples * CONFIG.SNAKE_REWARD
-        
+
         conn = get_db()
         cursor = conn.cursor()
-        
+
         try:
+            # Check daily snake earnings cap (₦500/day)
+            today = datetime.utcnow().date().isoformat()
+            ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+            cursor.execute(f"""
+                SELECT COALESCE(SUM(amount), 0) FROM transactions
+                WHERE user_id = {ph} AND type = 'SNAKE_REWARD'
+                AND DATE(timestamp) = {ph}
+            """, (user['id'], today))
+            earned_today = float(cursor.fetchone()[0] or 0)
+            SNAKE_DAILY_CAP = 500
+
+            if earned_today >= SNAKE_DAILY_CAP:
+                return jsonify({
+                    "success": False,
+                    "message": f"Daily snake earnings cap reached (₦{SNAKE_DAILY_CAP}). Come back tomorrow!",
+                    "daily_earned": earned_today,
+                    "daily_cap": SNAKE_DAILY_CAP
+                }), 400
+
+            # Reduce reward if it would exceed the cap
+            if earned_today + reward > SNAKE_DAILY_CAP:
+                reward = SNAKE_DAILY_CAP - earned_today
+
             # Use atomic balance update
             new_balance = update_user_balance(user['id'], reward)
             if new_balance is None:
@@ -2218,7 +2307,7 @@ def report_snake_enhanced():
             VALUES (%s, %s, %s, %s, %s, %s, %s)
             ''', (
                 tx_id, user['id'], 'SNAKE_REWARD', reward, 'COMPLETED',
-                json.dumps({"game": "snake", "apples": apples, "reward_per_apple": CONFIG.SNAKE_REWARD}),
+                json.dumps({"g": "snake", "a": apples}),
                 datetime.utcnow().isoformat()
             ))
             
@@ -2226,13 +2315,17 @@ def report_snake_enhanced():
             
             app.logger.info(f"✅ Snake reward granted to {user['username']}: ₦{reward}")
             
+            remaining_cap = max(0, SNAKE_DAILY_CAP - (earned_today + reward))
             return jsonify({
                 "success": True,
                 "reward": reward,
                 "new_balance": new_balance,
                 "apples": apples,
                 "transaction_id": tx_id,
-                "message": f"Success! Claimed ₦{reward} for {apples} apples"
+                "daily_earned": earned_today + reward,
+                "daily_cap": SNAKE_DAILY_CAP,
+                "remaining_today": remaining_cap,
+                "message": f"Success! Claimed ₦{reward} for {apples} apples. Daily cap: ₦{int(earned_today+reward)}/₦{SNAKE_DAILY_CAP}"
             })
             
         except Exception as e:
@@ -2283,13 +2376,42 @@ def report_coinflip_enhanced():
                 "details": limit_check
             }), 403
         
-        payout = bet * 2 if won else 0
-        net_change = payout - bet
-        
+        # House edge: win pays 1.8x not 2x (10% house edge)
+        payout = round(bet * 1.8, 2) if won else 0
+        net_change = round(payout - bet, 2)
+
         conn = get_db()
         cursor = conn.cursor()
-        
+
         try:
+            # Check daily coinflip WIN cap (₦1000/day)
+            today = datetime.utcnow().date().isoformat()
+            ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+            if won:
+                cursor.execute(f"""
+                    SELECT COALESCE(SUM(amount), 0) FROM transactions
+                    WHERE user_id = {ph} AND type = 'COINFLIP_WIN'
+                    AND DATE(timestamp) = {ph}
+                """, (user['id'], today))
+                won_today = float(cursor.fetchone()[0] or 0)
+                COINFLIP_WIN_CAP = 1000
+
+                if won_today >= COINFLIP_WIN_CAP:
+                    return jsonify({
+                        "success": False,
+                        "message": f"Daily coinflip win cap reached (₦{COINFLIP_WIN_CAP}). Come back tomorrow!",
+                        "daily_won": won_today,
+                        "daily_cap": COINFLIP_WIN_CAP
+                    }), 400
+
+                # Cap the win if it exceeds remaining allowance
+                if won_today + net_change > COINFLIP_WIN_CAP:
+                    net_change = COINFLIP_WIN_CAP - won_today
+                    payout = net_change + bet
+            else:
+                won_today = 0
+                COINFLIP_WIN_CAP = 1000
+
             # Use atomic balance update
             new_balance = update_user_balance(user['id'], net_change)
             if new_balance is None:
@@ -2321,7 +2443,7 @@ def report_coinflip_enhanced():
             VALUES (%s, %s, %s, %s, %s, %s, %s)
             ''', (
                 tx_id, user['id'], tx_type, net_change, 'COMPLETED',
-                json.dumps({"game": "coinflip", "bet": bet, "won": won, "payout": payout}),
+                json.dumps({"g": "coin", "b": bet, "w": int(won)}),
                 datetime.utcnow().isoformat()
             ))
             
@@ -2329,12 +2451,16 @@ def report_coinflip_enhanced():
             
             app.logger.info(f"✅ Coin flip processed for {user['username']}: {'WON' if won else 'LOST'} {bet}, net: {net_change}")
             
+            daily_won_after = won_today + net_change if won else won_today
             return jsonify({
                 "success": True,
                 "payout": payout if won else 0,
                 "net_change": net_change,
                 "new_balance": new_balance,
                 "won": won,
+                "daily_won": daily_won_after,
+                "daily_cap": COINFLIP_WIN_CAP,
+                "house_edge_note": "Wins pay 1.8x your bet",
                 "message": f"You {'won' if won else 'lost'}! {'+' if won else '-'}₦{abs(net_change):.2f}"
             })
             
@@ -2365,7 +2491,8 @@ def report_plinko_enhanced():
     if bet < CONFIG.PLINKO_MIN_BET or bet > 50000 or float(user['balance']) < bet:
         return jsonify({"success": False, "message": f"Invalid bet (min: {CONFIG.PLINKO_MIN_BET}, max: 50000)"}), 400
     
-    if multiplier not in [0.5, 3, 10]:
+    # Valid multipliers: 0.5x (lose half), 1x (break even), 3x, 10x
+    if multiplier not in [0.5, 1.0, 3.0, 10.0]:
         return jsonify({"success": False, "message": "Invalid multiplier"}), 400
     
     # ACQUIRE LOCK
@@ -2388,13 +2515,39 @@ def report_plinko_enhanced():
                 "details": limit_check
             }), 403
         
-        win_amount = bet * multiplier
-        net_change = win_amount - bet  # Positive if win, negative if loss
-        
+        win_amount = round(bet * multiplier, 2)
+        net_change = round(win_amount - bet, 2)  # Positive if win, negative if loss
+
         conn = get_db()
         cursor = conn.cursor()
-        
+
         try:
+            # Check daily plinko net WIN cap (₦800/day)
+            today = datetime.utcnow().date().isoformat()
+            ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+            PLINKO_WIN_CAP = 800
+            if net_change > 0:
+                cursor.execute(f"""
+                    SELECT COALESCE(SUM(amount), 0) FROM transactions
+                    WHERE user_id = {ph} AND type = 'PLINKO_WIN'
+                    AND DATE(timestamp) = {ph}
+                """, (user['id'], today))
+                plinko_won_today = float(cursor.fetchone()[0] or 0)
+
+                if plinko_won_today >= PLINKO_WIN_CAP:
+                    return jsonify({
+                        "success": False,
+                        "message": f"Daily plinko win cap reached (₦{PLINKO_WIN_CAP}). Come back tomorrow!",
+                        "daily_won": plinko_won_today,
+                        "daily_cap": PLINKO_WIN_CAP
+                    }), 400
+
+                if plinko_won_today + net_change > PLINKO_WIN_CAP:
+                    net_change = PLINKO_WIN_CAP - plinko_won_today
+                    win_amount = bet + net_change
+            else:
+                plinko_won_today = 0
+
             # Use atomic balance update
             new_balance = update_user_balance(user['id'], net_change)
             if new_balance is None:
@@ -2426,7 +2579,7 @@ def report_plinko_enhanced():
             VALUES (%s, %s, %s, %s, %s, %s, %s)
             ''', (
                 tx_id, user['id'], tx_type, net_change, 'COMPLETED',
-                json.dumps({"game": "plinko", "bet": bet, "multiplier": multiplier, "win_amount": win_amount}),
+                json.dumps({"g": "plinko", "b": bet, "x": multiplier}),
                 datetime.utcnow().isoformat()
             ))
             
@@ -2434,12 +2587,15 @@ def report_plinko_enhanced():
             
             app.logger.info(f"✅ Plinko processed for {user['username']}: bet {bet}, multiplier {multiplier}, net: {net_change}")
             
+            daily_plinko_after = plinko_won_today + net_change if net_change > 0 else plinko_won_today
             return jsonify({
                 "success": True,
                 "win_amount": win_amount,
                 "net_change": net_change,
                 "new_balance": new_balance,
                 "multiplier": multiplier,
+                "daily_won": daily_plinko_after,
+                "daily_cap": PLINKO_WIN_CAP,
                 "message": f"Plinko result: ×{multiplier} = {'+' if net_change > 0 else ''}₦{net_change:.2f}"
             })
             
@@ -2510,10 +2666,28 @@ def execute_spin():
                 "message": "You have already spun today. Come back tomorrow!"
             }), 400
         
-        # Generate spin result
+        # Count consecutive daily spins for bonus tracking
+        cursor.execute("""
+            SELECT COUNT(*) FROM transactions
+            WHERE user_id = %s AND type = 'SPIN_REWARD'
+            AND timestamp >= NOW() - INTERVAL '7 days'
+        """ if os.environ.get('DATABASE_URL') else """
+            SELECT COUNT(*) FROM transactions
+            WHERE user_id = ? AND type = 'SPIN_REWARD'
+            AND timestamp >= datetime('now', '-7 days')
+        """, (user['id'],))
+        spins_last_7_days = cursor.fetchone()[0]
+        is_bonus_spin = spins_last_7_days >= 6  # 7th consecutive spin = bonus
+
+        # Balanced weights: hard to get big, easy to get small
         rewards = [1000, 500, 200, 100, 50, 0]
-        weights = [0.05, 0.1, 0.15, 0.2, 0.25, 0.25]  # Probabilities
-        
+        if is_bonus_spin:
+            # Bonus spin on 7th day: slightly better odds
+            weights = [0.03, 0.07, 0.15, 0.25, 0.30, 0.20]
+        else:
+            # Normal spin: realistic odds
+            weights = [0.01, 0.04, 0.10, 0.20, 0.30, 0.35]
+
         import random
         reward = random.choices(rewards, weights=weights, k=1)[0]
         
@@ -2529,7 +2703,7 @@ def execute_spin():
         VALUES (%s, %s, %s, %s, %s, %s, %s)
         ''', (
             tx_id, user['id'], 'SPIN_REWARD', reward, 'COMPLETED',
-            json.dumps({"game": "spin", "reward": reward}),
+            json.dumps({"g": "spin"}),
             datetime.utcnow().isoformat()
         ))
         
@@ -2537,11 +2711,23 @@ def execute_spin():
         
         app.logger.info(f"Spin executed for {user['username']}: reward {reward}")
         
+        # Return prize_index so frontend wheel lands on the correct segment
+        prizes = [1000, 500, 200, 100, 50, 0]
+        prize_index = prizes.index(reward) if reward in prizes else 5
+
+        msg = f"🎉 Congratulations! You won ₦{reward}!"
+        if is_bonus_spin:
+            msg = f"🌟 BONUS SPIN! 7-day streak reward: ₦{reward}!"
+        elif reward == 0:
+            msg = "😢 Better luck tomorrow! Keep spinning daily for a bonus spin!"
+
         return jsonify({
             "success": True,
             "reward": reward,
+            "prize_index": prize_index,
             "new_balance": new_balance,
-            "message": f"Congratulations! You won ₦{reward}!"
+            "is_bonus_spin": is_bonus_spin,
+            "message": msg
         })
         
     except Exception as e:
@@ -2623,8 +2809,19 @@ def follow_tiktok_daily_enhanced():
         if not task_row:
             return jsonify({"success": False, "message": "No task for today"}), 404
         
-        reward = float(task_row[0]) if task_row[0] else CONFIG.TIKTOK_REWARD
-        
+        # Count how many TikTok tasks done today for tiered rewards
+        cursor.execute(
+            f'SELECT COUNT(*) FROM transactions WHERE user_id = {ph} AND type = %s AND DATE(timestamp) = %s'
+            if os.environ.get('DATABASE_URL') else
+            f'SELECT COUNT(*) FROM transactions WHERE user_id = {ph} AND type = ? AND DATE(timestamp) = ?',
+            (user['id'], 'TIKTOK_DAILY', today)
+        )
+        tasks_done_today = cursor.fetchone()[0]
+
+        # Tiered TikTok rewards: task 1=₦50, task 2=₦75, task 3=₦100
+        tiered_rewards = {0: 50, 1: 75, 2: 100}
+        reward = tiered_rewards.get(tasks_done_today, 50)
+
         # CHECK GAME LIMIT - Per reward claim
         limit_check = check_game_limit_with_logout(user['id'], 'tiktok')
         if not limit_check.get("can_play", False):
@@ -2635,7 +2832,7 @@ def follow_tiktok_daily_enhanced():
                 "redirect": True,
                 "details": limit_check
             }), 403
-        
+
         # Use atomic balance update
         new_balance = update_user_balance(user['id'], reward)
         if new_balance is None:
@@ -2652,11 +2849,15 @@ def follow_tiktok_daily_enhanced():
         
         app.logger.info(f"✅ TikTok daily claimed by {user['username']}: reward: {reward}")
         
+        task_number = tasks_done_today + 1
+        next_reward = tiered_rewards.get(tasks_done_today + 1, None)
         return jsonify({
             "success": True,
             "reward": reward,
             "new_balance": new_balance,
-            "message": f"Success! Claimed ₦{reward} for following TikTok"
+            "task_number": task_number,
+            "next_reward": next_reward,
+            "message": f"Task {task_number}/3 complete! Earned ₦{reward}" + (f" | Next task: ₦{next_reward}" if next_reward else " | All tasks done today! 🎉")
         })
         
     except Exception as e:
@@ -2665,6 +2866,136 @@ def follow_tiktok_daily_enhanced():
     finally:
         # RELEASE LOCK
         release_claim_lock(user['id'], 'TIKTOK')
+
+
+# ================= DAILY LOGIN BONUS =================
+@app.route('/api/daily-login-bonus', methods=['POST'])
+@require_auth
+def claim_daily_login_bonus():
+    """Daily login bonus with streak tracking"""
+    user = get_current_user()
+    today = datetime.utcnow().date().isoformat()
+    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+        # Get current streak and last login date
+        cursor.execute(f'SELECT login_streak, last_login_date FROM users WHERE id = {ph}', (user['id'],))
+        row = cursor.fetchone()
+        current_streak = int(row[0] or 0) if row else 0
+        last_login_date = row[1] if row else None
+
+        # Check if already claimed today
+        if last_login_date == today:
+            return jsonify({
+                "success": False,
+                "message": "Already claimed today's login bonus. Come back tomorrow!",
+                "streak": current_streak
+            }), 400
+
+        # Calculate new streak
+        yesterday = (datetime.utcnow().date() - timedelta(days=1)).isoformat()
+        if last_login_date == yesterday:
+            new_streak = current_streak + 1
+        else:
+            new_streak = 1  # Reset streak if missed a day
+
+        # Determine reward based on streak
+        if new_streak >= 30:
+            reward = 500
+            milestone = "🏆 30-Day Streak Bonus!"
+        elif new_streak >= 7 and new_streak % 7 == 0:
+            reward = 100
+            milestone = f"🌟 {new_streak}-Day Streak Bonus!"
+        else:
+            reward = 20
+            milestone = None
+
+        # Update balance
+        new_balance = update_user_balance(user['id'], reward)
+        if new_balance is None:
+            return jsonify({"success": False, "message": "Failed to update balance"}), 500
+
+        # Update streak
+        cursor.execute(
+            f'UPDATE users SET login_streak = {ph}, last_login_date = {ph} WHERE id = {ph}',
+            (new_streak, today, user['id'])
+        )
+
+        # Record transaction
+        tx_id = f"LOGIN-{secrets.token_hex(6)}"
+        cursor.execute(f"""
+            INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp)
+            VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+        """, (
+            tx_id, user['id'], 'LOGIN_BONUS', reward, 'COMPLETED',
+            json.dumps({"streak": new_streak}),
+            datetime.utcnow().isoformat()
+        ))
+
+        conn.commit()
+
+        next_milestone = None
+        if new_streak < 7:
+            next_milestone = f"₦100 bonus in {7 - new_streak} days!"
+        elif new_streak < 30:
+            days_to_30 = 30 - new_streak
+            next_7 = 7 - (new_streak % 7)
+            next_milestone = f"₦100 bonus in {next_7} days, ₦500 in {days_to_30} days!"
+
+        return jsonify({
+            "success": True,
+            "reward": reward,
+            "new_balance": new_balance,
+            "streak": new_streak,
+            "milestone": milestone,
+            "next_milestone": next_milestone,
+            "message": f"{'🎉 ' + milestone + ' ' if milestone else ''}Daily bonus: ₦{reward} | Streak: {new_streak} days"
+        })
+
+    except Exception as e:
+        app.logger.error(f"Login bonus error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to process login bonus"}), 500
+    finally:
+        return_db_connection(conn)
+
+@app.route('/api/daily-login-bonus/status', methods=['GET'])
+@require_auth
+def get_login_bonus_status():
+    """Get login bonus status and streak"""
+    user = get_current_user()
+    today = datetime.utcnow().date().isoformat()
+    ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(f'SELECT login_streak, last_login_date FROM users WHERE id = {ph}', (user['id'],))
+        row = cursor.fetchone()
+        streak = int(row[0] or 0) if row else 0
+        last_date = row[1] if row else None
+        already_claimed = last_date == today
+
+        next_reward = 20
+        if (streak + 1) >= 30:
+            next_reward = 500
+        elif (streak + 1) % 7 == 0:
+            next_reward = 100
+
+        return jsonify({
+            "success": True,
+            "streak": streak,
+            "already_claimed": already_claimed,
+            "next_reward": next_reward,
+            "last_claimed": last_date
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+    finally:
+        return_db_connection(conn)
 
 # ================= REFERRAL ENDPOINTS =================
 @app.route('/api/referral/claim', methods=['POST'])
@@ -2706,7 +3037,7 @@ def claim_referral_bonus():
         VALUES (%s, %s, %s, %s, %s, %s, %s)
         ''', (
             tx_id, user['id'], 'REFERRAL_BONUS', unclaimed, 'COMPLETED',
-            json.dumps({"referrals": referrals, "bonus_per_referral": CONFIG.REFERRAL_BONUS}),
+            json.dumps({"refs": len(referrals) if isinstance(referrals, list) else referrals}),
             datetime.utcnow().isoformat()
         ))
         
@@ -2971,7 +3302,7 @@ def withdraw():
         VALUES (%s, %s, %s, %s, %s, %s, %s)
         ''', (
             tx_id, user['id'], 'WITHDRAWAL', amount, 'PENDING',
-            json.dumps({'bank_code': bank_code, 'account_number': account_number, 'account_name': account_name}),
+            json.dumps({'bc':bank_code,'an':account_number,'nm':account_name}),
             datetime.utcnow().isoformat()
         ))
         
@@ -3121,7 +3452,7 @@ def admin_adjust_user_balance(user_id):
         VALUES (%s, %s, %s, %s, %s, %s, %s)
         ''', (
             tx_id, user_id, 'ADMIN_ADJUSTMENT', amount, 'COMPLETED',
-            json.dumps({"note": note, "admin_action": True}),
+            json.dumps({"note": note[:80] if note else ""}),
             datetime.utcnow().isoformat()
         ))
         
