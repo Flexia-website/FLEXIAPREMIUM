@@ -503,7 +503,7 @@
         </div>
         <div class="header-center">
             <h1>PLINKO 3D</h1>
-            <p class="game-subtitle">Max 5 plays per day • Min Bet: ₦100</p>
+            <p class="game-subtitle">Min 0.5x • Max 10x • Daily cap: ₦800 wins</p>
         </div>
         <div class="header-right">
             <button class="close-btn" onclick="goBackToDashboard()" title="Close">
@@ -882,43 +882,60 @@
         async function finishBall(ballIndex) {
             const ball = balls[ballIndex];
             if (ball.landed) return;
-            
+
             ball.landed = true;
             activeBalls--;
-            
+
             const boardWidth = document.getElementById('plinko-board').clientWidth;
             const slotWidth = boardWidth / MULTIPLIERS.length;
-            
+
             let slotIndex = Math.floor(ball.x / slotWidth);
             slotIndex = Math.max(0, Math.min(MULTIPLIERS.length - 1, slotIndex));
-            
+
             const multiplier = MULTIPLIERS[slotIndex];
-            
+
             // Submit to backend
             const result = await submitGameResult(ball.bet, multiplier);
-            
+
             if (result.success) {
-                ball.winAmount = result.winAmount;
+                // Use backend's authoritative values
+                const netChange = parseFloat(result.net_change || 0);
+                const winAmount = parseFloat(result.win_amount || 0);
+                ball.winAmount = winAmount;
                 ball.multiplier = multiplier;
-                totalWinAmount += result.winAmount;
-                
-                if (result.winAmount > 0) {
+                totalWinAmount += netChange;
+
+                // Update balance from backend
+                if (result.new_balance !== undefined) {
+                    balance = parseFloat(result.new_balance);
+                }
+
+                if (netChange > 0) {
                     totalWins++;
                 }
-                
+
                 // Highlight slot
                 const slotElement = document.getElementById(`slot-${slotIndex}`);
-                slotElement.classList.add('active');
-                setTimeout(() => {
-                    slotElement.classList.remove('active');
-                }, 800);
+                if (slotElement) {
+                    slotElement.classList.add('active');
+                    setTimeout(() => slotElement.classList.remove('active'), 800);
+                }
+
+                // Show daily cap warning
+                if (result.daily_won !== undefined && result.daily_cap !== undefined) {
+                    const remaining = result.daily_cap - result.daily_won;
+                    if (remaining <= 0) {
+                        isDroppingAll = false;
+                        document.getElementById('drop-btn').disabled = true;
+                        document.getElementById('drop-all-btn').disabled = true;
+                        setTimeout(() => alert('🚫 Daily plinko win cap reached (₦800). Come back tomorrow!'), 100);
+                    }
+                }
             } else {
                 // Handle error (e.g., daily limit reached)
                 if (result.message) {
-                    alert('❌ ' + result.message);
-                    // Stop dropping more balls
+                    setTimeout(() => alert('❌ ' + result.message), 100);
                     isDroppingAll = false;
-                    balls = balls.filter(b => !b.landed);
                     document.getElementById('drop-btn').disabled = false;
                     document.getElementById('drop-all-btn').disabled = false;
                     document.getElementById('bet-amount').disabled = false;
@@ -946,28 +963,27 @@
         }
         
         function showTotalWin() {
-            if (totalWinAmount > 0 || balls.length > 0) {
-                const winDisplay = document.getElementById('win-display');
-                const winAmountElement = document.getElementById('win-amount');
-                const winMultiplierElement = document.getElementById('win-multiplier');
-                
-                winAmountElement.textContent = `₦${totalWinAmount.toLocaleString()}`;
-                winMultiplierElement.textContent = `Total Earnings`;
-                
-                if (totalWinAmount > 0) {
-                    winAmountElement.style.color = '#00FF55';
-                } else {
-                    winAmountElement.style.color = '#FF5555';
-                }
-                
-                winDisplay.style.display = 'block';
-                winDisplay.style.animation = 'winPulse 1s ease-in-out';
-                
-                setTimeout(() => {
-                    winDisplay.style.display = 'none';
-                }, 5000);
-            }
-            
+            const winDisplay = document.getElementById('win-display');
+            const winAmountElement = document.getElementById('win-amount');
+            const winMultiplierElement = document.getElementById('win-multiplier');
+
+            const displayAmount = totalWinAmount;
+            winAmountElement.textContent = displayAmount >= 0
+                ? `+₦${displayAmount.toLocaleString('en-US', {minimumFractionDigits: 2})}`
+                : `-₦${Math.abs(displayAmount).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            winMultiplierElement.textContent = 'Net Result (Balance Updated)';
+
+            winAmountElement.style.color = displayAmount >= 0 ? '#00FF55' : '#FF5555';
+            winDisplay.style.display = 'block';
+            winDisplay.style.animation = 'winPulse 1s ease-in-out';
+
+            // Update stats display with refreshed balance
+            updateStatsDisplay();
+
+            setTimeout(() => {
+                winDisplay.style.display = 'none';
+            }, 5000);
+
             totalWinAmount = 0;
         }
         
