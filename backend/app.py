@@ -1461,15 +1461,46 @@ def start_cleanup_scheduler():
 
 
 # ======================= CRITICAL: DB INIT =======================
+def initialize_app():
+    """Safe startup - gunicorn always binds even if DB init fails"""
+    try:
+        init_db_pool()
+        app.logger.info("✅ DB pool initialized")
+    except Exception as e:
+        app.logger.error(f"❌ DB pool failed: {e}")
+
+    try:
+        init_db()
+        app.logger.info("✅ DB tables ready")
+    except Exception as e:
+        app.logger.error(f"❌ DB init failed: {e}")
+
+    try:
+        add_missing_columns()
+        app.logger.info("✅ DB columns verified")
+    except Exception as e:
+        app.logger.error(f"❌ Column migration failed: {e}")
+
+    try:
+        add_database_indexes()
+    except Exception as e:
+        app.logger.error(f"❌ Index creation failed: {e}")
+
+    try:
+        cleanup_old_tiktok_tasks()
+    except Exception as e:
+        app.logger.error(f"❌ TikTok cleanup failed: {e}")
+
+    try:
+        run_cleanup_scheduler()
+        run_backup_scheduler()
+        start_cleanup_scheduler()
+        app.logger.info("✅ Background schedulers started")
+    except Exception as e:
+        app.logger.error(f"❌ Scheduler start failed: {e}")
+
 with app.app_context():
-    init_db_pool()  # Initialize connection pool
-    init_db()       # Initialize database
-    add_missing_columns()  # Add missing columns
-    add_database_indexes()  # Add performance indexes
-    cleanup_old_tiktok_tasks()
-    run_cleanup_scheduler()
-    run_backup_scheduler()  # Start backup scheduler
-    start_cleanup_scheduler()  # Trim old transactions hourly
+    initialize_app()
 
 # ======================= AUTH ENDPOINTS =======================
 @app.route('/api/auth/register', methods=['POST'])
