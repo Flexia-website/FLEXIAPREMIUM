@@ -2482,9 +2482,14 @@ const Games = {
       msgEl.className = 'message';
     }
 
-    // Reset wheel to 0 cleanly
+    // Reset wheel and SVG to 0 cleanly
     wheel.style.transition = 'none';
     wheel.style.transform = 'rotate(0deg)';
+    const svgEl = document.getElementById('wheel-svg');
+    if (svgEl) {
+      svgEl.style.transition = 'none';
+      svgEl.style.transform = 'rotate(0deg)';
+    }
     void wheel.offsetWidth; // force reflow
 
     try {
@@ -2506,24 +2511,37 @@ const Games = {
       const reward = result.reward;
       const prizeIndex = result.prize_index !== undefined ? result.prize_index : 5;
 
-      // ✅ STEP 2: Calculate exact rotation to land on the winning segment
-      // Segments: [1000=0°, 500=60°, 200=120°, 100=180°, 50=240°, 0=300°]
-      const degreesPerSegment = 60;
-      const segmentStartAngle = prizeIndex * degreesPerSegment;
+      // ✅ EXACT SVG MATH:
+      // SVG segments are drawn clockwise from TOP (0°):
+      //   Segment 0 (₦1000): 0°-60°,  midpoint = 30°
+      //   Segment 1 (₦500):  60°-120°, midpoint = 90°
+      //   Segment 2 (₦200):  120°-180°,midpoint = 150°
+      //   Segment 3 (₦100):  180°-240°,midpoint = 210°
+      //   Segment 4 (₦50):   240°-300°,midpoint = 270°
+      //   Segment 5 (₦0):    300°-360°,midpoint = 330°
+      //
+      // When wheel rotates clockwise by θ°, pointer sees segment whose
+      // midpoint was originally at θ° from the top.
+      // So: θ = prizeIndex * 60 + 30
 
-      // Land in the MIDDLE of the winning segment (not the edge)
-      const segmentMidpoint = segmentStartAngle + (degreesPerSegment / 2);
+      const segmentMidpointFromTop = prizeIndex * 60 + 30;
 
-      // Pointer is at top. To bring a segment to the top, rotate (360 - angle)
-      const angleToTop = (360 - segmentMidpoint) % 360;
+      // Add 6-8 full spins for satisfying visual spin
+      const fullSpins = 6 + Math.floor(Math.random() * 3);
+      const totalRotation = (fullSpins * 360) + segmentMidpointFromTop;
 
-      // Add 5-7 full spins for visual effect
-      const fullSpins = 5 + Math.floor(Math.random() * 3);
-      const totalRotation = (fullSpins * 360) + angleToTop;
+      // Target the SVG element which is the actual spinning element
+      const svgWheel = document.getElementById('wheel-svg');
+      const spinTarget = svgWheel || wheel;
 
-      // ✅ STEP 3: Animate wheel to land EXACTLY on the winning segment
-      wheel.style.transition = 'transform 5s cubic-bezier(0.25, 0.1, 0.1, 1.0)';
-      wheel.style.transform = `rotate(${totalRotation}deg)`;
+      // Reset cleanly
+      spinTarget.style.transition = 'none';
+      spinTarget.style.transform = 'rotate(0deg)';
+      void spinTarget.offsetWidth; // force reflow
+
+      // ✅ STEP 3: Animate to EXACT winning segment center
+      spinTarget.style.transition = 'transform 5s cubic-bezier(0.17, 0.67, 0.05, 1.0)';
+      spinTarget.style.transform = `rotate(${totalRotation}deg)`;
 
       // ✅ STEP 4: Show result after animation completes
       setTimeout(() => {
@@ -2798,43 +2816,120 @@ const Settings = {
 
 //========== SPIN WHEEL FUNCTIONS =========
 function initSpinWheel() {
-  const wheel = document.getElementById('wheel');
-  if (!wheel) return;
-  
-  wheel.innerHTML = '';
-  
-  const segments = [
-    { class: 'segment-1', color: '#FF0055' },
-    { class: 'segment-2', color: '#FF5C5C' },
-    { class: 'segment-3', color: '#FFCC00' },
-    { class: 'segment-4', color: '#00FF55' },
-    { class: 'segment-5', color: '#00CCFF' },
-    { class: 'segment-6', color: '#8000FF' }
+  const container = document.getElementById('wheel');
+  if (!container) return;
+
+  // Clear old content
+  container.innerHTML = '';
+  container.style.cssText = 'position:relative;width:280px;height:280px;margin:0 auto;';
+
+  // Create SVG wheel - exact math, no CSS guessing
+  const prizes = [
+    { label: '₦1000', color: '#FF0055', textColor: '#fff' },
+    { label: '₦500',  color: '#FF8C00', textColor: '#fff' },
+    { label: '₦200',  color: '#FFCC00', textColor: '#111' },
+    { label: '₦100',  color: '#00C851', textColor: '#fff' },
+    { label: '₦50',   color: '#00CCFF', textColor: '#111' },
+    { label: '🎲 0',   color: '#8000FF', textColor: '#fff' }
   ];
-  
-  segments.forEach(seg => {
-    const div = document.createElement('div');
-    div.className = `wheel-segment ${seg.class}`;
-    wheel.appendChild(div);
+
+  const N = prizes.length;          // 6
+  const cx = 140, cy = 140, r = 130; // SVG center + radius
+  const sliceDeg = 360 / N;         // 60°
+
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('id', 'wheel-svg');
+  svg.setAttribute('viewBox', '0 0 280 280');
+  svg.setAttribute('width', '280');
+  svg.setAttribute('height', '280');
+  svg.style.cssText = 'display:block;border-radius:50%;overflow:hidden;filter:drop-shadow(0 0 18px rgba(128,0,255,0.5));';
+
+  // Helper: polar to cartesian
+  function polarToCart(cx, cy, r, angleDeg) {
+    const rad = (angleDeg - 90) * Math.PI / 180; // -90 so 0° = top
+    return {
+      x: cx + r * Math.cos(rad),
+      y: cy + r * Math.sin(rad)
+    };
+  }
+
+  prizes.forEach((prize, i) => {
+    const startAngle = i * sliceDeg;       // 0, 60, 120, 180, 240, 300
+    const endAngle   = startAngle + sliceDeg; // 60, 120, ...
+    const midAngle   = startAngle + sliceDeg / 2; // 30, 90, 150, ...
+
+    const p1 = polarToCart(cx, cy, r, startAngle);
+    const p2 = polarToCart(cx, cy, r, endAngle);
+
+    // Pie slice path
+    const path = document.createElementNS(svgNS, 'path');
+    const d = [
+      `M ${cx} ${cy}`,
+      `L ${p1.x} ${p1.y}`,
+      `A ${r} ${r} 0 0 1 ${p2.x} ${p2.y}`,
+      'Z'
+    ].join(' ');
+    path.setAttribute('d', d);
+    path.setAttribute('fill', prize.color);
+    path.setAttribute('stroke', '#0A0A1F');
+    path.setAttribute('stroke-width', '2');
+    svg.appendChild(path);
+
+    // Label - positioned at 72% radius along midpoint angle
+    const lp = polarToCart(cx, cy, r * 0.72, midAngle);
+    const text = document.createElementNS(svgNS, 'text');
+    text.setAttribute('x', lp.x);
+    text.setAttribute('y', lp.y);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('dominant-baseline', 'middle');
+    text.setAttribute('transform', `rotate(${midAngle}, ${lp.x}, ${lp.y})`);
+    text.setAttribute('fill', prize.textColor);
+    text.setAttribute('font-size', '11');
+    text.setAttribute('font-weight', 'bold');
+    text.setAttribute('font-family', 'Orbitron, Arial, sans-serif');
+    text.textContent = prize.label;
+    svg.appendChild(text);
   });
-  
-  const labelsDiv = document.createElement('div');
-  labelsDiv.className = 'wheel-labels';
-  
-  const labels = ['₦1000', '₦500', '₦200', '₦100', '₦50', 'TRY AGAIN'];
-  labels.forEach((label, index) => {
-    const labelDiv = document.createElement('div');
-    labelDiv.className = `wheel-label label-${index + 1}`;
-    labelDiv.textContent = label;
-    labelDiv.style.setProperty('--rotation', index * 60);
-    labelsDiv.appendChild(labelDiv);
-  });
-  
-  wheel.appendChild(labelsDiv);
-  
-  const center = document.createElement('div');
-  center.className = 'wheel-center';
-  wheel.appendChild(center);
+
+  // Center circle
+  const centerCircle = document.createElementNS(svgNS, 'circle');
+  centerCircle.setAttribute('cx', cx);
+  centerCircle.setAttribute('cy', cy);
+  centerCircle.setAttribute('r', '22');
+  centerCircle.setAttribute('fill', '#0A0A1F');
+  centerCircle.setAttribute('stroke', '#8000FF');
+  centerCircle.setAttribute('stroke-width', '3');
+  svg.appendChild(centerCircle);
+
+  const centerText = document.createElementNS(svgNS, 'text');
+  centerText.setAttribute('x', cx);
+  centerText.setAttribute('y', cy);
+  centerText.setAttribute('text-anchor', 'middle');
+  centerText.setAttribute('dominant-baseline', 'middle');
+  centerText.setAttribute('fill', '#8000FF');
+  centerText.setAttribute('font-size', '14');
+  centerText.textContent = '★';
+  svg.appendChild(centerText);
+
+  container.appendChild(svg);
+
+  // Pointer triangle at top (fixed, outside SVG)
+  const pointer = document.createElement('div');
+  pointer.style.cssText = `
+    position:absolute;top:-14px;left:50%;
+    transform:translateX(-50%);
+    width:0;height:0;
+    border-left:12px solid transparent;
+    border-right:12px solid transparent;
+    border-top:22px solid #FFD700;
+    filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+    z-index:10;
+  `;
+  container.appendChild(pointer);
+
+  // Store current rotation to allow reset
+  container._currentRotation = 0;
 }
 
 //========== DOM READY ===========
