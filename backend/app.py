@@ -429,16 +429,23 @@ login_attempts = {}
 register_attempts = {}
 game_action_attempts = {}
 
+_rate_limit_lock = threading.Lock()
+
 def rate_limit(store, key, max_per_min=5):
     now = datetime.utcnow()
-    if key not in store:
-        store[key] = []
-    store[key] = [t for t in store[key] if t > now - timedelta(minutes=1)]
-    if len(store[key]) >= max_per_min:
-        app.logger.warning(f'Rate limit exceeded for {key}: {len(store[key])} attempts')
-        return False
-    store[key].append(now)
-    return True
+    with _rate_limit_lock:
+        # Purge stale keys to prevent memory leak
+        stale = [k for k, v in list(store.items()) if not v or v[-1] < now - timedelta(minutes=2)]
+        for k in stale:
+            del store[k]
+        if key not in store:
+            store[key] = []
+        store[key] = [t for t in store[key] if t > now - timedelta(minutes=1)]
+        if len(store[key]) >= max_per_min:
+            app.logger.warning(f'Rate limit exceeded for {key}: {len(store[key])} attempts')
+            return False
+        store[key].append(now)
+        return True
 
 # ======================= CLAIM LOCKING SYSTEM =======================
 # Global claim lock to prevent duplicate claims
@@ -756,8 +763,11 @@ def add_database_indexes():
 
 def init_db():
     conn = get_db()
+    if conn is None:
+        raise RuntimeError("Cannot initialize DB - no connection available")
     cursor = conn.cursor()
     is_postgres = os.environ.get('DATABASE_URL') is not None
+    _init_db_conn_ref = conn  # keep ref for finally
 
     # Users table
     if is_postgres:
@@ -1034,8 +1044,8 @@ def init_db():
                        ('2348160881049', 'Primary Seller', True if is_postgres else 1, datetime.utcnow().isoformat()))
 
     conn.commit()
-    return_db_connection(conn)
     app.logger.info("Database initialization completed successfully!")
+    return_db_connection(_init_db_conn_ref)
 
 # ======================= HELPERS =======================
 def sanitize_input(text):
@@ -1530,7 +1540,7 @@ def register():
     cursor = conn.cursor()
     is_postgres = os.environ.get('DATABASE_URL') is not None
     ph = '%s' if is_postgres else '?'
-    
+
     try:
         cursor.execute(f'SELECT id FROM users WHERE LOWER(username) = LOWER({ph})', (username,))
         if cursor.fetchone():
@@ -2299,6 +2309,7 @@ def report_snake_enhanced():
             SNAKE_DAILY_CAP = 500
 
             if earned_today >= SNAKE_DAILY_CAP:
+                return_db_connection(conn)
                 return jsonify({
                     "success": False,
                     "message": f"Daily snake earnings cap reached (₦{SNAKE_DAILY_CAP}). Come back tomorrow!",
@@ -2428,6 +2439,7 @@ def report_coinflip_enhanced():
                 COINFLIP_WIN_CAP = 1000
 
                 if won_today >= COINFLIP_WIN_CAP:
+                    return_db_connection(conn)
                     return jsonify({
                         "success": False,
                         "message": f"Daily coinflip win cap reached (₦{COINFLIP_WIN_CAP}). Come back tomorrow!",
@@ -2566,6 +2578,7 @@ def report_plinko_enhanced():
                 plinko_won_today = float(cursor.fetchone()[0] or 0)
 
                 if plinko_won_today >= PLINKO_WIN_CAP:
+                    return_db_connection(conn)
                     return jsonify({
                         "success": False,
                         "message": f"Daily plinko win cap reached (₦{PLINKO_WIN_CAP}). Come back tomorrow!",
@@ -2651,10 +2664,11 @@ def get_spin_daily_status():
     cursor = conn.cursor()
     
     try:
-        cursor.execute('''
-        SELECT 1 FROM transactions 
-        WHERE user_id = %s AND type = 'SPIN_REWARD' 
-        AND DATE(timestamp) = %s
+        ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+        cursor.execute(f'''
+        SELECT 1 FROM transactions
+        WHERE user_id = {ph} AND type = 'SPIN_REWARD'
+        AND DATE(timestamp) = {ph}
         ''', (user['id'], today))
         
         already_spun = cursor.fetchone() is not None
@@ -2685,10 +2699,11 @@ def execute_spin():
     cursor = conn.cursor()
     
     try:
-        cursor.execute('''
-        SELECT 1 FROM transactions 
-        WHERE user_id = %s AND type = 'SPIN_REWARD' 
-        AND DATE(timestamp) = %s
+        ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+        cursor.execute(f'''
+        SELECT 1 FROM transactions
+        WHERE user_id = {ph} AND type = 'SPIN_REWARD'
+        AND DATE(timestamp) = {ph}
         ''', (user['id'], today))
         
         if cursor.fetchone() is not None:
@@ -3114,10 +3129,11 @@ def get_achievements():
         except:
             claimed_achievements = []
         
-        cursor.execute('SELECT COUNT(*) FROM transactions WHERE user_id = %s', (user['id'],))
+        ph = '%s' if os.environ.get('DATABASE_URL') else '?'
+        cursor.execute(f'SELECT COUNT(*) FROM transactions WHERE user_id = {ph}', (user['id'],))
         total_tx = cursor.fetchone()[0]
-        
-        cursor.execute('SELECT COUNT(*) FROM transactions WHERE user_id = %s AND type = %s', 
+
+        cursor.execute(f'SELECT COUNT(*) FROM transactions WHERE user_id = {ph} AND type = {ph}', 
                       (user['id'], 'WITHDRAWAL'))
         total_withdrawals = cursor.fetchone()[0]
         
