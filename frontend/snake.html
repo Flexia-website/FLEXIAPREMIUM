@@ -250,6 +250,8 @@ async function autoClaim() {
     const res = await callBackend(sessionApples, sessionGolden);
     if (res.success) {
       updateCapUI(res.daily_earned || DAILY_CAP);
+      // ✅ Sync balance to dashboard immediately
+      if (res.new_balance !== undefined) localStorage.setItem('flexia_balance', res.new_balance);
       showFunPopup();
       sessionEarned = sessionApples = sessionGolden = 0;
       updateSessionUI();
@@ -275,6 +277,8 @@ async function manualClaim() {
     if (res.success) {
       const earned = res.daily_earned || (dailyEarned + res.reward);
       updateCapUI(earned);
+      // ✅ Sync balance to dashboard immediately
+      if (res.new_balance !== undefined) localStorage.setItem('flexia_balance', res.new_balance);
       sessionEarned = sessionApples = sessionGolden = 0;
       updateSessionUI();
 
