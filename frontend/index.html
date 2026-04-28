@@ -536,227 +536,196 @@ Referral.open = function() {
 <!-- === CUSTOM SPIN ENGINE WITH BACKEND SYNC - FIXED === -->
 <script>
 const customSpinEngine = {
+  // 6 segments EXACTLY matching backend prizes array: [1000,500,200,100,50,0]
   segments: [
-    { label: "₦1000", color: "url(#purpleGrad)", val: 1000 },
-    { label: "TRY AGAIN", color: "url(#darkGrad)", val: 0 },
-    { label: "₦500", color: "url(#purpleGrad)", val: 500 },
-    { label: "₦50", color: "url(#darkGrad)", val: 50 },
-    { label: "₦1000", color: "url(#purpleGrad)", val: 1000 },
-    { label: "₦100", color: "url(#darkGrad)", val: 100 },
-    { label: "₦500", color: "url(#purpleGrad)", val: 500 },
-    { label: "₦200", color: "url(#darkGrad)", val: 200 }
+    { label: "₦1000", color: "#FF0055", textColor: "#fff", val: 1000 },
+    { label: "₦500",  color: "#FF8C00", textColor: "#fff", val: 500  },
+    { label: "₦200",  color: "#FFCC00", textColor: "#111", val: 200  },
+    { label: "₦100",  color: "#00C851", textColor: "#fff", val: 100  },
+    { label: "₦50",   color: "#00CCFF", textColor: "#111", val: 50   },
+    { label: "🎲 0",  color: "#8000FF", textColor: "#fff", val: 0    }
   ],
-  currentRot: 0,
   isSpinning: false,
 
-  async checkDailyStatus() {
-    try {
-      const res = await fetch('/api/spin/daily-status', { 
-        credentials: 'include',
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
-      });
-      
-      if (!res.ok) {
-        console.log('Spin status check failed:', res.status);
-        // If endpoint doesn't exist yet, allow spin
-        return true;
-      }
-      
-      const data = await res.json();
-      console.log('Spin status response:', data);
-      return data.can_spin === true;
-    } catch (e) {
-      console.log('Failed to check spin status (network error):', e);
-      return true; // Allow if offline or endpoint not ready
-    }
-  },
-
-  async executeSpinOnServer() {
-    try {
-      const res = await fetch('/api/spin/execute', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache'
-        },
-        credentials: 'include',
-        body: JSON.stringify({})
-      });
-      
-      const data = await res.json();
-      console.log('Spin execute response:', data);
-      return data;
-      
-    } catch (e) {
-      console.error('Spin execution failed:', e);
-      return { 
-        success: false, 
-        message: 'Network error. Please try again.',
-        reward: 0 
-      };
-    }
-  },
-
+  // Draw SVG wheel with exact segment positions
   setup() {
     const group = document.getElementById('segments-group');
-    if (!group) {
-      console.error('Segments group not found');
-      return;
-    }
-    
-    // Clear existing segments
+    if (!group) return;
     group.innerHTML = '';
-    
-    const step = 360 / this.segments.length;
+
+    const N = this.segments.length; // 6
+    const cx = 150, cy = 150, r = 140;
+    const sliceDeg = 360 / N; // 60°
+
+    function polar(cx, cy, r, deg) {
+      const rad = (deg - 90) * Math.PI / 180;
+      return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+    }
+
     this.segments.forEach((seg, i) => {
-      const angle = i * step;
-      const x1 = 150 + 140 * Math.cos(Math.PI * (angle - 90) / 180);
-      const y1 = 150 + 140 * Math.sin(Math.PI * (angle - 90) / 180);
-      const x2 = 150 + 140 * Math.cos(Math.PI * (angle + step - 90) / 180);
-      const y2 = 150 + 140 * Math.sin(Math.PI * (angle + step - 90) / 180);
-      
-      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      path.setAttribute("d", `M150,150 L${x1},${y1} A140,140 0 0,1 ${x2},${y2} Z`);
-      path.setAttribute("fill", seg.color);
-      path.setAttribute("stroke", "#111");
+      const startDeg = i * sliceDeg;
+      const endDeg   = startDeg + sliceDeg;
+      const midDeg   = startDeg + sliceDeg / 2;
+
+      const p1 = polar(cx, cy, r, startDeg);
+      const p2 = polar(cx, cy, r, endDeg);
+
+      // Pie slice
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', `M${cx},${cy} L${p1.x},${p1.y} A${r},${r} 0 0,1 ${p2.x},${p2.y} Z`);
+      path.setAttribute('fill', seg.color);
+      path.setAttribute('stroke', '#0A0A1F');
+      path.setAttribute('stroke-width', '2');
       group.appendChild(path);
-      
-      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      text.setAttribute("transform", `rotate(${angle + step/2}, 150, 150)`);
-      text.setAttribute("x", "150");
-      text.setAttribute("y", "50");
-      text.setAttribute("fill", "white");
-      text.setAttribute("font-family", "Orbitron");
-      text.setAttribute("font-size", "10");
-      text.setAttribute("text-anchor", "middle");
+
+      // Label at 72% radius on midpoint angle
+      const lp = polar(cx, cy, r * 0.72, midDeg);
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', lp.x);
+      text.setAttribute('y', lp.y);
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('dominant-baseline', 'middle');
+      text.setAttribute('transform', `rotate(${midDeg}, ${lp.x}, ${lp.y})`);
+      text.setAttribute('fill', seg.textColor);
+      text.setAttribute('font-size', '11');
+      text.setAttribute('font-weight', 'bold');
+      text.setAttribute('font-family', 'Orbitron, Arial, sans-serif');
       text.textContent = seg.label;
       group.appendChild(text);
     });
-    
-    console.log('Spin wheel setup complete');
   },
 
   openModal() {
+    // Setup wheel every time modal opens
+    this.setup();
+
     if (window.App && App.showModal) {
       App.showModal('spin-modal');
     } else {
-      document.getElementById('spin-modal').classList.remove('hidden');
+      const m = document.getElementById('spin-modal');
+      if (m) m.classList.remove('hidden');
     }
-    
-    // Reset wheel position
+
+    // Reset wheel
     const wheel = document.getElementById('wheel-svg');
     if (wheel) {
+      wheel.style.transition = 'none';
       wheel.style.transform = 'rotate(0deg)';
-      this.currentRot = 0;
     }
-    
-    // Reset result banner
+
+    // Reset banner
     const banner = document.getElementById('custom-result-banner');
-    if (banner) {
-      banner.style.display = 'none';
-      banner.innerHTML = '';
-    }
-    
-    // Enable spin button
+    if (banner) { banner.style.display = 'none'; banner.innerHTML = ''; }
+
+    // Reset button
     const btn = document.getElementById('spin-btn-custom');
-    if (btn) {
-      btn.disabled = false;
-    }
-    
+    if (btn) { btn.disabled = false; btn.textContent = 'INITIATE SPIN'; }
+
     this.isSpinning = false;
-    
-    console.log('Spin modal opened - ready to spin');
   },
 
   async initSpin() {
-    if (this.isSpinning) {
-      console.log('Already spinning, ignoring request');
+    if (this.isSpinning) return;
+
+    const btn    = document.getElementById('spin-btn-custom');
+    const wheel  = document.getElementById('wheel-svg');
+    const banner = document.getElementById('custom-result-banner');
+
+    if (!btn || !wheel || !banner) {
+      alert('Spin wheel not ready. Please close and reopen.');
       return;
     }
 
-    console.log('Starting spin process...');
-    
-    const btn = document.getElementById('spin-btn-custom');
-    const wheel = document.getElementById('wheel-svg');
-    const banner = document.getElementById('custom-result-banner');
-    
-    if (!btn || !wheel || !banner) {
-      console.error('Required elements not found');
-      return;
-    }
-    
-    // Show loading state
+    // Lock UI immediately
     this.isSpinning = true;
     btn.disabled = true;
+    btn.textContent = 'CONNECTING...';
     banner.style.display = 'none';
     banner.innerHTML = '';
-    
+
     try {
-      // Check if can spin today
-      const canSpin = await this.checkDailyStatus();
-      console.log('Can spin today?', canSpin);
-      
-      if (!canSpin) {
-        banner.innerHTML = `<span style="color:#FF3333">⚠️ You already spun today! Come back tomorrow.</span>`;
+      // ✅ STEP 1: Call backend FIRST — backend decides winner
+      btn.textContent = 'SPINNING...';
+      const res = await fetch('/api/spin/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+        credentials: 'include',
+        body: JSON.stringify({})
+      });
+
+      const result = await res.json();
+
+      if (!result.success) {
+        banner.innerHTML = `<span style="color:#FF3333">⚠️ ${result.message || 'Spin failed. Try again.'}</span>`;
         banner.style.display = 'block';
         this.isSpinning = false;
         btn.disabled = false;
+        btn.textContent = 'INITIATE SPIN';
         return;
       }
-      
-      // Start wheel animation
-      const fakeWinIdx = Math.floor(Math.random() * this.segments.length);
-      const spinDeg = 1800 + (360 - (fakeWinIdx * (360 / this.segments.length))) % 360;
-      this.currentRot += spinDeg;
-      wheel.style.transform = `rotate(${this.currentRot}deg)`;
-      
-      console.log('Wheel spinning... waiting for server response');
-      
-      // Execute spin on server after animation delay
-      setTimeout(async () => {
-        try {
-          const result = await this.executeSpinOnServer();
-          console.log('Server spin result:', result);
-          
-          if (result.success) {
-            // Update balance display
-            const balanceEl = document.getElementById('balance-display');
-            if (balanceEl) {
-              const currentText = balanceEl.textContent.replace(/,/g, '');
-              const currentBalance = parseFloat(currentText) || 0;
-              const newBalance = currentBalance + result.reward;
-              balanceEl.textContent = newBalance.toLocaleString('en-US', { minimumFractionDigits: 2 });
-            }
-            
-            // Update global balance if function exists
-            if (typeof window.updateBalance === 'function') {
-              window.updateBalance(result.reward);
-            }
-            
-            banner.innerHTML = `<span style="color:#00FF00">🎉 CONGRATULATIONS! WON: ₦${result.reward.toLocaleString()}</span>`;
-          } else {
-            banner.innerHTML = `<span style="color:#FF3333">${result.message || 'Spin failed. Try again.'}</span>`;
-          }
-          
-        } catch (error) {
-          console.error('Error during spin execution:', error);
-          banner.innerHTML = `<span style="color:#FFAA00">⚠️ Connection issue. Please try again.</span>`;
+
+      // ✅ STEP 2: Use prize_index from backend for EXACT segment landing
+      // SVG segments drawn clockwise from top (0°):
+      //   Segment 0 (₦1000): midpoint = 30°
+      //   Segment 1 (₦500):  midpoint = 90°
+      //   Segment 2 (₦200):  midpoint = 150°
+      //   Segment 3 (₦100):  midpoint = 210°
+      //   Segment 4 (₦50):   midpoint = 270°
+      //   Segment 5 (₦0):    midpoint = 330°
+      //
+      // When wheel rotates clockwise by θ°, the point that was at θ° from top
+      // comes to the pointer. So to bring segment i's midpoint to the pointer:
+      //   θ = 360 - midpoint = 360 - (i*60 + 30)
+      const prizeIndex = result.prize_index !== undefined ? result.prize_index : 5;
+      const segmentMidpoint = prizeIndex * 60 + 30;
+      const angleToPointer = (360 - segmentMidpoint) % 360;
+
+      // 6-8 full spins + exact landing angle
+      const fullSpins = 6 + Math.floor(Math.random() * 3);
+      const totalRotation = (fullSpins * 360) + angleToPointer;
+
+      // ✅ STEP 3: Animate wheel to land EXACTLY on winning segment
+      wheel.style.transition = 'transform 5s cubic-bezier(0.17, 0.67, 0.05, 1.0)';
+      wheel.style.transform  = `rotate(${totalRotation}deg)`;
+
+      // ✅ STEP 4: Show result after animation (5s)
+      setTimeout(() => {
+        const reward = result.reward || 0;
+        const isBonusSpin = result.is_bonus_spin || false;
+
+        if (reward > 0) {
+          banner.innerHTML = `
+            <span style="color:#00FF55;font-size:1.1rem;font-weight:bold;">
+              ${isBonusSpin ? '🌟 BONUS SPIN! ' : '🎉 '}WON: ₦${reward.toLocaleString()}!
+            </span>`;
+        } else {
+          banner.innerHTML = `<span style="color:#A0A0B5;">😢 No win this time. Come back tomorrow!</span>`;
         }
-        
         banner.style.display = 'block';
+
+        // Update balance
+        if (result.new_balance !== undefined) {
+          const balEls = document.querySelectorAll('#balance-display, .balance-amount, [data-balance]');
+          balEls.forEach(el => {
+            el.textContent = parseFloat(result.new_balance).toLocaleString('en-US', { minimumFractionDigits: 2 });
+          });
+          if (window.App && App.updateBalance) App.updateBalance(result.new_balance);
+          if (window.App && App.currentUser) App.currentUser.balance = result.new_balance;
+        }
+
+        btn.disabled = true; // Already spun today
+        btn.textContent = '✓ COME BACK TOMORROW';
         this.isSpinning = false;
-        btn.disabled = false;
-        
-      }, 3000); // Wait 3 seconds for wheel animation
-      
-    } catch (error) {
-      console.error('Spin initialization error:', error);
-      banner.innerHTML = `<span style="color:#FF3333">❌ Error initializing spin. Please try again.</span>`;
+
+      }, 5200); // match 5s animation + buffer
+
+    } catch (err) {
+      console.error('Spin error:', err);
+      banner.innerHTML = `<span style="color:#FF3333">❌ Network error. Please try again.</span>`;
       banner.style.display = 'block';
       this.isSpinning = false;
       btn.disabled = false;
+      btn.textContent = 'TRY AGAIN';
     }
   }
 };
