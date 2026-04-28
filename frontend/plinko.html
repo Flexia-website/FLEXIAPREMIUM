@@ -1085,6 +1085,19 @@
             slotIndex = Math.max(0, Math.min(MULTIPLIERS.length - 1, slotIndex));
 
             const multiplier = MULTIPLIERS[slotIndex];
+
+            // ✅ Highlight slot and start fade-out immediately — no waiting
+            const slotElement = document.getElementById(`slot-${slotIndex}`);
+            if (slotElement) {
+                slotElement.classList.add('active');
+                setTimeout(() => slotElement.classList.remove('active'), 800);
+            }
+
+            ball.element.style.transition = 'all 0.5s ease-out';
+            ball.element.style.opacity = '0';
+            ball.element.style.transform = 'translate(-50%, -50%) scale(0)';
+
+            // ✅ Fire API call immediately alongside the fade-out
             const result = await submitGameResult(ball.bet, multiplier);
 
             if (result.success) {
@@ -1096,16 +1109,12 @@
 
                 if (result.new_balance !== undefined) {
                     balance = parseFloat(result.new_balance);
+                    // ✅ Write to localStorage so dashboard syncs instantly
+                    localStorage.setItem('flexia_balance', result.new_balance);
                 }
 
                 if (netChange > 0) {
                     totalWins++;
-                }
-
-                const slotElement = document.getElementById(`slot-${slotIndex}`);
-                if (slotElement) {
-                    slotElement.classList.add('active');
-                    setTimeout(() => slotElement.classList.remove('active'), 800);
                 }
 
                 if (result.daily_won !== undefined) {
@@ -1129,10 +1138,7 @@
                 }
             }
             
-            ball.element.style.transition = 'all 0.5s ease-out';
-            ball.element.style.opacity = '0';
-            ball.element.style.transform = 'translate(-50%, -50%) scale(0)';
-            
+            // Clean up ball element (fade already started above)
             setTimeout(() => {
                 if (ball.element.parentNode) {
                     ball.element.remove();
