@@ -564,18 +564,24 @@ async function flipCoin() {
   const shadow = document.getElementById('coin-shadow');
   coin.classList.add('coin-tossing');
   shadow.classList.add('shadow-pulsing');
+
+  // ✅ Fire API call immediately alongside animation — don't wait for animation to finish
+  const apiPromise = processCoinFlip(bet, win);
   
   setTimeout(async () => {
     coin.classList.remove('coin-tossing');
     shadow.classList.remove('shadow-pulsing');
     
     try {
-      const result = await processCoinFlip(bet, win);
+      // API has had 2 seconds to complete — should already be resolved
+      const result = await apiPromise;
       if (result.success) {
         dailyWon = result.daily_won || dailyWon;
         updateCapBadge();
         userBalance = parseFloat(result.new_balance);
         document.getElementById('balance').textContent = `₦${userBalance.toFixed(2)}`;
+        // ✅ Write to localStorage so dashboard syncs instantly
+        localStorage.setItem('flexia_balance', result.new_balance);
         
         if (dailyWon >= COIN_CAP) {
           showMessage('🚫 Daily cap reached. Come back tomorrow!', 'error');
