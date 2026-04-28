@@ -825,6 +825,23 @@ const App = {
     
     this.lastBalanceUpdate = now;
   },
+
+  fetchFreshBalance: async function () {
+    if (!this.currentUser) return;
+    try {
+      const response = await this.requestWithTimeout('/api/user/profile', {
+        credentials: 'include',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.user && data.user.balance !== undefined) {
+          this.currentUser.balance = parseFloat(data.user.balance);
+          this.refreshBalance(true);
+        }
+      }
+    } catch (e) { /* silent fail — network may be slow */ }
+  },
   
   updateBalance: function (newBalance) {
     if (this.currentUser) {
@@ -893,10 +910,28 @@ const App = {
   },
   
   setupAutoRefresh: function () {
-    // Refresh balance every 10 seconds
-    setInterval(() => this.refreshBalance(), 10000);
+    // Fetch fresh balance from server every 10 seconds
+    setInterval(() => this.fetchFreshBalance(), 10000);
     // Update game cards every 30 seconds
     setInterval(() => this.updateGameCards(), 30000);
+
+    // Re-fetch balance immediately when user returns to this tab from a game page
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        this.fetchFreshBalance();
+      }
+    });
+
+    // Pick up balance written by game pages (coinflip / plinko / snake)
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'flexia_balance' && e.newValue && this.currentUser) {
+        const val = parseFloat(e.newValue);
+        if (!isNaN(val)) {
+          this.currentUser.balance = val;
+          this.refreshBalance(true);
+        }
+      }
+    });
   },
   
   async updateGameCards() {
