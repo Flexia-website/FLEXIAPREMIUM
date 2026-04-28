@@ -1,4 +1,4 @@
-# backend/app.py - COMPLETE PRODUCTION VERSION WITH ALL ENDPOINTS
+# backend/app.py - COMPLETE PRODUCION VERSION WITH ALL ENDPOINTS
 # FLEXIA Platform - PRODUCTION READY v15.0
 # GEVENT ASYNC - HANDLES UNLIMITED SIMULTANEOUS USERS
 # ADMIN CREDENTIALS VIA ENVIRONMENT VARIABLES
@@ -40,7 +40,7 @@ class Config:
     MIN_WITHDRAWAL = 100000
     REFERRAL_BONUS = 7500
     TIKTOK_REWARD = 150
-    SNAKE_REWARD = 200
+    SNAKE_REWARD = 20   # ₦20 per apple (₦40 for golden)
     COIN_FLIP_MIN_BET = 100
     PLINKO_MIN_BET = 100
     SESSION_DURATION_HOURS = 24
@@ -2291,7 +2291,10 @@ def report_snake_enhanced():
                 "details": limit_check
             }), 403
         
-        reward = apples * CONFIG.SNAKE_REWARD
+        golden_apples = data.get('golden_apples', 0)
+        normal_apples = apples - golden_apples
+        reward = (normal_apples * CONFIG.SNAKE_REWARD) + (golden_apples * CONFIG.SNAKE_REWARD * 2)
+        reward = max(0, reward)
 
         conn = get_db()
         cursor = conn.cursor()
@@ -2349,7 +2352,7 @@ def report_snake_enhanced():
             VALUES (%s, %s, %s, %s, %s, %s, %s)
             ''', (
                 tx_id, user['id'], 'SNAKE_REWARD', reward, 'COMPLETED',
-                json.dumps({"g": "snake", "a": apples}),
+                json.dumps({"g":"snake","a":apples,"ga":golden_apples}),
                 datetime.utcnow().isoformat()
             ))
             
