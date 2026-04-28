@@ -2524,11 +2524,14 @@ const Games = {
       // midpoint was originally at θ° from the top.
       // So: θ = prizeIndex * 60 + 30
 
+      // Correct formula: rotate (360 - midpoint) to bring segment to top pointer
+      // midpoint of segment i = i*60 + 30 degrees clockwise from top
       const segmentMidpointFromTop = prizeIndex * 60 + 30;
+      const angleToPointer = (360 - segmentMidpointFromTop) % 360;
 
       // Add 6-8 full spins for satisfying visual spin
       const fullSpins = 6 + Math.floor(Math.random() * 3);
-      const totalRotation = (fullSpins * 360) + segmentMidpointFromTop;
+      const totalRotation = (fullSpins * 360) + angleToPointer;
 
       // Target the SVG element which is the actual spinning element
       const svgWheel = document.getElementById('wheel-svg');
