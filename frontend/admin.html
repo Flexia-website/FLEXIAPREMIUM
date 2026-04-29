@@ -1054,6 +1054,19 @@
                 </button>
                 <div id="social-message" class="message hidden"></div>
             </div>
+
+            <div class="admin-section">
+                <h3><i class="fas fa-money-bill-wave"></i> Minimum Withdrawal Amount</h3>
+                <p>Set the minimum amount users must have before they can withdraw. This updates live across the app.</p>
+                <div class="mb-3">
+                    <label>Minimum Withdrawal (₦)</label>
+                    <input type="number" id="min-withdrawal-input" placeholder="e.g. 100000" min="0" step="1000" style="font-size:1.1rem; font-weight:bold;" />
+                </div>
+                <button onclick="saveMinWithdrawal()" style="background: #8000FF;">
+                    <i class="fas fa-save"></i> Save Minimum Withdrawal
+                </button>
+                <div id="min-withdrawal-message" class="message hidden"></div>
+            </div>
             
             <div class="admin-section">
                 <h3><i class="fas fa-key"></i> Change Admin Password</h3>
@@ -2719,6 +2732,9 @@
                     document.getElementById('whatsapp-link').value = s.whatsapp_link || '';
                     document.getElementById('telegram-link').value = s.telegram_link || '';
                     document.getElementById('facebook-link').value = s.facebook_link || '';
+                    // Populate min withdrawal with live DB value
+                    const minWd = s.min_withdrawal != null ? s.min_withdrawal : 100000;
+                    document.getElementById('min-withdrawal-input').value = minWd;
                 }
             } catch (err) {
                 console.error('Load settings error:', err);
@@ -2742,6 +2758,24 @@
             } catch (err) {
                 console.error('Save links error:', err);
                 showMessage('Network error.', 'error', 'social-message');
+            }
+        }
+
+        async function saveMinWithdrawal() {
+            const val = parseFloat(document.getElementById('min-withdrawal-input').value);
+            if (isNaN(val) || val < 0) {
+                showMessage('Please enter a valid amount.', 'error', 'min-withdrawal-message');
+                return;
+            }
+            try {
+                const result = await postData('/api/admin/settings', { min_withdrawal: val });
+                if (result.success) {
+                    showMessage(`✅ Minimum withdrawal set to ₦${val.toLocaleString()}`, 'success', 'min-withdrawal-message');
+                } else {
+                    showMessage(result.message || 'Failed to save.', 'error', 'min-withdrawal-message');
+                }
+            } catch (err) {
+                showMessage('Network error.', 'error', 'min-withdrawal-message');
             }
         }
         
