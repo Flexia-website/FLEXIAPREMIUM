@@ -656,6 +656,116 @@ body {
   gap: 15px;
 }
 
+/* Withdrawal Balance Breakdown */
+.withdraw-balance-breakdown {
+  background: rgba(128, 0, 255, 0.06);
+  border: 1px solid rgba(128, 0, 255, 0.25);
+  border-radius: 10px;
+  padding: 12px 15px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.withdraw-balance-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.withdraw-balance-row.total {
+  font-size: 0.95rem;
+}
+
+.withdraw-balance-label {
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.withdraw-balance-row.total .withdraw-balance-label {
+  color: var(--text-light);
+  font-weight: 600;
+}
+
+.withdraw-balance-val {
+  color: var(--text-light);
+  font-weight: 500;
+}
+
+.withdraw-balance-row.total strong {
+  color: #00FFCC;
+  font-size: 1.05rem;
+  font-family: var(--font-display);
+  text-shadow: 0 0 8px rgba(0,255,204,0.35);
+}
+
+.withdraw-balance-divider {
+  height: 1px;
+  background: rgba(128, 0, 255, 0.2);
+  margin: 2px 0;
+}
+
+/* Game Rewards Mini Display */
+.game-rewards-row {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.game-rewards-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  background: rgba(0, 255, 204, 0.06);
+  border: 1px solid rgba(0, 255, 204, 0.25);
+  border-radius: 10px;
+  padding: 8px 14px 8px 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.game-rewards-mini::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, #00FFCC, #8000FF);
+  border-radius: 10px 0 0 10px;
+}
+
+.game-rewards-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.game-rewards-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.game-rewards-label {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.game-rewards-amount {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #00FFCC;
+  font-family: var(--font-display);
+  text-shadow: 0 0 8px rgba(0, 255, 204, 0.4);
+}
+
 .control-btn {
   flex-grow: 1;
   padding: 10px 15px;
