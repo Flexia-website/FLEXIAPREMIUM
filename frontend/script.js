@@ -766,6 +766,15 @@ const App = {
   
   checkAuth: async function () {
     try {
+      // Fetch live config (min withdrawal) alongside auth check
+      fetch('/api/config').then(r => r.json()).then(cfg => {
+        if (cfg.success && cfg.min_withdrawal != null) {
+          CONFIG.MIN_WITHDRAWAL = cfg.min_withdrawal;
+          const minEl = document.getElementById('withdraw-min');
+          if (minEl) minEl.textContent = `₦${cfg.min_withdrawal.toLocaleString()}`;
+        }
+      }).catch(() => {});
+
       const response = await this.requestWithTimeout('/api/user/profile');
       const data = await response.json();
       if (data.success) {
@@ -812,16 +821,39 @@ const App = {
       });
     }
     
-    const withdrawBalance = document.getElementById('withdraw-balance');
-    if (withdrawBalance) {
-      withdrawBalance.textContent = `₦${this.currentUser.balance.toLocaleString(undefined, { 
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2 
-      })}`;
-    }
-    
     const minEl = document.getElementById('withdraw-min');
     if (minEl) minEl.textContent = `₦${CONFIG.MIN_WITHDRAWAL.toLocaleString()}`;
+
+    // Populate game rewards mini display
+    const gameRewardsEl = document.getElementById('game-rewards-display');
+    const gameTypes = ['COINFLIP_WIN', 'PLINKO_WIN', 'PLINKO_REPORT', 'SNAKE_REWARD'];
+    const gameTotal = (this.currentUser.transactions || [])
+      .filter(t => gameTypes.includes(t.type) && parseFloat(t.amount || 0) > 0)
+      .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+
+    if (gameRewardsEl) {
+      gameRewardsEl.textContent = gameTotal.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+
+    // Populate withdrawal modal balance breakdown
+    // Refer & TikTok portion = total balance minus game rewards
+    const totalBal = parseFloat(this.currentUser.balance);
+    const refTikTokBal = Math.max(0, totalBal - gameTotal);
+    const fmt = (v) => `₦${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    const wdRef = document.getElementById('withdraw-ref-balance');
+    if (wdRef) wdRef.textContent = fmt(refTikTokBal);
+
+    const wdGame = document.getElementById('withdraw-game-balance');
+    if (wdGame) wdGame.textContent = fmt(gameTotal);
+
+    const withdrawBalance = document.getElementById('withdraw-balance');
+    if (withdrawBalance) {
+      withdrawBalance.textContent = fmt(totalBal);
+    }
     
     this.lastBalanceUpdate = now;
   },
@@ -829,6 +861,15 @@ const App = {
   fetchFreshBalance: async function () {
     if (!this.currentUser) return;
     try {
+      // Refresh live config values (min withdrawal may have changed)
+      fetch('/api/config').then(r => r.json()).then(cfg => {
+        if (cfg.success && cfg.min_withdrawal != null) {
+          CONFIG.MIN_WITHDRAWAL = cfg.min_withdrawal;
+          const minEl = document.getElementById('withdraw-min');
+          if (minEl) minEl.textContent = `₦${cfg.min_withdrawal.toLocaleString()}`;
+        }
+      }).catch(() => {});
+
       const response = await this.requestWithTimeout('/api/user/profile', {
         credentials: 'include',
         headers: { 'Cache-Control': 'no-cache' }
@@ -837,6 +878,8 @@ const App = {
         const data = await response.json();
         if (data.success && data.user && data.user.balance !== undefined) {
           this.currentUser.balance = parseFloat(data.user.balance);
+          // Keep transactions fresh so game rewards display stays accurate
+          if (data.user.transactions) this.currentUser.transactions = data.user.transactions;
           this.refreshBalance(true);
         }
       }
@@ -2175,8 +2218,10 @@ const Banking = {
       return;
     }
     
-    if (amount > user.balance) {
-      App.showMessage('Insufficient balance.', 'error');
+    // Combined balance = user.balance (backend total = Refer/TikTok + Game Rewards)
+    const combinedBalance = parseFloat(user.balance);
+    if (amount > combinedBalance) {
+      App.showMessage(`Insufficient balance. Your total available is ₦${combinedBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 'error');
       return;
     }
     
