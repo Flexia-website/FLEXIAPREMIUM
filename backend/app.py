@@ -835,7 +835,8 @@ def init_db():
             whatsapp_link TEXT,
             telegram_link TEXT,
             facebook_link TEXT,
-            global_withdrawal_days TEXT
+            global_withdrawal_days TEXT,
+            min_withdrawal REAL DEFAULT 100000
         )
         ''')
     else:
@@ -845,7 +846,8 @@ def init_db():
             whatsapp_link TEXT,
             telegram_link TEXT,
             facebook_link TEXT,
-            global_withdrawal_days TEXT
+            global_withdrawal_days TEXT,
+            min_withdrawal REAL DEFAULT 100000
         )
         ''')
 
@@ -1071,6 +1073,27 @@ def get_global_withdrawal_days():
     finally:
         return_db_connection(conn)
     return CONFIG.DEFAULT_WITHDRAWAL_DAYS
+
+def get_min_withdrawal():
+    """Read dynamic minimum withdrawal from admin_settings. Falls back to CONFIG value."""
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        # Ensure column exists (migration for existing databases)
+        try:
+            cursor.execute('ALTER TABLE admin_settings ADD COLUMN min_withdrawal REAL DEFAULT 100000')
+            conn.commit()
+        except Exception:
+            pass  # Column already exists
+        cursor.execute('SELECT min_withdrawal FROM admin_settings LIMIT 1')
+        row = cursor.fetchone()
+        if row and row[0] is not None:
+            return float(row[0])
+    except Exception as e:
+        app.logger.error(f"Error getting min_withdrawal: {e}")
+    finally:
+        return_db_connection(conn)
+    return CONFIG.MIN_WITHDRAWAL
 
 def get_game_friendly_name(game_type):
     """Get user-friendly name for game type"""
@@ -1720,6 +1743,15 @@ def logout():
     resp = jsonify({"success": True, "message": "Logged out"})
     resp.set_cookie('session_token', '', expires=0)
     return resp
+
+# ======================= PUBLIC CONFIG =======================
+@app.route('/api/config')
+def get_public_config():
+    """Returns live app config values (no auth required)."""
+    return jsonify({
+        "success": True,
+        "min_withdrawal": get_min_withdrawal()
+    })
 
 # ======================= USER ENDPOINTS =======================
 @app.route('/api/user/profile')
@@ -3324,8 +3356,8 @@ def withdraw():
         global_days = get_global_withdrawal_days()
         return jsonify({"success": False, "message": f"Withdrawals only on days: {', '.join(map(str, sorted(global_days)))}"}), 403
     
-    if amount < CONFIG.MIN_WITHDRAWAL:
-        return jsonify({"success": False, "message": f"Min withdrawal: ₦{CONFIG.MIN_WITHDRAWAL:,}"}), 400
+    if amount < get_min_withdrawal():
+        return jsonify({"success": False, "message": f"Min withdrawal: ₦{get_min_withdrawal():,.0f}"}), 400
     
     if float(user['balance']) < amount:
         return jsonify({"success": False, "message": "Insufficient balance"}), 400
@@ -3601,18 +3633,43 @@ def admin_update_settings():
     telegram_link = data.get('telegram_link', '')
     facebook_link = data.get('facebook_link', '')
     global_withdrawal_days = data.get('global_withdrawal_days', [])
+    min_withdrawal = data.get('min_withdrawal', None)
     
     if not isinstance(global_withdrawal_days, list):
         return jsonify({"success": False, "message": "Invalid withdrawal days format"}), 400
+    
+    if min_withdrawal is not None:
+        try:
+            min_withdrawal = float(min_withdrawal)
+            if min_withdrawal < 0:
+                return jsonify({"success": False, "message": "Minimum withdrawal cannot be negative"}), 400
+        except (ValueError, TypeError):
+            return jsonify({"success": False, "message": "Invalid minimum withdrawal amount"}), 400
     
     conn = get_db()
     cursor = conn.cursor()
     
     try:
-        cursor.execute('''
-        UPDATE admin_settings 
-        SET whatsapp_link = %s, telegram_link = %s, facebook_link = %s, global_withdrawal_days = %s
-        ''', (whatsapp_link, telegram_link, facebook_link, json.dumps(global_withdrawal_days)))
+        # Ensure column exists for existing databases
+        try:
+            cursor.execute('ALTER TABLE admin_settings ADD COLUMN min_withdrawal REAL DEFAULT 100000')
+            conn.commit()
+        except Exception:
+            pass
+
+        ph = get_placeholder()
+        if min_withdrawal is not None:
+            cursor.execute(f'''
+            UPDATE admin_settings 
+            SET whatsapp_link = {ph}, telegram_link = {ph}, facebook_link = {ph},
+                global_withdrawal_days = {ph}, min_withdrawal = {ph}
+            ''', (whatsapp_link, telegram_link, facebook_link,
+                  json.dumps(global_withdrawal_days), min_withdrawal))
+        else:
+            cursor.execute(f'''
+            UPDATE admin_settings 
+            SET whatsapp_link = {ph}, telegram_link = {ph}, facebook_link = {ph}, global_withdrawal_days = {ph}
+            ''', (whatsapp_link, telegram_link, facebook_link, json.dumps(global_withdrawal_days)))
         conn.commit()
         
         app.logger.info(f"Admin updated settings")
