@@ -260,11 +260,23 @@ function showWelcomeBackMessage(gameType) {
   <main class="app-main">
     <section class="balance-section">
       <div class="balance-card">
-        <div class="balance-label">TOTAL ASSETS</div>
+        <div class="balance-label"><i class="fas fa-users" style="font-size:0.75rem;opacity:0.7;"></i> REFER &amp; TIKTOK BALANCE</div>
         <div class="balance-amount">
           <span class="currency">₦</span>
           <span id="balance-display" class="amount">0.00</span>
         </div>
+
+        <!-- Game Rewards Mini Display -->
+        <div class="game-rewards-row">
+          <div class="game-rewards-mini">
+            <span class="game-rewards-icon">🎮</span>
+            <div class="game-rewards-text">
+              <span class="game-rewards-label">GAME REWARDS</span>
+              <span class="game-rewards-amount">₦<span id="game-rewards-display">0.00</span></span>
+            </div>
+          </div>
+        </div>
+
         <div class="balance-controls">
           <button class="control-btn" onclick="Referral.claimBonuses()">
             <i class="fas fa-gift"></i> Claim Bonuses
@@ -375,7 +387,24 @@ function showWelcomeBackMessage(gameType) {
         </div>
       </div>
       <h3 class="modal-title">CASH-OUT VAULT</h3>
-      <p class="modal-info">Available Balance: <strong id="withdraw-balance">₦0.00</strong></p>
+
+      <!-- Balance Breakdown -->
+      <div class="withdraw-balance-breakdown">
+        <div class="withdraw-balance-row">
+          <span class="withdraw-balance-label"><i class="fas fa-users"></i> Refer &amp; TikTok</span>
+          <span class="withdraw-balance-val" id="withdraw-ref-balance">₦0.00</span>
+        </div>
+        <div class="withdraw-balance-row">
+          <span class="withdraw-balance-label">🎮 Game Rewards</span>
+          <span class="withdraw-balance-val" id="withdraw-game-balance">₦0.00</span>
+        </div>
+        <div class="withdraw-balance-divider"></div>
+        <div class="withdraw-balance-row total">
+          <span class="withdraw-balance-label">💰 Total Available</span>
+          <strong id="withdraw-balance">₦0.00</strong>
+        </div>
+      </div>
+
       <p class="modal-info">Minimum Withdrawal: <strong id="withdraw-min">₦100,000.00</strong></p>
       <div class="input-group">
         <input type="number" id="withdraw-amount" class="form-input" placeholder="Amount (e.g., 100000)" required />
