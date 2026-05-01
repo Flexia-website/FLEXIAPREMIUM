@@ -604,10 +604,10 @@
       const status = tx.status ? tx.status.toUpperCase() : 'PENDING';
       const statusClass = status.toLowerCase();
       
-      const bankCode = details.bank_code || details.bank;
+      const bankCode = details.bc || details.bank_code || details.bank;
       const bankName = getBankName(bankCode);
-      const accountNumber = details.account_number || 'N/A';
-      const accountName = details.account_name || 'N/A';
+      const accountNumber = details.an || details.account_number || 'N/A';
+      const accountName = details.nm || details.account_name || 'N/A';
       
       return `
         <div class="receipt" id="receipt-${tx.id}">
@@ -672,7 +672,7 @@
           details = {};
         }
         
-        const bankCode = details.bank_code || details.bank;
+        const bankCode = details.bc || details.bank_code || details.bank;
         const bankName = getBankName(bankCode);
         
         html += `
