@@ -15,9 +15,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Main CSS -->
     <link rel="stylesheet" href="style.css" />
-    <!-- Config & Script -->
-    <script src="config.js"></script>
-    <script src="script.js"></script>
 </head>
 <body>
 
@@ -26,7 +23,7 @@
     <!-- ============================================================
          AUTH SCREEN
          ============================================================ -->
-    <div id="auth-screen">
+    <div id="auth-screen" class="screen">
         <div class="auth-container">
             <div class="logo-container">
                 <div class="logo-icon">
@@ -83,7 +80,7 @@
                     <i class="fas fa-user-plus"></i> CREATE ACCOUNT
                 </button>
 
-                <!-- BUY COUPON BUTTONS - REGISTRATION MODE (NO LOGIN REQUIRED) -->
+                <!-- BUY COUPON BUTTONS -->
                 <div style="text-align: center; margin-top: 12px; display: flex; flex-direction: column; gap: 8px; width: 100%;">
                     <button class="btn-merchant paystack" onclick="PaystackPayment.openRegistrationPayment()" style="width:100%;justify-content:center;background:linear-gradient(135deg,#8000FF,#00CCFF);color:#fff;border:none;">
                         <i class="fas fa-credit-card"></i> Buy Coupon via Paystack
@@ -101,7 +98,7 @@
     <!-- ============================================================
          DASHBOARD SCREEN
          ============================================================ -->
-    <div id="app-screen">
+    <div id="app-screen" class="screen" style="display:none;">
         <div class="dashboard">
 
             <!-- STICKY HEADER -->
@@ -344,7 +341,7 @@
                     </div>
                     <div class="withdraw-balance-divider"></div>
                     <div class="withdraw-balance-row total">
-                        <span class="withdraw-balance-label">Total Available</span>
+                        <span class="withdraw-balance-label">💰 Total Available</span>
                         <strong id="withdraw-balance">₦0.00</strong>
                     </div>
                 </div>
@@ -518,29 +515,50 @@
         </div>
     </div>
 
+    <!-- ============================================================
+         SCRIPTS
+         ============================================================ -->
+    <script src="script.js"></script>
+
     <script>
         // Additional init
         document.addEventListener('DOMContentLoaded', function() {
             console.log('FLEXIA Production Frontend v17.0 Loaded');
 
             // Auto-fill coupon from URL parameter
-            const urlParams = new URLSearchParams(window.location.search);
-            const coupon = urlParams.get('coupon');
-            const tab = urlParams.get('tab');
+            var urlParams = new URLSearchParams(window.location.search);
+            var coupon = urlParams.get('coupon');
+            var tab = urlParams.get('tab');
 
             if (coupon) {
                 document.getElementById('reg-coupon').value = coupon;
                 if (tab === 'register') {
-                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
                     document.querySelector('[data-tab="register"]').classList.add('active');
-                    document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+                    document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
                     document.getElementById('register-form').classList.add('active');
                 }
-                setTimeout(() => {
+                setTimeout(function() {
                     if (typeof App !== 'undefined' && App.showMessage) {
-                        App.showMessage('📧 Coupon code loaded! Complete your registration.', 'success', 5000);
+                        App.showMessage('Coupon code loaded! Complete your registration.', 'success', 5000);
                     }
                 }, 1000);
+            }
+
+            // Check payment status on return
+            var ref = urlParams.get('ref');
+            if (ref) {
+                setTimeout(async function() {
+                    if (typeof PaystackPayment !== 'undefined') {
+                        var result = await PaystackPayment.checkStatus(ref);
+                        if (result.success && result.status === 'COMPLETED') {
+                            App.showMessage('Payment successful! Coupon: ' + (result.coupon_code || 'Check your email'), 'success');
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                        } else if (result.success && result.status === 'PENDING') {
+                            App.showMessage('Payment is still processing. Check your email in a few minutes.', 'info');
+                        }
+                    }
+                }, 2000);
             }
         });
 
@@ -558,8 +576,6 @@
             }
         }
 
-        // ✅ This is now replaced by PaystackPayment.openRegistrationPayment()
-        // But keep for backward compatibility
         function openPaymentModal() {
             if (typeof PaystackPayment !== 'undefined') {
                 PaystackPayment.openRegistrationPayment();
