@@ -1,22 +1,19 @@
-// script.js - FLEXIA Frontend Logic v14.0 - COMPLETE VERSION
-// ✅ ALL FIXES APPLIED ✅ DAILY PLAY LIMITS ✅ AUTO-LOGOUT ✅ WITHDRAWAL DAY CHECK ✅ BEAUTIFUL UI
+// script.js - FLEXIA Frontend Logic v17.0 - COMPLETE VERSION
+// ✅ FULL REGISTRATION WITH COUPON VALIDATION ✅ PAYSTACK BUY COUPON ✅ SESSION MANAGEMENT ✅ TODAY'S EARNINGS
 
 //========== EMBEDDED CSS ========
 const embeddedCSS = `
-  /* Password visibility toggle */
   .password-container {
     position: relative;
     width: 100%;
     margin-bottom: 15px;
   }
-  
   .password-container input {
     width: 100%;
     padding-left: 45px !important;
     padding-right: 45px !important;
     box-sizing: border-box !important;
   }
-  
   .password-toggle {
     position: absolute;
     right: 12px;
@@ -36,19 +33,15 @@ const embeddedCSS = `
     transition: color 0.2s, background 0.2s;
     z-index: 10;
   }
-  
   .password-toggle:hover {
     color: #8000FF;
     background: rgba(128, 0, 255, 0.1);
   }
-  
-  /* Game button loading states */
   .btn-loading {
     position: relative;
     color: transparent !important;
     pointer-events: none;
   }
-  
   .btn-loading::after {
     content: '';
     position: absolute;
@@ -62,12 +55,9 @@ const embeddedCSS = `
     border-top-color: #fff;
     animation: spin 0.8s linear infinite;
   }
-  
   @keyframes spin {
     to { transform: rotate(360deg); }
   }
-  
-  /* Global messages */
   .global-message {
     position: fixed;
     top: 20px;
@@ -83,668 +73,43 @@ const embeddedCSS = `
     max-width: 90%;
     text-align: center;
     border-left: 4px solid;
-  }
-  
-  .global-message.success {
-    border-left-color: #00ff88;
-    background: rgba(0, 255, 136, 0.1);
-  }
-  
-  .global-message.error {
-    border-left-color: #ff0055;
-    background: rgba(255, 0, 85, 0.1);
-  }
-  
-  .global-message.warning {
-    border-left-color: #ffaa00;
-    background: rgba(255, 170, 0, 0.1);
-  }
-  
-  @keyframes slideDown {
-    from {
-      opacity: 0;
-      transform: translateX(-50%) translateY(-20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-  }
-  
-  @keyframes slideOut {
-    from {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-    to {
-      opacity: 0;
-      transform: translateX(-50%) translateY(-20px);
-    }
-  }
-  
-  /* Social links */
-  .social-link {
-    display: inline-block;
-    margin: 5px 0;
-    padding: 8px 15px;
-    background: rgba(30,30,69,0.8);
-    border: 1px solid #8000FF;
-    border-radius: 8px;
-    color: #8000FF;
-    text-decoration: none;
     font-weight: 600;
-    transition: all 0.2s;
   }
-  
-  .social-link:hover {
-    background: rgba(128,0,255,0.2);
-    transform: translateY(-2px);
-  }
-  
-  /* Settings sections */
-  .settings-section {
-    margin-bottom: 20px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid #252540;
-  }
-  
-  .settings-section:last-child {
-    border-bottom: none;
-  }
-  
-  .small-text {
-    font-size: 0.8rem;
-    color: #A0A0B5;
-    margin: 10px 0;
-  }
-  
-  /* Profile sections */
-  .profile-section {
-    margin-bottom: 20px;
-    padding: 15px;
-    background: rgba(30,30,69,0.5);
-    border-radius: 8px;
-    border-left: 4px solid #8000FF;
-  }
-  
-  .profile-section h4 {
-    margin-top: 0;
-    color: #8000FF;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  
-  .profile-section p {
-    margin: 8px 0;
-    display: flex;
-    justify-content: space-between;
-  }
-  
-  .profile-section strong {
-    color: #A0A0B5;
-  }
-  
-  /* Referral sections */
-  .referral-section {
-    margin-bottom: 25px;
-    padding: 20px;
-    background: rgba(30,30,69,0.5);
-    border-radius: 10px;
-    border: 1px solid rgba(128, 0, 255, 0.3);
-  }
-  
-  .referral-section h4 {
-    margin-top: 0;
-    color: #8000FF;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  
-  .referral-section code {
-    display: inline-block;
-    padding: 5px 10px;
-    background: rgba(128, 0, 255, 0.2);
-    border-radius: 5px;
-    font-family: monospace;
-    margin: 10px 0;
-  }
-  
-  /* TikTok display */
-  .tiktok-account-display {
-    background: rgba(0, 0, 0, 0.3);
-    border: 2px solid #8000FF;
-    border-radius: 10px;
-    padding: 15px;
-    margin: 15px 0;
-    text-align: center;
-    font-size: 1.2rem;
-  }
-  
-  /* Spin wheel */
-  .wheel-container {
-    position: relative;
-    width: 300px;
-    height: 300px;
-    margin: 20px auto;
-  }
-  
-  .wheel {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    position: relative;
-    overflow: hidden;
-    border: 5px solid #8000FF;
-    box-shadow: 0 0 20px rgba(128, 0, 255, 0.5);
-  }
-  
-  .wheel-segment {
-    position: absolute;
-    width: 50%;
-    height: 50%;
-    transform-origin: 100% 100%;
-    left: 0;
-    top: 0;
-    border-radius: 0 100% 0 0;
-  }
-  
-  .wheel-segment.segment-1 { background: #FF0055; transform: rotate(0deg); }
-  .wheel-segment.segment-2 { background: #FF5C5C; transform: rotate(60deg); }
-  .wheel-segment.segment-3 { background: #FFCC00; transform: rotate(120deg); }
-  .wheel-segment.segment-4 { background: #00FF55; transform: rotate(180deg); }
-  .wheel-segment.segment-5 { background: #00CCFF; transform: rotate(240deg); }
-  .wheel-segment.segment-6 { background: #8000FF; transform: rotate(300deg); }
-  
-  .wheel-center {
-    position: absolute;
-    width: 50px;
-    height: 50px;
-    background: white;
-    border-radius: 50%;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 10;
-    border: 5px solid #8000FF;
-  }
-  
-  .wheel-labels {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-  }
-  
-  .wheel-label {
-    position: absolute;
-    left: 50%;
-    top: 15%;
-    transform: translateX(-50%) rotate(var(--rotation));
-    transform-origin: 50% 150px;
-    color: white;
-    font-weight: bold;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-  }
-  
-  /* Game limits display */
-  .limit-display {
-    background: rgba(30,30,69,0.8);
-    padding: 10px;
-    border-radius: 5px;
-    margin: 10px 0;
-    border-left: 3px solid #00FF55;
-  }
-  
-  .limit-display.warning {
-    border-left-color: #FFAA00;
-  }
-  
-  .limit-display.danger {
-    border-left-color: #FF0055;
-  }
-  
-  /* Game Limit Modal Styles */
-  .game-limit-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10000;
-    backdrop-filter: blur(10px);
-  }
-  
-  .game-limit-modal-content {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    border-radius: 20px;
-    padding: 30px;
-    max-width: 400px;
-    width: 90%;
-    border: 2px solid #8000FF;
-    box-shadow: 0 20px 40px rgba(128, 0, 255, 0.3);
-    text-align: center;
-    animation: slideIn 0.4s ease-out;
-  }
-  
-  .game-limit-icon {
-    font-size: 4rem;
-    margin-bottom: 20px;
-    color: #ff4757;
-    animation: pulse 2s infinite;
-  }
-  
-  .game-limit-title {
-    color: white;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 1.5rem;
-    margin-bottom: 15px;
-  }
-  
-  .game-limit-message {
-    background: rgba(255, 71, 87, 0.1);
-    border-radius: 10px;
-    padding: 20px;
-    margin: 20px 0;
-    border: 1px solid rgba(255, 71, 87, 0.3);
-  }
-  
-  .game-limit-text {
-    color: #ffb8c6;
-    font-size: 1.1rem;
-    line-height: 1.5;
-    margin-bottom: 15px;
-  }
-  
-  .game-limit-info {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 15px;
-    color: #ffcc00;
-  }
-  
-  .game-limit-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 25px;
-  }
-  
-  .game-limit-btn-ok {
-    background: linear-gradient(135deg, #8000FF 0%, #6C00FF 100%);
-    color: white;
-    border: none;
-    padding: 15px;
-    border-radius: 10px;
-    font-family: 'Orbitron', sans-serif;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 1rem;
-  }
-  
-  .game-limit-btn-ok:hover {
-    transform: translateY(-2px);
-  }
-  
-  .game-limit-btn-alternative {
-    background: transparent;
-    color: #00D4FF;
-    border: 1px solid #00D4FF;
-    padding: 12px;
-    border-radius: 10px;
-    font-family: 'Orbitron', sans-serif;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 0.9rem;
-  }
-  
-  .game-limit-btn-alternative:hover {
-    background: rgba(0, 212, 255, 0.1);
-  }
-  
-  /* Force Logout Modal Styles */
-  .force-logout-modal-content {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    border-radius: 20px;
-    padding: 30px;
-    max-width: 450px;
-    width: 90%;
-    border: 2px solid #ff4757;
-    box-shadow: 0 20px 40px rgba(255, 71, 87, 0.3);
-    text-align: center;
-    animation: slideIn 0.4s ease-out;
-  }
-  
-  .force-logout-countdown {
-    color: #ff6b6b;
-    font-weight: bold;
-    font-size: 1.2rem;
-    animation: pulse 1s infinite;
-  }
-  
-  /* Withdrawal Day Check Modal */
-  .withdrawal-day-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10001;
-    backdrop-filter: blur(10px);
-  }
-  
-  .withdrawal-day-modal-content {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    border-radius: 20px;
-    padding: 30px;
-    max-width: 450px;
-    width: 90%;
-    border: 2px solid #ffcc00;
-    box-shadow: 0 20px 40px rgba(255, 204, 0, 0.3);
-    text-align: center;
-    animation: slideIn 0.4s ease-out;
-  }
-  
-  .withdrawal-day-icon {
-    font-size: 4rem;
-    margin-bottom: 20px;
-  }
-  
-  .withdrawal-day-icon.allowed {
-    color: #00ff88;
-  }
-  
-  .withdrawal-day-icon.not-allowed {
-    color: #ff6b6b;
-  }
-  
-  .withdrawal-day-title {
-    color: white;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 1.5rem;
-    margin-bottom: 15px;
-  }
-  
-  .withdrawal-day-message {
-    background: rgba(255, 204, 0, 0.1);
-    border-radius: 10px;
-    padding: 20px;
-    margin: 20px 0;
-    border: 1px solid rgba(255, 204, 0, 0.3);
-  }
-  
-  .withdrawal-day-text {
-    color: #ffd166;
-    font-size: 1.1rem;
-    line-height: 1.5;
-    margin-bottom: 15px;
-  }
-  
-  .withdrawal-day-info {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 15px;
-    color: #00D4FF;
-  }
-  
-  .withdrawal-day-days {
-    background: rgba(128, 0, 255, 0.2);
-    border-radius: 8px;
-    padding: 10px;
-    margin: 15px 0;
-    border: 1px solid #8000FF;
-  }
-  
-  .withdrawal-day-days strong {
-    color: #8000FF;
-    display: block;
-    margin-bottom: 5px;
-  }
-  
-  .withdrawal-day-day {
-    display: inline-block;
-    padding: 5px 10px;
-    margin: 3px;
-    background: rgba(128, 0, 255, 0.3);
-    border-radius: 5px;
-    font-weight: bold;
-  }
-  
-  .withdrawal-day-day.current {
-    background: #00ff88;
-    color: #000;
-  }
-  
-  .withdrawal-day-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 25px;
-  }
-  
-  .withdrawal-day-btn-primary {
-    background: linear-gradient(135deg, #8000FF 0%, #6C00FF 100%);
-    color: white;
-    border: none;
-    padding: 15px;
-    border-radius: 10px;
-    font-family: 'Orbitron', sans-serif;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 1rem;
-  }
-  
-  .withdrawal-day-btn-primary:hover {
-    transform: translateY(-2px);
-  }
-  
-  .withdrawal-day-btn-secondary {
-    background: transparent;
-    color: #A0A0B5;
-    border: 1px solid #A0A0B5;
-    padding: 12px;
-    border-radius: 10px;
-    font-family: 'Orbitron', sans-serif;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 0.9rem;
-  }
-  
-  .withdrawal-day-btn-secondary:hover {
-    background: rgba(160, 160, 181, 0.1);
-  }
-  
-  @keyframes slideIn {
-    from {
-      opacity: 0;
-      transform: translateY(-30px) scale(0.9);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-  
-  @keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-  }
-  
-  /* Game Card Disabled State */
-  .activity-card.disabled {
-    opacity: 0.5;
-    filter: grayscale(0.7);
-    cursor: not-allowed !important;
-    position: relative;
-  }
-  
-  .activity-card.disabled::after {
-    content: "LIMIT REACHED";
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: #ff4757;
-    color: white;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    font-weight: bold;
-    letter-spacing: 1px;
-  }
-  
-  .activity-card.disabled .card-badge {
-    background: #ff4757 !important;
-  }
-  
-  /* PIN Change Modal Styles */
-  .pin-change-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10002;
-    backdrop-filter: blur(10px);
-  }
-  
-  .pin-change-modal-content {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    border-radius: 20px;
-    padding: 30px;
-    max-width: 400px;
-    width: 90%;
-    border: 2px solid #8000FF;
-    box-shadow: 0 20px 40px rgba(128, 0, 255, 0.3);
-    text-align: center;
-    animation: slideIn 0.4s ease-out;
-  }
-  
-  .pin-change-icon {
-    font-size: 3rem;
-    margin-bottom: 20px;
-    color: #8000FF;
-  }
-  
-  .pin-change-title {
-    color: white;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 1.5rem;
-    margin-bottom: 20px;
-  }
-  
-  .pin-input-group {
-    margin-bottom: 20px;
-    text-align: left;
-  }
-  
-  .pin-input-group label {
-    display: block;
-    color: #A0A0B5;
-    margin-bottom: 8px;
-    font-size: 0.9rem;
-  }
-  
-  .pin-input {
-    width: 100%;
-    padding: 12px 15px;
-    background: rgba(30, 30, 69, 0.8);
-    border: 2px solid #252540;
-    border-radius: 10px;
-    color: white;
-    font-size: 1.1rem;
-    font-family: monospace;
-    letter-spacing: 3px;
-    text-align: center;
-  }
-  
-  .pin-input:focus {
-    border-color: #8000FF;
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(128, 0, 255, 0.2);
-  }
-  
-  .pin-change-buttons {
-    display: flex;
-    gap: 10px;
-    margin-top: 25px;
-  }
-  
-  .pin-change-btn-primary {
-    flex: 1;
-    background: linear-gradient(135deg, #8000FF 0%, #6C00FF 100%);
-    color: white;
-    border: none;
-    padding: 15px;
-    border-radius: 10px;
-    font-family: 'Orbitron', sans-serif;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
-  
-  .pin-change-btn-primary:hover {
-    transform: translateY(-2px);
-  }
-  
-  .pin-change-btn-secondary {
-    flex: 1;
-    background: transparent;
-    color: #A0A0B5;
-    border: 1px solid #A0A0B5;
-    padding: 15px;
-    border-radius: 10px;
-    font-family: 'Orbitron', sans-serif;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
-  
-  .pin-change-btn-secondary:hover {
-    background: rgba(160, 160, 181, 0.1);
+  .global-message.success { border-left-color: #00ff88; background: rgba(0,255,136,0.1); }
+  .global-message.error { border-left-color: #ff0055; background: rgba(255,0,85,0.1); }
+  .global-message.warning { border-left-color: #ffaa00; background: rgba(255,170,0,0.1); }
+  .global-message.info { border-left-color: #00ccff; background: rgba(0,204,255,0.1); }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+  @keyframes slideOut {
+    from { opacity: 1; transform: translateX(-50%) translateY(0); }
+    to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
   }
 `;
 
-// Inject CSS into document
 const style = document.createElement('style');
 style.textContent = embeddedCSS;
 document.head.appendChild(style);
 
 //========== CONFIGURATION ========
 const CONFIG = {
-  MIN_WITHDRAWAL: 100000,
-  REFERRAL_BONUS: 7500,
-  TIKTOK_REWARD: 150,
-  SNAKE_REWARD: 200,
+  MIN_WITHDRAWAL: window.APP_CONFIG?.MIN_WITHDRAWAL || 100000,
+  REFERRAL_BONUS: window.APP_CONFIG?.REFERRAL_BONUS || 7500,
+  TIKTOK_REWARD: window.APP_CONFIG?.REWARDS?.TIKTOK_BASE || 150,
+  SNAKE_REWARD: window.APP_CONFIG?.REWARDS?.SNAKE_APPLE || 200,
   COIN_FLIP_MIN_BET: 100,
   PLINKO_MIN_BET: 100,
   CLAIM_COOLDOWN: 2000,
-  GAME_DAILY_LIMITS: {
-    'snake': 5,
-    'coinflip': 2,
-    'plinko': 2,
+  GAME_DAILY_LIMITS: window.APP_CONFIG?.GAME_DAILY_LIMITS || {
+    'snake': 17,
+    'coinflip': 12,
+    'plinko': 12,
     'spin': 1,
-    'tiktok': 1
-  }
+    'tiktok': 3
+  },
+  PAYSTACK_MIN_AMOUNT: window.APP_CONFIG?.PAYSTACK?.MIN_AMOUNT || 500
 };
 
 //========== CORE APP ==========
@@ -752,7 +117,7 @@ const App = {
   currentUser: null,
   balanceVisible: true,
   lastBalanceUpdate: 0,
-  
+
   init: async function () {
     await this.checkAuth();
     if (document.getElementById('app-screen')) {
@@ -761,12 +126,15 @@ const App = {
       this.setupTheme();
       this.setupAutoRefresh();
       this.updateGameCards();
+      if (this.currentUser) {
+        await TodayEarnings.fetch();
+        SessionManager.init();
+      }
     }
   },
-  
+
   checkAuth: async function () {
     try {
-      // Fetch live config (min withdrawal) alongside auth check
       fetch('/api/config').then(r => r.json()).then(cfg => {
         if (cfg.success && cfg.min_withdrawal != null) {
           CONFIG.MIN_WITHDRAWAL = cfg.min_withdrawal;
@@ -781,11 +149,12 @@ const App = {
         this.currentUser = data.user;
         this.showAppScreen();
         this.refreshBalance();
-        document.getElementById('welcome-text').textContent = `Welcome, ${data.user.username}!`;
-        document.getElementById('user-avatar').textContent = data.user.username.charAt(0).toUpperCase();
+        document.getElementById('dashboard-username').textContent = data.user.username;
+        document.getElementById('dashboard-avatar').textContent = data.user.username.charAt(0).toUpperCase();
         if (data.user.ui_theme === 'dark') {
           document.body.classList.add('dark-mode');
         }
+        SessionManager.init();
       } else {
         this.showAuthScreen();
       }
@@ -794,37 +163,33 @@ const App = {
       this.showAuthScreen();
     }
   },
-  
+
   showAppScreen: function () {
     document.getElementById('auth-screen').classList.add('hidden');
     document.getElementById('app-screen').classList.remove('hidden');
   },
-  
+
   showAuthScreen: function () {
     document.getElementById('app-screen').classList.add('hidden');
     document.getElementById('auth-screen').classList.remove('hidden');
   },
-  
+
   refreshBalance: function (force = false) {
     if (!this.currentUser) return;
-    
     const now = Date.now();
     if (!force && (now - this.lastBalanceUpdate) < 3000) {
       return;
     }
-    
     const display = document.getElementById('balance-display');
     if (display) {
-      display.textContent = this.currentUser.balance.toLocaleString(undefined, { 
+      display.textContent = this.currentUser.balance.toLocaleString(undefined, {
         minimumFractionDigits: 2,
-        maximumFractionDigits: 2 
+        maximumFractionDigits: 2
       });
     }
-    
     const minEl = document.getElementById('withdraw-min');
     if (minEl) minEl.textContent = `₦${CONFIG.MIN_WITHDRAWAL.toLocaleString()}`;
 
-    // Populate game rewards mini display
     const gameRewardsEl = document.getElementById('game-rewards-display');
     const gameTypes = ['COINFLIP_WIN', 'PLINKO_WIN', 'PLINKO_REPORT', 'SNAKE_REWARD'];
     const gameTotal = (this.currentUser.transactions || [])
@@ -838,8 +203,6 @@ const App = {
       });
     }
 
-    // Populate withdrawal modal balance breakdown
-    // Refer & TikTok portion = total balance minus game rewards
     const totalBal = parseFloat(this.currentUser.balance);
     const refTikTokBal = Math.max(0, totalBal - gameTotal);
     const fmt = (v) => `₦${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -854,14 +217,13 @@ const App = {
     if (withdrawBalance) {
       withdrawBalance.textContent = fmt(totalBal);
     }
-    
+
     this.lastBalanceUpdate = now;
   },
 
   fetchFreshBalance: async function () {
     if (!this.currentUser) return;
     try {
-      // Refresh live config values (min withdrawal may have changed)
       fetch('/api/config').then(r => r.json()).then(cfg => {
         if (cfg.success && cfg.min_withdrawal != null) {
           CONFIG.MIN_WITHDRAWAL = cfg.min_withdrawal;
@@ -878,21 +240,22 @@ const App = {
         const data = await response.json();
         if (data.success && data.user && data.user.balance !== undefined) {
           this.currentUser.balance = parseFloat(data.user.balance);
-          // Keep transactions fresh so game rewards display stays accurate
           if (data.user.transactions) this.currentUser.transactions = data.user.transactions;
           this.refreshBalance(true);
+          await TodayEarnings.fetch();
         }
       }
-    } catch (e) { /* silent fail — network may be slow */ }
+    } catch (e) { /* silent fail */ }
   },
-  
+
   updateBalance: function (newBalance) {
     if (this.currentUser) {
       this.currentUser.balance = newBalance;
       this.refreshBalance(true);
+      TodayEarnings.fetch();
     }
   },
-  
+
   toggleBalance: function () {
     this.balanceVisible = !this.balanceVisible;
     const display = document.getElementById('balance-display');
@@ -902,25 +265,22 @@ const App = {
         : '••••••••';
     }
   },
-  
+
   showModal: function (modalId) {
     document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
     document.getElementById(modalId).classList.remove('hidden');
   },
-  
+
   closeModal: function (modalId) {
     document.getElementById(modalId).classList.add('hidden');
   },
-  
+
   showMessage: function (text, type = 'info', duration = 5000) {
-    // Remove existing messages
     document.querySelectorAll('.global-message').forEach(el => el.remove());
-    
     const messageEl = document.createElement('div');
     messageEl.className = `global-message ${type}`;
     messageEl.textContent = text;
     document.body.appendChild(messageEl);
-    
     setTimeout(() => {
       messageEl.style.animation = 'slideOut 0.3s ease-out';
       setTimeout(() => {
@@ -930,13 +290,11 @@ const App = {
       }, 300);
     }, duration);
   },
-  
+
   toggleTheme: function () {
     document.body.classList.toggle('dark-mode');
     const isDark = document.body.classList.contains('dark-mode');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    
-    // Save to backend
     fetch('/api/user/set-theme', {
       method: 'POST',
       credentials: 'include',
@@ -944,57 +302,49 @@ const App = {
       body: JSON.stringify({ dark_mode: isDark })
     }).catch(console.error);
   },
-  
+
   setupTheme: function () {
     const savedTheme = localStorage.getItem('theme') || 'light';
     if (savedTheme === 'dark') {
       document.body.classList.add('dark-mode');
     }
   },
-  
-  setupAutoRefresh: function () {
-    // Fetch fresh balance from server every 10 seconds
-    setInterval(() => this.fetchFreshBalance(), 10000);
-    // Update game cards every 30 seconds
-    setInterval(() => this.updateGameCards(), 30000);
 
-    // Re-fetch balance immediately when user returns to this tab from a game page
+  setupAutoRefresh: function () {
+    setInterval(() => this.fetchFreshBalance(), 10000);
+    setInterval(() => this.updateGameCards(), 30000);
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         this.fetchFreshBalance();
+        SessionManager.handleAppResume();
       }
     });
-
-    // Pick up balance written by game pages (coinflip / plinko / snake)
     window.addEventListener('storage', (e) => {
       if (e.key === 'flexia_balance' && e.newValue && this.currentUser) {
         const val = parseFloat(e.newValue);
         if (!isNaN(val)) {
           this.currentUser.balance = val;
           this.refreshBalance(true);
+          TodayEarnings.fetch();
         }
       }
     });
   },
-  
+
   async updateGameCards() {
     if (!this.currentUser) return;
-    
     const games = [
-      { type: 'snake', element: document.querySelector('.activity-card[onclick*="snake.html"]') },
-      { type: 'coinflip', element: document.querySelector('.activity-card[onclick*="coinflip.html"]') },
-      { type: 'plinko', element: document.querySelector('.activity-card[onclick*="plinko.html"]') }
+      { type: 'snake', element: document.querySelector('.activity-card .icon.snake')?.closest('.activity-card') },
+      { type: 'coinflip', element: document.querySelector('.activity-card .icon.coin')?.closest('.activity-card') },
+      { type: 'plinko', element: document.querySelector('.activity-card .icon.plinko')?.closest('.activity-card') }
     ];
-    
     for (const game of games) {
       if (!game.element) continue;
-      
       try {
         const response = await this.requestWithTimeout(`/api/games/access?game=${game.type}`, {
           credentials: 'include',
           headers: { 'Cache-Control': 'no-cache' }
         });
-        
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
@@ -1003,21 +353,15 @@ const App = {
               game.element.style.opacity = '1';
               game.element.style.filter = 'none';
               game.element.style.cursor = 'pointer';
-              
-              // Update badge if exists
-              const badge = game.element.querySelector('.card-badge');
-              if (badge && data.remaining_plays) {
-                badge.textContent = `${data.remaining_plays}/${data.max_plays} left`;
+              const badge = game.element.querySelector('.badge');
+              if (badge && data.remaining_plays !== undefined) {
+                badge.textContent = `${data.remaining_plays} left`;
               }
             } else {
               game.element.classList.add('disabled');
-              game.element.style.opacity = '0.5';
-              game.element.style.filter = 'grayscale(0.7)';
-              game.element.style.cursor = 'not-allowed';
-              
-              const badge = game.element.querySelector('.card-badge');
+              const badge = game.element.querySelector('.badge');
               if (badge) {
-                badge.textContent = `LIMIT REACHED`;
+                badge.textContent = `LIMIT`;
                 badge.style.background = '#ff4757';
               }
             }
@@ -1028,24 +372,20 @@ const App = {
       }
     }
   },
-  
+
   requestWithTimeout: async function(url, options = {}, timeout = 10000) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
-    
     try {
       const response = await fetch(url, {
         ...options,
         signal: controller.signal
       });
       clearTimeout(timeoutId);
-      
-      // Check if response is JSON
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         throw new Error('Server returned non-JSON response. Please try again.');
       }
-      
       return response;
     } catch (error) {
       clearTimeout(timeoutId);
@@ -1057,711 +397,261 @@ const App = {
   }
 };
 
-//========== WITHDRAWAL DAY CHECK FUNCTION ==========
-async function checkWithdrawalDay() {
+//========== SESSION PERSISTENCE & RECOVERY ==========
+const SessionManager = {
+  lastActiveTime: null,
+  sessionCheckInterval: null,
+  recoveryAttempted: false,
+
+  init: function() {
+    this.checkSessionStatus();
+    this.trackActivity();
+    this.sessionCheckInterval = setInterval(() => {
+      this.refreshSessionIfActive();
+    }, 300000);
+    
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        this.handleAppResume();
+      }
+    });
+    
+    window.addEventListener('online', () => {
+      App.showMessage('Connection restored. Refreshing...', 'info', 3000);
+      this.handleAppResume();
+    });
+    
+    window.addEventListener('offline', () => {
+      App.showMessage('No internet connection. Reconnecting...', 'warning', 5000);
+    });
+    
+    console.log('Session Manager initialized');
+  },
+
+  checkSessionStatus: async function() {
     try {
-        const response = await fetch('/api/withdrawal/check-day', {
-            credentials: 'include'
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            // Show notification to user
-            const today = new Date().getDate();
-            const days = data.custom_withdrawal_days.length > 0 
-                ? data.custom_withdrawal_days 
-                : data.global_withdrawal_days;
-            
-            if (!data.can_withdraw) {
-                // Show detailed modal
-                showWithdrawalDayModal(false, today, days);
-                return false;
-            } else {
-                // Show success modal
-                showWithdrawalDayModal(true, today, days);
-                return true;
-            }
-        }
-    } catch (error) {
-        console.error('Withdrawal day check error:', error);
-        // Show error notification
-        App.showMessage('⚠️ Unable to check withdrawal day. Please try again.', 'warning', 5000);
-        return true; // Allow withdrawal on error
-    }
-}
-
-function showWithdrawalDayModal(canWithdraw, today, days) {
-    // Remove existing modal
-    const existingModal = document.getElementById('withdrawal-day-modal');
-    if (existingModal) {
-        existingModal.remove();
-    }
-    
-    const isCustom = days && days.length > 0;
-    const sortedDays = days ? [...days].sort((a,b) => a-b) : [];
-    
-    const modal = document.createElement('div');
-    modal.id = 'withdrawal-day-modal';
-    modal.className = 'withdrawal-day-modal';
-    
-    modal.innerHTML = `
-        <div class="withdrawal-day-modal-content">
-            <div class="withdrawal-day-icon ${canWithdraw ? 'allowed' : 'not-allowed'}">
-                ${canWithdraw ? '✅' : '❌'}
-            </div>
-            
-            <h3 class="withdrawal-day-title">
-                ${canWithdraw ? 'Withdrawal Allowed Today!' : 'Withdrawal Not Allowed Today'}
-            </h3>
-            
-            <div class="withdrawal-day-message">
-                <p class="withdrawal-day-text">
-                    ${canWithdraw 
-                        ? `You <strong>CAN</strong> withdraw today (Day ${today})!`
-                        : `You <strong>cannot</strong> withdraw today (Day ${today}).`
-                    }
-                </p>
-                
-                <div class="withdrawal-day-info">
-                    <i class="fas fa-calendar-day"></i>
-                    <span>Today: Day ${today}</span>
-                </div>
-                
-                ${days && days.length > 0 ? `
-                    <div class="withdrawal-day-days">
-                        <strong>${isCustom ? 'Your Allowed Withdrawal Days:' : 'Global Allowed Days:'}</strong>
-                        <div style="margin-top: 8px;">
-                            ${sortedDays.map(day => `
-                                <span class="withdrawal-day-day ${day === today ? 'current' : ''}">
-                                    Day ${day}${day === today ? ' (Today)' : ''}
-                                </span>
-                            `).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-                
-                ${!canWithdraw ? `
-                    <div class="withdrawal-day-info" style="color: #ff6b6b;">
-                        <i class="fas fa-clock"></i>
-                        <span>Next allowed day: ${getNextAllowedDay(today, sortedDays)}</span>
-                    </div>
-                ` : ''}
-            </div>
-            
-            <div class="withdrawal-day-buttons">
-                ${canWithdraw ? `
-                    <button class="withdrawal-day-btn-primary" onclick="closeWithdrawalDayModal(); Banking.openWithdraw();">
-                        <i class="fas fa-money-bill-wave"></i> Proceed to Withdrawal
-                    </button>
-                ` : `
-                    <button class="withdrawal-day-btn-primary" onclick="closeWithdrawalDayModal();">
-                        <i class="fas fa-check-circle"></i> OK, I Understand
-                    </button>
-                `}
-                
-                <button class="withdrawal-day-btn-secondary" onclick="closeWithdrawalDayModal()">
-                    Close
-                </button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-}
-
-function closeWithdrawalDayModal() {
-    const modal = document.getElementById('withdrawal-day-modal');
-    if (modal) {
-        modal.remove();
-    }
-}
-
-function getNextAllowedDay(currentDay, allowedDays) {
-    if (!allowedDays || allowedDays.length === 0) return 'Unknown';
-    
-    // Sort days
-    const sorted = [...allowedDays].sort((a,b) => a-b);
-    
-    // Find next day after current
-    for (const day of sorted) {
-        if (day > currentDay) {
-            return `Day ${day}`;
-        }
-    }
-    
-    // Wrap around to first day of next month
-    return `Day ${sorted[0]} (next month)`;
-}
-
-//========== GAME MANAGER WITH LOCKING ==========
-const GameManager = {
-  lastClaimTime: 0,
-  pendingRequests: new Map(),
-  
-  async checkDailyLimit(gameType) {
-    try {
-      const response = await App.requestWithTimeout(`/api/games/limit-check?game=${gameType}`, {
-        credentials: 'include',
-        headers: { 
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
+      const response = await fetch('/api/session/status', {
+        credentials: 'include'
       });
+      const data = await response.json();
       
-      if (!response.ok) {
-        console.warn('Limit check failed, assuming can play');
-        return { can_play: true, remaining: 999 };
+      if (data.success && data.authenticated) {
+        this.lastActiveTime = Date.now();
+        
+        if (document.getElementById('auth-screen') && 
+            !document.getElementById('auth-screen').classList.contains('hidden')) {
+          App.showMessage('Session restored. Welcome back!', 'success', 3000);
+          await App.checkAuth();
+        }
+        return true;
+      } else {
+        if (document.getElementById('app-screen') && 
+            !document.getElementById('app-screen').classList.contains('hidden')) {
+          App.showAuthScreen();
+          App.showMessage('Session expired. Please login again.', 'warning', 4000);
+        }
+        return false;
       }
-      
-      return await response.json();
     } catch (error) {
-      console.error('Limit check error:', error);
-      return { can_play: true, remaining: 999 };
+      console.error('Session check error:', error);
+      return false;
     }
   },
-  
-  async safeClaim(endpoint, data, gameType = 'unknown') {
-    if (this.pendingRequests.has(gameType)) {
-      console.warn(`Already claiming ${gameType}, ignoring duplicate`);
-      return { 
-        success: false, 
-        message: "Please wait for the current claim to complete" 
-      };
+
+  refreshSessionIfActive: async function() {
+    if (App.currentUser) {
+      try {
+        const response = await fetch('/api/session/refresh', {
+          method: 'POST',
+          credentials: 'include'
+        });
+        const data = await response.json();
+        if (data.success) {
+          this.lastActiveTime = Date.now();
+          console.log('Session refreshed');
+        }
+      } catch (error) {
+        console.warn('Session refresh failed:', error);
+      }
     }
-    
-    this.pendingRequests.set(gameType, true);
-    
-    try {
-      const response = await App.requestWithTimeout(endpoint, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-Request-ID': Date.now().toString()
-        },
-        credentials: 'include',
-        body: JSON.stringify(data)
-      }, 15000);
-      
-      const result = await response.json();
-      this.lastClaimTime = Date.now();
-      return result;
-      
-    } catch (error) {
-      console.error('Claim error:', error);
-      
-      if (error.name === 'AbortError') {
-        return { 
-          success: false, 
-          message: "Request timed out. Please try again." 
+  },
+
+  trackActivity: function() {
+    const events = ['click', 'touchstart', 'scroll', 'keydown', 'mousemove'];
+    const activityHandler = () => {
+      this.lastActiveTime = Date.now();
+    };
+    events.forEach(event => {
+      document.addEventListener(event, activityHandler, { passive: true });
+    });
+  },
+
+  handleAppResume: function() {
+    console.log('App resumed, checking session...');
+    this.checkSessionStatus().then(isValid => {
+      if (isValid && App.currentUser) {
+        App.fetchFreshBalance();
+        TodayEarnings.fetch();
+        App.updateGameCards();
+        App.showMessage('App reloaded successfully', 'success', 2000);
+      } else if (isValid && !App.currentUser) {
+        App.checkAuth();
+      }
+    });
+    this.restoreFromLocalStorage();
+  },
+
+  saveState: function() {
+    if (App.currentUser) {
+      try {
+        const state = {
+          userId: App.currentUser.id,
+          username: App.currentUser.username,
+          balance: App.currentUser.balance,
+          lastActive: Date.now(),
+          savedAt: new Date().toISOString()
         };
+        localStorage.setItem('flexia_session_state', JSON.stringify(state));
+      } catch (e) {
+        console.warn('Failed to save session state:', e);
       }
-      
-      return { 
-        success: false, 
-        message: error.message || "Connection error. Please check your internet and try again." 
-      };
-      
-    } finally {
-      this.pendingRequests.delete(gameType);
     }
   },
-  
-  setButtonLoading: function(buttonId, isLoading) {
-    const button = document.getElementById(buttonId);
-    if (!button) return;
-    
-    if (isLoading) {
-      button.classList.add('btn-loading');
-      button.disabled = true;
-    } else {
-      button.classList.remove('btn-loading');
-      button.disabled = false;
+
+  restoreFromLocalStorage: function() {
+    try {
+      const saved = localStorage.getItem('flexia_session_state');
+      if (saved) {
+        const state = JSON.parse(saved);
+        const age = Date.now() - state.lastActive;
+        if (age < 1800000 && !App.currentUser) {
+          console.log('Restoring session from localStorage');
+          this.checkSessionStatus().then(isValid => {
+            if (isValid) {
+              App.checkAuth();
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to restore from localStorage:', e);
     }
+  },
+
+  saveScrollPosition: function() {
+    try {
+      sessionStorage.setItem('flexia_scroll_position', window.scrollY.toString());
+    } catch (e) { /* ignore */ }
+  },
+
+  saveActiveTab: function(tab) {
+    try {
+      sessionStorage.setItem('flexia_active_tab', tab);
+    } catch (e) { /* ignore */ }
   }
 };
 
-//========== ENHANCED GAME LIMITER WITH FRIENDLY MESSAGES ==========
-const GameLimiter = {
-  dailyLimits: CONFIG.GAME_DAILY_LIMITS,
-  
-  gameFriendlyNames: {
-    'snake': 'Snake Game',
-    'coinflip': 'Coin Flip',
-    'plinko': 'Plinko 3D',
-    'spin': 'Daily Spin',
-    'tiktok': 'TikTok Follow'
-  },
-  
-  gameEmojis: {
-    'snake': '🐍',
-    'coinflip': '🪙',
-    'plinko': '🎯',
-    'spin': '🎡',
-    'tiktok': '📱'
-  },
-  
-  gameMessages: {
-    'snake': {
-      icon: '🐍',
-      title: 'Snake Game Limit Reached',
-      message: 'You have played Snake 5 times today. Come back tomorrow for more fun!'
-    },
-    'coinflip': {
-      icon: '🪙',
-      title: 'Coin Flip Limit Reached',
-      message: 'You have played Coin Flip 2 times today. Daily limit reached!'
-    },
-    'plinko': {
-      icon: '🎯',
-      title: 'Plinko Limit Reached',
-      message: 'You have played Plinko 2 times today. Try again tomorrow!'
-    },
-    'spin': {
-      icon: '🎡',
-      title: 'Daily Spin Limit Reached',
-      message: 'You have already used your daily spin today! Come back tomorrow.'
-    },
-    'tiktok': {
-      icon: '📱',
-      title: 'TikTok Daily Limit Reached',
-      message: 'You have already claimed TikTok reward today! Come back tomorrow.'
-    }
-  },
-  
-  async checkAndNavigate(gameType, targetUrl) {
-    if (!App.currentUser) {
-      App.showMessage('Please login first', 'error');
-      return false;
-    }
-    
+// Save state on beforeunload
+window.addEventListener('beforeunload', function() {
+  SessionManager.saveState();
+  SessionManager.saveScrollPosition();
+});
+
+//========== TODAY'S EARNINGS ==========
+const TodayEarnings = {
+  async fetch() {
+    if (!App.currentUser) return;
     try {
-      // First check if user can access the game
-      const response = await App.requestWithTimeout(`/api/games/access?game=${gameType}`, {
+      const response = await App.requestWithTimeout('/api/user/today-earnings', {
         credentials: 'include',
         headers: { 'Cache-Control': 'no-cache' }
       });
-      
       const data = await response.json();
-      
-      if (!data.success) {
-        App.showMessage('Failed to check game access. Please try again.', 'error');
-        return false;
+      if (data.success) {
+        this.render(data);
       }
-      
-      if (data.can_play === false) {
-        // Show friendly limit modal
-        this.showLimitModal(gameType, data);
-        return false;
-      }
-      
-      // User can play, proceed to game
-      window.location.href = targetUrl;
-      return true;
-      
     } catch (error) {
-      console.error('Game access check error:', error);
-      // On error, still allow navigation but show warning
-      App.showMessage('Could not verify game limits. Proceeding to game...', 'warning');
-      window.location.href = targetUrl;
-      return true;
+      console.error('Failed to fetch today earnings:', error);
     }
   },
-  
-  showLimitModal(gameType, data = null) {
-    const existingModal = document.getElementById('game-limit-modal');
-    if (existingModal) {
-      existingModal.remove();
-    }
-    
-    const gameInfo = this.gameMessages[gameType] || {
-      icon: '🎮',
-      title: 'Game Limit Reached',
-      message: 'You have reached your daily limit for this game.'
+
+  render(data) {
+    const total = data.total_earned || 0;
+    const breakdown = data.breakdown || {};
+    const caps = data.caps || {};
+
+    document.getElementById('today-earnings-total').textContent = total.toFixed(2);
+
+    const gameMap = {
+      'SNAKE_REWARD': 'today-snake',
+      'COINFLIP_WIN': 'today-coinflip',
+      'PLINKO_WIN': 'today-plinko',
+      'TIKTOK_DAILY': 'today-tiktok',
+      'REFERRAL_BONUS': 'today-referral',
+      'LOGIN_BONUS': 'today-login',
+      'ACHIEVEMENT_REWARD': 'today-achievement',
+      'SPIN_REWARD': 'today-spin'
     };
-    
-    const limit = this.dailyLimits[gameType] || 5;
-    const played = data?.played_today || limit;
-    
-    const modal = document.createElement('div');
-    modal.id = 'game-limit-modal';
-    modal.className = 'game-limit-modal';
-    
-    modal.innerHTML = `
-      <div class="game-limit-modal-content">
-        <div class="game-limit-icon">${gameInfo.icon}</div>
-        
-        <h3 class="game-limit-title">${gameInfo.title}</h3>
-        
-        <div class="game-limit-message">
-          <p class="game-limit-text">${gameInfo.message}</p>
-          
-          <div class="game-limit-info">
-            <i class="fas fa-calendar-day"></i>
-            <span>Daily Limit: ${played}/${limit} plays</span>
-          </div>
-          
-          <div class="game-limit-info">
-            <i class="fas fa-clock"></i>
-            <span>Reset Time: Midnight (00:00 GMT)</span>
-          </div>
-        </div>
-        
-        <div class="game-limit-buttons">
-          <button class="game-limit-btn-ok" onclick="GameLimiter.closeModal()">
-            <i class="fas fa-check-circle"></i> OK, I Understand
-          </button>
-          
-          <button class="game-limit-btn-alternative" onclick="GameLimiter.suggestAlternative('${gameType}')">
-            <i class="fas fa-gamepad"></i> Try Another Game
-          </button>
-        </div>
-      </div>
-    `;
-    
-    document.body.appendChild(modal);
-  },
-  
-  closeModal() {
-    const modal = document.getElementById('game-limit-modal');
-    if (modal) {
-      modal.remove();
-    }
-  },
-  
-  suggestAlternative(currentGame) {
-    this.closeModal();
-    
-    // Determine which games to suggest (all except the current one)
-    const alternativeGames = Object.keys(this.gameFriendlyNames).filter(game => game !== currentGame);
-    
-    let alternativesHTML = `
-      <div style="
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.9);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 10001;
-        backdrop-filter: blur(10px);
-      ">
-        <div style="
-          background: linear-gradient(135deg, #0f3460 0%, #1a1a2e 100%);
-          border-radius: 20px;
-          padding: 30px;
-          max-width: 400px;
-          width: 90%;
-          border: 2px solid #00D4FF;
-          box-shadow: 0 20px 40px rgba(0, 212, 255, 0.3);
-          text-align: center;
-          animation: slideIn 0.4s ease-out;
-        ">
-          <h3 style="
-            color: white;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-          ">
-            🎮 Try These Games Instead
-          </h3>
-          
-          <div style="
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin: 20px 0;
-          ">
-    `;
-    
-    // Add alternative game buttons
-    alternativeGames.forEach(gameType => {
-      const gameName = this.gameFriendlyNames[gameType];
-      const emoji = this.gameEmojis[gameType] || '🎮';
-      
-      let onclick = '';
-      if (gameType === 'snake') onclick = 'window.location.href=\'snake.html\'';
-      else if (gameType === 'coinflip') onclick = 'window.location.href=\'coinflip.html\'';
-      else if (gameType === 'plinko') onclick = 'window.location.href=\'plinko.html\'';
-      else if (gameType === 'spin') onclick = 'Games.openSpinWheel()';
-      else if (gameType === 'tiktok') onclick = 'Games.openTikTok()';
-      
-      alternativesHTML += `
-        <button onclick="${onclick}" style="
-          background: linear-gradient(135deg, #8000FF 0%, #6C00FF 100%);
-          color: white;
-          border: none;
-          padding: 15px;
-          border-radius: 10px;
-          font-family: 'Orbitron', sans-serif;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          text-align: left;
-          display: flex;
-          align-items: center;
-          gap: 15px;
-        ">
-          <span style="font-size: 1.5rem;">${emoji}</span>
-          <div style="text-align: left;">
-            <div style="font-size: 1.1rem;">${gameName}</div>
-            <div style="font-size: 0.8rem; opacity: 0.8;">${this.getGameDescription(gameType)}</div>
-          </div>
-        </button>
-      `;
+
+    Object.keys(gameMap).forEach(type => {
+      const el = document.getElementById(gameMap[type]);
+      if (el) {
+        const amount = breakdown[type] || 0;
+        el.textContent = amount.toFixed(2);
+      }
     });
-    
-    alternativesHTML += `
-          </div>
-          
-          <button onclick="GameLimiter.closeAlternativeModal()" style="
-            background: transparent;
-            color: #A0A0B5;
-            border: 1px solid #A0A0B5;
-            padding: 12px;
-            border-radius: 10px;
-            font-family: 'Orbitron', sans-serif;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            width: 100%;
-            margin-top: 15px;
-          ">
-            Close
-          </button>
-        </div>
-      </div>
-    `;
-    
-    const altModal = document.createElement('div');
-    altModal.innerHTML = alternativesHTML;
-    altModal.id = 'alternative-games-modal';
-    document.body.appendChild(altModal);
-  },
-  
-  getGameDescription(gameType) {
-    const descriptions = {
-      'snake': 'Eat apples, earn ₦200 each',
-      'coinflip': 'Bet & double your money',
-      'plinko': 'Bet & multiply your earnings',
-      'spin': 'Spin & win up to ₦1000',
-      'tiktok': 'Follow & earn ₦150 daily'
+
+    const capMap = {
+      'snake': 'today-snake',
+      'coinflip': 'today-coinflip',
+      'plinko': 'today-plinko'
     };
-    return descriptions[gameType] || 'Earn rewards';
-  },
-  
-  closeAlternativeModal() {
-    const modal = document.getElementById('alternative-games-modal');
-    if (modal) {
-      modal.remove();
+    Object.keys(capMap).forEach(game => {
+      const el = document.getElementById(capMap[game]);
+      if (el && caps[game]) {
+        const earned = caps[game].earned || 0;
+        const cap = caps[game].cap || 0;
+        const parent = el.closest('.earnings-item');
+        if (parent) {
+          const label = parent.querySelector('span:last-child');
+          if (label) {
+            label.innerHTML = `₦${earned.toFixed(2)} / ₦${cap}`;
+            if (earned >= cap) {
+              label.innerHTML += ' ✓';
+              label.style.color = '#34d399';
+            } else if (earned > cap * 0.8) {
+              label.style.color = '#fbbf24';
+            } else {
+              label.style.color = '';
+            }
+          }
+        }
+      }
+    });
+
+    const updateEl = document.getElementById('today-earnings-update');
+    if (updateEl) {
+      updateEl.textContent = 'Updated ' + new Date().toLocaleTimeString();
     }
+  },
+
+  async refresh() {
+    await this.fetch();
   }
 };
 
-//========== ENHANCED GAME LIMITER WITH AUTO-LOGOUT ===========
-const EnhancedGameLimiter = {
-    async checkAndHandleGameAccess(gameType, targetUrl) {
-        if (!App.currentUser) {
-            App.showMessage('Please login first', 'error');
-            return false;
-        }
-        
-        try {
-            // Check game access with logout capability
-            const response = await App.requestWithTimeout(`/api/games/check-limit-with-logout/${gameType}`, {
-                credentials: 'include',
-                headers: { 'Cache-Control': 'no-cache' }
-            });
-            
-            const data = await response.json();
-            
-            if (!data.success) {
-                if (data.force_logout || data.action_required === 'logout') {
-                    // Show logout modal and force logout
-                    this.showForceLogoutModal(gameType, data);
-                    return false;
-                }
-                
-                App.showMessage(data.message || 'Failed to check game access', 'error');
-                return false;
-            }
-            
-            if (!data.can_play) {
-                // Show limit reached modal with logout option
-                this.showLimitReachedModal(gameType, data);
-                return false;
-            }
-            
-            // User can play, proceed to game
-            window.location.href = targetUrl;
-            return true;
-            
-        } catch (error) {
-            console.error('Game access check error:', error);
-            App.showMessage('Could not verify game limits. Proceeding to game...', 'warning');
-            window.location.href = targetUrl;
-            return true;
-        }
-    },
-    
-    showForceLogoutModal(gameType, data) {
-        const gameInfo = GameLimiter.gameMessages[gameType] || {
-            icon: '🎮',
-            title: 'Daily Limit Reached',
-            message: 'You have reached your daily limit for this game.'
-        };
-        
-        const played = data.played_today || 0;
-        const max = data.max_plays || CONFIG.GAME_DAILY_LIMITS[gameType] || 5;
-        const resetTime = data.reset_time || 'midnight (00:00 UTC)';
-        
-        const modal = document.createElement('div');
-        modal.id = 'force-logout-modal';
-        modal.className = 'game-limit-modal';
-        modal.style.zIndex = '10002';
-        
-        modal.innerHTML = `
-            <div class="force-logout-modal-content">
-                <div class="game-limit-icon">🚫</div>
-                
-                <h3 class="game-limit-title">Daily Limit Reached</h3>
-                
-                <div class="game-limit-message">
-                    <p class="game-limit-text" style="font-size: 1.1rem; line-height: 1.6;">
-                        <strong>You've played ${played}/${max} times today!</strong><br><br>
-                        Daily limits reset at <strong>${resetTime}</strong>.<br>
-                        You will now be logged out automatically.
-                    </p>
-                    
-                    <div class="game-limit-info">
-                        <i class="fas fa-calendar-day"></i>
-                        <span>Played Today: ${played}/${max}</span>
-                    </div>
-                    
-                    <div class="game-limit-info">
-                        <i class="fas fa-clock"></i>
-                        <span>Reset Time: ${resetTime}</span>
-                    </div>
-                    
-                    <div class="game-limit-info" style="color: #ff6b6b;">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span>Auto-logout in <span id="logout-countdown" class="force-logout-countdown">10</span> seconds</span>
-                    </div>
-                </div>
-                
-                <div class="game-limit-buttons">
-                    <button class="game-limit-btn-ok" onclick="EnhancedGameLimiter.performLogout('${gameType}')">
-                        <i class="fas fa-sign-out-alt"></i> Logout Now
-                    </button>
-                    
-                    <button class="game-limit-btn-alternative" onclick="EnhancedGameLimiter.closeModal()">
-                        <i class="fas fa-home"></i> Return to Dashboard
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        // Start countdown
-        let countdown = 10;
-        const countdownEl = document.getElementById('logout-countdown');
-        const countdownInterval = setInterval(() => {
-            countdown--;
-            if (countdownEl) countdownEl.textContent = countdown;
-            
-            if (countdown <= 0) {
-                clearInterval(countdownInterval);
-                this.performLogout(gameType);
-            }
-        }, 1000);
-        
-        // Store interval for cleanup
-        modal.countdownInterval = countdownInterval;
-    },
-    
-    async performLogout(gameType) {
-        try {
-            // Call force logout endpoint
-            await fetch('/api/games/force-logout/' + gameType, {
-                method: 'POST',
-                credentials: 'include'
-            });
-            
-            // Clear local session
-            document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
-            
-            // Show logout message
-            this.showLogoutMessage();
-            
-            // Redirect to login page with reason
-            setTimeout(() => {
-                window.location.href = '/?reason=daily_limit_reached&game=' + gameType;
-            }, 2000);
-            
-        } catch (error) {
-            console.error('Logout error:', error);
-            // Force redirect anyway
-            window.location.href = '/?reason=daily_limit_reached';
-        }
-    },
-    
-    showLogoutMessage() {
-        const message = document.createElement('div');
-        message.className = 'global-message warning';
-        message.style.position = 'fixed';
-        message.style.top = '50%';
-        message.style.left = '50%';
-        message.style.transform = 'translate(-50%, -50%)';
-        message.style.zIndex = '10003';
-        message.style.fontSize = '1.2rem';
-        message.innerHTML = `
-            <div style="text-align: center;">
-                <div style="font-size: 3rem; margin-bottom: 20px;">🚫</div>
-                <h3 style="margin-bottom: 15px;">Daily Limit Reached</h3>
-                <p>You have been logged out automatically.<br>Please come back tomorrow!</p>
-                <p style="font-size: 0.9rem; opacity: 0.8;">Redirecting to login page...</p>
-            </div>
-        `;
-        document.body.appendChild(message);
-        
-        // Remove after 3 seconds
-        setTimeout(() => {
-            if (message.parentNode) {
-                message.remove();
-            }
-        }, 3000);
-    },
-    
-    closeModal() {
-        const modal = document.getElementById('force-logout-modal');
-        if (modal) {
-            if (modal.countdownInterval) {
-                clearInterval(modal.countdownInterval);
-            }
-            modal.remove();
-        }
-        
-        // Also close regular limit modal if open
-        GameLimiter.closeModal();
-        
-        // Return to dashboard
-        window.location.href = '/';
-    },
-    
-    showLimitReachedModal(gameType, data) {
-        GameLimiter.showLimitModal(gameType, data);
-    }
-};
+// Auto-refresh every 30 seconds
+setInterval(() => {
+  if (document.getElementById('app-screen').classList.contains('active')) {
+    TodayEarnings.refresh();
+  }
+}, 30000);
 
-//========== AUTHENTICATION =========
+//========== AUTHENTICATION ==========
 const Auth = {
   togglePasswordVisibility: function(fieldId) {
     const passwordField = document.getElementById(fieldId);
     const toggleBtn = passwordField.nextElementSibling;
-    
     if (passwordField.type === 'password') {
       passwordField.type = 'text';
       toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
@@ -1772,16 +662,14 @@ const Auth = {
       toggleBtn.setAttribute('title', 'Show password');
     }
   },
-  
+
   initPasswordToggles: function() {
     const loginPasswordField = document.getElementById('login-password');
     if (loginPasswordField && !loginPasswordField.parentNode?.classList?.contains('password-container')) {
       const loginContainer = document.createElement('div');
       loginContainer.className = 'password-container';
-      
       loginPasswordField.parentNode.insertBefore(loginContainer, loginPasswordField);
       loginContainer.appendChild(loginPasswordField);
-      
       const loginToggle = document.createElement('button');
       loginToggle.type = 'button';
       loginToggle.className = 'password-toggle';
@@ -1791,15 +679,12 @@ const Auth = {
       loginToggle.onclick = () => this.togglePasswordVisibility('login-password');
       loginContainer.appendChild(loginToggle);
     }
-    
     const regPasswordField = document.getElementById('reg-password');
     if (regPasswordField && !regPasswordField.parentNode?.classList?.contains('password-container')) {
       const regContainer = document.createElement('div');
       regContainer.className = 'password-container';
-      
       regPasswordField.parentNode.insertBefore(regContainer, regPasswordField);
       regContainer.appendChild(regPasswordField);
-      
       const regToggle = document.createElement('button');
       regToggle.type = 'button';
       regToggle.className = 'password-toggle';
@@ -1810,36 +695,36 @@ const Auth = {
       regContainer.appendChild(regToggle);
     }
   },
-  
+
   login: async function () {
     const identifier = document.getElementById('login-username').value.trim();
     const password = document.getElementById('login-password').value;
     const messageEl = document.getElementById('login-message');
-    
+
     if (!identifier || !password) {
       messageEl.textContent = 'Please fill all fields';
       messageEl.className = 'message error';
       return;
     }
-    
+
     try {
       const response = await App.requestWithTimeout('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: identifier, password })
       });
-      
       const data = await response.json();
+
       messageEl.textContent = data.message;
       messageEl.className = data.success ? 'message success' : 'message error';
-      
+
       if (data.success) {
         App.currentUser = data.user;
         App.showAppScreen();
         App.refreshBalance();
         document.getElementById('login-username').value = '';
         document.getElementById('login-password').value = '';
-        
+
         const loginPassword = document.getElementById('login-password');
         if (loginPassword.type === 'text') {
           loginPassword.type = 'password';
@@ -1849,13 +734,15 @@ const Auth = {
             toggleBtn.setAttribute('title', 'Show password');
           }
         }
+        await TodayEarnings.fetch();
+        SessionManager.init();
       }
     } catch (error) {
       messageEl.textContent = error.message || 'Network error. Please try again.';
       messageEl.className = 'message error';
     }
   },
-  
+
   register: async function () {
     const username = document.getElementById('reg-username').value.trim();
     const password = document.getElementById('reg-password').value;
@@ -1863,57 +750,97 @@ const Auth = {
     const referral = document.getElementById('reg-referral').value.trim();
     const contact = document.getElementById('reg-contact')?.value.trim() || '';
     const messageEl = document.getElementById('register-message');
-    
+    const btn = document.getElementById('register-btn');
+
     if (!username || !password || !coupon) {
-      messageEl.textContent = 'All fields required';
+      messageEl.textContent = 'All required fields must be filled';
       messageEl.className = 'message error';
       return;
     }
-    
+
     if (username.length < 3) {
       messageEl.textContent = 'Username must be at least 3 characters';
       messageEl.className = 'message error';
       return;
     }
-    
+
     if (password.length < 6) {
       messageEl.textContent = 'Password must be at least 6 characters';
       messageEl.className = 'message error';
       return;
     }
-    
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CHECKING COUPON...';
+    messageEl.textContent = 'Checking coupon code...';
+    messageEl.className = 'message info';
+
     try {
+      const couponCheck = await App.requestWithTimeout('/api/auth/validate-coupon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coupon_code: coupon })
+      });
+      const couponData = await couponCheck.json();
+
+      if (!couponData.success) {
+        messageEl.textContent = couponData.message || 'Invalid coupon code. Please check and try again.';
+        messageEl.className = 'message error';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-user-plus"></i> CREATE ACCOUNT';
+        return;
+      }
+
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CREATING ACCOUNT...';
+      messageEl.textContent = 'Creating your account...';
+      messageEl.className = 'message info';
+
       const response = await App.requestWithTimeout('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password, coupon_code: coupon, referral_code: referral, contact })
       });
-      
+
       const data = await response.json();
-      messageEl.textContent = data.message;
-      messageEl.className = data.success ? 'message success' : 'message error';
-      
+
       if (data.success) {
-        document.getElementById('login-username').value = username;
-        document.getElementById('login-password').value = password;
-        
-        const regPassword = document.getElementById('reg-password');
-        if (regPassword.type === 'text') {
-          regPassword.type = 'password';
-          const toggleBtn = regPassword.nextElementSibling;
-          if (toggleBtn) {
-            toggleBtn.innerHTML = '<i class="fas fa-eye"></i>';
-            toggleBtn.setAttribute('title', 'Show password');
-          }
-        }
-        document.querySelector('.tab[data-tab="login"]').click();
+        messageEl.textContent = 'Account created successfully! Please login.';
+        messageEl.className = 'message success';
+
+        document.getElementById('reg-username').value = '';
+        document.getElementById('reg-password').value = '';
+        document.getElementById('reg-coupon').value = '';
+        document.getElementById('reg-referral').value = '';
+        document.getElementById('reg-contact').value = '';
+
+        setTimeout(() => {
+          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          document.querySelector('[data-tab="login"]').classList.add('active');
+          document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+          document.getElementById('login-form').classList.add('active');
+          document.getElementById('login-message').textContent = 'Account created! Please login with your credentials.';
+          document.getElementById('login-message').className = 'message success';
+          document.getElementById('login-username').value = username;
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-user-plus"></i> CREATE ACCOUNT';
+        }, 2000);
+
+      } else {
+        messageEl.textContent = data.message || 'Registration failed. Please try again.';
+        messageEl.className = 'message error';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-user-plus"></i> CREATE ACCOUNT';
       }
+
     } catch (error) {
+      console.error('Registration error:', error);
       messageEl.textContent = error.message || 'Network error. Please try again.';
       messageEl.className = 'message error';
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-user-plus"></i> CREATE ACCOUNT';
     }
   },
-  
+
   buyCoupon: async function () {
     try {
       const response = await App.requestWithTimeout('/api/whatsapp/numbers');
@@ -1926,14 +853,716 @@ const Auth = {
   }
 };
 
-//========== PROFILE =========
+//========== WITHDRAWAL DAY CHECK ==========
+async function checkWithdrawalDay() {
+  try {
+    const response = await fetch('/api/withdrawal/check-day', {
+      credentials: 'include'
+    });
+    const data = await response.json();
+    if (data.success) {
+      const today = new Date().getDate();
+      const days = data.custom_withdrawal_days.length > 0
+        ? data.custom_withdrawal_days
+        : data.global_withdrawal_days;
+      if (!data.can_withdraw) {
+        showWithdrawalDayModal(false, today, days);
+        return false;
+      } else {
+        showWithdrawalDayModal(true, today, days);
+        return true;
+      }
+    }
+  } catch (error) {
+    console.error('Withdrawal day check error:', error);
+    App.showMessage('Unable to check withdrawal day. Please try again.', 'warning', 5000);
+    return true;
+  }
+}
+
+function showWithdrawalDayModal(canWithdraw, today, days) {
+  const existingModal = document.getElementById('withdrawal-day-modal');
+  if (existingModal) existingModal.remove();
+  const sortedDays = days ? [...days].sort((a,b) => a-b) : [];
+  const modal = document.createElement('div');
+  modal.id = 'withdrawal-day-modal';
+  modal.className = 'withdrawal-day-modal';
+  modal.innerHTML = `
+    <div class="withdrawal-day-modal-content">
+      <div class="withdrawal-day-icon ${canWithdraw ? 'allowed' : 'not-allowed'}">
+        ${canWithdraw ? '✅' : '❌'}
+      </div>
+      <h3 class="withdrawal-day-title">
+        ${canWithdraw ? 'Withdrawal Allowed Today!' : 'Withdrawal Not Allowed Today'}
+      </h3>
+      <div class="withdrawal-day-message">
+        <p class="withdrawal-day-text">
+          ${canWithdraw
+            ? `You <strong>CAN</strong> withdraw today (Day ${today})!`
+            : `You <strong>cannot</strong> withdraw today (Day ${today}).`
+          }
+        </p>
+        <div class="withdrawal-day-info">
+          <i class="fas fa-calendar-day"></i>
+          <span>Today: Day ${today}</span>
+        </div>
+        ${days && days.length > 0 ? `
+          <div class="withdrawal-day-days">
+            <strong>Withdrawal Days:</strong>
+            <div style="margin-top: 8px;">
+              ${sortedDays.map(day => `
+                <span class="withdrawal-day-day ${day === today ? 'current' : ''}">
+                  Day ${day}${day === today ? ' (Today)' : ''}
+                </span>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+        ${!canWithdraw ? `
+          <div class="withdrawal-day-info" style="color: #ff6b6b;">
+            <i class="fas fa-clock"></i>
+            <span>Next allowed day: ${getNextAllowedDay(today, sortedDays)}</span>
+          </div>
+        ` : ''}
+      </div>
+      <div class="withdrawal-day-buttons">
+        ${canWithdraw ? `
+          <button class="withdrawal-day-btn-primary" onclick="closeWithdrawalDayModal(); Banking.openWithdraw();">
+            <i class="fas fa-money-bill-wave"></i> Proceed to Withdrawal
+          </button>
+        ` : `
+          <button class="withdrawal-day-btn-primary" onclick="closeWithdrawalDayModal();">
+            <i class="fas fa-check-circle"></i> OK, I Understand
+          </button>
+        `}
+        <button class="withdrawal-day-btn-secondary" onclick="closeWithdrawalDayModal()">Close</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function closeWithdrawalDayModal() {
+  const modal = document.getElementById('withdrawal-day-modal');
+  if (modal) modal.remove();
+}
+
+function getNextAllowedDay(currentDay, allowedDays) {
+  if (!allowedDays || allowedDays.length === 0) return 'Unknown';
+  const sorted = [...allowedDays].sort((a,b) => a-b);
+  for (const day of sorted) {
+    if (day > currentDay) return `Day ${day}`;
+  }
+  return `Day ${sorted[0]} (next month)`;
+}
+
+//========== PAYSTACK PAYMENT ==========
+const PaystackPayment = {
+  timerInterval: null,
+  timerSeconds: 3600,
+
+  async initiate() {
+    const email = document.getElementById('payment-email').value.trim();
+    const amount = parseFloat(document.getElementById('payment-amount').value);
+    const btn = document.getElementById('paystack-pay-btn');
+    const msg = document.getElementById('payment-message');
+
+    if (!email || !email.includes('@')) {
+      msg.textContent = 'Please enter a valid email address';
+      msg.className = 'message error';
+      return;
+    }
+
+    if (!amount || amount < CONFIG.PAYSTACK_MIN_AMOUNT) {
+      msg.textContent = `Minimum amount is ₦${CONFIG.PAYSTACK_MIN_AMOUNT}`;
+      msg.className = 'message error';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    msg.textContent = 'Initializing payment...';
+    msg.className = 'message info';
+
+    try {
+      const response = await App.requestWithTimeout('/api/paystack/initialize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, amount })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        msg.textContent = 'Payment initialized!';
+        msg.className = 'message success';
+
+        sessionStorage.setItem('paystack_ref', data.reference);
+        sessionStorage.setItem('paystack_email', email);
+
+        if (data.bank_transfer_details) {
+          this.showBankTransferDetails(data.bank_transfer_details, data.expires_at);
+          this.startTimer(data.expires_at);
+        }
+
+        setTimeout(() => {
+          window.location.href = data.authorization_url;
+        }, 2000);
+      } else {
+        msg.textContent = data.message || 'Payment initialization failed';
+        msg.className = 'message error';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-credit-card"></i> Pay Now';
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      msg.textContent = error.message || 'Network error. Please try again.';
+      msg.className = 'message error';
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-credit-card"></i> Pay Now';
+    }
+  },
+
+  showBankTransferDetails(details, expiresAt) {
+    const container = document.getElementById('bank-transfer-info');
+    const detailsDiv = document.getElementById('transfer-details');
+
+    container.style.display = 'block';
+    container.classList.add('visible');
+
+    detailsDiv.innerHTML = `
+      <div class="row">
+        <span class="label">Bank</span>
+        <span class="value">${details.bank_name || 'GTBank'}</span>
+      </div>
+      <div class="row">
+        <span class="label">Account Number</span>
+        <span class="value account-number">${details.account_number || '0123456789'}</span>
+      </div>
+      <div class="row">
+        <span class="label">Account Name</span>
+        <span class="value">${details.account_name || 'FLEXIA Payments'}</span>
+      </div>
+      <div class="row">
+        <span class="label">Amount to Transfer</span>
+        <span class="value" style="color:#00FF55;font-weight:bold;">₦${details.amount || '500.00'}</span>
+      </div>
+    `;
+
+    if (expiresAt) {
+      this.timerSeconds = Math.floor((new Date(expiresAt) - new Date()) / 1000);
+      if (this.timerSeconds < 0) this.timerSeconds = 3600;
+    } else {
+      this.timerSeconds = 3600;
+    }
+
+    container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  },
+
+  startTimer(expiresAt) {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+    }
+
+    if (expiresAt) {
+      this.timerSeconds = Math.floor((new Date(expiresAt) - new Date()) / 1000);
+      if (this.timerSeconds < 0) this.timerSeconds = 3600;
+    } else {
+      this.timerSeconds = 3600;
+    }
+
+    const timerEl = document.getElementById('payment-timer-value');
+
+    this.timerInterval = setInterval(() => {
+      this.timerSeconds--;
+
+      if (this.timerSeconds <= 0) {
+        clearInterval(this.timerInterval);
+        timerEl.textContent = '00:00';
+        timerEl.className = 'payment-timer-value expired';
+        document.getElementById('bank-transfer-info').style.borderColor = '#FF0000';
+
+        const msg = document.getElementById('payment-message');
+        msg.textContent = 'Payment window expired. Please start a new payment.';
+        msg.className = 'message error';
+
+        document.getElementById('paystack-pay-btn').disabled = true;
+        return;
+      }
+
+      const minutes = Math.floor(this.timerSeconds / 60);
+      const seconds = this.timerSeconds % 60;
+      timerEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+      if (this.timerSeconds < 300) {
+        timerEl.className = 'payment-timer-value danger';
+      } else if (this.timerSeconds < 600) {
+        timerEl.className = 'payment-timer-value warning';
+      } else {
+        timerEl.className = 'payment-timer-value';
+      }
+    }, 1000);
+  },
+
+  closeModal() {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+
+    document.getElementById('bank-transfer-info').style.display = 'none';
+    document.getElementById('bank-transfer-info').classList.remove('visible');
+    document.getElementById('payment-timer-value').textContent = '60:00';
+    document.getElementById('payment-timer-value').className = 'payment-timer-value';
+
+    App.closeModal('paystack-payment-modal');
+  },
+
+  async checkStatus(reference) {
+    try {
+      const response = await App.requestWithTimeout(`/api/paystack/status/${reference}`, {
+        credentials: 'include'
+      });
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Status check error:', error);
+      return { success: false, message: 'Failed to check status' };
+    }
+  },
+
+  openRegistrationPayment: function() {
+    App.showModal('paystack-payment-modal');
+    document.getElementById('payment-message').textContent = '';
+    document.getElementById('payment-message').className = 'message';
+    document.getElementById('paystack-pay-btn').disabled = false;
+    document.getElementById('paystack-pay-btn').innerHTML = '<i class="fas fa-credit-card"></i> Pay Now';
+    document.getElementById('bank-transfer-info').style.display = 'none';
+    document.getElementById('bank-transfer-info').classList.remove('visible');
+    document.getElementById('payment-timer-value').textContent = '60:00';
+    document.getElementById('payment-timer-value').className = 'payment-timer-value';
+
+    const regEmail = document.getElementById('reg-contact')?.value || '';
+    if (regEmail && regEmail.includes('@')) {
+      document.getElementById('payment-email').value = regEmail;
+    }
+
+    const modalInfo = document.querySelector('#paystack-payment-modal .modal-info');
+    if (modalInfo) {
+      modalInfo.innerHTML = `
+        Pay via <strong>Bank Transfer</strong> or <strong>Card</strong> and receive your coupon code via email.
+        <br><br>
+        <span style="color: #00FF55; font-size: 0.85rem;">
+          <i class="fas fa-info-circle"></i> After payment, use the coupon code to register!
+        </span>
+      `;
+    }
+  },
+
+  openDashboardPayment: function() {
+    if (!App.currentUser) {
+      App.showMessage('Please login first', 'error');
+      return;
+    }
+    App.showModal('paystack-payment-modal');
+    document.getElementById('payment-message').textContent = '';
+    document.getElementById('payment-message').className = 'message';
+    document.getElementById('paystack-pay-btn').disabled = false;
+    document.getElementById('paystack-pay-btn').innerHTML = '<i class="fas fa-credit-card"></i> Pay Now';
+    document.getElementById('bank-transfer-info').style.display = 'none';
+    document.getElementById('bank-transfer-info').classList.remove('visible');
+    document.getElementById('payment-timer-value').textContent = '60:00';
+    document.getElementById('payment-timer-value').className = 'payment-timer-value';
+
+    if (App.currentUser && App.currentUser.email) {
+      document.getElementById('payment-email').value = App.currentUser.email;
+    } else if (App.currentUser && App.currentUser.contact) {
+      document.getElementById('payment-email').value = App.currentUser.contact;
+    }
+
+    const modalInfo = document.querySelector('#paystack-payment-modal .modal-info');
+    if (modalInfo) {
+      modalInfo.innerHTML = `
+        Pay via <strong>Bank Transfer</strong> or <strong>Card</strong> and receive your coupon code via email.
+      `;
+    }
+  }
+};
+
+//========== GAME MANAGER ==========
+const GameManager = {
+  lastClaimTime: 0,
+  pendingRequests: new Map(),
+
+  async checkDailyLimit(gameType) {
+    try {
+      const response = await App.requestWithTimeout(`/api/games/limit-check?game=${gameType}`, {
+        credentials: 'include',
+        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+      });
+      if (!response.ok) {
+        console.warn('Limit check failed, assuming can play');
+        return { can_play: true, remaining: 999 };
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Limit check error:', error);
+      return { can_play: true, remaining: 999 };
+    }
+  },
+
+  async safeClaim(endpoint, data, gameType = 'unknown') {
+    if (this.pendingRequests.has(gameType)) {
+      console.warn(`Already claiming ${gameType}, ignoring duplicate`);
+      return { success: false, message: "Please wait for the current claim to complete" };
+    }
+    this.pendingRequests.set(gameType, true);
+    try {
+      const response = await App.requestWithTimeout(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Request-ID': Date.now().toString() },
+        credentials: 'include',
+        body: JSON.stringify(data)
+      }, 15000);
+      const result = await response.json();
+      this.lastClaimTime = Date.now();
+      return result;
+    } catch (error) {
+      console.error('Claim error:', error);
+      if (error.name === 'AbortError') {
+        return { success: false, message: "Request timed out. Please try again." };
+      }
+      return { success: false, message: error.message || "Connection error." };
+    } finally {
+      this.pendingRequests.delete(gameType);
+    }
+  },
+
+  setButtonLoading: function(buttonId, isLoading) {
+    const button = document.getElementById(buttonId);
+    if (!button) return;
+    if (isLoading) {
+      button.classList.add('btn-loading');
+      button.disabled = true;
+    } else {
+      button.classList.remove('btn-loading');
+      button.disabled = false;
+    }
+  }
+};
+
+//========== GAME LIMITER ==========
+const GameLimiter = {
+  dailyLimits: CONFIG.GAME_DAILY_LIMITS,
+  gameFriendlyNames: {
+    'snake': 'Snake Game',
+    'coinflip': 'Coin Flip',
+    'plinko': 'Plinko 3D',
+    'spin': 'Daily Spin',
+    'tiktok': 'TikTok Follow'
+  },
+  gameMessages: {
+    'snake': { icon: '🐍', title: 'Snake Game Limit Reached', message: 'You have played Snake 5 times today. Come back tomorrow for more fun!' },
+    'coinflip': { icon: '🪙', title: 'Coin Flip Limit Reached', message: 'You have played Coin Flip 2 times today. Daily limit reached!' },
+    'plinko': { icon: '🎯', title: 'Plinko Limit Reached', message: 'You have played Plinko 2 times today. Try again tomorrow!' },
+    'spin': { icon: '🎡', title: 'Daily Spin Limit Reached', message: 'You have already used your daily spin today! Come back tomorrow.' },
+    'tiktok': { icon: '📱', title: 'TikTok Daily Limit Reached', message: 'You have already claimed TikTok reward today! Come back tomorrow.' }
+  },
+
+  async checkAndNavigate(gameType, targetUrl) {
+    if (!App.currentUser) {
+      App.showMessage('Please login first', 'error');
+      return false;
+    }
+    try {
+      const response = await App.requestWithTimeout(`/api/games/access?game=${gameType}`, {
+        credentials: 'include',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      const data = await response.json();
+      if (!data.success) {
+        App.showMessage('Failed to check game access. Please try again.', 'error');
+        return false;
+      }
+      if (data.can_play === false) {
+        this.showLimitModal(gameType, data);
+        return false;
+      }
+      window.location.href = targetUrl;
+      return true;
+    } catch (error) {
+      console.error('Game access check error:', error);
+      App.showMessage('Could not verify game limits. Proceeding to game...', 'warning');
+      window.location.href = targetUrl;
+      return true;
+    }
+  },
+
+  showLimitModal(gameType, data) {
+    const existingModal = document.getElementById('game-limit-modal');
+    if (existingModal) existingModal.remove();
+
+    const gameInfo = this.gameMessages[gameType] || {
+      icon: '🎮',
+      title: 'Game Limit Reached',
+      message: 'You have reached your daily limit for this game.'
+    };
+
+    const limit = this.dailyLimits[gameType] || 5;
+    const played = data?.played_today || limit;
+
+    const modal = document.createElement('div');
+    modal.id = 'game-limit-modal';
+    modal.className = 'game-limit-modal';
+    modal.innerHTML = `
+      <div class="game-limit-modal-content">
+        <div class="game-limit-icon">${gameInfo.icon}</div>
+        <h3 class="game-limit-title">${gameInfo.title}</h3>
+        <div class="game-limit-message">
+          <p class="game-limit-text">${gameInfo.message}</p>
+          <div class="game-limit-info">
+            <i class="fas fa-calendar-day"></i>
+            <span>Daily Limit: ${played}/${limit} plays</span>
+          </div>
+          <div class="game-limit-info">
+            <i class="fas fa-clock"></i>
+            <span>Reset Time: Midnight (00:00 GMT)</span>
+          </div>
+        </div>
+        <div class="game-limit-buttons">
+          <button class="game-limit-btn-ok" onclick="GameLimiter.closeModal()">
+            <i class="fas fa-check-circle"></i> OK, I Understand
+          </button>
+          <button class="game-limit-btn-alternative" onclick="GameLimiter.suggestAlternative('${gameType}')">
+            <i class="fas fa-gamepad"></i> Try Another Game
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  },
+
+  closeModal() {
+    const modal = document.getElementById('game-limit-modal');
+    if (modal) modal.remove();
+  },
+
+  suggestAlternative(currentGame) {
+    this.closeModal();
+    const alternativeGames = Object.keys(this.gameFriendlyNames).filter(game => game !== currentGame);
+    let alternativesHTML = `
+      <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:10001;backdrop-filter:blur(10px);">
+        <div style="background:linear-gradient(135deg,#0f3460,#1a1a2e);border-radius:20px;padding:30px;max-width:400px;width:90%;border:2px solid #00D4FF;box-shadow:0 20px 40px rgba(0,212,255,0.3);text-align:center;animation:slideIn 0.4s ease-out;">
+          <h3 style="color:white;font-family:Orbitron,sans-serif;font-size:1.5rem;margin-bottom:20px;">🎮 Try These Games Instead</h3>
+          <div style="display:flex;flex-direction:column;gap:15px;margin:20px 0;">
+    `;
+    alternativeGames.forEach(gameType => {
+      const gameName = this.gameFriendlyNames[gameType];
+      const emoji = gameType === 'snake' ? '🐍' : gameType === 'coinflip' ? '🪙' : gameType === 'plinko' ? '🎯' : gameType === 'spin' ? '🎡' : '📱';
+      let onclick = '';
+      if (gameType === 'snake') onclick = 'window.location.href="snake.html"';
+      else if (gameType === 'coinflip') onclick = 'window.location.href="coinflip.html"';
+      else if (gameType === 'plinko') onclick = 'window.location.href="plinko.html"';
+      else if (gameType === 'spin') onclick = 'Games.openSpinWheel()';
+      else if (gameType === 'tiktok') onclick = 'Games.openTikTok()';
+      alternativesHTML += `
+        <button onclick="${onclick}" style="background:linear-gradient(135deg,#8000FF,#6C00FF);color:white;border:none;padding:15px;border-radius:10px;font-family:Orbitron,sans-serif;font-weight:700;cursor:pointer;transition:all 0.3s ease;text-align:left;display:flex;align-items:center;gap:15px;">
+          <span style="font-size:1.5rem;">${emoji}</span>
+          <div style="text-align:left;">
+            <div style="font-size:1.1rem;">${gameName}</div>
+            <div style="font-size:0.8rem;opacity:0.8;">${this.getGameDescription(gameType)}</div>
+          </div>
+        </button>
+      `;
+    });
+    alternativesHTML += `
+          </div>
+          <button onclick="GameLimiter.closeAlternativeModal()" style="background:transparent;color:#A0A0B5;border:1px solid #A0A0B5;padding:12px;border-radius:10px;font-family:Orbitron,sans-serif;cursor:pointer;transition:all 0.3s ease;width:100%;margin-top:15px;">Close</button>
+        </div>
+      </div>
+    `;
+    const altModal = document.createElement('div');
+    altModal.innerHTML = alternativesHTML;
+    altModal.id = 'alternative-games-modal';
+    document.body.appendChild(altModal);
+  },
+
+  getGameDescription(gameType) {
+    const descriptions = {
+      'snake': 'Eat apples, earn ₦200 each',
+      'coinflip': 'Bet & double your money',
+      'plinko': 'Bet & multiply your earnings',
+      'spin': 'Spin & win up to ₦1000',
+      'tiktok': 'Follow & earn ₦150 daily'
+    };
+    return descriptions[gameType] || 'Earn rewards';
+  },
+
+  closeAlternativeModal() {
+    const modal = document.getElementById('alternative-games-modal');
+    if (modal) modal.remove();
+  }
+};
+
+//========== ENHANCED GAME LIMITER WITH AUTO-LOGOUT ==========
+const EnhancedGameLimiter = {
+  async checkAndHandleGameAccess(gameType, targetUrl) {
+    if (!App.currentUser) {
+      App.showMessage('Please login first', 'error');
+      return false;
+    }
+    try {
+      const response = await App.requestWithTimeout(`/api/games/check-limit-with-logout/${gameType}`, {
+        credentials: 'include',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      const data = await response.json();
+      if (!data.success) {
+        if (data.force_logout || data.action_required === 'logout') {
+          this.showForceLogoutModal(gameType, data);
+          return false;
+        }
+        App.showMessage(data.message || 'Failed to check game access', 'error');
+        return false;
+      }
+      if (!data.can_play) {
+        this.showLimitReachedModal(gameType, data);
+        return false;
+      }
+      window.location.href = targetUrl;
+      return true;
+    } catch (error) {
+      console.error('Game access check error:', error);
+      App.showMessage('Could not verify game limits. Proceeding to game...', 'warning');
+      window.location.href = targetUrl;
+      return true;
+    }
+  },
+
+  showForceLogoutModal(gameType, data) {
+    const gameInfo = GameLimiter.gameMessages[gameType] || {
+      icon: '🎮',
+      title: 'Daily Limit Reached',
+      message: 'You have reached your daily limit for this game.'
+    };
+    const played = data.played_today || 0;
+    const max = data.max_plays || CONFIG.GAME_DAILY_LIMITS[gameType] || 5;
+    const resetTime = data.reset_time || 'midnight (00:00 UTC)';
+
+    const modal = document.createElement('div');
+    modal.id = 'force-logout-modal';
+    modal.className = 'game-limit-modal';
+    modal.style.zIndex = '10002';
+    modal.innerHTML = `
+      <div class="force-logout-modal-content">
+        <div class="game-limit-icon">🚫</div>
+        <h3 class="game-limit-title">Daily Limit Reached</h3>
+        <div class="game-limit-message">
+          <p class="game-limit-text" style="font-size:1.1rem;line-height:1.6;">
+            <strong>You've played ${played}/${max} times today!</strong><br><br>
+            Daily limits reset at <strong>${resetTime}</strong>.<br>
+            You will now be logged out automatically.
+          </p>
+          <div class="game-limit-info">
+            <i class="fas fa-calendar-day"></i>
+            <span>Played Today: ${played}/${max}</span>
+          </div>
+          <div class="game-limit-info">
+            <i class="fas fa-clock"></i>
+            <span>Reset Time: ${resetTime}</span>
+          </div>
+          <div class="game-limit-info" style="color:#ff6b6b;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>Auto-logout in <span id="logout-countdown" class="force-logout-countdown">10</span> seconds</span>
+          </div>
+        </div>
+        <div class="game-limit-buttons">
+          <button class="game-limit-btn-ok" onclick="EnhancedGameLimiter.performLogout('${gameType}')">
+            <i class="fas fa-sign-out-alt"></i> Logout Now
+          </button>
+          <button class="game-limit-btn-alternative" onclick="EnhancedGameLimiter.closeModal()">
+            <i class="fas fa-home"></i> Return to Dashboard
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    let countdown = 10;
+    const countdownEl = document.getElementById('logout-countdown');
+    const countdownInterval = setInterval(() => {
+      countdown--;
+      if (countdownEl) countdownEl.textContent = countdown;
+      if (countdown <= 0) {
+        clearInterval(countdownInterval);
+        this.performLogout(gameType);
+      }
+    }, 1000);
+    modal.countdownInterval = countdownInterval;
+  },
+
+  async performLogout(gameType) {
+    try {
+      await fetch('/api/games/force-logout/' + gameType, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+      this.showLogoutMessage();
+      setTimeout(() => {
+        window.location.href = '/?reason=daily_limit_reached&game=' + gameType;
+      }, 2000);
+    } catch (error) {
+      console.error('Logout error:', error);
+      window.location.href = '/?reason=daily_limit_reached';
+    }
+  },
+
+  showLogoutMessage() {
+    const message = document.createElement('div');
+    message.className = 'global-message warning';
+    message.style.position = 'fixed';
+    message.style.top = '50%';
+    message.style.left = '50%';
+    message.style.transform = 'translate(-50%, -50%)';
+    message.style.zIndex = '10003';
+    message.style.fontSize = '1.2rem';
+    message.innerHTML = `
+      <div style="text-align:center;">
+        <div style="font-size:3rem;margin-bottom:20px;">🚫</div>
+        <h3 style="margin-bottom:15px;">Daily Limit Reached</h3>
+        <p>You have been logged out automatically.<br>Please come back tomorrow!</p>
+        <p style="font-size:0.9rem;opacity:0.8;">Redirecting to login page...</p>
+      </div>
+    `;
+    document.body.appendChild(message);
+    setTimeout(() => { if (message.parentNode) message.remove(); }, 3000);
+  },
+
+  closeModal() {
+    const modal = document.getElementById('force-logout-modal');
+    if (modal) {
+      if (modal.countdownInterval) clearInterval(modal.countdownInterval);
+      modal.remove();
+    }
+    GameLimiter.closeModal();
+    window.location.href = '/';
+  },
+
+  showLimitReachedModal(gameType, data) {
+    GameLimiter.showLimitModal(gameType, data);
+  }
+};
+
+//========== PROFILE ==========
 const Profile = {
   open: async function () {
     if (!App.currentUser) return;
     await this.load();
     App.showModal('profile-modal');
   },
-  
+
   load: async function () {
     try {
       const response = await App.requestWithTimeout('/api/user/profile');
@@ -1941,7 +1570,6 @@ const Profile = {
       if (data.success) {
         App.currentUser = data.user;
         App.refreshBalance(true);
-        
         const stats = data.user.game_stats || {};
         let html = `
           <div class="profile-section">
@@ -1951,49 +1579,41 @@ const Profile = {
             <p><strong>Referral Code:</strong> ${data.user.referral_code}</p>
             <p><strong>Joined:</strong> ${new Date(data.user.created_at).toLocaleDateString()}</p>
           </div>
-          
           <div class="profile-section">
             <h4><i class="fas fa-chart-line"></i> Game Stats</h4>
             <p><strong>Snake High Score:</strong> ${stats.snake?.high_score || 0}</p>
             <p><strong>Coin Flip Wins:</strong> ${stats.coin_flip?.wins || 0}</p>
             <p><strong>Plinko Total Wins:</strong> ${stats.plinko?.total_wins || 0}</p>
           </div>
-          
           <div class="profile-section">
             <h4><i class="fas fa-image"></i> Profile Picture</h4>
-            <input type="text" id="profile-pic-url" placeholder="Enter image URL" 
+            <input type="text" id="profile-pic-url" placeholder="Enter image URL"
                    style="width:100%;padding:8px;margin:5px 0;background:#151535;border:1px solid #8000FF;color:white;border-radius:4px;">
-            <button class="btn-primary" onclick="Profile.setProfilePicture()" 
-                    style="margin-top:10px;">
+            <button class="btn-primary" onclick="Profile.setProfilePicture()" style="margin-top:10px;">
               <i class="fas fa-upload"></i> Update Picture
             </button>
         `;
-        
         if (data.user.profile_picture) {
           html += `
             <div style="margin-top:15px;text-align:center;">
-              <img src="${data.user.profile_picture}" 
-                   style="width:100px;height:100px;border-radius:15px;border:3px solid #8000FF;">
+              <img src="${data.user.profile_picture}" style="width:100px;height:100px;border-radius:15px;border:3px solid #8000FF;">
             </div>
           `;
         }
-        
         document.getElementById('profile-data').innerHTML = html;
       }
     } catch (err) {
       console.error('Failed to load profile', err);
-      document.getElementById('profile-data').innerHTML = 
-        '<p class="error">Failed to load profile. Please try again.</p>';
+      document.getElementById('profile-data').innerHTML = '<p class="error">Failed to load profile. Please try again.</p>';
     }
   },
-  
+
   setProfilePicture: async function () {
     const url = document.getElementById('profile-pic-url').value.trim();
     if (!url) {
       App.showMessage('Please enter an image URL', 'error');
       return;
     }
-    
     try {
       const response = await App.requestWithTimeout('/api/user/set-profile-picture', {
         method: 'POST',
@@ -2001,7 +1621,6 @@ const Profile = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ picture_url: url })
       });
-      
       const data = await response.json();
       if (data.success) {
         App.showMessage('Profile picture updated!', 'success');
@@ -2015,15 +1634,13 @@ const Profile = {
   }
 };
 
-//========== REFERRALS ========
+//========== REFERRALS ==========
 const Referral = {
   open: async function () {
     if (!App.currentUser) return;
-    
     try {
       const response = await App.requestWithTimeout('/api/user/profile');
       const data = await response.json();
-      
       if (data.success) {
         const unclaimed = data.referrals.unclaimed_bonus;
         const html = `
@@ -2033,27 +1650,23 @@ const Referral = {
             <p>Share this code to earn <strong>₦${CONFIG.REFERRAL_BONUS.toLocaleString()}</strong> per friend!</p>
             <p><strong>Referred Users:</strong> ${data.referrals.count}</p>
             <p><strong>Unclaimed Bonus:</strong> ₦${unclaimed.toLocaleString()}</p>
-            
             ${unclaimed > 0
               ? `<button class="btn-primary" onclick="Referral.claimBonuses()" style="margin-top:15px;">
                    <i class="fas fa-gift"></i> Claim ₦${unclaimed.toLocaleString()} Bonus
                  </button>`
-              : '<p style="color:#00FF55;margin-top:15px;">All bonuses claimed! 🎉</p>'
+              : '<p style="color:#00FF55;margin-top:15px;">All bonuses claimed!</p>'
             }
           </div>
-          
           <div class="referral-section" style="margin-top:20px;">
             <h4><i class="fas fa-share-alt"></i> Share Your Link</h4>
             <div style="background:#151535;padding:10px;border-radius:5px;border:1px solid #8000FF;margin:10px 0;">
               ${window.location.origin}/?ref=${data.user.referral_code}
             </div>
-            <button class="btn-secondary" onclick="Referral.copyReferralLink('${data.user.referral_code}')" 
-                    style="margin-top:10px;">
+            <button class="btn-secondary" onclick="Referral.copyReferralLink('${data.user.referral_code}')" style="margin-top:10px;">
               <i class="fas fa-copy"></i> Copy Link
             </button>
           </div>
         `;
-        
         document.getElementById('referral-data').innerHTML = html;
         App.showModal('referral-modal');
       }
@@ -2062,7 +1675,7 @@ const Referral = {
       App.showMessage('Failed to load referral data', 'error');
     }
   },
-  
+
   copyReferralLink: function (code) {
     const link = `${window.location.origin}/?ref=${code}`;
     navigator.clipboard.writeText(link).then(() => {
@@ -2077,21 +1690,15 @@ const Referral = {
       App.showMessage('Link copied!', 'success');
     });
   },
-  
+
   claimBonuses: async function () {
     try {
-      const result = await GameManager.safeClaim(
-        '/api/referral/claim',
-        {},
-        'referral'
-      );
-      
+      const result = await GameManager.safeClaim('/api/referral/claim', {}, 'referral');
       if (!result.success) {
         App.showMessage(result.message, 'error');
         return;
       }
-      
-      App.showMessage(`🎉 ₦${result.claimed.toLocaleString()} referral bonus claimed!`, 'success');
+      App.showMessage(`Bonuses claimed: ₦${result.claimed.toLocaleString()}`, 'success');
       App.updateBalance(result.new_balance);
       Referral.open();
     } catch (error) {
@@ -2100,10 +1707,10 @@ const Referral = {
   }
 };
 
-//========== BANKING & WITHDRAWALS =========
+//========== BANKING ==========
 const Banking = {
   banks: [],
-  
+
   async loadBanks() {
     try {
       const response = await App.requestWithTimeout('/api/banking/banks');
@@ -2129,31 +1736,20 @@ const Banking = {
       this.loadFallbackBanks();
     }
   },
-  
+
   loadFallbackBanks() {
     const fallbackBanks = [
-      {code: "057", name: "Zenith Bank Plc"},
-      {code: "058", name: "GTBank"},
-      {code: "044", name: "Access Bank"},
-      {code: "033", name: "UBA"},
-      {code: "011", name: "First Bank"},
-      {code: "070", name: "Fidelity Bank"},
-      {code: "050", name: "Ecobank"},
-      {code: "039", name: "Stanbic IBTC"},
-      {code: "214", name: "FCMB"},
-      {code: "232", name: "Sterling Bank"},
-      {code: "032", name: "Union Bank"},
-      {code: "035", name: "Wema Bank"},
-      {code: "082", name: "Keystone Bank"},
-      {code: "215", name: "Unity Bank"},
-      {code: "076", name: "Polaris Bank"},
-      {code: "565", name: "OPay"},
-      {code: "100", name: "PalmPay"},
-      {code: "50211", name: "Kuda Bank"},
-      {code: "566", name: "VBank"},
-      {code: "035A", name: "ALAT by Wema"}
+      {code: "057", name: "Zenith Bank Plc"}, {code: "058", name: "GTBank"},
+      {code: "044", name: "Access Bank"}, {code: "033", name: "UBA"},
+      {code: "011", name: "First Bank"}, {code: "070", name: "Fidelity Bank"},
+      {code: "050", name: "Ecobank"}, {code: "039", name: "Stanbic IBTC"},
+      {code: "214", name: "FCMB"}, {code: "232", name: "Sterling Bank"},
+      {code: "032", name: "Union Bank"}, {code: "035", name: "Wema Bank"},
+      {code: "082", name: "Keystone Bank"}, {code: "215", name: "Unity Bank"},
+      {code: "076", name: "Polaris Bank"}, {code: "565", name: "OPay"},
+      {code: "100", name: "PalmPay"}, {code: "50211", name: "Kuda Bank"},
+      {code: "566", name: "VBank"}, {code: "035A", name: "ALAT by Wema"}
     ];
-    
     this.banks = fallbackBanks;
     const select = document.getElementById('bank-select');
     if (select) {
@@ -2166,33 +1762,20 @@ const Banking = {
       });
     }
   },
-  
+
   openWithdraw: async function () {
     if (!App.currentUser) return;
-    
-    // First check withdrawal day
     const canWithdraw = await checkWithdrawalDay();
-    
-    if (!canWithdraw) {
-        // The modal is already shown by checkWithdrawalDay()
-        return;
-    }
-    
-    // Clear withdrawal form
+    if (!canWithdraw) return;
     document.getElementById('withdrawal-message').textContent = '';
-    
-    if (this.banks.length === 0) {
-      await this.loadBanks();
-    }
-    
+    if (this.banks.length === 0) await this.loadBanks();
     document.getElementById('withdraw-amount').value = '';
     document.getElementById('bank-select').selectedIndex = 0;
     document.getElementById('account-number').value = '';
     document.getElementById('account-name-manual').value = '';
-    
     App.showModal('withdrawal-modal');
   },
-  
+
   processWithdrawal: async function () {
     const userRes = await App.requestWithTimeout('/api/user/profile');
     const userData = await userRes.json();
@@ -2200,65 +1783,48 @@ const Banking = {
       App.showMessage('Session expired. Please log in again.', 'error');
       return;
     }
-    
     const user = userData.user;
     if (!user.withdrawal_pin) {
       App.showMessage('You must set a withdrawal PIN before cashing out.', 'info');
       Settings.setWithdrawalPin();
       return;
     }
-    
     const amount = parseFloat(document.getElementById('withdraw-amount').value);
     const bankCode = document.getElementById('bank-select').value;
     const accountNumber = document.getElementById('account-number').value.trim();
     const accountName = document.getElementById('account-name-manual').value.trim();
-    
     if (!amount || amount < CONFIG.MIN_WITHDRAWAL) {
       App.showMessage(`Minimum withdrawal: ₦${CONFIG.MIN_WITHDRAWAL.toLocaleString()}`, 'error');
       return;
     }
-    
-    // Combined balance = user.balance (backend total = Refer/TikTok + Game Rewards)
     const combinedBalance = parseFloat(user.balance);
     if (amount > combinedBalance) {
-      App.showMessage(`Insufficient balance. Your total available is ₦${combinedBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 'error');
+      App.showMessage(`Insufficient balance. Total available: ₦${combinedBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 'error');
       return;
     }
-    
     if (!bankCode || !accountNumber || accountNumber.length < 10 || isNaN(accountNumber)) {
       App.showMessage('Invalid bank details.', 'error');
       return;
     }
-    
-    const pin = prompt('Enter your 4–6 digit withdrawal PIN:');
+    const pin = prompt('Enter your 4-6 digit withdrawal PIN:');
     if (!pin || !/^\d{4,6}$/.test(pin)) {
       App.showMessage('Valid PIN required.', 'error');
       return;
     }
-    
     const msgEl = document.getElementById('withdrawal-message');
     msgEl.textContent = 'Processing withdrawal...';
     msgEl.className = 'message info';
-    
     try {
-      const result = await GameManager.safeClaim(
-        '/api/banking/withdraw',
-        {
-          amount, 
-          bank_code: bankCode, 
-          account_number: accountNumber, 
-          account_name: accountName, 
-          pin 
-        },
-        'withdrawal'
-      );
-      
+      const result = await GameManager.safeClaim('/api/banking/withdraw', {
+        amount, bank_code: bankCode, account_number: accountNumber,
+        account_name: accountName, pin
+      }, 'withdrawal');
       msgEl.textContent = result.message;
       msgEl.className = result.success ? 'message success' : 'message error';
-      
       if (result.success) {
         App.updateBalance(result.new_balance);
-        App.showMessage('✅ Withdrawal submitted for manual review!', 'success');
+        App.showMessage('Withdrawal submitted for manual review!', 'success');
+        await TodayEarnings.refresh();
         setTimeout(() => App.closeModal('withdrawal-modal'), 2000);
       }
     } catch (error) {
@@ -2268,15 +1834,13 @@ const Banking = {
   }
 };
 
-//========== ACHIEVEMENTS =========
+//========== ACHIEVEMENTS ==========
 const Achievements = {
   open: async function () {
     if (!App.currentUser) return;
-    
     try {
       const response = await App.requestWithTimeout('/api/achievements');
       const data = await response.json();
-      
       if (data.success) {
         this.achievementsData = data;
         window.location.href = 'achievements.html';
@@ -2288,18 +1852,14 @@ const Achievements = {
       App.showMessage('Failed to load achievements', 'error');
     }
   },
-  
+
   claimAllRewards: async function () {
     try {
-      const result = await GameManager.safeClaim(
-        '/api/achievements/claim',
-        {},
-        'achievements'
-      );
-      
+      const result = await GameManager.safeClaim('/api/achievements/claim', {}, 'achievements');
       if (result.success) {
-        App.showMessage(`🎉 Achievement rewards claimed! New balance: ₦${result.new_balance.toLocaleString()}`, 'success');
+        App.showMessage(`Achievement rewards claimed! New balance: ₦${result.new_balance.toLocaleString()}`, 'success');
         App.updateBalance(result.new_balance);
+        await TodayEarnings.refresh();
       } else {
         App.showMessage(result.message || 'Failed to claim rewards', 'error');
       }
@@ -2309,66 +1869,42 @@ const Achievements = {
   }
 };
 
-//========== GAMES & TIKTOK DAILY =========
+//========== GAMES ==========
 const Games = {
-  // Updated game opening functions with enhanced limiter (auto-logout)
   openSnake: () => EnhancedGameLimiter.checkAndHandleGameAccess('snake', 'snake.html'),
   openCoinFlip: () => EnhancedGameLimiter.checkAndHandleGameAccess('coinflip', 'coinflip.html'),
   openPlinko: () => EnhancedGameLimiter.checkAndHandleGameAccess('plinko', 'plinko.html'),
-  
-  // Game reporting functions
+
   reportSnake: async function (apples) {
-    return await GameManager.safeClaim(
-      '/api/games/snake/report', 
-      { apples_eaten: apples }, 
-      'snake'
-    );
+    return await GameManager.safeClaim('/api/games/snake/report', { apples_eaten: apples }, 'snake');
   },
-  
+
   reportCoinFlip: async function (bet, won) {
-    return await GameManager.safeClaim(
-      '/api/games/coinflip/report',
-      { bet: bet, won: won },
-      'coinflip'
-    );
+    return await GameManager.safeClaim('/api/games/coinflip/report', { bet: bet, won: won }, 'coinflip');
   },
-  
+
   reportPlinko: async function (bet, multiplier) {
-    return await GameManager.safeClaim(
-      '/api/games/plinko/report',
-      { bet: bet, multiplier: multiplier },
-      'plinko'
-    );
+    return await GameManager.safeClaim('/api/games/plinko/report', { bet: bet, multiplier: multiplier }, 'plinko');
   },
-  
+
   reportSpin: async function (_unused) {
-    // Backend decides the reward - frontend just triggers the spin
-    return await GameManager.safeClaim(
-      '/api/games/spin/execute',
-      {},
-      'spin'
-    );
+    return await GameManager.safeClaim('/api/spin/execute', {}, 'spin');
   },
-  
+
   openTikTok: async function () {
     if (!App.currentUser) return;
-    
-    // Check TikTok limit first with enhanced limiter
     try {
       const response = await App.requestWithTimeout(`/api/games/check-limit-with-logout/tiktok`, {
         credentials: 'include',
         headers: { 'Cache-Control': 'no-cache' }
       });
-      
       const data = await response.json();
-      
       if (!data.success) {
         if (data.force_logout || data.action_required === 'logout') {
           EnhancedGameLimiter.showForceLogoutModal('tiktok', data);
           return;
         }
       }
-      
       if (!data.can_play) {
         EnhancedGameLimiter.showLimitReachedModal('tiktok', data);
         return;
@@ -2376,96 +1912,72 @@ const Games = {
     } catch (error) {
       console.error('TikTok access check error:', error);
     }
-    
+
     const msgEl = document.getElementById('tiktok-message');
     msgEl.textContent = '';
     msgEl.className = 'message';
-    
     try {
       const response = await App.requestWithTimeout('/api/games/tiktok/daily');
       const data = await response.json();
-      
       if (!data.success) {
-        document.getElementById('tiktok-instructions').innerHTML = `
-          <p style="color:#ff5252;">${data.message || 'No TikTok task available today.'}</p>
-        `;
+        document.getElementById('tiktok-instructions').innerHTML = `<p style="color:#ff5252;">${data.message || 'No TikTok task available today.'}</p>`;
         document.querySelector('.action-buttons').style.display = 'none';
         App.showModal('tiktok-modal');
         return;
       }
-      
       if (data.already_claimed) {
-        document.getElementById('tiktok-instructions').innerHTML = `
-          <p style="color:#ff9800;">You have already claimed today's TikTok reward! 🎉</p>
-        `;
+        document.getElementById('tiktok-instructions').innerHTML = `<p style="color:#ff9800;">You have already claimed today's TikTok reward!</p>`;
         document.querySelector('.action-buttons').style.display = 'none';
         App.showModal('tiktok-modal');
         return;
       }
-      
       if (!data.task || !data.task.tiktok_link) {
-        document.getElementById('tiktok-instructions').innerHTML = `
-          <p style="color:#ff5252;">Admin hasn't set a TikTok task for today.</p>
-        `;
+        document.getElementById('tiktok-instructions').innerHTML = `<p style="color:#ff5252;">Admin hasn't set a TikTok task for today.</p>`;
         document.querySelector('.action-buttons').style.display = 'none';
         App.showModal('tiktok-modal');
         return;
       }
-      
       try {
         const url = new URL(data.task.tiktok_link);
         const username = url.pathname.split('/')[1] || data.task.tiktok_link;
         document.getElementById('tiktok-account-name').textContent = '@' + username;
         document.getElementById('tiktok-instructions').innerHTML = `
           <p>Earn <strong>₦${data.task.reward_amount}</strong> for following on TikTok</p>
-          <div class="tiktok-account-display">
-            <strong>@${username}</strong>
-          </div>
+          <div class="tiktok-account-display"><strong>@${username}</strong></div>
           <p class="small-text">Search <strong>@${username}</strong> on TikTok and follow the account</p>
         `;
       } catch (e) {
         document.getElementById('tiktok-account-name').textContent = data.task.tiktok_link;
         document.getElementById('tiktok-instructions').innerHTML = `
           <p>Earn <strong>₦${data.task.reward_amount}</strong> for following on TikTok</p>
-          <div class="tiktok-account-display">
-            <strong>${data.task.tiktok_link}</strong>
-          </div>
+          <div class="tiktok-account-display"><strong>${data.task.tiktok_link}</strong></div>
           <p class="small-text">Open this link in TikTok and follow</p>
         `;
       }
-      
       document.querySelector('.action-buttons').style.display = 'flex';
       App.showModal('tiktok-modal');
     } catch (err) {
       console.error('TikTok load error:', err);
-      document.getElementById('tiktok-instructions').innerHTML = `
-        <p style="color:#ff5252;">Failed to load TikTok task. Please try again.</p>
-      `;
+      document.getElementById('tiktok-instructions').innerHTML = `<p style="color:#ff5252;">Failed to load TikTok task. Please try again.</p>`;
       document.querySelector('.action-buttons').style.display = 'none';
       App.showModal('tiktok-modal');
     }
   },
-  
+
   verifyTikTokFollow: async function () {
     const msgEl = document.getElementById('tiktok-message');
     msgEl.textContent = 'Claiming reward...';
     msgEl.className = 'message';
-    
     try {
-      const result = await GameManager.safeClaim(
-        '/api/games/tiktok/follow-daily',
-        {},
-        'tiktok'
-      );
-      
+      const result = await GameManager.safeClaim('/api/games/tiktok/follow-daily', {}, 'tiktok');
       if (result.success) {
         App.updateBalance(result.new_balance);
-        msgEl.textContent = `✅ Success! ₦${result.reward} added to your balance.`;
+        msgEl.textContent = `Success! ₦${result.reward} added to your balance.`;
         msgEl.className = 'message success';
-        
+        await TodayEarnings.refresh();
         setTimeout(() => {
           App.closeModal('tiktok-modal');
-          App.showMessage(`🎉 TikTok reward claimed: ₦${result.reward}`, 'success');
+          App.showMessage(`TikTok reward claimed: ₦${result.reward}`, 'success');
         }, 2000);
       } else {
         msgEl.textContent = result.message || 'Failed to claim reward.';
@@ -2476,7 +1988,7 @@ const Games = {
       msgEl.className = 'message error';
     }
   },
-  
+
   openTikTokApp: function () {
     const usernameEl = document.getElementById('tiktok-account-name');
     const username = usernameEl.textContent.replace('@', '');
@@ -2487,26 +1999,21 @@ const Games = {
       }, 500);
     }
   },
-  
+
   openSpinWheel: async function() {
     if (!App.currentUser) return;
-    
-    // Check spin limit first with enhanced limiter
     try {
       const response = await App.requestWithTimeout(`/api/games/check-limit-with-logout/spin`, {
         credentials: 'include',
         headers: { 'Cache-Control': 'no-cache' }
       });
-      
       const data = await response.json();
-      
       if (!data.success) {
         if (data.force_logout || data.action_required === 'logout') {
           EnhancedGameLimiter.showForceLogoutModal('spin', data);
           return;
         }
       }
-      
       if (!data.can_play) {
         EnhancedGameLimiter.showLimitReachedModal('spin', data);
         return;
@@ -2514,55 +2021,42 @@ const Games = {
     } catch (error) {
       console.error('Spin access check error:', error);
     }
-    
     const wheel = document.getElementById('wheel');
     const button = document.getElementById('spin-button');
     const msgEl = document.getElementById('spin-message');
     const resultEl = document.getElementById('spin-result');
-    
     if (wheel) {
       wheel.style.transition = 'none';
       wheel.style.transform = 'rotate(0deg)';
       void wheel.offsetWidth;
     }
-    
     if (button) {
       button.disabled = false;
       button.innerHTML = '<i class="fas fa-sync-alt"></i> SPIN WHEEL';
     }
-    
     if (msgEl) {
       msgEl.textContent = '';
       msgEl.className = 'message';
     }
-    
     if (resultEl) {
       resultEl.classList.add('hidden');
     }
-    
     App.showModal('spin-modal');
-    
     setTimeout(() => initSpinWheel(), 150);
   },
-  
+
   spinWheel: async function() {
     const button = document.getElementById('spin-button');
     const wheel = document.getElementById('wheel');
     const msgEl = document.getElementById('spin-message');
-
     if (!button || !wheel || button.disabled) return;
-
-    // Disable button immediately to prevent double-spin
     button.disabled = true;
     GameManager.setButtonLoading('spin-button', true);
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SPINNING...';
-
     if (msgEl) {
       msgEl.textContent = '';
       msgEl.className = 'message';
     }
-
-    // Reset wheel and SVG to 0 cleanly
     wheel.style.transition = 'none';
     wheel.style.transform = 'rotate(0deg)';
     const svgEl = document.getElementById('wheel-svg');
@@ -2570,12 +2064,9 @@ const Games = {
       svgEl.style.transition = 'none';
       svgEl.style.transform = 'rotate(0deg)';
     }
-    void wheel.offsetWidth; // force reflow
-
+    void wheel.offsetWidth;
     try {
-      // ✅ STEP 1: Call backend FIRST — backend decides the winner
       const result = await this.reportSpin(null);
-
       if (!result.success) {
         button.disabled = false;
         GameManager.setButtonLoading('spin-button', false);
@@ -2587,72 +2078,40 @@ const Games = {
         App.showMessage(result.message || 'Spin failed', 'error');
         return;
       }
-
       const reward = result.reward;
       const prizeIndex = result.prize_index !== undefined ? result.prize_index : 5;
-
-      // ✅ EXACT SVG MATH:
-      // SVG segments are drawn clockwise from TOP (0°):
-      //   Segment 0 (₦1000): 0°-60°,  midpoint = 30°
-      //   Segment 1 (₦500):  60°-120°, midpoint = 90°
-      //   Segment 2 (₦200):  120°-180°,midpoint = 150°
-      //   Segment 3 (₦100):  180°-240°,midpoint = 210°
-      //   Segment 4 (₦50):   240°-300°,midpoint = 270°
-      //   Segment 5 (₦0):    300°-360°,midpoint = 330°
-      //
-      // When wheel rotates clockwise by θ°, pointer sees segment whose
-      // midpoint was originally at θ° from the top.
-      // So: θ = prizeIndex * 60 + 30
-
-      // Correct formula: rotate (360 - midpoint) to bring segment to top pointer
-      // midpoint of segment i = i*60 + 30 degrees clockwise from top
       const segmentMidpointFromTop = prizeIndex * 60 + 30;
       const angleToPointer = (360 - segmentMidpointFromTop) % 360;
-
-      // Add 6-8 full spins for satisfying visual spin
       const fullSpins = 6 + Math.floor(Math.random() * 3);
       const totalRotation = (fullSpins * 360) + angleToPointer;
-
-      // Target the SVG element which is the actual spinning element
       const svgWheel = document.getElementById('wheel-svg');
       const spinTarget = svgWheel || wheel;
-
-      // Reset cleanly
       spinTarget.style.transition = 'none';
       spinTarget.style.transform = 'rotate(0deg)';
-      void spinTarget.offsetWidth; // force reflow
-
-      // ✅ STEP 3: Animate to EXACT winning segment center
+      void spinTarget.offsetWidth;
       spinTarget.style.transition = 'transform 5s cubic-bezier(0.17, 0.67, 0.05, 1.0)';
       spinTarget.style.transform = `rotate(${totalRotation}deg)`;
-
-      // ✅ STEP 4: Show result after animation completes
       setTimeout(() => {
         GameManager.setButtonLoading('spin-button', false);
         App.updateBalance(result.new_balance);
-
         const resultMsg = reward > 0
           ? `🎉 Congratulations! You won ₦${reward.toLocaleString()}!`
-          : `😢 Better luck tomorrow!`;
-
+          : `Better luck tomorrow!`;
         if (msgEl) {
           msgEl.textContent = resultMsg;
           msgEl.className = reward > 0 ? 'message success' : 'message warning';
         }
-
         const resultEl = document.getElementById('spin-result');
         if (resultEl) {
-          resultEl.innerHTML = `<p style="font-size: 1.1rem; font-weight: bold;">${resultMsg}</p>`;
+          resultEl.innerHTML = `<p style="font-size:1.1rem;font-weight:bold;">${resultMsg}</p>`;
           resultEl.classList.remove('hidden');
         }
-
         button.innerHTML = '<i class="fas fa-check"></i> COME BACK TOMORROW';
-
         if (reward > 0) {
-          App.showMessage(`🎡 You won ₦${reward.toLocaleString()}!`, 'success');
+          App.showMessage(`You won ₦${reward.toLocaleString()}!`, 'success');
+          TodayEarnings.refresh();
         }
-      }, 5200); // match the 5s animation duration + 200ms buffer
-
+      }, 5200);
     } catch (err) {
       console.error('Spin error:', err);
       button.disabled = false;
@@ -2667,11 +2126,10 @@ const Games = {
   }
 };
 
-//========== SETTINGS & LOGOUT =========
+//========== SETTINGS ==========
 const Settings = {
   open: async function () {
     if (!App.currentUser) return;
-    
     try {
       const response = await App.requestWithTimeout('/api/user/profile');
       const data = await response.json();
@@ -2679,7 +2137,6 @@ const Settings = {
         App.showMessage('Failed to load settings', 'error');
         return;
       }
-      
       const user = data.user;
       const hasPin = !!user.withdrawal_pin;
       let html = `
@@ -2689,28 +2146,15 @@ const Settings = {
           <p><strong>Balance:</strong> ₦${user.balance.toLocaleString()}</p>
         </div>
       `;
-      
       try {
         const socialResponse = await App.requestWithTimeout('/api/admin/settings');
         const socialData = await socialResponse.json();
         if (socialData.success) {
           const s = socialData.settings;
-          html += `
-            <div class="settings-section">
-              <h4><i class="fas fa-users"></i> Join Our Community</h4>
-          `;
-          if (s.whatsapp_link) html += `
-            <a href="${s.whatsapp_link}" target="_blank" class="social-link">
-              <i class="fab fa-whatsapp"></i> WhatsApp Group
-            </a><br>`;
-          if (s.telegram_link) html += `
-            <a href="${s.telegram_link}" target="_blank" class="social-link">
-              <i class="fab fa-telegram"></i> Telegram Group
-            </a><br>`;
-          if (s.facebook_link) html += `
-            <a href="${s.facebook_link}" target="_blank" class="social-link">
-              <i class="fab fa-facebook"></i> Facebook Group
-            </a><br>`;
+          html += `<div class="settings-section"><h4><i class="fas fa-users"></i> Join Our Community</h4>`;
+          if (s.whatsapp_link) html += `<a href="${s.whatsapp_link}" target="_blank" class="social-link"><i class="fab fa-whatsapp"></i> WhatsApp Group</a><br>`;
+          if (s.telegram_link) html += `<a href="${s.telegram_link}" target="_blank" class="social-link"><i class="fab fa-telegram"></i> Telegram Group</a><br>`;
+          if (s.facebook_link) html += `<a href="${s.facebook_link}" target="_blank" class="social-link"><i class="fab fa-facebook"></i> Facebook Group</a><br>`;
           if (!(s.whatsapp_link || s.telegram_link || s.facebook_link)) {
             html += `<p class="small-text">No social links configured yet</p>`;
           }
@@ -2719,7 +2163,6 @@ const Settings = {
       } catch (e) {
         console.error('Social links error:', e);
       }
-      
       if (user.is_admin) {
         html += `
           <div class="settings-section">
@@ -2730,7 +2173,6 @@ const Settings = {
           </div>
         `;
       }
-      
       html += `
         <div class="settings-section">
           <h4><i class="fas fa-lock"></i> Security</h4>
@@ -2738,14 +2180,18 @@ const Settings = {
             <i class="fas fa-key"></i> ${hasPin ? 'Change' : 'Set'} Withdrawal PIN
           </button>
         </div>
-        
         <div class="settings-section">
           <h4><i class="fas fa-palette"></i> Appearance</h4>
           <button class="btn-primary" onclick="App.toggleTheme()" style="width:100%;">
             <i class="fas fa-moon"></i> ${document.body.classList.contains('dark-mode') ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           </button>
         </div>
-        
+        <div class="settings-section">
+          <h4><i class="fas fa-shopping-cart"></i> Buy Coupon</h4>
+          <button class="btn-primary" onclick="PaystackPayment.openDashboardPayment()" style="width:100%;background:linear-gradient(135deg,#00CCFF,#8000FF);">
+            <i class="fas fa-credit-card"></i> Buy Coupon via Paystack
+          </button>
+        </div>
         <div class="settings-section">
           <h4><i class="fas fa-sign-out-alt"></i> Session</h4>
           <button class="btn-primary" style="background:#d32f2f;width:100%;" onclick="Settings.logout()">
@@ -2753,7 +2199,6 @@ const Settings = {
           </button>
         </div>
       `;
-      
       document.getElementById('settings-data').innerHTML = html;
       App.showModal('settings-modal');
     } catch (error) {
@@ -2761,7 +2206,7 @@ const Settings = {
       App.showMessage('Failed to load settings', 'error');
     }
   },
-  
+
   setWithdrawalPin: async function (isChange = false) {
     let currentPin = '';
     if (isChange) {
@@ -2771,7 +2216,6 @@ const Settings = {
         App.showMessage('Current PIN must be 4 to 6 digits.', 'error');
         return;
       }
-      
       try {
         const response = await App.requestWithTimeout('/api/user/verify-withdrawal-pin', {
           method: 'POST',
@@ -2779,7 +2223,6 @@ const Settings = {
           body: JSON.stringify({ pin: currentPin }),
           credentials: 'include'
         });
-        
         const verifyData = await response.json();
         if (!verifyData.success) {
           App.showMessage('Incorrect current PIN.', 'error');
@@ -2790,26 +2233,18 @@ const Settings = {
         return;
       }
     }
-    
     const newPin = prompt('Enter your NEW 4-6 digit Withdrawal PIN:');
     if (!newPin || !/^\d{4,6}$/.test(newPin)) {
       App.showMessage('New PIN must be 4 to 6 digits.', 'error');
       return;
     }
-    
     const confirmPin = prompt('Confirm your new PIN:');
     if (newPin !== confirmPin) {
       App.showMessage('PINs do not match.', 'error');
       return;
     }
-    
     try {
-      const result = await GameManager.safeClaim(
-        '/api/user/set-withdrawal-pin',
-        { pin: newPin },
-        'setpin'
-      );
-      
+      const result = await GameManager.safeClaim('/api/user/set-withdrawal-pin', { pin: newPin }, 'setpin');
       if (result.success) {
         App.showMessage('PIN ' + (isChange ? 'changed' : 'set') + ' successfully!', 'success');
         App.closeModal('settings-modal');
@@ -2820,49 +2255,37 @@ const Settings = {
       App.showMessage('Failed to set PIN. Please try again.', 'error');
     }
   },
-  
+
   changeWithdrawalPin: function () {
     this.setWithdrawalPin(true);
   },
-  
+
   changePassword: async function () {
     const oldPass = prompt("Enter your current password:");
     if (!oldPass) return;
-    
     const newPass = prompt("Enter a new password (min 6 characters):");
     if (!newPass || newPass.length < 6) {
       App.showMessage("Password must be at least 6 characters.", "error");
       return;
     }
-    
     const confirmPass = prompt("Confirm your new password:");
     if (newPass !== confirmPass) {
       App.showMessage("Passwords do not match.", "error");
       return;
     }
-    
     try {
-      // Check if user is admin
       const isAdmin = App.currentUser && App.currentUser.is_admin;
       const endpoint = isAdmin ? '/api/admin/change-password' : '/api/user/change-password';
-      
       const response = await App.requestWithTimeout(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ 
-          current_password: oldPass,
-          new_password: newPass
-        })
+        body: JSON.stringify({ current_password: oldPass, new_password: newPass })
       });
-      
       const data = await response.json();
-      
       if (data.success) {
-        App.showMessage("✅ Password changed successfully!", "success");
+        App.showMessage("Password changed successfully!", "success");
         App.closeModal('settings-modal');
-        
-        // If admin, suggest logout
         if (isAdmin && data.message && data.message.includes('login again')) {
           setTimeout(() => {
             if (confirm("Admin password changed. Logout and login again?")) {
@@ -2877,49 +2300,37 @@ const Settings = {
       App.showMessage("Network error. Please try again.", "error");
     }
   },
-  
+
   logout: async function () {
     if (!confirm('Are you sure you want to logout?')) return;
-    
     try {
-      await App.requestWithTimeout('/api/auth/logout', { 
-        method: 'POST', 
-        credentials: 'include' 
-      });
+      await App.requestWithTimeout('/api/auth/logout', { method: 'POST', credentials: 'include' });
     } catch (e) {
       console.warn('Logout endpoint failed');
     }
-    
     document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax' +
       (window.location.protocol === 'https:' ? '; secure' : '');
-    
     window.location.href = '/';
   }
 };
 
-//========== SPIN WHEEL FUNCTIONS =========
+//========== SPIN WHEEL ==========
 function initSpinWheel() {
   const container = document.getElementById('wheel');
   if (!container) return;
-
-  // Clear old content
   container.innerHTML = '';
   container.style.cssText = 'position:relative;width:280px;height:280px;margin:0 auto;';
 
-  // Create SVG wheel - exact math, no CSS guessing
   const prizes = [
     { label: '₦1000', color: '#FF0055', textColor: '#fff' },
     { label: '₦500',  color: '#FF8C00', textColor: '#fff' },
     { label: '₦200',  color: '#FFCC00', textColor: '#111' },
     { label: '₦100',  color: '#00C851', textColor: '#fff' },
     { label: '₦50',   color: '#00CCFF', textColor: '#111' },
-    { label: '🎲 0',   color: '#8000FF', textColor: '#fff' }
+    { label: '0',     color: '#8000FF', textColor: '#fff' }
   ];
 
-  const N = prizes.length;          // 6
-  const cx = 140, cy = 140, r = 130; // SVG center + radius
-  const sliceDeg = 360 / N;         // 60°
-
+  const N = prizes.length, cx = 140, cy = 140, r = 130, sliceDeg = 360 / N;
   const svgNS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(svgNS, 'svg');
   svg.setAttribute('id', 'wheel-svg');
@@ -2928,38 +2339,23 @@ function initSpinWheel() {
   svg.setAttribute('height', '280');
   svg.style.cssText = 'display:block;border-radius:50%;overflow:hidden;filter:drop-shadow(0 0 18px rgba(128,0,255,0.5));';
 
-  // Helper: polar to cartesian
   function polarToCart(cx, cy, r, angleDeg) {
-    const rad = (angleDeg - 90) * Math.PI / 180; // -90 so 0° = top
-    return {
-      x: cx + r * Math.cos(rad),
-      y: cy + r * Math.sin(rad)
-    };
+    const rad = (angleDeg - 90) * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
   }
 
   prizes.forEach((prize, i) => {
-    const startAngle = i * sliceDeg;       // 0, 60, 120, 180, 240, 300
-    const endAngle   = startAngle + sliceDeg; // 60, 120, ...
-    const midAngle   = startAngle + sliceDeg / 2; // 30, 90, 150, ...
-
+    const startAngle = i * sliceDeg, endAngle = startAngle + sliceDeg, midAngle = startAngle + sliceDeg / 2;
     const p1 = polarToCart(cx, cy, r, startAngle);
     const p2 = polarToCart(cx, cy, r, endAngle);
-
-    // Pie slice path
     const path = document.createElementNS(svgNS, 'path');
-    const d = [
-      `M ${cx} ${cy}`,
-      `L ${p1.x} ${p1.y}`,
-      `A ${r} ${r} 0 0 1 ${p2.x} ${p2.y}`,
-      'Z'
-    ].join(' ');
+    const d = [`M ${cx} ${cy}`, `L ${p1.x} ${p1.y}`, `A ${r} ${r} 0 0 1 ${p2.x} ${p2.y}`, 'Z'].join(' ');
     path.setAttribute('d', d);
     path.setAttribute('fill', prize.color);
     path.setAttribute('stroke', '#0A0A1F');
     path.setAttribute('stroke-width', '2');
     svg.appendChild(path);
 
-    // Label - positioned at 72% radius along midpoint angle
     const lp = polarToCart(cx, cy, r * 0.72, midAngle);
     const text = document.createElementNS(svgNS, 'text');
     text.setAttribute('x', lp.x);
@@ -2975,7 +2371,6 @@ function initSpinWheel() {
     svg.appendChild(text);
   });
 
-  // Center circle
   const centerCircle = document.createElementNS(svgNS, 'circle');
   centerCircle.setAttribute('cx', cx);
   centerCircle.setAttribute('cy', cy);
@@ -2994,10 +2389,8 @@ function initSpinWheel() {
   centerText.setAttribute('font-size', '14');
   centerText.textContent = '★';
   svg.appendChild(centerText);
-
   container.appendChild(svg);
 
-  // Pointer triangle at top (fixed, outside SVG)
   const pointer = document.createElement('div');
   pointer.style.cssText = `
     position:absolute;top:-14px;left:50%;
@@ -3010,275 +2403,130 @@ function initSpinWheel() {
     z-index:10;
   `;
   container.appendChild(pointer);
-
-  // Store current rotation to allow reset
   container._currentRotation = 0;
 }
 
-//========== DOM READY ===========
-document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+//========== DOM READY ==========
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
       tab.classList.add('active');
-      const targetForm = tab.dataset.tab + '-form';
+      var targetForm = tab.dataset.tab + '-form';
       document.getElementById(targetForm).classList.add('active');
     });
   });
-  
-  const buyCouponBtn = document.querySelector('[onclick="Auth.buyCoupon()"]');
+
+  var buyCouponBtn = document.querySelector('[onclick="Auth.buyCoupon()"]');
   if (buyCouponBtn) {
-    buyCouponBtn.onclick = () => Auth.buyCoupon();
+    buyCouponBtn.onclick = function() { Auth.buyCoupon(); };
   }
-  
+
   Auth.initPasswordToggles();
   App.init();
-  
-  // Update game card click handlers for enhanced limiter with auto-logout
-  setTimeout(() => {
-    const snakeCard = document.querySelector('.activity-card[onclick*="snake.html"]');
-    const coinflipCard = document.querySelector('.activity-card[onclick*="coinflip.html"]');
-    const plinkoCard = document.querySelector('.activity-card[onclick*="plinko.html"]');
-    
-    if (snakeCard) {
-      snakeCard.onclick = () => EnhancedGameLimiter.checkAndHandleGameAccess('snake', 'snake.html');
-    }
-    if (coinflipCard) {
-      coinflipCard.onclick = () => EnhancedGameLimiter.checkAndHandleGameAccess('coinflip', 'coinflip.html');
-    }
-    if (plinkoCard) {
-      plinkoCard.onclick = () => EnhancedGameLimiter.checkAndHandleGameAccess('plinko', 'plinko.html');
-    }
-  }, 1000);
-  
-  // Auto-initialize spin wheel when modal opens
-  const spinModal = document.getElementById('spin-modal');
-  if (spinModal) {
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.attributeName === 'class') {
-          const isVisible = !spinModal.classList.contains('hidden');
-          if (isVisible) {
-            setTimeout(() => initSpinWheel(), 100);
-          }
-        }
-      });
-    });
-    
-    observer.observe(spinModal, { 
-      attributes: true, 
-      attributeFilter: ['class'] 
-    });
-  }
-});
 
-//========== GLOBAL FUNCTIONS FOR GAME PAGES =========
-(function() {
-    // Export all functions to window
-    window.App = App;
-    window.GameManager = GameManager;
-    window.GameLimiter = GameLimiter;
-    window.EnhancedGameLimiter = EnhancedGameLimiter;
-    window.Games = Games;
-    window.Auth = Auth;
-    window.Profile = Profile;
-    window.Referral = Referral;
-    window.Banking = Banking;
-    window.Achievements = Achievements;
-    window.Settings = Settings;
-    window.checkWithdrawalDay = checkWithdrawalDay;
-    window.closeWithdrawalDayModal = closeWithdrawalDayModal;
-    
-    // Game navigation with enhanced limits (auto-logout)
-    window.openSnakeGame = () => EnhancedGameLimiter.checkAndHandleGameAccess('snake', 'snake.html');
-    window.openCoinFlipGame = () => EnhancedGameLimiter.checkAndHandleGameAccess('coinflip', 'coinflip.html');
-    window.openPlinkoGame = () => EnhancedGameLimiter.checkAndHandleGameAccess('plinko', 'plinko.html');
-    window.openTikTokGame = Games.openTikTok;
-    window.openSpinWheelGame = Games.openSpinWheel;
-    
-    // Critical API functions
-    window.checkDailyLimit = GameManager.checkDailyLimit;
-    window.updateBalance = App.updateBalance;
-    window.showMessage = App.showMessage;
-    window.goBackToDashboard = () => window.location.href = 'index.html';
-    
-    // Game claim functions using safeClaim
-    window.claimSnakeReward = async function(apples) {
-        return await GameManager.safeClaim(
-            '/api/games/snake/report',
-            { apples_eaten: apples },
-            'snake'
-        );
-    };
-    
-    window.claimCoinFlipReward = async function(bet, won) {
-        return await GameManager.safeClaim(
-            '/api/games/coinflip/report',
-            { bet: bet, won: won },
-            'coinflip'
-        );
-    };
-    
-    window.claimPlinkoReward = async function(bet, multiplier) {
-        return await GameManager.safeClaim(
-            '/api/games/plinko/report',
-            { bet: bet, multiplier: multiplier },
-            'plinko'
-        );
-    };
-    
-    // Universal game result reporter
-    window.reportGameResult = async function(gameType, data) {
-        const endpoints = {
-            'snake': '/api/games/snake/report',
-            'coinflip': '/api/games/coinflip/report',
-            'plinko': '/api/games/plinko/report',
-            'spin': '/api/games/spin/report'
-        };
-        
-        const endpoint = endpoints[gameType];
-        if (!endpoint) {
-            return { success: false, message: 'Unknown game type' };
-        }
-        
-        return await GameManager.safeClaim(endpoint, data, gameType);
-    };
-    
-    console.log('✅ FLEXIA Script v14.0 - ALL FUNCTIONS LOADED WITH COMPLETE WITHDRAWAL DAY CHECK');
-})();
+  // Auto-fill coupon from URL parameter
+  var urlParams = new URLSearchParams(window.location.search);
+  var coupon = urlParams.get('coupon');
+  var tab = urlParams.get('tab');
 
-// Emergency fallback loader
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(() => {
-        const required = ['checkDailyLimit', 'claimSnakeReward', 'claimCoinFlipReward', 'claimPlinkoReward'];
-        required.forEach(func => {
-            if (typeof window[func] !== 'function') {
-                console.warn(`Function ${func} missing, creating emergency fallback`);
-                
-                if (func === 'checkDailyLimit') {
-                    window.checkDailyLimit = async () => ({ can_play: true, played_today: 0, max_per_day: 999 });
-                } else if (func === 'claimSnakeReward') {
-                    window.claimSnakeReward = async (apples) => ({
-                        success: false,
-                        message: 'Please refresh the page to load game functions'
-                    });
-                }
-            }
-        });
+  if (coupon) {
+    document.getElementById('reg-coupon').value = coupon;
+    if (tab === 'register') {
+      document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelector('[data-tab="register"]').classList.add('active');
+      document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
+      document.getElementById('register-form').classList.add('active');
+    }
+    setTimeout(function() {
+      if (typeof App !== 'undefined' && App.showMessage) {
+        App.showMessage('Coupon code loaded! Complete your registration.', 'success', 5000);
+      }
     }, 1000);
+  }
+
+  // Check payment status on return
+  var ref = urlParams.get('ref');
+  if (ref) {
+    setTimeout(async function() {
+      var result = await PaystackPayment.checkStatus(ref);
+      if (result.success && result.status === 'COMPLETED') {
+        App.showMessage('Payment successful! Coupon: ' + (result.coupon_code || 'Check your email'), 'success');
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (result.success && result.status === 'PENDING') {
+        App.showMessage('Payment is still processing. Check your email in a few minutes.', 'info');
+      }
+    }, 2000);
+  }
+
+  setTimeout(function() {
+    var snakeCard = document.querySelector('.activity-card .icon.snake')?.closest('.activity-card');
+    var coinflipCard = document.querySelector('.activity-card .icon.coin')?.closest('.activity-card');
+    var plinkoCard = document.querySelector('.activity-card .icon.plinko')?.closest('.activity-card');
+    if (snakeCard) snakeCard.onclick = function() { EnhancedGameLimiter.checkAndHandleGameAccess('snake', 'snake.html'); };
+    if (coinflipCard) coinflipCard.onclick = function() { EnhancedGameLimiter.checkAndHandleGameAccess('coinflip', 'coinflip.html'); };
+    if (plinkoCard) plinkoCard.onclick = function() { EnhancedGameLimiter.checkAndHandleGameAccess('plinko', 'plinko.html'); };
+  }, 1000);
+
+  var spinModal = document.getElementById('spin-modal');
+  if (spinModal) {
+    var observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        if (mutation.attributeName === 'class') {
+          var isVisible = !spinModal.classList.contains('hidden');
+          if (isVisible) setTimeout(function() { initSpinWheel(); }, 100);
+        }
+      });
+    });
+    observer.observe(spinModal, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  // Restore scroll position
+  var scrollPos = sessionStorage.getItem('flexia_scroll_position');
+  if (scrollPos) {
+    setTimeout(function() {
+      window.scrollTo(0, parseInt(scrollPos));
+      sessionStorage.removeItem('flexia_scroll_position');
+    }, 300);
+  }
 });
 
+//========== GLOBAL EXPORTS ==========
+window.App = App;
+window.GameManager = GameManager;
+window.GameLimiter = GameLimiter;
+window.EnhancedGameLimiter = EnhancedGameLimiter;
+window.Games = Games;
+window.Auth = Auth;
+window.Profile = Profile;
+window.Referral = Referral;
+window.Banking = Banking;
+window.Achievements = Achievements;
+window.Settings = Settings;
+window.TodayEarnings = TodayEarnings;
+window.PaystackPayment = PaystackPayment;
+window.SessionManager = SessionManager;
+window.checkWithdrawalDay = checkWithdrawalDay;
+window.closeWithdrawalDayModal = closeWithdrawalDayModal;
+window.openSnakeGame = function() { EnhancedGameLimiter.checkAndHandleGameAccess('snake', 'snake.html'); };
+window.openCoinFlipGame = function() { EnhancedGameLimiter.checkAndHandleGameAccess('coinflip', 'coinflip.html'); };
+window.openPlinkoGame = function() { EnhancedGameLimiter.checkAndHandleGameAccess('plinko', 'plinko.html'); };
+window.openTikTokGame = Games.openTikTok;
+window.openSpinWheelGame = Games.openSpinWheel;
+window.checkDailyLimit = GameManager.checkDailyLimit;
+window.updateBalance = App.updateBalance;
+window.showMessage = App.showMessage;
+window.goBackToDashboard = function() { window.location.href = 'index.html'; };
 
-// ==================== DAILY LOGIN BONUS ====================
-const LoginBonus = {
-  async checkAndClaim() {
-    try {
-      // Check status first
-      const statusRes = await fetch('/api/daily-login-bonus/status', {
-        credentials: 'include'
-      });
-      if (!statusRes.ok) return;
-      const status = await statusRes.json();
-      if (!status.success || status.already_claimed) return;
-
-      // Auto-claim
-      const claimRes = await fetch('/api/daily-login-bonus', {
-        method: 'POST',
-        credentials: 'include'
-      });
-      if (!claimRes.ok) return;
-      const data = await claimRes.json();
-      if (!data.success) return;
-
-      // Show popup
-      LoginBonus.showPopup(data);
-    } catch (e) {
-      console.log('Login bonus check failed:', e);
-    }
-  },
-
-  showPopup(data) {
-    const existing = document.getElementById('login-bonus-popup');
-    if (existing) existing.remove();
-
-    const reward = data.reward || 20;
-    const streak = data.streak || 1;
-    const milestone = data.milestone || null;
-    const nextMilestone = data.next_milestone || null;
-
-    const popup = document.createElement('div');
-    popup.id = 'login-bonus-popup';
-    popup.style.cssText = `
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.85); z-index: 99999;
-      display: flex; align-items: center; justify-content: center;
-      animation: fadeIn 0.3s ease;
-    `;
-
-    const streakDots = Array.from({length: Math.min(streak, 7)}, (_, i) =>
-      `<div style="width:12px;height:12px;border-radius:50%;background:${i < streak ? '#00FF55' : '#333'};
-       box-shadow:${i < streak ? '0 0 8px #00FF55' : 'none'};"></div>`
-    ).join('');
-
-    popup.innerHTML = `
-      <div style="background:linear-gradient(135deg,#0A0A1F,#151535);
-                  border:2px solid ${milestone ? '#FFD700' : '#8000FF'};
-                  border-radius:20px; padding:30px; max-width:340px; width:90%;
-                  text-align:center; box-shadow:0 20px 60px rgba(128,0,255,0.4);">
-        <div style="font-size:3rem;margin-bottom:10px;">${milestone ? '🏆' : '🎁'}</div>
-        <h2 style="color:${milestone ? '#FFD700' : '#8000FF'};margin-bottom:5px;font-size:1.5rem;">
-          ${milestone ? milestone : 'Daily Login Bonus!'}
-        </h2>
-        <div style="font-size:2.5rem;font-weight:bold;color:#00FF55;
-                    text-shadow:0 0 15px rgba(0,255,85,0.7);margin:15px 0;">
-          +₦${reward.toLocaleString()}
-        </div>
-        <div style="color:#A0A0B5;margin-bottom:15px;">added to your balance</div>
-
-        <div style="background:rgba(128,0,255,0.1);border-radius:10px;padding:12px;margin-bottom:15px;
-                    border:1px solid rgba(128,0,255,0.3);">
-          <div style="color:#A0A0B5;font-size:0.85rem;margin-bottom:8px;">LOGIN STREAK</div>
-          <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:6px;">
-            ${streakDots}
-          </div>
-          <div style="color:#00CCFF;font-weight:bold;">${streak} day${streak !== 1 ? 's' : ''} in a row! 🔥</div>
-          ${nextMilestone ? `<div style="color:#FFD700;font-size:0.8rem;margin-top:6px;">${nextMilestone}</div>` : ''}
-        </div>
-
-        <button onclick="document.getElementById('login-bonus-popup').remove()"
-          style="background:linear-gradient(45deg,#8000FF,#00CCFF);border:none;border-radius:10px;
-                 color:#0A0A1F;padding:14px 30px;font-size:1rem;font-weight:bold;
-                 cursor:pointer;width:100%;margin-top:5px;">
-          CLAIM & CONTINUE
-        </button>
-      </div>
-    `;
-
-    document.body.appendChild(popup);
-    popup.addEventListener('click', (e) => {
-      if (e.target === popup) popup.remove();
-    });
-
-    // Update balance in UI if App object available
-    if (typeof App !== 'undefined' && App.updateBalance && data.new_balance) {
-      App.updateBalance(data.new_balance);
-    }
-
-    // Auto-close after 10 seconds
-    setTimeout(() => {
-      const p = document.getElementById('login-bonus-popup');
-      if (p) p.remove();
-    }, 10000);
-  }
+window.claimSnakeReward = async function(apples) {
+  return await GameManager.safeClaim('/api/games/snake/report', { apples_eaten: apples }, 'snake');
+};
+window.claimCoinFlipReward = async function(bet, won) {
+  return await GameManager.safeClaim('/api/games/coinflip/report', { bet: bet, won: won }, 'coinflip');
+};
+window.claimPlinkoReward = async function(bet, multiplier) {
+  return await GameManager.safeClaim('/api/games/plinko/report', { bet: bet, multiplier: multiplier }, 'plinko');
 };
 
-// Auto-check login bonus when page loads (dashboard only)
-document.addEventListener('DOMContentLoaded', () => {
-  // Only run on main dashboard page
-  if (window.location.pathname === '/' || window.location.pathname.endsWith('index.html')) {
-    // Slight delay so main content loads first
-    setTimeout(() => LoginBonus.checkAndClaim(), 1500);
-  }
-});
-
+console.log('FLEXIA Script v17.0 - COMPLETE VERSION LOADED');
