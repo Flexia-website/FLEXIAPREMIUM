@@ -4,41 +4,30 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>FLEXIA · Referral Banking</title>
-    <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="logo/favicon.ico" />
     <link rel="icon" type="image/png" sizes="32x32" href="logo/flexia-logo.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="logo/flexia-logo.png" />
     <link rel="apple-touch-icon" href="logo/apple-touch-icon.png" />
     <link rel="manifest" href="manifest.json" />
-    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <!-- Main CSS -->
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-
     <div class="grid-bg"></div>
 
-    <!-- ============================================================
-         AUTH SCREEN
-         ============================================================ -->
+    <!-- AUTH SCREEN -->
     <div id="auth-screen" class="screen">
         <div class="auth-container">
             <div class="logo-container">
-                <div class="logo-icon">
-                    <img src="logo/flexia-logo.png" alt="FLEXIA Logo" />
-                </div>
+                <div class="logo-icon"><img src="logo/flexia-logo.png" alt="FLEXIA Logo" /></div>
                 <h1 class="app-title">FLEXIA</h1>
                 <p class="app-subtitle">Referral Banking &amp; Earnings Platform</p>
             </div>
-
             <div class="auth-tabs">
                 <button class="tab active" data-tab="login">LOGIN</button>
                 <button class="tab" data-tab="register">REGISTER</button>
             </div>
-
-            <!-- LOGIN FORM -->
             <div id="login-form" class="auth-form active">
                 <div class="input-group">
                     <input type="text" id="login-username" class="form-input" placeholder="Username" />
@@ -48,24 +37,20 @@
                     <input type="password" id="login-password" class="form-input" placeholder="Password" />
                     <i class="fas fa-lock input-icon"></i>
                 </div>
-                <button class="btn-primary" id="login-btn" onclick="Auth.login()">
-                    <i class="fas fa-sign-in-alt"></i> ENTER VAULT
-                </button>
+                <button class="btn-primary" onclick="Auth.login()"><i class="fas fa-sign-in-alt"></i> ENTER VAULT</button>
                 <div id="login-message" class="message"></div>
             </div>
-
-            <!-- REGISTER FORM -->
             <div id="register-form" class="auth-form">
                 <div class="input-group">
-                    <input type="text" id="reg-username" class="form-input" placeholder="Choose Username" required />
+                    <input type="text" id="reg-username" class="form-input" placeholder="Choose Username" />
                     <i class="fas fa-user input-icon"></i>
                 </div>
                 <div class="input-group">
-                    <input type="password" id="reg-password" class="form-input" placeholder="Create Password" required />
+                    <input type="password" id="reg-password" class="form-input" placeholder="Create Password" />
                     <i class="fas fa-lock input-icon"></i>
                 </div>
                 <div class="input-group">
-                    <input type="text" id="reg-coupon" class="form-input" placeholder="Coupon Code" required />
+                    <input type="text" id="reg-coupon" class="form-input" placeholder="Coupon Code" />
                     <i class="fas fa-ticket input-icon"></i>
                 </div>
                 <div class="input-group">
@@ -76,12 +61,8 @@
                     <input type="text" id="reg-contact" class="form-input" placeholder="Email or Phone (Optional)" />
                     <i class="fas fa-envelope input-icon"></i>
                 </div>
-                <button class="btn-primary" id="register-btn" onclick="Auth.register()">
-                    <i class="fas fa-user-plus"></i> CREATE ACCOUNT
-                </button>
-
-                <!-- BUY COUPON BUTTONS -->
-                <div style="text-align: center; margin-top: 12px; display: flex; flex-direction: column; gap: 8px; width: 100%;">
+                <button class="btn-primary" onclick="Auth.register()"><i class="fas fa-user-plus"></i> CREATE ACCOUNT</button>
+                <div style="text-align:center;margin-top:12px;display:flex;flex-direction:column;gap:8px;width:100%;">
                     <button class="btn-merchant paystack" onclick="PaystackPayment.openRegistrationPayment()" style="width:100%;justify-content:center;background:linear-gradient(135deg,#8000FF,#00CCFF);color:#fff;border:none;">
                         <i class="fas fa-credit-card"></i> Buy Coupon via Paystack
                     </button>
@@ -89,33 +70,22 @@
                         <i class="fas fa-store"></i> Buy Coupon from Merchant
                     </button>
                 </div>
-
                 <div id="register-message" class="message"></div>
             </div>
         </div>
     </div>
 
-    <!-- ============================================================
-         DASHBOARD SCREEN
-         ============================================================ -->
+    <!-- DASHBOARD -->
     <div id="app-screen" class="screen" style="display:none;">
         <div class="dashboard">
-
-            <!-- STICKY HEADER -->
             <header class="app-header">
                 <div class="header-row">
                     <div class="brand">
-                        <div class="brand-icon">
-                            <img src="logo/flexia-logo.png" alt="FLEXIA" />
-                        </div>
+                        <div class="brand-icon"><img src="logo/flexia-logo.png" alt="FLEXIA" /></div>
                         <span class="brand-name">FLEXIA</span>
                     </div>
                     <div class="header-right">
-                        <div class="greeting">
-                            Welcome back
-                            <strong id="dashboard-username">User</strong>
-                        </div>
-                        <!-- Manual refresh button -->
+                        <div class="greeting">Welcome back <strong id="dashboard-username">User</strong></div>
                         <button onclick="App.fetchFreshBalance()" class="btn-secondary" style="font-size:0.7rem;padding:4px 10px;border-radius:20px;margin-right:6px;">
                             <i class="fas fa-sync-alt"></i>
                         </button>
@@ -127,12 +97,9 @@
                 </div>
             </header>
 
-            <!-- BALANCE CARD -->
             <div class="balance-card">
                 <div class="balance-label"><i class="fas fa-wallet"></i> Total Balance</div>
-                <div class="balance-amount">
-                    <span class="currency">₦</span><span id="balance-display">0.00</span>
-                </div>
+                <div class="balance-amount"><span class="currency">₦</span><span id="balance-display">0.00</span></div>
                 <div class="balance-breakdown">
                     <span class="item"><i class="fas fa-users"></i> Refer &amp; TikTok: <strong id="refer-balance">₦0.00</strong></span>
                     <span class="item"><i class="fas fa-gamepad"></i> Games: <strong id="game-balance">₦0.00</strong></span>
@@ -140,28 +107,13 @@
                 </div>
             </div>
 
-            <!-- TODAY'S EARNINGS CARD – REMOVED per request -->
-            <!-- QUICK ACTIONS -->
             <div class="quick-actions">
-                <div class="q-btn" onclick="Referral.claimBonuses()">
-                    <i class="fas fa-gift gold"></i>
-                    <span>Claim</span>
-                </div>
-                <div class="q-btn" onclick="Games.openSpinWheel()">
-                    <i class="fas fa-sync-alt teal"></i>
-                    <span>Spin</span>
-                </div>
-                <div class="q-btn" onclick="Banking.openWithdraw()">
-                    <i class="fas fa-paper-plane purple"></i>
-                    <span>Transfer</span>
-                </div>
-                <div class="q-btn" onclick="Achievements.open()">
-                    <i class="fas fa-chart-line blue"></i>
-                    <span>Stats</span>
-                </div>
+                <div class="q-btn" onclick="Referral.claimBonuses()"><i class="fas fa-gift gold"></i><span>Claim</span></div>
+                <div class="q-btn" onclick="Games.openSpinWheel()"><i class="fas fa-sync-alt teal"></i><span>Spin</span></div>
+                <div class="q-btn" onclick="Banking.openWithdraw()"><i class="fas fa-paper-plane purple"></i><span>Transfer</span></div>
+                <div class="q-btn" onclick="Achievements.open()"><i class="fas fa-chart-line blue"></i><span>Stats</span></div>
             </div>
 
-            <!-- REWARDS BAR -->
             <div class="rewards-bar">
                 <div class="left">
                     <span class="icon"><i class="fas fa-trophy"></i></span>
@@ -173,7 +125,6 @@
                 <span class="badge" id="weekly-badge">+₦0 this week</span>
             </div>
 
-            <!-- GAMES -->
             <div class="section-title"><i class="fas fa-gamepad"></i> Play &amp; Earn</div>
             <div class="game-grid">
                 <div class="activity-card" onclick="Games.openSnake()">
@@ -214,7 +165,6 @@
                 </div>
             </div>
 
-            <!-- ACHIEVEMENTS -->
             <div class="section-title"><i class="fas fa-trophy"></i> Achievements</div>
             <div class="game-grid">
                 <div class="activity-card" onclick="Achievements.open()">
@@ -237,300 +187,148 @@
                 </div>
             </div>
 
-            <!-- ACTIVITY FEED -->
             <div class="feed" id="activity-feed">
                 <div class="feed-header">
-                    <span><i class="fas fa-clock" style="margin-right:4px;"></i> Recent Activity</span>
+                    <span><i class="fas fa-clock"></i> Recent Activity</span>
                     <i class="fas fa-chevron-right" onclick="viewAllActivity()"></i>
                 </div>
-                <div id="feed-items">
-                    <!-- Populated by script -->
-                </div>
+                <div id="feed-items"></div>
             </div>
 
-            <!-- BOTTOM NAV -->
             <nav class="bottom-nav">
-                <div class="nav-item active" onclick="navigateTab('home')">
-                    <i class="fas fa-home"></i>
-                    <span>Home</span>
-                </div>
-                <div class="nav-item" onclick="Banking.openWithdraw()">
-                    <i class="fas fa-wallet"></i>
-                    <span>Cashout</span>
-                </div>
-                <div class="nav-item" onclick="Achievements.open()">
-                    <i class="fas fa-trophy"></i>
-                    <span>Awards</span>
-                </div>
-                <div class="nav-item" onclick="window.location.href='receipt.html'">
-                    <i class="fas fa-receipt"></i>
-                    <span>Receipt</span>
-                </div>
-                <div class="nav-item" onclick="Settings.open()">
-                    <i class="fas fa-cog"></i>
-                    <span>Settings</span>
-                </div>
+                <div class="nav-item active" onclick="navigateTab('home')"><i class="fas fa-home"></i><span>Home</span></div>
+                <div class="nav-item" onclick="Banking.openWithdraw()"><i class="fas fa-wallet"></i><span>Cashout</span></div>
+                <div class="nav-item" onclick="Achievements.open()"><i class="fas fa-trophy"></i><span>Awards</span></div>
+                <div class="nav-item" onclick="window.location.href='receipt.html'"><i class="fas fa-receipt"></i><span>Receipt</span></div>
+                <div class="nav-item" onclick="Settings.open()"><i class="fas fa-cog"></i><span>Settings</span></div>
             </nav>
-
         </div>
     </div>
 
-    <!-- ============================================================
-         MODALS
-         ============================================================ -->
+    <!-- MODALS -->
     <div id="modals-container">
-        <!-- Withdrawal Modal -->
         <div id="withdrawal-modal" class="modal hidden">
             <div class="modal-content">
-                <div class="modal-logo">
-                    <div class="modal-logo-icon">
-                        <img src="logo/flexia-logo.png" alt="FLEXIA" />
-                    </div>
-                </div>
+                <div class="modal-logo"><div class="modal-logo-icon"><img src="logo/flexia-logo.png" alt="FLEXIA" /></div></div>
                 <h3 class="modal-title">CASH-OUT VAULT</h3>
-
                 <div class="withdraw-balance-breakdown">
-                    <div class="withdraw-balance-row">
-                        <span class="withdraw-balance-label"><i class="fas fa-users"></i> Refer &amp; TikTok</span>
-                        <span class="withdraw-balance-val" id="withdraw-ref-balance">₦0.00</span>
-                    </div>
-                    <div class="withdraw-balance-row">
-                        <span class="withdraw-balance-label"><i class="fas fa-gamepad"></i> Game Rewards</span>
-                        <span class="withdraw-balance-val" id="withdraw-game-balance">₦0.00</span>
-                    </div>
+                    <div class="withdraw-balance-row"><span class="withdraw-balance-label"><i class="fas fa-users"></i> Refer &amp; TikTok</span><span class="withdraw-balance-val" id="withdraw-ref-balance">₦0.00</span></div>
+                    <div class="withdraw-balance-row"><span class="withdraw-balance-label"><i class="fas fa-gamepad"></i> Game Rewards</span><span class="withdraw-balance-val" id="withdraw-game-balance">₦0.00</span></div>
                     <div class="withdraw-balance-divider"></div>
-                    <div class="withdraw-balance-row total">
-                        <span class="withdraw-balance-label">💰 Total Available</span>
-                        <strong id="withdraw-balance">₦0.00</strong>
-                    </div>
+                    <div class="withdraw-balance-row total"><span class="withdraw-balance-label">💰 Total Available</span><strong id="withdraw-balance">₦0.00</strong></div>
                 </div>
-
                 <p class="modal-info">Minimum Withdrawal: <strong id="withdraw-min">₦100,000.00</strong></p>
-                <div class="input-group">
-                    <input type="number" id="withdraw-amount" class="form-input" placeholder="Amount (e.g., 100000)" required />
-                </div>
-                <div class="input-group">
-                    <select id="bank-select" class="form-input" required>
-                        <option value="" disabled selected>Select Bank</option>
-                    </select>
-                </div>
-                <div class="input-group">
-                    <input type="text" id="account-number" class="form-input" placeholder="Account Number" required />
-                </div>
-                <div class="input-group">
-                    <input type="text" id="account-name-manual" class="form-input" placeholder="Account Name (Manual)" required />
-                </div>
-                <button class="btn-primary" onclick="Banking.processWithdrawal()">
-                    <i class="fas fa-paper-plane"></i> SUBMIT WITHDRAWAL
-                </button>
+                <div class="input-group"><input type="number" id="withdraw-amount" class="form-input" placeholder="Amount" /></div>
+                <div class="input-group"><select id="bank-select" class="form-input"><option value="" disabled selected>Select Bank</option></select></div>
+                <div class="input-group"><input type="text" id="account-number" class="form-input" placeholder="Account Number" /></div>
+                <div class="input-group"><input type="text" id="account-name-manual" class="form-input" placeholder="Account Name" /></div>
+                <button class="btn-primary" onclick="Banking.processWithdrawal()"><i class="fas fa-paper-plane"></i> SUBMIT</button>
                 <div id="withdrawal-message" class="message"></div>
                 <button class="btn-close" onclick="App.closeModal('withdrawal-modal')">CLOSE</button>
             </div>
         </div>
 
-        <!-- Referral Modal -->
         <div id="referral-modal" class="modal hidden">
             <div class="modal-content">
-                <div class="modal-logo">
-                    <div class="modal-logo-icon">
-                        <img src="logo/flexia-logo.png" alt="FLEXIA" />
-                    </div>
-                </div>
+                <div class="modal-logo"><div class="modal-logo-icon"><img src="logo/flexia-logo.png" alt="FLEXIA" /></div></div>
                 <h3 class="modal-title">Refer &amp; Earn</h3>
-                <div id="referral-data">Loading referral data...</div>
+                <div id="referral-data">Loading...</div>
                 <button class="btn-close" onclick="App.closeModal('referral-modal')">CLOSE</button>
             </div>
         </div>
 
-        <!-- Profile Modal -->
         <div id="profile-modal" class="modal hidden">
             <div class="modal-content">
-                <div class="modal-logo">
-                    <div class="modal-logo-icon">
-                        <img src="logo/flexia-logo.png" alt="FLEXIA" />
-                    </div>
-                </div>
+                <div class="modal-logo"><div class="modal-logo-icon"><img src="logo/flexia-logo.png" alt="FLEXIA" /></div></div>
                 <h3 class="modal-title">User Profile</h3>
                 <div id="profile-data">...</div>
                 <button class="btn-close" onclick="App.closeModal('profile-modal')">CLOSE</button>
             </div>
         </div>
 
-        <!-- Settings Modal -->
         <div id="settings-modal" class="modal hidden">
             <div class="modal-content">
-                <div class="modal-logo">
-                    <div class="modal-logo-icon">
-                        <img src="logo/flexia-logo.png" alt="FLEXIA" />
-                    </div>
-                </div>
+                <div class="modal-logo"><div class="modal-logo-icon"><img src="logo/flexia-logo.png" alt="FLEXIA" /></div></div>
                 <h3 class="modal-title">Settings</h3>
                 <div id="settings-data">...</div>
                 <button class="btn-close" onclick="App.closeModal('settings-modal')">CLOSE</button>
             </div>
         </div>
 
-        <!-- TikTok Modal -->
         <div id="tiktok-modal" class="modal hidden">
             <div class="modal-content">
-                <div class="modal-logo">
-                    <div class="modal-logo-icon">
-                        <img src="logo/flexia-logo.png" alt="FLEXIA" />
-                    </div>
-                </div>
+                <div class="modal-logo"><div class="modal-logo-icon"><img src="logo/flexia-logo.png" alt="FLEXIA" /></div></div>
                 <h3 class="modal-title">TIKTOK FOLLOW</h3>
                 <p class="modal-info">Earn <strong>₦150.00</strong> for following on TikTok</p>
                 <div id="tiktok-instructions">
-                    <p>Follow the account below on TikTok to earn ₦150.00</p>
-                    <div class="tiktok-account-display">
-                        <strong id="tiktok-account-name">Loading...</strong>
-                    </div>
-                    <p class="small-text">Search this username on TikTok and follow the account</p>
+                    <p>Follow the account below to earn ₦150.00</p>
+                    <div class="tiktok-account-display"><strong id="tiktok-account-name">Loading...</strong></div>
+                    <p class="small-text">Search this username on TikTok and follow</p>
                 </div>
                 <div class="action-buttons">
-                    <button class="btn-secondary" onclick="Games.openTikTokApp()">
-                        <i class="fab fa-tiktok"></i> OPEN TIKTOK
-                    </button>
-                    <button class="btn-primary" onclick="Games.verifyTikTokFollow()">
-                        <i class="fas fa-check"></i> I FOLLOWED
-                    </button>
+                    <button class="btn-secondary" onclick="Games.openTikTokApp()"><i class="fab fa-tiktok"></i> OPEN TIKTOK</button>
+                    <button class="btn-primary" onclick="Games.verifyTikTokFollow()"><i class="fas fa-check"></i> I FOLLOWED</button>
                 </div>
                 <div id="tiktok-message" class="message"></div>
                 <button class="btn-close" onclick="App.closeModal('tiktok-modal')">CLOSE</button>
             </div>
         </div>
 
-        <!-- Spin Modal -->
         <div id="spin-modal" class="modal hidden">
-            <div class="modal-content" style="background: #0a0a0a; border: 1px solid #333; text-align: center;">
-                <div class="modal-logo">
-                    <div class="modal-logo-icon">
-                        <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 40px; height: 40px;" />
-                    </div>
-                </div>
-                <h3 class="modal-title" style="color: #fff; letter-spacing: 2px;">CYBER SPIN</h3>
+            <div class="modal-content" style="background:#0a0a0a;border:1px solid #333;text-align:center;">
+                <div class="modal-logo"><div class="modal-logo-icon"><img src="logo/flexia-logo.png" alt="FLEXIA" style="width:40px;height:40px;" /></div></div>
+                <h3 class="modal-title" style="color:#fff;letter-spacing:2px;">CYBER SPIN</h3>
                 <div id="wheel" style="position:relative;width:280px;height:280px;margin:0 auto;"></div>
-                <button id="spin-button" class="btn-primary" onclick="Games.spinWheel()" style="max-width:240px;margin:15px auto;">
-                    <i class="fas fa-sync-alt"></i> SPIN WHEEL
-                </button>
+                <button id="spin-button" class="btn-primary" onclick="Games.spinWheel()" style="max-width:240px;margin:15px auto;"><i class="fas fa-sync-alt"></i> SPIN WHEEL</button>
                 <div id="spin-message" class="message"></div>
                 <div id="spin-result" class="hidden" style="margin-top:10px;"></div>
                 <button class="btn-close" onclick="App.closeModal('spin-modal')" style="margin-top:20px;opacity:0.5;">CLOSE</button>
             </div>
         </div>
 
-        <!-- Paystack Payment Modal -->
         <div id="paystack-payment-modal" class="modal hidden">
             <div class="modal-content">
-                <div class="modal-logo">
-                    <div class="modal-logo-icon">
-                        <img src="logo/flexia-logo.png" alt="FLEXIA" />
-                    </div>
-                </div>
+                <div class="modal-logo"><div class="modal-logo-icon"><img src="logo/flexia-logo.png" alt="FLEXIA" /></div></div>
                 <h3 class="modal-title">Buy Coupon Code</h3>
-
-                <p class="modal-info">
-                    Pay via <strong>Bank Transfer</strong> or <strong>Card</strong> and receive your coupon code via email.
-                </p>
-
+                <p class="modal-info">Pay via <strong>Bank Transfer</strong> or <strong>Card</strong> and receive your coupon code via email.</p>
                 <div class="payment-methods-badges">
                     <span class="payment-method-badge bank"><i class="fas fa-university"></i> Bank Transfer</span>
                     <span class="payment-method-badge card"><i class="fas fa-credit-card"></i> Card</span>
                     <span class="payment-method-badge ussd"><i class="fas fa-mobile-alt"></i> USSD</span>
                     <span class="payment-method-badge qr"><i class="fas fa-qrcode"></i> QR</span>
                 </div>
-
-                <div class="input-group">
-                    <input type="email" id="payment-email" class="form-input" placeholder="Your Email Address" required />
-                    <i class="fas fa-envelope input-icon"></i>
-                </div>
-
-                <div class="input-group">
-                    <input type="number" id="payment-amount" class="form-input" placeholder="Amount (₦)" min="500" value="500" />
-                    <i class="fas fa-money-bill-wave input-icon"></i>
-                </div>
-
-                <button class="btn-primary" onclick="PaystackPayment.initiate()" id="paystack-pay-btn">
-                    <i class="fas fa-credit-card"></i> Pay Now
-                </button>
-
+                <div class="input-group"><input type="email" id="payment-email" class="form-input" placeholder="Your Email" /><i class="fas fa-envelope input-icon"></i></div>
+                <div class="input-group"><input type="number" id="payment-amount" class="form-input" placeholder="Amount (₦)" min="500" value="500" /><i class="fas fa-money-bill-wave input-icon"></i></div>
+                <button class="btn-primary" onclick="PaystackPayment.initiate()" id="paystack-pay-btn"><i class="fas fa-credit-card"></i> Pay Now</button>
                 <div id="bank-transfer-info" class="bank-transfer-info">
                     <h4><i class="fas fa-university"></i> Bank Transfer Details</h4>
-                    <div id="transfer-details" class="bank-transfer-details">
-                        <!-- Dynamically populated -->
-                    </div>
-                    <div class="payment-timer-container">
-                        <span class="payment-timer-label"><i class="fas fa-clock"></i> Time Remaining:</span>
-                        <span id="payment-timer-value" class="payment-timer-value">60:00</span>
-                    </div>
-                    <p class="payment-timer-note">
-                        <i class="fas fa-info-circle"></i> Transfer the exact amount before the timer expires
-                    </p>
+                    <div id="transfer-details" class="bank-transfer-details"></div>
+                    <div class="payment-timer-container"><span class="payment-timer-label"><i class="fas fa-clock"></i> Time Remaining:</span><span id="payment-timer-value" class="payment-timer-value">60:00</span></div>
+                    <p class="payment-timer-note"><i class="fas fa-info-circle"></i> Transfer the exact amount before timer expires</p>
                 </div>
-
                 <div id="payment-message" class="message"></div>
                 <button class="btn-close" onclick="PaystackPayment.closeModal()">CLOSE</button>
             </div>
         </div>
     </div>
 
-    <!-- ============================================================
-         SCRIPTS
-         ============================================================ -->
     <script src="script.js"></script>
-
     <script>
-        // Additional init
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('FLEXIA Production Frontend v17.0 Loaded');
-
-            // Auto-fill coupon from URL parameter
-            var urlParams = new URLSearchParams(window.location.search);
-            var coupon = urlParams.get('coupon');
-            var tab = urlParams.get('tab');
-
-            if (coupon) {
-                document.getElementById('reg-coupon').value = coupon;
-                if (tab === 'register') {
-                    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
-                    document.querySelector('[data-tab="register"]').classList.add('active');
-                    document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
-                    document.getElementById('register-form').classList.add('active');
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const ref = urlParams.get('ref');
+        if (ref) {
+            setTimeout(async function() {
+                const result = await PaystackPayment.checkStatus(ref);
+                if (result.success && result.status === 'COMPLETED') {
+                    window.history.replaceState({}, document.title, window.location.pathname);
                 }
-                // No welcome message – silent
-            }
-
-            // Check payment status on return
-            var ref = urlParams.get('ref');
-            if (ref) {
-                setTimeout(async function() {
-                    if (typeof PaystackPayment !== 'undefined') {
-                        var result = await PaystackPayment.checkStatus(ref);
-                        if (result.success && result.status === 'COMPLETED') {
-                            // no message – just update state
-                            window.history.replaceState({}, document.title, window.location.pathname);
-                        }
-                    }
-                }, 2000);
-            }
-        });
-
-        // Placeholder functions for navigation
-        function navigateTab(tab) {
-            if (tab === 'home') return;
-            // silent navigation
+            }, 2000);
         }
-
-        function viewAllActivity() {
-            // silent
-        }
-
-        function openPaymentModal() {
-            if (typeof PaystackPayment !== 'undefined') {
-                PaystackPayment.openRegistrationPayment();
-            }
-        }
+    });
+    function navigateTab(tab) { if (tab !== 'home') { /* silent */ } }
+    function viewAllActivity() { /* silent */ }
+    function openPaymentModal() { PaystackPayment.openRegistrationPayment(); }
     </script>
-
 </body>
 </html>
