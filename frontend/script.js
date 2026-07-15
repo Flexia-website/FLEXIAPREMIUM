@@ -4,38 +4,128 @@
 // No auto-refresh, no user notifications, premium UI
 // ============================================================
 
+// ========== EMBEDDED CSS ==========
+const embeddedCSS = `
+  .password-container {
+    position: relative;
+    width: 100%;
+    margin-bottom: 15px;
+  }
+  .password-container input {
+    width: 100%;
+    padding-left: 45px !important;
+    padding-right: 45px !important;
+    box-sizing: border-box !important;
+  }
+  .password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: #A0A0B5;
+    cursor: pointer;
+    font-size: 1.1rem;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: color 0.2s, background 0.2s;
+    z-index: 10;
+  }
+  .password-toggle:hover {
+    color: #8000FF;
+    background: rgba(128, 0, 255, 0.1);
+  }
+  .btn-loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+  }
+  .btn-loading::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  .global-message {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 24px;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    border-radius: 8px;
+    z-index: 10000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    animation: slideDown 0.3s ease-out;
+    max-width: 90%;
+    text-align: center;
+    border-left: 4px solid;
+    font-weight: 600;
+    display: none;
+  }
+  .global-message.success { border-left-color: #00ff88; background: rgba(0,255,136,0.1); }
+  .global-message.error { border-left-color: #ff0055; background: rgba(255,0,85,0.1); }
+  .global-message.warning { border-left-color: #ffaa00; background: rgba(255,170,0,0.1); }
+  .global-message.info { border-left-color: #00ccff; background: rgba(0,204,255,0.1); }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+  @keyframes slideOut {
+    from { opacity: 1; transform: translateX(-50%) translateY(0); }
+    to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+  }
+`;
+
+var style = document.createElement('style');
+style.textContent = embeddedCSS;
+document.head.appendChild(style);
+
 // ========== CONFIGURATION ==========
-const CONFIG = {
-  MIN_WITHDRAWAL: 100000,
-  REFERRAL_BONUS: 7500,
-  TIKTOK_REWARD: 150,
-  SNAKE_REWARD: 20,
+var CONFIG = {
+  MIN_WITHDRAWAL: window.APP_CONFIG?.MIN_WITHDRAWAL || 100000,
+  REFERRAL_BONUS: window.APP_CONFIG?.REFERRAL_BONUS || 7500,
+  TIKTOK_REWARD: window.APP_CONFIG?.REWARDS?.TIKTOK_BASE || 150,
+  SNAKE_REWARD: window.APP_CONFIG?.REWARDS?.SNAKE_APPLE || 200,
   COIN_FLIP_MIN_BET: 100,
   PLINKO_MIN_BET: 100,
   CLAIM_COOLDOWN: 2000,
-  GAME_DAILY_LIMITS: {
+  GAME_DAILY_LIMITS: window.APP_CONFIG?.GAME_DAILY_LIMITS || {
     'snake': 17,
     'coinflip': 12,
     'plinko': 12,
     'spin': 1,
     'tiktok': 3
   },
-  PAYSTACK_MIN_AMOUNT: 500
+  PAYSTACK_MIN_AMOUNT: window.APP_CONFIG?.PAYSTACK?.MIN_AMOUNT || 500
 };
 
-// ========== DOM UTILITY ==========
-function $(id) { return document.getElementById(id); }
-function qs(sel) { return document.querySelector(sel); }
-function qsa(sel) { return document.querySelectorAll(sel); }
-
-// ========== APP CORE ==========
-const App = {
+// ========== CORE APP ==========
+var App = {
   currentUser: null,
   balanceVisible: true,
+  lastBalanceUpdate: 0,
 
-  async init() {
+  init: async function () {
+    console.log('App.init() called');
     await this.checkAuth();
-    if ($('app-screen')) {
+    if (document.getElementById('app-screen')) {
       await Profile.load();
       await Banking.loadBanks();
       this.setupTheme();
@@ -46,20 +136,36 @@ const App = {
     }
   },
 
-  async checkAuth() {
+  checkAuth: async function () {
+    console.log('App.checkAuth() called');
     try {
-      const res = await fetch('/api/user/profile', { credentials: 'include' });
-      const data = await res.json();
+      fetch('/api/config').then(function(r) {
+        return r.json();
+      }).then(function(cfg) {
+        if (cfg.success && cfg.min_withdrawal != null) {
+          CONFIG.MIN_WITHDRAWAL = cfg.min_withdrawal;
+          var minEl = document.getElementById('withdraw-min');
+          if (minEl) minEl.textContent = '₦' + cfg.min_withdrawal.toLocaleString();
+        }
+      }).catch(function() {});
+
+      var response = await this.requestWithTimeout('/api/user/profile');
+      var data = await response.json();
+      console.log('Auth check response:', data);
+      
       if (data.success) {
         this.currentUser = data.user;
         this.showAppScreen();
         this.updateBalanceDisplay();
-        $('dashboard-username').textContent = data.user.username;
-        $('dashboard-avatar').textContent = data.user.username.charAt(0).toUpperCase();
-        if (data.user.ui_theme === 'dark') document.body.classList.add('dark-mode');
+        document.getElementById('dashboard-username').textContent = data.user.username;
+        document.getElementById('dashboard-avatar').textContent = data.user.username.charAt(0).toUpperCase();
+        if (data.user.ui_theme === 'dark') {
+          document.body.classList.add('dark-mode');
+        }
         SessionManager.init();
         console.log('User logged in:', data.user.username);
       } else {
+        console.log('No valid session, showing auth screen');
         this.showAuthScreen();
       }
     } catch (err) {
@@ -68,107 +174,151 @@ const App = {
     }
   },
 
-  showAppScreen() {
-    $('auth-screen').style.display = 'none';
-    $('app-screen').style.display = 'block';
-    $('app-screen').classList.add('active');
+  showAppScreen: function () {
+    console.log('Showing app screen');
+    var authScreen = document.getElementById('auth-screen');
+    var appScreen = document.getElementById('app-screen');
+    
+    if (authScreen) {
+      authScreen.style.display = 'none';
+    }
+    if (appScreen) {
+      appScreen.style.display = 'block';
+      appScreen.classList.add('active');
+    }
   },
 
-  showAuthScreen() {
-    $('auth-screen').style.display = 'flex';
-    $('app-screen').style.display = 'none';
-    $('app-screen').classList.remove('active');
+  showAuthScreen: function () {
+    console.log('Showing auth screen');
+    var authScreen = document.getElementById('auth-screen');
+    var appScreen = document.getElementById('app-screen');
+    
+    if (authScreen) {
+      authScreen.style.display = 'flex';
+    }
+    if (appScreen) {
+      appScreen.style.display = 'none';
+      appScreen.classList.remove('active');
+    }
   },
 
-  updateBalanceDisplay() {
+  updateBalanceDisplay: function () {
     if (!this.currentUser) return;
-    const bal = $('balance-display');
-    if (bal) {
-      bal.textContent = this.currentUser.balance.toLocaleString(undefined, {
+    var display = document.getElementById('balance-display');
+    if (display) {
+      display.textContent = this.currentUser.balance.toLocaleString(undefined, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       });
     }
-    const minEl = $('withdraw-min');
+    var minEl = document.getElementById('withdraw-min');
     if (minEl) minEl.textContent = '₦' + CONFIG.MIN_WITHDRAWAL.toLocaleString();
 
-    const gameTypes = ['COINFLIP_WIN', 'PLINKO_WIN', 'PLINKO_REPORT', 'SNAKE_REWARD'];
-    const gameTotal = (this.currentUser.transactions || [])
-      .filter(t => gameTypes.includes(t.type) && parseFloat(t.amount || 0) > 0)
-      .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+    var gameRewardsEl = document.getElementById('game-rewards-display');
+    var gameTypes = ['COINFLIP_WIN', 'PLINKO_WIN', 'PLINKO_REPORT', 'SNAKE_REWARD'];
+    var gameTotal = (this.currentUser.transactions || [])
+      .filter(function(t) { return gameTypes.indexOf(t.type) !== -1 && parseFloat(t.amount || 0) > 0; })
+      .reduce(function(sum, t) { return sum + parseFloat(t.amount || 0); }, 0);
 
-    const grd = $('game-rewards-display');
-    if (grd) {
-      grd.textContent = '₦' + gameTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (gameRewardsEl) {
+      gameRewardsEl.textContent = '₦' + gameTotal.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
     }
 
-    const totalBal = parseFloat(this.currentUser.balance);
-    const refTikTokBal = Math.max(0, totalBal - gameTotal);
-    const fmt = (v) => '₦' + v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    var totalBal = parseFloat(this.currentUser.balance);
+    var refTikTokBal = Math.max(0, totalBal - gameTotal);
+    var fmt = function(v) { return '₦' + v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
 
-    const wdRef = $('withdraw-ref-balance');
+    var wdRef = document.getElementById('withdraw-ref-balance');
     if (wdRef) wdRef.textContent = fmt(refTikTokBal);
 
-    const wdGame = $('withdraw-game-balance');
+    var wdGame = document.getElementById('withdraw-game-balance');
     if (wdGame) wdGame.textContent = fmt(gameTotal);
 
-    const wdBal = $('withdraw-balance');
-    if (wdBal) wdBal.textContent = fmt(totalBal);
+    var withdrawBalance = document.getElementById('withdraw-balance');
+    if (withdrawBalance) {
+      withdrawBalance.textContent = fmt(totalBal);
+    }
+
+    this.lastBalanceUpdate = Date.now();
   },
 
-  async fetchFreshBalance() {
+  fetchFreshBalance: async function () {
     if (!this.currentUser) return;
     try {
-      const res = await fetch('/api/user/profile', {
+      fetch('/api/config').then(function(r) { return r.json(); }).then(function(cfg) {
+        if (cfg.success && cfg.min_withdrawal != null) {
+          CONFIG.MIN_WITHDRAWAL = cfg.min_withdrawal;
+          var minEl = document.getElementById('withdraw-min');
+          if (minEl) minEl.textContent = '₦' + cfg.min_withdrawal.toLocaleString();
+        }
+      }).catch(function() {});
+
+      var response = await this.requestWithTimeout('/api/user/profile', {
         credentials: 'include',
         headers: { 'Cache-Control': 'no-cache' }
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.user) {
+      if (response.ok) {
+        var data = await response.json();
+        if (data.success && data.user && data.user.balance !== undefined) {
           this.currentUser.balance = parseFloat(data.user.balance);
           if (data.user.transactions) this.currentUser.transactions = data.user.transactions;
           this.updateBalanceDisplay();
         }
       }
-    } catch (e) { /* silent */ }
+    } catch (e) { /* silent fail */ }
   },
 
-  updateBalance(newBalance) {
+  updateBalance: function (newBalance) {
     if (this.currentUser) {
       this.currentUser.balance = newBalance;
       this.updateBalanceDisplay();
     }
   },
 
-  showModal(modalId) {
-    qsa('.modal').forEach(m => m.classList.add('hidden'));
-    $(modalId).classList.remove('hidden');
-  },
-
-  closeModal(modalId) {
-    $(modalId).classList.add('hidden');
-  },
-
-  showMessage(text, type = 'info', duration = 5000) {
-    if (type === 'error' || type === 'warning') {
-      const existing = document.querySelector('.global-message');
-      if (existing) existing.remove();
-      const el = document.createElement('div');
-      el.className = 'global-message ' + type;
-      el.style.display = 'block';
-      el.textContent = text;
-      document.body.appendChild(el);
-      setTimeout(() => {
-        el.style.animation = 'slideOut 0.3s ease-out';
-        setTimeout(() => { if (el.parentNode) el.remove(); }, 300);
-      }, duration);
+  toggleBalance: function () {
+    this.balanceVisible = !this.balanceVisible;
+    var display = document.getElementById('balance-display');
+    if (display) {
+      display.textContent = this.balanceVisible
+        ? this.currentUser.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })
+        : '••••••••';
     }
   },
 
-  toggleTheme() {
+  showModal: function (modalId) {
+    document.querySelectorAll('.modal').forEach(function(m) { m.classList.add('hidden'); });
+    document.getElementById(modalId).classList.remove('hidden');
+  },
+
+  closeModal: function (modalId) {
+    document.getElementById(modalId).classList.add('hidden');
+  },
+
+  showMessage: function (text, type, duration) {
+    if (type === undefined) type = 'info';
+    if (duration === undefined) duration = 5000;
+    document.querySelectorAll('.global-message').forEach(function(el) { el.remove(); });
+    var messageEl = document.createElement('div');
+    messageEl.className = 'global-message ' + type;
+    messageEl.textContent = text;
+    messageEl.style.display = 'block';
+    document.body.appendChild(messageEl);
+    setTimeout(function() {
+      messageEl.style.animation = 'slideOut 0.3s ease-out';
+      setTimeout(function() {
+        if (messageEl.parentNode) {
+          messageEl.remove();
+        }
+      }, 300);
+    }, duration);
+  },
+
+  toggleTheme: function () {
     document.body.classList.toggle('dark-mode');
-    const isDark = document.body.classList.contains('dark-mode');
+    var isDark = document.body.classList.contains('dark-mode');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
     fetch('/api/user/set-theme', {
       method: 'POST',
@@ -178,67 +328,103 @@ const App = {
     }).catch(console.error);
   },
 
-  setupTheme() {
-    const saved = localStorage.getItem('theme') || 'light';
-    if (saved === 'dark') document.body.classList.add('dark-mode');
+  setupTheme: function () {
+    var savedTheme = localStorage.getItem('theme') || 'light';
+    if (savedTheme === 'dark') {
+      document.body.classList.add('dark-mode');
+    }
   },
 
-  async requestWithTimeout(url, options = {}, timeout = 10000) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+  // AUTO-REFRESH DISABLED per user request
+  setupAutoRefresh: function () {
+    // No auto-refresh - user controls when to refresh
+  },
+
+  requestWithTimeout: async function(url, options, timeout) {
+    if (options === undefined) options = {};
+    if (timeout === undefined) timeout = 10000;
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function() { controller.abort(); }, timeout);
     try {
-      const response = await fetch(url, { ...options, signal: controller.signal });
+      var response = await fetch(url, Object.assign({}, options, { signal: controller.signal }));
       clearTimeout(timeoutId);
+      var contentType = response.headers.get('content-type');
+      if (!contentType || contentType.indexOf('application/json') === -1) {
+        throw new Error('Server returned non-JSON response. Please try again.');
+      }
       return response;
     } catch (error) {
       clearTimeout(timeoutId);
-      if (error.name === 'AbortError') throw new Error('Request timed out');
+      if (error.name === 'AbortError') {
+        throw new Error('Request timed out. Please try again.');
+      }
       throw error;
     }
   }
 };
 
-// ========== SESSION MANAGER ==========
-const SessionManager = {
+// ========== SESSION PERSISTENCE & RECOVERY ==========
+var SessionManager = {
   lastActiveTime: null,
   sessionCheckInterval: null,
 
-  init() {
+  init: function() {
     this.checkSessionStatus();
     this.trackActivity();
-    this.sessionCheckInterval = setInterval(() => this.refreshSessionIfActive(), 300000);
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') this.handleAppResume();
+    var self = this;
+    this.sessionCheckInterval = setInterval(function() { self.refreshSessionIfActive(); }, 300000);
+    
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'visible') {
+        self.handleAppResume();
+      }
     });
-    window.addEventListener('online', () => this.handleAppResume());
+    
+    window.addEventListener('online', function() {
+      self.handleAppResume();
+    });
+    
+    window.addEventListener('offline', function() {
+      // silent
+    });
+    
     console.log('Session Manager initialized');
   },
 
-  async checkSessionStatus() {
+  checkSessionStatus: async function() {
     try {
-      const res = await fetch('/api/session/status', { credentials: 'include' });
-      const data = await res.json();
+      var response = await fetch('/api/session/status', {
+        credentials: 'include'
+      });
+      var data = await response.json();
+      
       if (data.success && data.authenticated) {
         this.lastActiveTime = Date.now();
         return true;
+      } else {
+        if (document.getElementById('app-screen') && 
+            document.getElementById('app-screen').style.display !== 'none') {
+          App.showAuthScreen();
+        }
+        return false;
       }
-      return false;
     } catch (error) {
       console.error('Session check error:', error);
       return false;
     }
   },
 
-  async refreshSessionIfActive() {
+  refreshSessionIfActive: async function() {
     if (App.currentUser) {
       try {
-        const res = await fetch('/api/session/refresh', {
+        var response = await fetch('/api/session/refresh', {
           method: 'POST',
           credentials: 'include'
         });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success) this.lastActiveTime = Date.now();
+        var data = await response.json();
+        if (data.success) {
+          this.lastActiveTime = Date.now();
+          console.log('Session refreshed');
         }
       } catch (error) {
         console.warn('Session refresh failed:', error);
@@ -246,220 +432,304 @@ const SessionManager = {
     }
   },
 
-  trackActivity() {
-    const events = ['click', 'touchstart', 'scroll', 'keydown', 'mousemove'];
-    const handler = () => { this.lastActiveTime = Date.now(); };
-    events.forEach(event => document.addEventListener(event, handler, { passive: true }));
+  trackActivity: function() {
+    var events = ['click', 'touchstart', 'scroll', 'keydown', 'mousemove'];
+    var self = this;
+    var activityHandler = function() {
+      self.lastActiveTime = Date.now();
+    };
+    events.forEach(function(event) {
+      document.addEventListener(event, activityHandler, { passive: true });
+    });
   },
 
-  handleAppResume() {
-    this.checkSessionStatus().then(isValid => {
+  handleAppResume: function() {
+    console.log('App resumed, checking session...');
+    var self = this;
+    this.checkSessionStatus().then(function(isValid) {
       if (isValid && App.currentUser) {
         App.fetchFreshBalance();
       } else if (isValid && !App.currentUser) {
         App.checkAuth();
       }
     });
+    this.restoreFromLocalStorage();
   },
 
-  saveState() {
+  saveState: function() {
     if (App.currentUser) {
       try {
-        localStorage.setItem('flexia_session_state', JSON.stringify({
+        var state = {
           userId: App.currentUser.id,
           username: App.currentUser.username,
           balance: App.currentUser.balance,
-          lastActive: Date.now()
-        }));
-      } catch (e) { /* ignore */ }
+          lastActive: Date.now(),
+          savedAt: new Date().toISOString()
+        };
+        localStorage.setItem('flexia_session_state', JSON.stringify(state));
+      } catch (e) {
+        console.warn('Failed to save session state:', e);
+      }
     }
   },
 
-  restoreFromLocalStorage() {
+  restoreFromLocalStorage: function() {
     try {
-      const saved = localStorage.getItem('flexia_session_state');
+      var saved = localStorage.getItem('flexia_session_state');
       if (saved) {
-        const state = JSON.parse(saved);
-        const age = Date.now() - state.lastActive;
+        var state = JSON.parse(saved);
+        var age = Date.now() - state.lastActive;
         if (age < 1800000 && !App.currentUser) {
-          this.checkSessionStatus().then(isValid => {
-            if (isValid) App.checkAuth();
+          console.log('Restoring session from localStorage');
+          this.checkSessionStatus().then(function(isValid) {
+            if (isValid) {
+              App.checkAuth();
+            }
           });
         }
       }
+    } catch (e) {
+      console.warn('Failed to restore from localStorage:', e);
+    }
+  },
+
+  saveScrollPosition: function() {
+    try {
+      sessionStorage.setItem('flexia_scroll_position', window.scrollY.toString());
+    } catch (e) { /* ignore */ }
+  },
+
+  saveActiveTab: function(tab) {
+    try {
+      sessionStorage.setItem('flexia_active_tab', tab);
     } catch (e) { /* ignore */ }
   }
 };
 
-window.addEventListener('beforeunload', () => SessionManager.saveState());
+// Save state on beforeunload
+window.addEventListener('beforeunload', function() {
+  SessionManager.saveState();
+  SessionManager.saveScrollPosition();
+});
 
-// ========== AUTH ==========
-const Auth = {
-  togglePasswordVisibility(fieldId) {
-    const field = $(fieldId);
-    const toggle = field.nextElementSibling;
-    if (field.type === 'password') {
-      field.type = 'text';
-      toggle.innerHTML = '<i class="fas fa-eye-slash"></i>';
+// ========== AUTHENTICATION ==========
+var Auth = {
+  togglePasswordVisibility: function(fieldId) {
+    var passwordField = document.getElementById(fieldId);
+    var toggleBtn = passwordField.nextElementSibling;
+    if (passwordField.type === 'password') {
+      passwordField.type = 'text';
+      toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+      toggleBtn.setAttribute('title', 'Hide password');
     } else {
-      field.type = 'password';
-      toggle.innerHTML = '<i class="fas fa-eye"></i>';
+      passwordField.type = 'password';
+      toggleBtn.innerHTML = '<i class="fas fa-eye"></i>';
+      toggleBtn.setAttribute('title', 'Show password');
     }
   },
 
-  initPasswordToggles() {
-    ['login-password', 'reg-password'].forEach(id => {
-      const field = $(id);
-      if (field && !field.parentNode.classList.contains('password-container')) {
-        const container = document.createElement('div');
-        container.className = 'password-container';
-        field.parentNode.insertBefore(container, field);
-        container.appendChild(field);
-        const toggle = document.createElement('button');
-        toggle.type = 'button';
-        toggle.className = 'password-toggle';
-        toggle.innerHTML = '<i class="fas fa-eye"></i>';
-        toggle.onclick = () => this.togglePasswordVisibility(id);
-        container.appendChild(toggle);
-      }
-    });
+  initPasswordToggles: function() {
+    var loginPasswordField = document.getElementById('login-password');
+    if (loginPasswordField && !loginPasswordField.parentNode?.classList?.contains('password-container')) {
+      var loginContainer = document.createElement('div');
+      loginContainer.className = 'password-container';
+      loginPasswordField.parentNode.insertBefore(loginContainer, loginPasswordField);
+      loginContainer.appendChild(loginPasswordField);
+      var loginToggle = document.createElement('button');
+      loginToggle.type = 'button';
+      loginToggle.className = 'password-toggle';
+      loginToggle.innerHTML = '<i class="fas fa-eye"></i>';
+      loginToggle.setAttribute('title', 'Show password');
+      loginToggle.setAttribute('aria-label', 'Toggle password visibility');
+      loginToggle.onclick = function() { Auth.togglePasswordVisibility('login-password'); };
+      loginContainer.appendChild(loginToggle);
+    }
+    var regPasswordField = document.getElementById('reg-password');
+    if (regPasswordField && !regPasswordField.parentNode?.classList?.contains('password-container')) {
+      var regContainer = document.createElement('div');
+      regContainer.className = 'password-container';
+      regPasswordField.parentNode.insertBefore(regContainer, regPasswordField);
+      regContainer.appendChild(regPasswordField);
+      var regToggle = document.createElement('button');
+      regToggle.type = 'button';
+      regToggle.className = 'password-toggle';
+      regToggle.innerHTML = '<i class="fas fa-eye"></i>';
+      regToggle.setAttribute('title', 'Show password');
+      regToggle.setAttribute('aria-label', 'Toggle password visibility');
+      regToggle.onclick = function() { Auth.togglePasswordVisibility('reg-password'); };
+      regContainer.appendChild(regToggle);
+    }
   },
 
-  async login() {
-    const username = $('login-username').value.trim();
-    const password = $('login-password').value;
-    const msg = $('login-message');
+  login: async function () {
+    var identifier = document.getElementById('login-username').value.trim();
+    var password = document.getElementById('login-password').value;
+    var messageEl = document.getElementById('login-message');
 
-    if (!username || !password) {
-      msg.textContent = 'Please fill all fields';
-      msg.className = 'message error';
+    if (!identifier || !password) {
+      messageEl.textContent = 'Please fill all fields';
+      messageEl.className = 'message error';
       return;
     }
 
     try {
-      const res = await App.requestWithTimeout('/api/auth/login', {
+      var response = await App.requestWithTimeout('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username: identifier, password: password })
       });
-      const data = await res.json();
+      var data = await response.json();
 
-      msg.textContent = data.message;
-      msg.className = data.success ? 'message success' : 'message error';
+      messageEl.textContent = data.message;
+      messageEl.className = data.success ? 'message success' : 'message error';
 
       if (data.success) {
         App.currentUser = data.user;
         App.showAppScreen();
         App.updateBalanceDisplay();
-        $('login-username').value = '';
-        $('login-password').value = '';
+        document.getElementById('login-username').value = '';
+        document.getElementById('login-password').value = '';
+
+        var loginPassword = document.getElementById('login-password');
+        if (loginPassword.type === 'text') {
+          loginPassword.type = 'password';
+          var toggleBtn = loginPassword.nextElementSibling;
+          if (toggleBtn) {
+            toggleBtn.innerHTML = '<i class="fas fa-eye"></i>';
+            toggleBtn.setAttribute('title', 'Show password');
+          }
+        }
         SessionManager.init();
+        console.log('Login successful, dashboard shown');
       }
     } catch (error) {
-      msg.textContent = error.message || 'Network error';
-      msg.className = 'message error';
+      messageEl.textContent = error.message || 'Network error. Please try again.';
+      messageEl.className = 'message error';
     }
   },
 
-  async register() {
-    const username = $('reg-username').value.trim();
-    const password = $('reg-password').value;
-    const coupon = $('reg-coupon').value.trim().toUpperCase();
-    const referral = $('reg-referral').value.trim();
-    const contact = $('reg-contact').value.trim() || '';
-    const msg = $('register-message');
-    const btn = $('register-btn');
+  register: async function () {
+    var username = document.getElementById('reg-username').value.trim();
+    var password = document.getElementById('reg-password').value;
+    var coupon = document.getElementById('reg-coupon').value.trim().toUpperCase();
+    var referral = document.getElementById('reg-referral').value.trim();
+    var contact = document.getElementById('reg-contact')?.value.trim() || '';
+    var messageEl = document.getElementById('register-message');
+    var btn = document.getElementById('register-btn');
 
     if (!username || !password || !coupon) {
-      msg.textContent = 'All required fields must be filled';
-      msg.className = 'message error';
+      messageEl.textContent = 'All required fields must be filled';
+      messageEl.className = 'message error';
       return;
     }
+
     if (username.length < 3) {
-      msg.textContent = 'Username must be at least 3 characters';
-      msg.className = 'message error';
+      messageEl.textContent = 'Username must be at least 3 characters';
+      messageEl.className = 'message error';
       return;
     }
+
     if (password.length < 6) {
-      msg.textContent = 'Password must be at least 6 characters';
-      msg.className = 'message error';
+      messageEl.textContent = 'Password must be at least 6 characters';
+      messageEl.className = 'message error';
       return;
     }
 
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CHECKING...';
-    msg.textContent = 'Checking coupon...';
-    msg.className = 'message info';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CHECKING COUPON...';
+    messageEl.textContent = 'Checking coupon code...';
+    messageEl.className = 'message info';
 
     try {
-      const check = await App.requestWithTimeout('/api/auth/validate-coupon', {
+      var couponCheck = await App.requestWithTimeout('/api/auth/validate-coupon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ coupon_code: coupon })
       });
-      const couponData = await check.json();
+      var couponData = await couponCheck.json();
 
       if (!couponData.success) {
-        msg.textContent = couponData.message || 'Invalid coupon';
-        msg.className = 'message error';
+        messageEl.textContent = couponData.message || 'Invalid coupon code. Please check and try again.';
+        messageEl.className = 'message error';
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-user-plus"></i> CREATE ACCOUNT';
         return;
       }
 
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CREATING...';
-      msg.textContent = 'Creating account...';
-      msg.className = 'message info';
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CREATING ACCOUNT...';
+      messageEl.textContent = 'Creating your account...';
+      messageEl.className = 'message info';
 
-      const res = await App.requestWithTimeout('/api/auth/register', {
+      var response = await App.requestWithTimeout('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, coupon_code: coupon, referral_code: referral, contact })
+        body: JSON.stringify({ username: username, password: password, coupon_code: coupon, referral_code: referral, contact: contact })
       });
-      const data = await res.json();
+
+      var data = await response.json();
 
       if (data.success) {
-        msg.textContent = 'Account created! Please login.';
-        msg.className = 'message success';
-        ['reg-username', 'reg-password', 'reg-coupon', 'reg-referral', 'reg-contact'].forEach(id => $(id).value = '');
-        setTimeout(() => {
-          qsa('.tab').forEach(t => t.classList.remove('active'));
-          qs('[data-tab="login"]').classList.add('active');
-          qsa('.auth-form').forEach(f => f.classList.remove('active'));
-          $('login-form').classList.add('active');
-          $('login-message').textContent = 'Account created! Please login.';
-          $('login-message').className = 'message success';
-          $('login-username').value = username;
+        messageEl.textContent = 'Account created successfully! Please login.';
+        messageEl.className = 'message success';
+
+        document.getElementById('reg-username').value = '';
+        document.getElementById('reg-password').value = '';
+        document.getElementById('reg-coupon').value = '';
+        document.getElementById('reg-referral').value = '';
+        document.getElementById('reg-contact').value = '';
+
+        setTimeout(function() {
+          document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+          document.querySelector('[data-tab="login"]').classList.add('active');
+          document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
+          document.getElementById('login-form').classList.add('active');
+          document.getElementById('login-message').textContent = 'Account created! Please login with your credentials.';
+          document.getElementById('login-message').className = 'message success';
+          document.getElementById('login-username').value = username;
           btn.disabled = false;
           btn.innerHTML = '<i class="fas fa-user-plus"></i> CREATE ACCOUNT';
         }, 2000);
+
       } else {
-        msg.textContent = data.message || 'Registration failed';
-        msg.className = 'message error';
+        messageEl.textContent = data.message || 'Registration failed. Please try again.';
+        messageEl.className = 'message error';
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-user-plus"></i> CREATE ACCOUNT';
       }
+
     } catch (error) {
-      msg.textContent = error.message || 'Network error';
-      msg.className = 'message error';
+      console.error('Registration error:', error);
+      messageEl.textContent = error.message || 'Network error. Please try again.';
+      messageEl.className = 'message error';
       btn.disabled = false;
       btn.innerHTML = '<i class="fas fa-user-plus"></i> CREATE ACCOUNT';
     }
   },
 
-  buyCoupon() {
-    window.open('https://wa.me/2348160881049', '_blank');
+  buyCoupon: async function () {
+    try {
+      var response = await App.requestWithTimeout('/api/whatsapp/numbers');
+      var data = await response.json();
+      var number = (data.success && data.numbers && data.numbers[0]) ? data.numbers[0].number.trim() : '2348160881049';
+      window.open('https://wa.me/' + number, '_blank');
+    } catch (error) {
+      window.open('https://wa.me/2348160881049', '_blank');
+    }
   }
 };
 
 // ========== WITHDRAWAL DAY CHECK ==========
 async function checkWithdrawalDay() {
   try {
-    const res = await fetch('/api/withdrawal/check-day', { credentials: 'include' });
-    const data = await res.json();
+    var response = await fetch('/api/withdrawal/check-day', {
+      credentials: 'include'
+    });
+    var data = await response.json();
     if (data.success) {
-      const today = new Date().getDate();
-      const days = data.custom_withdrawal_days.length > 0 ? data.custom_withdrawal_days : data.global_withdrawal_days;
+      var today = new Date().getDate();
+      var days = data.custom_withdrawal_days.length > 0
+        ? data.custom_withdrawal_days
+        : data.global_withdrawal_days;
       if (!data.can_withdraw) {
         showWithdrawalDayModal(false, today, days);
         return false;
@@ -475,79 +745,136 @@ async function checkWithdrawalDay() {
 }
 
 function showWithdrawalDayModal(canWithdraw, today, days) {
-  const existing = document.getElementById('withdrawal-day-modal');
-  if (existing) existing.remove();
-  const sortedDays = days ? [...days].sort((a, b) => a - b) : [];
-  const modal = document.createElement('div');
+  var existingModal = document.getElementById('withdrawal-day-modal');
+  if (existingModal) existingModal.remove();
+  
+  var sortedDays = days ? days.slice().sort(function(a,b){return a-b;}) : [];
+  var nextDay = getNextAllowedDay(today, sortedDays);
+  
+  var modal = document.createElement('div');
   modal.id = 'withdrawal-day-modal';
   modal.className = 'withdrawal-day-modal';
-  modal.innerHTML = `
-    <div class="withdrawal-day-modal-content">
-      <div class="withdrawal-day-icon ${canWithdraw ? 'allowed' : 'not-allowed'}">${canWithdraw ? '✅' : '❌'}</div>
-      <h3 class="withdrawal-day-title">${canWithdraw ? 'Withdrawal Allowed Today!' : 'Withdrawal Not Allowed Today'}</h3>
-      <div class="withdrawal-day-message">
-        <p class="withdrawal-day-text">You <strong>${canWithdraw ? 'CAN' : 'CANNOT'}</strong> withdraw today (Day ${today}).</p>
-        <div class="withdrawal-day-info"><i class="fas fa-calendar-day"></i> <span>Today: Day ${today}</span></div>
-        ${days && days.length > 0 ? `
-          <div class="withdrawal-day-days">
-            <strong>Withdrawal Days:</strong>
-            <div style="margin-top: 8px;">${sortedDays.map(d => '<span class="withdrawal-day-day ' + (d === today ? 'current' : '') + '">Day ' + d + (d === today ? ' (Today)' : '') + '</span>').join('')}</div>
-          </div>
-        ` : ''}
-        ${!canWithdraw ? `
-          <div class="withdrawal-day-info" style="color: #ff6b6b;">
-            <i class="fas fa-clock"></i>
-            <span>Next allowed day: ${getNextAllowedDay(today, sortedDays)}</span>
-          </div>
-        ` : ''}
+  
+  var modalContent = document.createElement('div');
+  modalContent.className = 'withdrawal-day-modal-content ' + (canWithdraw ? 'allowed' : '');
+  
+  var daysHTML = '';
+  if (sortedDays.length > 0) {
+    var allDays = [];
+    for (var i = 1; i <= 31; i++) {
+      var isCurrent = i === today;
+      var isAllowed = sortedDays.includes(i);
+      var dayClass = 'withdrawal-day-day';
+      if (isCurrent) dayClass += ' current';
+      if (isAllowed) dayClass += ' allowed';
+      else dayClass += ' disabled';
+      allDays.push('<span class="' + dayClass + '">' + i + '</span>');
+    }
+    daysHTML = allDays.join('');
+  }
+  
+  modalContent.innerHTML = `
+    <div class="withdrawal-day-icon ${canWithdraw ? 'allowed' : 'not-allowed'}">
+      ${canWithdraw ? '✅' : '🚫'}
+    </div>
+    <h3 class="withdrawal-day-title ${canWithdraw ? 'allowed' : 'not-allowed'}">
+      ${canWithdraw ? 'Withdrawal Allowed Today!' : 'Withdrawal Not Allowed Today'}
+    </h3>
+    <p class="withdrawal-day-subtitle">
+      ${canWithdraw 
+        ? 'You <strong>CAN</strong> withdraw today (Day <strong>' + today + '</strong>)'
+        : 'You <strong>CANNOT</strong> withdraw today (Day <strong>' + today + '</strong>)'
+      }
+    </p>
+    
+    <div class="withdrawal-day-info-row">
+      <i class="fas fa-calendar-day"></i>
+      <span>Today: Day ${today}</span>
+    </div>
+    
+    <div class="withdrawal-day-days-container">
+      <div class="withdrawal-day-days-label">
+        <i class="fas fa-calendar-alt"></i> Withdrawal Days
       </div>
-      <div class="withdrawal-day-buttons">
-        ${canWithdraw ? `
-          <button class="withdrawal-day-btn-primary" onclick="closeWithdrawalDayModal(); Banking.openWithdraw();">
-            <i class="fas fa-money-bill-wave"></i> Proceed to Withdrawal
-          </button>
-        ` : `
-          <button class="withdrawal-day-btn-primary" onclick="closeWithdrawalDayModal();">
-            <i class="fas fa-check-circle"></i> OK, I Understand
-          </button>
-        `}
-        <button class="withdrawal-day-btn-secondary" onclick="closeWithdrawalDayModal()">Close</button>
+      <div class="withdrawal-day-days-grid">
+        ${daysHTML}
       </div>
     </div>
+    
+    ${!canWithdraw ? `
+      <div class="withdrawal-day-next">
+        <i class="fas fa-clock"></i>
+        <span>Next allowed day: <strong>${nextDay}</strong></span>
+      </div>
+    ` : ''}
+    
+    <div class="withdrawal-day-buttons">
+      ${canWithdraw ? `
+        <button class="withdrawal-day-btn-primary allowed" onclick="closeWithdrawalDayModal(); Banking.openWithdraw();">
+          <i class="fas fa-money-bill-wave"></i> Withdraw Now
+        </button>
+      ` : `
+        <button class="withdrawal-day-btn-primary" onclick="closeWithdrawalDayModal();">
+          <i class="fas fa-check-circle"></i> OK, I Understand
+        </button>
+      `}
+      <button class="withdrawal-day-btn-secondary" onclick="closeWithdrawalDayModal();">
+        <i class="fas fa-times"></i> Close
+      </button>
+    </div>
   `;
+  
+  modal.appendChild(modalContent);
   document.body.appendChild(modal);
+  
+  document.body.style.overflow = 'hidden';
+  
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+      closeWithdrawalDayModal();
+    }
+  });
+  
+  document.addEventListener('keydown', function handler(e) {
+    if (e.key === 'Escape') {
+      closeWithdrawalDayModal();
+      document.removeEventListener('keydown', handler);
+    }
+  });
 }
 
 function closeWithdrawalDayModal() {
-  const modal = document.getElementById('withdrawal-day-modal');
+  var modal = document.getElementById('withdrawal-day-modal');
   if (modal) modal.remove();
+  document.body.style.overflow = '';
 }
 
 function getNextAllowedDay(currentDay, allowedDays) {
   if (!allowedDays || allowedDays.length === 0) return 'Unknown';
-  const sorted = [...allowedDays].sort((a, b) => a - b);
-  for (const d of sorted) {
-    if (d > currentDay) return 'Day ' + d;
+  var sorted = allowedDays.slice().sort(function(a,b){return a-b;});
+  for (var i = 0; i < sorted.length; i++) {
+    if (sorted[i] > currentDay) return 'Day ' + sorted[i];
   }
   return 'Day ' + sorted[0] + ' (next month)';
 }
 
 // ========== PAYSTACK PAYMENT ==========
-const PaystackPayment = {
+var PaystackPayment = {
   timerInterval: null,
   timerSeconds: 3600,
 
   async initiate() {
-    const email = $('payment-email').value.trim();
-    const amount = parseFloat($('payment-amount').value);
-    const btn = $('paystack-pay-btn');
-    const msg = $('payment-message');
+    var email = document.getElementById('payment-email').value.trim();
+    var amount = parseFloat(document.getElementById('payment-amount').value);
+    var btn = document.getElementById('paystack-pay-btn');
+    var msg = document.getElementById('payment-message');
 
-    if (!email || !email.includes('@')) {
-      msg.textContent = 'Valid email required';
+    if (!email || email.indexOf('@') === -1) {
+      msg.textContent = 'Please enter a valid email address';
       msg.className = 'message error';
       return;
     }
+
     if (!amount || amount < CONFIG.PAYSTACK_MIN_AMOUNT) {
       msg.textContent = 'Minimum amount is ₦' + CONFIG.PAYSTACK_MIN_AMOUNT;
       msg.className = 'message error';
@@ -560,259 +887,412 @@ const PaystackPayment = {
     msg.className = 'message info';
 
     try {
-      const res = await App.requestWithTimeout('/api/paystack/initialize', {
+      var response = await App.requestWithTimeout('/api/paystack/initialize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ email, amount })
+        body: JSON.stringify({ email: email, amount: amount })
       });
-      const data = await res.json();
+
+      var data = await response.json();
 
       if (data.success) {
         msg.textContent = 'Payment initialized!';
         msg.className = 'message success';
+
         sessionStorage.setItem('paystack_ref', data.reference);
         sessionStorage.setItem('paystack_email', email);
+
         if (data.bank_transfer_details) {
           this.showBankTransferDetails(data.bank_transfer_details, data.expires_at);
           this.startTimer(data.expires_at);
         }
-        setTimeout(() => window.location.href = data.authorization_url, 2000);
+
+        setTimeout(function() {
+          window.location.href = data.authorization_url;
+        }, 2000);
       } else {
-        msg.textContent = data.message || 'Payment failed';
+        msg.textContent = data.message || 'Payment initialization failed';
         msg.className = 'message error';
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-credit-card"></i> Pay Now';
       }
     } catch (error) {
-      msg.textContent = error.message || 'Network error';
+      console.error('Payment error:', error);
+      msg.textContent = error.message || 'Network error. Please try again.';
       msg.className = 'message error';
       btn.disabled = false;
       btn.innerHTML = '<i class="fas fa-credit-card"></i> Pay Now';
     }
   },
 
-  showBankTransferDetails(details, expiresAt) {
-    const container = $('bank-transfer-info');
-    const detailsDiv = $('transfer-details');
+  showBankTransferDetails: function(details, expiresAt) {
+    var container = document.getElementById('bank-transfer-info');
+    var detailsDiv = document.getElementById('transfer-details');
+
     container.style.display = 'block';
     container.classList.add('visible');
+
     detailsDiv.innerHTML = `
-      <div class="row"><span class="label">Bank</span><span class="value">${details.bank_name || 'GTBank'}</span></div>
-      <div class="row"><span class="label">Account Number</span><span class="value account-number">${details.account_number || '0123456789'}</span></div>
-      <div class="row"><span class="label">Account Name</span><span class="value">${details.account_name || 'FLEXIA Payments'}</span></div>
-      <div class="row"><span class="label">Amount</span><span class="value" style="color:#00FF55;font-weight:bold;">₦${details.amount || '500.00'}</span></div>
+      <div class="row">
+        <span class="label">Bank</span>
+        <span class="value">${details.bank_name || 'GTBank'}</span>
+      </div>
+      <div class="row">
+        <span class="label">Account Number</span>
+        <span class="value account-number">${details.account_number || '0123456789'}</span>
+      </div>
+      <div class="row">
+        <span class="label">Account Name</span>
+        <span class="value">${details.account_name || 'FLEXIA Payments'}</span>
+      </div>
+      <div class="row">
+        <span class="label">Amount to Transfer</span>
+        <span class="value" style="color:#00FF55;font-weight:bold;">₦${details.amount || '500.00'}</span>
+      </div>
     `;
-    this.timerSeconds = expiresAt ? Math.floor((new Date(expiresAt) - new Date()) / 1000) : 3600;
-    if (this.timerSeconds < 0) this.timerSeconds = 3600;
+
+    if (expiresAt) {
+      this.timerSeconds = Math.floor((new Date(expiresAt) - new Date()) / 1000);
+      if (this.timerSeconds < 0) this.timerSeconds = 3600;
+    } else {
+      this.timerSeconds = 3600;
+    }
+
     container.scrollIntoView({ behavior: 'smooth', block: 'center' });
   },
 
-  startTimer(expiresAt) {
-    if (this.timerInterval) clearInterval(this.timerInterval);
-    this.timerSeconds = expiresAt ? Math.floor((new Date(expiresAt) - new Date()) / 1000) : 3600;
-    if (this.timerSeconds < 0) this.timerSeconds = 3600;
-    const timerEl = $('payment-timer-value');
-    this.timerInterval = setInterval(() => {
-      this.timerSeconds--;
-      if (this.timerSeconds <= 0) {
-        clearInterval(this.timerInterval);
+  startTimer: function(expiresAt) {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+    }
+
+    if (expiresAt) {
+      this.timerSeconds = Math.floor((new Date(expiresAt) - new Date()) / 1000);
+      if (this.timerSeconds < 0) this.timerSeconds = 3600;
+    } else {
+      this.timerSeconds = 3600;
+    }
+
+    var timerEl = document.getElementById('payment-timer-value');
+
+    var self = this;
+    this.timerInterval = setInterval(function() {
+      self.timerSeconds--;
+
+      if (self.timerSeconds <= 0) {
+        clearInterval(self.timerInterval);
         timerEl.textContent = '00:00';
         timerEl.className = 'payment-timer-value expired';
-        $('bank-transfer-info').style.borderColor = '#FF0000';
-        $('payment-message').textContent = 'Payment window expired. Start a new payment.';
-        $('payment-message').className = 'message error';
-        $('paystack-pay-btn').disabled = true;
+        document.getElementById('bank-transfer-info').style.borderColor = '#FF0000';
+
+        var msg = document.getElementById('payment-message');
+        msg.textContent = 'Payment window expired. Please start a new payment.';
+        msg.className = 'message error';
+
+        document.getElementById('paystack-pay-btn').disabled = true;
         return;
       }
-      const m = String(Math.floor(this.timerSeconds / 60)).padStart(2, '0');
-      const s = String(this.timerSeconds % 60).padStart(2, '0');
-      timerEl.textContent = m + ':' + s;
-      timerEl.className = 'payment-timer-value' +
-        (this.timerSeconds < 300 ? ' danger' : this.timerSeconds < 600 ? ' warning' : '');
+
+      var minutes = Math.floor(self.timerSeconds / 60);
+      var seconds = self.timerSeconds % 60;
+      timerEl.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+
+      if (self.timerSeconds < 300) {
+        timerEl.className = 'payment-timer-value danger';
+      } else if (self.timerSeconds < 600) {
+        timerEl.className = 'payment-timer-value warning';
+      } else {
+        timerEl.className = 'payment-timer-value';
+      }
     }, 1000);
   },
 
-  closeModal() {
-    if (this.timerInterval) clearInterval(this.timerInterval);
-    this.timerInterval = null;
-    $('bank-transfer-info').style.display = 'none';
-    $('bank-transfer-info').classList.remove('visible');
-    $('payment-timer-value').textContent = '60:00';
-    $('payment-timer-value').className = 'payment-timer-value';
+  closeModal: function() {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+
+    document.getElementById('bank-transfer-info').style.display = 'none';
+    document.getElementById('bank-transfer-info').classList.remove('visible');
+    document.getElementById('payment-timer-value').textContent = '60:00';
+    document.getElementById('payment-timer-value').className = 'payment-timer-value';
+
     App.closeModal('paystack-payment-modal');
   },
 
   async checkStatus(reference) {
     try {
-      const res = await App.requestWithTimeout('/api/paystack/status/' + reference, {
+      var response = await App.requestWithTimeout('/api/paystack/status/' + reference, {
         credentials: 'include'
       });
-      return await res.json();
+      var data = await response.json();
+      return data;
     } catch (error) {
       console.error('Status check error:', error);
       return { success: false, message: 'Failed to check status' };
     }
   },
 
-  openRegistrationPayment() {
+  openRegistrationPayment: function() {
     App.showModal('paystack-payment-modal');
-    $('payment-message').textContent = '';
-    $('payment-message').className = 'message';
-    $('paystack-pay-btn').disabled = false;
-    $('paystack-pay-btn').innerHTML = '<i class="fas fa-credit-card"></i> Pay Now';
-    $('bank-transfer-info').style.display = 'none';
-    $('bank-transfer-info').classList.remove('visible');
-    $('payment-timer-value').textContent = '60:00';
-    $('payment-timer-value').className = 'payment-timer-value';
-    const regEmail = $('reg-contact')?.value || '';
-    if (regEmail && regEmail.includes('@')) $('payment-email').value = regEmail;
-    const info = document.querySelector('#paystack-payment-modal .modal-info');
-    if (info) {
-      info.innerHTML = `Pay via <strong>Bank Transfer</strong> or <strong>Card</strong> and receive your coupon code via email.`;
+    document.getElementById('payment-message').textContent = '';
+    document.getElementById('payment-message').className = 'message';
+    document.getElementById('paystack-pay-btn').disabled = false;
+    document.getElementById('paystack-pay-btn').innerHTML = '<i class="fas fa-credit-card"></i> Pay Now';
+    document.getElementById('bank-transfer-info').style.display = 'none';
+    document.getElementById('bank-transfer-info').classList.remove('visible');
+    document.getElementById('payment-timer-value').textContent = '60:00';
+    document.getElementById('payment-timer-value').className = 'payment-timer-value';
+
+    var regEmail = document.getElementById('reg-contact')?.value || '';
+    if (regEmail && regEmail.indexOf('@') !== -1) {
+      document.getElementById('payment-email').value = regEmail;
+    }
+
+    var modalInfo = document.querySelector('#paystack-payment-modal .modal-info');
+    if (modalInfo) {
+      modalInfo.innerHTML = `
+        Pay via <strong>Bank Transfer</strong> or <strong>Card</strong> and receive your coupon code via email.
+        <br><br>
+        <span style="color: #00FF55; font-size: 0.85rem;">
+          <i class="fas fa-info-circle"></i> After payment, use the coupon code to register!
+        </span>
+      `;
+    }
+  },
+
+  openDashboardPayment: function() {
+    if (!App.currentUser) {
+      return;
+    }
+    App.showModal('paystack-payment-modal');
+    document.getElementById('payment-message').textContent = '';
+    document.getElementById('payment-message').className = 'message';
+    document.getElementById('paystack-pay-btn').disabled = false;
+    document.getElementById('paystack-pay-btn').innerHTML = '<i class="fas fa-credit-card"></i> Pay Now';
+    document.getElementById('bank-transfer-info').style.display = 'none';
+    document.getElementById('bank-transfer-info').classList.remove('visible');
+    document.getElementById('payment-timer-value').textContent = '60:00';
+    document.getElementById('payment-timer-value').className = 'payment-timer-value';
+
+    if (App.currentUser && App.currentUser.email) {
+      document.getElementById('payment-email').value = App.currentUser.email;
+    } else if (App.currentUser && App.currentUser.contact) {
+      document.getElementById('payment-email').value = App.currentUser.contact;
+    }
+
+    var modalInfo = document.querySelector('#paystack-payment-modal .modal-info');
+    if (modalInfo) {
+      modalInfo.innerHTML = `
+        Pay via <strong>Bank Transfer</strong> or <strong>Card</strong> and receive your coupon code via email.
+      `;
     }
   }
 };
 
 // ========== GAME MANAGER ==========
-const GameManager = {
+var GameManager = {
+  lastClaimTime: 0,
   pendingRequests: new Map(),
 
-  async safeClaim(endpoint, data, gameType = 'unknown') {
+  async checkDailyLimit(gameType) {
+    try {
+      var response = await App.requestWithTimeout('/api/games/limit-check?game=' + gameType, {
+        credentials: 'include',
+        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+      });
+      if (!response.ok) {
+        console.warn('Limit check failed, assuming can play');
+        return { can_play: true, remaining: 999 };
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Limit check error:', error);
+      return { can_play: true, remaining: 999 };
+    }
+  },
+
+  async safeClaim(endpoint, data, gameType) {
+    if (gameType === undefined) gameType = 'unknown';
     if (this.pendingRequests.has(gameType)) {
+      console.warn('Already claiming ' + gameType + ', ignoring duplicate');
       return { success: false, message: "Please wait for the current claim to complete" };
     }
     this.pendingRequests.set(gameType, true);
     try {
-      const res = await App.requestWithTimeout(endpoint, {
+      var response = await App.requestWithTimeout(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Request-ID': Date.now().toString() },
         credentials: 'include',
         body: JSON.stringify(data)
       }, 15000);
-      const result = await res.json();
+      var result = await response.json();
+      this.lastClaimTime = Date.now();
       return result;
     } catch (error) {
       console.error('Claim error:', error);
+      if (error.name === 'AbortError') {
+        return { success: false, message: "Request timed out. Please try again." };
+      }
       return { success: false, message: error.message || "Connection error." };
     } finally {
       this.pendingRequests.delete(gameType);
     }
   },
 
-  async checkDailyLimit(gameType) {
-    try {
-      const res = await App.requestWithTimeout('/api/games/limit-check?game=' + gameType, {
-        credentials: 'include',
-        headers: { 'Cache-Control': 'no-cache' }
-      });
-      if (!res.ok) return { can_play: true, remaining: 999 };
-      return await res.json();
-    } catch (error) {
-      console.error('Limit check error:', error);
-      return { can_play: true, remaining: 999 };
+  setButtonLoading: function(buttonId, isLoading) {
+    var button = document.getElementById(buttonId);
+    if (!button) return;
+    if (isLoading) {
+      button.classList.add('btn-loading');
+      button.disabled = true;
+    } else {
+      button.classList.remove('btn-loading');
+      button.disabled = false;
     }
   }
 };
 
 // ========== GAME LIMITER ==========
-const GameLimiter = {
+var GameLimiter = {
   dailyLimits: CONFIG.GAME_DAILY_LIMITS,
+  gameFriendlyNames: {
+    'snake': 'Snake Game',
+    'coinflip': 'Coin Flip',
+    'plinko': 'Plinko 3D',
+    'spin': 'Daily Spin',
+    'tiktok': 'TikTok Follow'
+  },
   gameMessages: {
-    'snake': { icon: '🐍', title: 'Snake Limit Reached', message: 'You have played Snake 5 times today. Come back tomorrow!' },
-    'coinflip': { icon: '🪙', title: 'Coin Flip Limit Reached', message: 'Daily coin flip limit reached!' },
-    'plinko': { icon: '🎯', title: 'Plinko Limit Reached', message: 'Daily plinko limit reached!' },
-    'spin': { icon: '🎡', title: 'Spin Limit Reached', message: 'You have already spun today!' },
-    'tiktok': { icon: '📱', title: 'TikTok Limit Reached', message: 'Daily TikTok limit reached!' }
+    'snake': { icon: '🐍', title: 'Snake Game Limit Reached', message: 'You have played Snake 5 times today. Come back tomorrow for more fun!' },
+    'coinflip': { icon: '🪙', title: 'Coin Flip Limit Reached', message: 'You have played Coin Flip 2 times today. Daily limit reached!' },
+    'plinko': { icon: '🎯', title: 'Plinko Limit Reached', message: 'You have played Plinko 2 times today. Try again tomorrow!' },
+    'spin': { icon: '🎡', title: 'Daily Spin Limit Reached', message: 'You have already used your daily spin today! Come back tomorrow.' },
+    'tiktok': { icon: '📱', title: 'TikTok Daily Limit Reached', message: 'You have already claimed TikTok reward today! Come back tomorrow.' }
   },
 
-  showLimitModal(gameType, data) {
-    const existing = document.getElementById('game-limit-modal');
-    if (existing) existing.remove();
-    const info = this.gameMessages[gameType] || { icon: '🎮', title: 'Limit Reached', message: 'Daily limit reached.' };
-    const limit = this.dailyLimits[gameType] || 5;
-    const played = data?.played_today || limit;
-    const modal = document.createElement('div');
+  showLimitModal: function(gameType, data) {
+    var existingModal = document.getElementById('game-limit-modal');
+    if (existingModal) existingModal.remove();
+
+    var gameInfo = this.gameMessages[gameType] || {
+      icon: '🎮',
+      title: 'Game Limit Reached',
+      message: 'You have reached your daily limit for this game.'
+    };
+
+    var limit = this.dailyLimits[gameType] || 5;
+    var played = data?.played_today || limit;
+
+    var modal = document.createElement('div');
     modal.id = 'game-limit-modal';
     modal.className = 'game-limit-modal';
     modal.innerHTML = `
       <div class="game-limit-modal-content">
-        <div class="game-limit-icon">${info.icon}</div>
-        <h3 class="game-limit-title">${info.title}</h3>
+        <div class="game-limit-icon">${gameInfo.icon}</div>
+        <h3 class="game-limit-title">${gameInfo.title}</h3>
         <div class="game-limit-message">
-          <p class="game-limit-text">${info.message}</p>
-          <div class="game-limit-info"><i class="fas fa-calendar-day"></i> <span>Daily Limit: ${played}/${limit} plays</span></div>
-          <div class="game-limit-info"><i class="fas fa-clock"></i> <span>Reset Time: Midnight (00:00 GMT)</span></div>
+          <p class="game-limit-text">${gameInfo.message}</p>
+          <div class="game-limit-info">
+            <i class="fas fa-calendar-day"></i>
+            <span>Daily Limit: ${played}/${limit} plays</span>
+          </div>
+          <div class="game-limit-info">
+            <i class="fas fa-clock"></i>
+            <span>Reset Time: Midnight (00:00 GMT)</span>
+          </div>
         </div>
         <div class="game-limit-buttons">
-          <button class="game-limit-btn-ok" onclick="GameLimiter.closeModal()"><i class="fas fa-check-circle"></i> OK</button>
-          <button class="game-limit-btn-alternative" onclick="GameLimiter.suggestAlternative('${gameType}')"><i class="fas fa-gamepad"></i> Try Another</button>
+          <button class="game-limit-btn-ok" onclick="GameLimiter.closeModal()">
+            <i class="fas fa-check-circle"></i> OK, I Understand
+          </button>
+          <button class="game-limit-btn-alternative" onclick="GameLimiter.suggestAlternative('${gameType}')">
+            <i class="fas fa-gamepad"></i> Try Another Game
+          </button>
         </div>
       </div>
     `;
     document.body.appendChild(modal);
   },
 
-  closeModal() {
-    const modal = document.getElementById('game-limit-modal');
+  closeModal: function() {
+    var modal = document.getElementById('game-limit-modal');
     if (modal) modal.remove();
-    const alt = document.getElementById('alternative-games-modal');
-    if (alt) alt.remove();
   },
 
-  suggestAlternative(currentGame) {
+  suggestAlternative: function(currentGame) {
     this.closeModal();
-    const alternatives = Object.keys(this.dailyLimits).filter(g => g !== currentGame);
-    let html = `
-      <div id="alternative-games-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:10001;backdrop-filter:blur(10px);">
-        <div style="background:linear-gradient(135deg,#0f3460,#1a1a2e);border-radius:20px;padding:30px;max-width:400px;width:90%;border:2px solid #00D4FF;text-align:center;">
-          <h3 style="color:white;font-family:Orbitron,sans-serif;font-size:1.5rem;margin-bottom:20px;">🎮 Try These Games</h3>
+    var alternativeGames = Object.keys(this.gameFriendlyNames).filter(function(game) { return game !== currentGame; });
+    var alternativesHTML = `
+      <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:10001;backdrop-filter:blur(10px);">
+        <div style="background:linear-gradient(135deg,#0f3460,#1a1a2e);border-radius:20px;padding:30px;max-width:400px;width:90%;border:2px solid #00D4FF;box-shadow:0 20px 40px rgba(0,212,255,0.3);text-align:center;animation:slideIn 0.4s ease-out;">
+          <h3 style="color:white;font-family:Orbitron,sans-serif;font-size:1.5rem;margin-bottom:20px;">🎮 Try These Games Instead</h3>
           <div style="display:flex;flex-direction:column;gap:15px;margin:20px 0;">
     `;
-    const gameUrls = {
-      'snake': 'snake.html',
-      'coinflip': 'coinflip.html',
-      'plinko': 'plinko.html',
-      'spin': 'Games.openSpinWheel()',
-      'tiktok': 'Games.openTikTok()'
-    };
-    const gameIcons = { 'snake': '🐍', 'coinflip': '🪙', 'plinko': '🎯', 'spin': '🎡', 'tiktok': '📱' };
-    const gameNames = { 'snake': 'Snake', 'coinflip': 'Coin Flip', 'plinko': 'Plinko', 'spin': 'Spin', 'tiktok': 'TikTok' };
-    for (const g of alternatives) {
-      const url = gameUrls[g] || '#';
-      const click = typeof url === 'string' && url.includes('()') ? url : `window.location.href="${url}"`;
-      html += `
-        <button onclick="${click}" style="background:linear-gradient(135deg,#8000FF,#6C00FF);color:white;border:none;padding:15px;border-radius:10px;font-family:Orbitron,sans-serif;font-weight:700;cursor:pointer;transition:all 0.3s;text-align:left;display:flex;align-items:center;gap:15px;">
-          <span style="font-size:1.5rem;">${gameIcons[g] || '🎮'}</span>
-          <div><div style="font-size:1.1rem;">${gameNames[g] || g}</div><div style="font-size:0.8rem;opacity:0.8;">Play & earn</div></div>
+    var self = this;
+    alternativeGames.forEach(function(gameType) {
+      var gameName = self.gameFriendlyNames[gameType];
+      var emoji = gameType === 'snake' ? '🐍' : gameType === 'coinflip' ? '🪙' : gameType === 'plinko' ? '🎯' : gameType === 'spin' ? '🎡' : '📱';
+      var onclick = '';
+      if (gameType === 'snake') onclick = 'window.location.href="snake.html"';
+      else if (gameType === 'coinflip') onclick = 'window.location.href="coinflip.html"';
+      else if (gameType === 'plinko') onclick = 'window.location.href="plinko.html"';
+      else if (gameType === 'spin') onclick = 'Games.openSpinWheel()';
+      else if (gameType === 'tiktok') onclick = 'Games.openTikTok()';
+      alternativesHTML += `
+        <button onclick="${onclick}" style="background:linear-gradient(135deg,#8000FF,#6C00FF);color:white;border:none;padding:15px;border-radius:10px;font-family:Orbitron,sans-serif;font-weight:700;cursor:pointer;transition:all 0.3s ease;text-align:left;display:flex;align-items:center;gap:15px;">
+          <span style="font-size:1.5rem;">${emoji}</span>
+          <div style="text-align:left;">
+            <div style="font-size:1.1rem;">${gameName}</div>
+            <div style="font-size:0.8rem;opacity:0.8;">${self.getGameDescription(gameType)}</div>
+          </div>
         </button>
       `;
-    }
-    html += `
+    });
+    alternativesHTML += `
           </div>
-          <button onclick="GameLimiter.closeModal()" style="background:transparent;color:#A0A0B5;border:1px solid #A0A0B5;padding:12px;border-radius:10px;font-family:Orbitron,sans-serif;cursor:pointer;width:100%;margin-top:15px;">Close</button>
+          <button onclick="GameLimiter.closeAlternativeModal()" style="background:transparent;color:#A0A0B5;border:1px solid #A0A0B5;padding:12px;border-radius:10px;font-family:Orbitron,sans-serif;cursor:pointer;transition:all 0.3s ease;width:100%;margin-top:15px;">Close</button>
         </div>
       </div>
     `;
-    const el = document.createElement('div');
-    el.innerHTML = html;
-    document.body.appendChild(el.firstElementChild);
+    var altModal = document.createElement('div');
+    altModal.innerHTML = alternativesHTML;
+    altModal.id = 'alternative-games-modal';
+    document.body.appendChild(altModal);
+  },
+
+  getGameDescription: function(gameType) {
+    var descriptions = {
+      'snake': 'Eat apples, earn ₦200 each',
+      'coinflip': 'Bet & double your money',
+      'plinko': 'Bet & multiply your earnings',
+      'spin': 'Spin & win up to ₦1000',
+      'tiktok': 'Follow & earn ₦150 daily'
+    };
+    return descriptions[gameType] || 'Earn rewards';
+  },
+
+  closeAlternativeModal: function() {
+    var modal = document.getElementById('alternative-games-modal');
+    if (modal) modal.remove();
   }
 };
 
-// ========== ENHANCED GAME LIMITER ==========
-const EnhancedGameLimiter = {
+// ========== ENHANCED GAME LIMITER (NO AUTO-LOGOUT) ==========
+var EnhancedGameLimiter = {
   async checkAndHandleGameAccess(gameType, targetUrl) {
     if (!App.currentUser) {
       App.showMessage('Please login first', 'error');
       return false;
     }
     try {
-      const res = await App.requestWithTimeout('/api/games/check-limit-with-logout/' + gameType, {
+      var response = await App.requestWithTimeout('/api/games/check-limit-with-logout/' + gameType, {
         credentials: 'include',
         headers: { 'Cache-Control': 'no-cache' }
       });
-      const data = await res.json();
+      var data = await response.json();
       if (!data.success || !data.can_play) {
         this.showInformativeModal(gameType, data);
         return false;
@@ -826,27 +1306,35 @@ const EnhancedGameLimiter = {
     }
   },
 
-  showInformativeModal(gameType, data) {
-    const existing = document.getElementById('force-logout-modal');
+  showInformativeModal: function(gameType, data) {
+    var existing = document.getElementById('force-logout-modal');
     if (existing) existing.remove();
-    const info = GameLimiter.gameMessages[gameType] || { icon: '🎮', title: 'Limit Reached', message: 'Daily limit reached.' };
-    const played = data?.played_today || 0;
-    const max = data?.max_plays || CONFIG.GAME_DAILY_LIMITS[gameType] || 5;
-    const resetTime = data?.reset_time || 'midnight (00:00 UTC)';
-    const modal = document.createElement('div');
+    
+    var gameInfo = GameLimiter.gameMessages[gameType] || {
+      icon: '🎮',
+      title: 'Daily Limit Reached',
+      message: 'You have reached your daily limit for this game.'
+    };
+    var played = data.played_today || 0;
+    var max = data.max_plays || CONFIG.GAME_DAILY_LIMITS[gameType] || 5;
+    var resetTime = data.reset_time || 'midnight (00:00 UTC)';
+
+    var modal = document.createElement('div');
     modal.id = 'force-logout-modal';
-    modal.className = 'premium-modal-overlay';
+    modal.className = 'game-limit-modal';
     modal.innerHTML = `
-      <div class="premium-modal-content">
-        <div class="modal-icon">⏰</div>
-        <h3 class="modal-title">${info.title}</h3>
-        <div class="modal-message">
-          <p>You've played <strong>${played}/${max}</strong> times today.</p>
-          <p>Limits reset at <strong>${resetTime}</strong>.</p>
-          <p style="margin-top: 12px; color: #fbbf24;">Come back tomorrow to play again!</p>
+      <div class="game-limit-modal-content">
+        <div class="game-limit-icon">⏰</div>
+        <h3 class="game-limit-title">Daily Limit Reached</h3>
+        <div class="game-limit-message">
+          <p style="font-size:1.1rem;line-height:1.6;">
+            <strong>You've played ${played}/${max} times today!</strong>
+          </p>
+          <p>Daily limits reset at <strong>${resetTime}</strong>.</p>
+          <p style="margin-top:12px;color:#fbbf24;">Come back tomorrow to play again!</p>
         </div>
-        <div class="modal-actions">
-          <button class="premium-btn primary" onclick="EnhancedGameLimiter.closeModal()">
+        <div class="game-limit-buttons">
+          <button class="game-limit-btn-ok" onclick="EnhancedGameLimiter.closeModal()">
             <i class="fas fa-home"></i> Go to Dashboard
           </button>
         </div>
@@ -855,29 +1343,33 @@ const EnhancedGameLimiter = {
     document.body.appendChild(modal);
   },
 
-  closeModal() {
-    const modal = document.getElementById('force-logout-modal');
+  closeModal: function() {
+    var modal = document.getElementById('force-logout-modal');
     if (modal) modal.remove();
+  },
+
+  showLimitReachedModal: function(gameType, data) {
+    GameLimiter.showLimitModal(gameType, data);
   }
 };
 
 // ========== PROFILE ==========
-const Profile = {
-  async open() {
+var Profile = {
+  open: async function () {
     if (!App.currentUser) return;
     await this.load();
     App.showModal('profile-modal');
   },
 
-  async load() {
+  load: async function () {
     try {
-      const res = await App.requestWithTimeout('/api/user/profile');
-      const data = await res.json();
+      var response = await App.requestWithTimeout('/api/user/profile');
+      var data = await response.json();
       if (data.success) {
         App.currentUser = data.user;
         App.updateBalanceDisplay();
-        const stats = data.user.game_stats || {};
-        let html = `
+        var stats = data.user.game_stats || {};
+        var html = `
           <div class="profile-section">
             <h4><i class="fas fa-user-circle"></i> Account Information</h4>
             <p><strong>Username:</strong> ${data.user.username}</p>
@@ -893,112 +1385,138 @@ const Profile = {
           </div>
           <div class="profile-section">
             <h4><i class="fas fa-image"></i> Profile Picture</h4>
-            <input type="text" id="profile-pic-url" placeholder="Enter image URL" style="width:100%;padding:8px;margin:5px 0;background:#151535;border:1px solid #8000FF;color:white;border-radius:4px;">
+            <input type="text" id="profile-pic-url" placeholder="Enter image URL"
+                   style="width:100%;padding:8px;margin:5px 0;background:#151535;border:1px solid #8000FF;color:white;border-radius:4px;">
             <button class="btn-primary" onclick="Profile.setProfilePicture()" style="margin-top:10px;">
               <i class="fas fa-upload"></i> Update Picture
             </button>
         `;
         if (data.user.profile_picture) {
-          html += `<div style="margin-top:15px;text-align:center;"><img src="${data.user.profile_picture}" style="width:100px;height:100px;border-radius:15px;border:3px solid #8000FF;"></div>`;
+          html += `
+            <div style="margin-top:15px;text-align:center;">
+              <img src="${data.user.profile_picture}" style="width:100px;height:100px;border-radius:15px;border:3px solid #8000FF;">
+            </div>
+          `;
         }
-        $('profile-data').innerHTML = html;
+        document.getElementById('profile-data').innerHTML = html;
       }
     } catch (err) {
-      console.error('Profile load failed:', err);
-      $('profile-data').innerHTML = '<p class="error">Failed to load profile.</p>';
+      console.error('Failed to load profile', err);
+      document.getElementById('profile-data').innerHTML = '<p class="error">Failed to load profile. Please try again.</p>';
     }
   },
 
-  async setProfilePicture() {
-    const url = $('profile-pic-url').value.trim();
-    if (!url) return;
+  setProfilePicture: async function () {
+    var url = document.getElementById('profile-pic-url').value.trim();
+    if (!url) {
+      return;
+    }
     try {
-      const res = await App.requestWithTimeout('/api/user/set-profile-picture', {
+      var response = await App.requestWithTimeout('/api/user/set-profile-picture', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ picture_url: url })
       });
-      const data = await res.json();
-      if (data.success) this.load();
-    } catch (error) { /* silent */ }
+      var data = await response.json();
+      if (data.success) {
+        this.load();
+      }
+    } catch (error) {
+      // silent
+    }
   }
 };
 
 // ========== REFERRALS ==========
-const Referral = {
-  async open() {
+var Referral = {
+  open: async function () {
     if (!App.currentUser) return;
     try {
-      const res = await App.requestWithTimeout('/api/user/profile');
-      const data = await res.json();
+      var response = await App.requestWithTimeout('/api/user/profile');
+      var data = await response.json();
       if (data.success) {
-        const unclaimed = data.referrals.unclaimed_bonus;
-        let html = `
+        var unclaimed = data.referrals.unclaimed_bonus;
+        var html = `
           <div class="referral-section">
             <h4><i class="fas fa-users"></i> Your Referral Program</h4>
             <p><strong>Your Referral Code:</strong> <code style="font-size:1.2em;background:#8000FF;padding:5px 10px;border-radius:5px;">${data.user.referral_code}</code></p>
             <p>Share this code to earn <strong>₦${CONFIG.REFERRAL_BONUS.toLocaleString()}</strong> per friend!</p>
             <p><strong>Referred Users:</strong> ${data.referrals.count}</p>
             <p><strong>Unclaimed Bonus:</strong> ₦${unclaimed.toLocaleString()}</p>
-            ${unclaimed > 0 ? '<button class="btn-primary" onclick="Referral.claimBonuses()" style="margin-top:15px;"><i class="fas fa-gift"></i> Claim ₦' + unclaimed.toLocaleString() + ' Bonus</button>' : '<p style="color:#00FF55;margin-top:15px;">All bonuses claimed!</p>'}
+            ${unclaimed > 0
+              ? '<button class="btn-primary" onclick="Referral.claimBonuses()" style="margin-top:15px;"><i class="fas fa-gift"></i> Claim ₦' + unclaimed.toLocaleString() + ' Bonus</button>'
+              : '<p style="color:#00FF55;margin-top:15px;">All bonuses claimed!</p>'
+            }
           </div>
           <div class="referral-section" style="margin-top:20px;">
             <h4><i class="fas fa-share-alt"></i> Share Your Link</h4>
-            <div style="background:#151535;padding:10px;border-radius:5px;border:1px solid #8000FF;margin:10px 0;">${window.location.origin}/?ref=${data.user.referral_code}</div>
-            <button class="btn-secondary" onclick="Referral.copyReferralLink('${data.user.referral_code}')" style="margin-top:10px;"><i class="fas fa-copy"></i> Copy Link</button>
+            <div style="background:#151535;padding:10px;border-radius:5px;border:1px solid #8000FF;margin:10px 0;">
+              ${window.location.origin}/?ref=${data.user.referral_code}
+            </div>
+            <button class="btn-secondary" onclick="Referral.copyReferralLink('${data.user.referral_code}')" style="margin-top:10px;">
+              <i class="fas fa-copy"></i> Copy Link
+            </button>
           </div>
         `;
-        $('referral-data').innerHTML = html;
+        document.getElementById('referral-data').innerHTML = html;
         App.showModal('referral-modal');
       }
-    } catch (error) { console.error('Referral load error:', error); }
+    } catch (error) {
+      console.error('Referral load error:', error);
+    }
   },
 
-  copyReferralLink(code) {
-    const link = window.location.origin + '/?ref=' + code;
-    navigator.clipboard.writeText(link).catch(() => {
-      const ta = document.createElement('textarea');
-      ta.value = link;
-      document.body.appendChild(ta);
-      ta.select();
+  copyReferralLink: function (code) {
+    var link = window.location.origin + '/?ref=' + code;
+    navigator.clipboard.writeText(link).then(function() {
+      // silent
+    }).catch(function() {
+      var textarea = document.createElement('textarea');
+      textarea.value = link;
+      document.body.appendChild(textarea);
+      textarea.select();
       document.execCommand('copy');
-      document.body.removeChild(ta);
+      document.body.removeChild(textarea);
     });
   },
 
-  async claimBonuses() {
+  claimBonuses: async function () {
     try {
-      const result = await GameManager.safeClaim('/api/referral/claim', {}, 'referral');
-      if (result.success) {
-        App.updateBalance(result.new_balance);
-        this.open();
+      var result = await GameManager.safeClaim('/api/referral/claim', {}, 'referral');
+      if (!result.success) {
+        return;
       }
-    } catch (error) { /* silent */ }
+      App.updateBalance(result.new_balance);
+      this.open();
+    } catch (error) {
+      // silent
+    }
   }
 };
 
 // ========== BANKING ==========
-const Banking = {
+var Banking = {
   banks: [],
 
   async loadBanks() {
     try {
-      const res = await App.requestWithTimeout('/api/banking/banks');
-      const data = await res.json();
+      var response = await App.requestWithTimeout('/api/banking/banks');
+      var data = await response.json();
       if (data.success) {
         this.banks = data.banks;
-        const select = $('bank-select');
+        var select = document.getElementById('bank-select');
         if (select) {
           select.innerHTML = '<option value="" disabled selected>Select Bank</option>';
-          data.banks.forEach(b => {
-            const opt = document.createElement('option');
-            opt.value = b.code;
-            opt.textContent = b.name;
+          data.banks.forEach(function(bank) {
+            var opt = document.createElement('option');
+            opt.value = bank.code;
+            opt.textContent = bank.name;
             select.appendChild(opt);
           });
         }
       } else {
+        console.error('Failed to load banks:', data.message);
         this.loadFallbackBanks();
       }
     } catch (err) {
@@ -1007,8 +1525,8 @@ const Banking = {
     }
   },
 
-  loadFallbackBanks() {
-    const fallback = [
+  loadFallbackBanks: function() {
+    var fallbackBanks = [
       {code: "057", name: "Zenith Bank Plc"}, {code: "058", name: "GTBank"},
       {code: "044", name: "Access Bank"}, {code: "033", name: "UBA"},
       {code: "011", name: "First Bank"}, {code: "070", name: "Fidelity Bank"},
@@ -1020,175 +1538,190 @@ const Banking = {
       {code: "100", name: "PalmPay"}, {code: "50211", name: "Kuda Bank"},
       {code: "566", name: "VBank"}, {code: "035A", name: "ALAT by Wema"}
     ];
-    this.banks = fallback;
-    const select = $('bank-select');
+    this.banks = fallbackBanks;
+    var select = document.getElementById('bank-select');
     if (select) {
       select.innerHTML = '<option value="" disabled selected>Select Bank</option>';
-      fallback.forEach(b => {
-        const opt = document.createElement('option');
-        opt.value = b.code;
-        opt.textContent = b.name;
+      fallbackBanks.forEach(function(bank) {
+        var opt = document.createElement('option');
+        opt.value = bank.code;
+        opt.textContent = bank.name;
         select.appendChild(opt);
       });
     }
   },
 
-  async openWithdraw() {
+  openWithdraw: async function () {
     if (!App.currentUser) return;
-    const can = await checkWithdrawalDay();
-    if (!can) return;
-    $('withdrawal-message').textContent = '';
+    var canWithdraw = await checkWithdrawalDay();
+    if (!canWithdraw) return;
+    document.getElementById('withdrawal-message').textContent = '';
     if (this.banks.length === 0) await this.loadBanks();
-    $('withdraw-amount').value = '';
-    $('bank-select').selectedIndex = 0;
-    $('account-number').value = '';
-    $('account-name-manual').value = '';
+    document.getElementById('withdraw-amount').value = '';
+    document.getElementById('bank-select').selectedIndex = 0;
+    document.getElementById('account-number').value = '';
+    document.getElementById('account-name-manual').value = '';
     App.showModal('withdrawal-modal');
   },
 
-  async processWithdrawal() {
-    const userRes = await App.requestWithTimeout('/api/user/profile');
-    const userData = await userRes.json();
-    const msg = $('withdrawal-message');
+  processWithdrawal: async function () {
+    var userRes = await App.requestWithTimeout('/api/user/profile');
+    var userData = await userRes.json();
+    var msgEl = document.getElementById('withdrawal-message');
+    
     if (!userData.success) {
-      msg.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Session expired. Please login again.</div>`;
+      msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Session expired. Please log in again.</div>`;
       return;
     }
-    const user = userData.user;
+    
+    var user = userData.user;
     if (!user.withdrawal_pin) {
-      msg.innerHTML = `<div class="alert-box warning"><i class="fas fa-info-circle"></i> You must set a withdrawal PIN first.</div>`;
+      msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-info-circle"></i> You must set a withdrawal PIN first.</div>`;
       Settings.setWithdrawalPin();
       return;
     }
-    const amount = parseFloat($('withdraw-amount').value);
-    const bankCode = $('bank-select').value;
-    const accountNumber = $('account-number').value.trim();
-    const accountName = $('account-name-manual').value.trim();
+    
+    var amount = parseFloat(document.getElementById('withdraw-amount').value);
+    var bankCode = document.getElementById('bank-select').value;
+    var accountNumber = document.getElementById('account-number').value.trim();
+    var accountName = document.getElementById('account-name-manual').value.trim();
 
     if (!amount || amount < CONFIG.MIN_WITHDRAWAL) {
-      msg.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Minimum withdrawal: ₦${CONFIG.MIN_WITHDRAWAL.toLocaleString()}</div>`;
+      msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Minimum withdrawal: ₦${CONFIG.MIN_WITHDRAWAL.toLocaleString()}</div>`;
       return;
     }
-    if (amount > parseFloat(user.balance)) {
-      msg.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Insufficient balance.</div>`;
+    
+    var combinedBalance = parseFloat(user.balance);
+    if (amount > combinedBalance) {
+      msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Insufficient balance. Total available: ₦${combinedBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>`;
       return;
     }
+    
     if (!bankCode || !accountNumber || accountNumber.length < 10 || isNaN(accountNumber)) {
-      msg.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Invalid bank details.</div>`;
+      msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Invalid bank details.</div>`;
       return;
     }
-    const pin = prompt('Enter your 4-6 digit withdrawal PIN:');
+    
+    var pin = prompt('Enter your 4-6 digit withdrawal PIN:');
     if (!pin || !/^\d{4,6}$/.test(pin)) {
-      msg.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Valid PIN required.</div>`;
+      msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Valid PIN required.</div>`;
       return;
     }
 
-    msg.innerHTML = `<div class="alert-box info"><i class="fas fa-spinner fa-spin"></i> Processing...</div>`;
+    msgEl.innerHTML = `<div class="alert-box info"><i class="fas fa-spinner fa-spin"></i> Processing withdrawal...</div>`;
+    
     try {
-      const result = await GameManager.safeClaim('/api/banking/withdraw', {
-        amount, bank_code: bankCode, account_number: accountNumber,
-        account_name: accountName, pin
+      var result = await GameManager.safeClaim('/api/banking/withdraw', {
+        amount: amount, bank_code: bankCode, account_number: accountNumber,
+        account_name: accountName, pin: pin
       }, 'withdrawal');
+      
       if (result.success) {
-        msg.innerHTML = `<div class="alert-box success"><i class="fas fa-check-circle"></i> ${result.message}</div>`;
+        msgEl.innerHTML = `<div class="alert-box success"><i class="fas fa-check-circle"></i> ${result.message}</div>`;
         App.updateBalance(result.new_balance);
-        setTimeout(() => App.closeModal('withdrawal-modal'), 2000);
+        setTimeout(function() { App.closeModal('withdrawal-modal'); }, 2000);
       } else {
-        msg.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> ${result.message}</div>`;
+        msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> ${result.message}</div>`;
       }
     } catch (error) {
-      msg.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Network error.</div>`;
+      msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Network error. Please try again.</div>`;
     }
   }
 };
 
 // ========== ACHIEVEMENTS ==========
-const Achievements = {
-  open() {
+var Achievements = {
+  open: function () {
     if (!App.currentUser) return;
     window.location.href = 'achievements.html';
   },
 
-  async claimAllRewards() {
+  claimAllRewards: async function () {
     try {
-      const result = await GameManager.safeClaim('/api/achievements/claim', {}, 'achievements');
-      if (result.success) App.updateBalance(result.new_balance);
-    } catch (error) { /* silent */ }
+      var result = await GameManager.safeClaim('/api/achievements/claim', {}, 'achievements');
+      if (result.success) {
+        App.updateBalance(result.new_balance);
+      }
+    } catch (error) {
+      // silent
+    }
   }
 };
 
 // ========== GAMES ==========
-const Games = {
-  openSnake() { return EnhancedGameLimiter.checkAndHandleGameAccess('snake', 'snake.html'); },
-  openCoinFlip() { return EnhancedGameLimiter.checkAndHandleGameAccess('coinflip', 'coinflip.html'); },
-  openPlinko() { return EnhancedGameLimiter.checkAndHandleGameAccess('plinko', 'plinko.html'); },
+var Games = {
+  openSnake: function() { return EnhancedGameLimiter.checkAndHandleGameAccess('snake', 'snake.html'); },
+  openCoinFlip: function() { return EnhancedGameLimiter.checkAndHandleGameAccess('coinflip', 'coinflip.html'); },
+  openPlinko: function() { return EnhancedGameLimiter.checkAndHandleGameAccess('plinko', 'plinko.html'); },
 
-  reportSnake(apples) {
-    return GameManager.safeClaim('/api/games/snake/report', { apples_eaten: apples }, 'snake');
+  reportSnake: async function (apples) {
+    return await GameManager.safeClaim('/api/games/snake/report', { apples_eaten: apples }, 'snake');
   },
 
-  reportCoinFlip(bet, won) {
-    return GameManager.safeClaim('/api/games/coinflip/report', { bet, won }, 'coinflip');
+  reportCoinFlip: async function (bet, won) {
+    return await GameManager.safeClaim('/api/games/coinflip/report', { bet: bet, won: won }, 'coinflip');
   },
 
-  reportPlinko(bet, multiplier) {
-    return GameManager.safeClaim('/api/games/plinko/report', { bet, multiplier }, 'plinko');
+  reportPlinko: async function (bet, multiplier) {
+    return await GameManager.safeClaim('/api/games/plinko/report', { bet: bet, multiplier: multiplier }, 'plinko');
   },
 
-  reportSpin() {
-    return GameManager.safeClaim('/api/spin/execute', {}, 'spin');
+  reportSpin: async function (_unused) {
+    return await GameManager.safeClaim('/api/spin/execute', {}, 'spin');
   },
 
-  async openTikTok() {
+  openTikTok: async function () {
     if (!App.currentUser) return;
     try {
-      const res = await App.requestWithTimeout('/api/games/check-limit-with-logout/tiktok', {
+      var response = await App.requestWithTimeout('/api/games/check-limit-with-logout/tiktok', {
         credentials: 'include',
         headers: { 'Cache-Control': 'no-cache' }
       });
-      const data = await res.json();
+      var data = await response.json();
       if (!data.success || !data.can_play) {
         EnhancedGameLimiter.showInformativeModal('tiktok', data);
         return;
       }
-    } catch (error) { console.error('TikTok access error:', error); }
+    } catch (error) {
+      console.error('TikTok access error:', error);
+    }
 
-    const msg = $('tiktok-message');
-    msg.textContent = '';
-    msg.className = 'message';
+    var msgEl = document.getElementById('tiktok-message');
+    msgEl.textContent = '';
+    msgEl.className = 'message';
     try {
-      const res = await App.requestWithTimeout('/api/games/tiktok/daily');
-      const data = await res.json();
+      var response = await App.requestWithTimeout('/api/games/tiktok/daily');
+      var data = await response.json();
       if (!data.success) {
-        $('tiktok-instructions').innerHTML = '<p style="color:#ff5252;">' + (data.message || 'No task today.') + '</p>';
+        document.getElementById('tiktok-instructions').innerHTML = '<p style="color:#ff5252;">' + (data.message || 'No task today.') + '</p>';
         document.querySelector('.action-buttons').style.display = 'none';
         App.showModal('tiktok-modal');
         return;
       }
       if (data.already_claimed) {
-        $('tiktok-instructions').innerHTML = '<p style="color:#ff9800;">Already claimed today!</p>';
+        document.getElementById('tiktok-instructions').innerHTML = '<p style="color:#ff9800;">Already claimed today!</p>';
         document.querySelector('.action-buttons').style.display = 'none';
         App.showModal('tiktok-modal');
         return;
       }
       if (!data.task || !data.task.tiktok_link) {
-        $('tiktok-instructions').innerHTML = '<p style="color:#ff5252;">Admin hasn\'t set a task for today.</p>';
+        document.getElementById('tiktok-instructions').innerHTML = '<p style="color:#ff5252;">No task for today.</p>';
         document.querySelector('.action-buttons').style.display = 'none';
         App.showModal('tiktok-modal');
         return;
       }
       try {
-        const url = new URL(data.task.tiktok_link);
-        const username = url.pathname.split('/')[1] || data.task.tiktok_link;
-        $('tiktok-account-name').textContent = '@' + username;
-        $('tiktok-instructions').innerHTML = `
+        var url = new URL(data.task.tiktok_link);
+        var username = url.pathname.split('/')[1] || data.task.tiktok_link;
+        document.getElementById('tiktok-account-name').textContent = '@' + username;
+        document.getElementById('tiktok-instructions').innerHTML = `
           <p>Earn <strong>₦${data.task.reward_amount}</strong> for following on TikTok</p>
           <div class="tiktok-account-display"><strong>@${username}</strong></div>
           <p class="small-text">Search <strong>@${username}</strong> on TikTok and follow</p>
         `;
       } catch (e) {
-        $('tiktok-account-name').textContent = data.task.tiktok_link;
-        $('tiktok-instructions').innerHTML = `
+        document.getElementById('tiktok-account-name').textContent = data.task.tiktok_link;
+        document.getElementById('tiktok-instructions').innerHTML = `
           <p>Earn <strong>₦${data.task.reward_amount}</strong> for following on TikTok</p>
           <div class="tiktok-account-display"><strong>${data.task.tiktok_link}</strong></div>
           <p class="small-text">Open this link in TikTok and follow</p>
@@ -1198,56 +1731,60 @@ const Games = {
       App.showModal('tiktok-modal');
     } catch (err) {
       console.error('TikTok load error:', err);
-      $('tiktok-instructions').innerHTML = '<p style="color:#ff5252;">Failed to load task.</p>';
+      document.getElementById('tiktok-instructions').innerHTML = '<p style="color:#ff5252;">Failed to load task.</p>';
       document.querySelector('.action-buttons').style.display = 'none';
       App.showModal('tiktok-modal');
     }
   },
 
-  async verifyTikTokFollow() {
-    const msg = $('tiktok-message');
-    msg.innerHTML = '<div class="alert-box info"><i class="fas fa-spinner fa-spin"></i> Claiming...</div>';
+  verifyTikTokFollow: async function () {
+    var msgEl = document.getElementById('tiktok-message');
+    msgEl.innerHTML = '<div class="alert-box info"><i class="fas fa-spinner fa-spin"></i> Claiming...</div>';
     try {
-      const result = await GameManager.safeClaim('/api/games/tiktok/follow-daily', {}, 'tiktok');
+      var result = await GameManager.safeClaim('/api/games/tiktok/follow-daily', {}, 'tiktok');
       if (result.success) {
         App.updateBalance(result.new_balance);
-        msg.innerHTML = `<div class="alert-box success"><i class="fas fa-check-circle"></i> Claimed ₦${result.reward}!</div>`;
-        setTimeout(() => App.closeModal('tiktok-modal'), 2000);
+        msgEl.innerHTML = `<div class="alert-box success"><i class="fas fa-check-circle"></i> Claimed ₦${result.reward}!</div>`;
+        setTimeout(function() { App.closeModal('tiktok-modal'); }, 2000);
       } else {
-        msg.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> ${result.message || 'Failed.'}</div>`;
+        msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> ${result.message || 'Failed.'}</div>`;
       }
     } catch (error) {
-      msg.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Network error.</div>`;
+      msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Network error.</div>`;
     }
   },
 
-  openTikTokApp() {
-    const name = $('tiktok-account-name');
-    const username = name.textContent.replace('@', '');
+  openTikTokApp: function () {
+    var usernameEl = document.getElementById('tiktok-account-name');
+    var username = usernameEl.textContent.replace('@', '');
     if (username) {
       window.open('snssdk1233://user/@' + username, '_blank');
-      setTimeout(() => window.open('https://www.tiktok.com/@' + username, '_blank'), 500);
+      setTimeout(function() {
+        window.open('https://www.tiktok.com/@' + username, '_blank');
+      }, 500);
     }
   },
 
-  async openSpinWheel() {
+  openSpinWheel: async function() {
     if (!App.currentUser) return;
     try {
-      const res = await App.requestWithTimeout('/api/games/check-limit-with-logout/spin', {
+      var response = await App.requestWithTimeout('/api/games/check-limit-with-logout/spin', {
         credentials: 'include',
         headers: { 'Cache-Control': 'no-cache' }
       });
-      const data = await res.json();
+      var data = await response.json();
       if (!data.success || !data.can_play) {
         EnhancedGameLimiter.showInformativeModal('spin', data);
         return;
       }
-    } catch (error) { console.error('Spin access error:', error); }
+    } catch (error) {
+      console.error('Spin access error:', error);
+    }
 
-    const wheel = $('wheel');
-    const btn = $('spin-button');
-    const msg = $('spin-message');
-    const result = $('spin-result');
+    var wheel = document.getElementById('wheel');
+    var btn = document.getElementById('spin-button');
+    var msgEl = document.getElementById('spin-message');
+    var resultEl = document.getElementById('spin-result');
     if (wheel) {
       wheel.style.transition = 'none';
       wheel.style.transform = 'rotate(0deg)';
@@ -1257,48 +1794,48 @@ const Games = {
       btn.disabled = false;
       btn.innerHTML = '<i class="fas fa-sync-alt"></i> SPIN WHEEL';
     }
-    if (msg) { msg.textContent = ''; msg.className = 'message'; }
-    if (result) result.classList.add('hidden');
+    if (msgEl) { msgEl.textContent = ''; msgEl.className = 'message'; }
+    if (resultEl) resultEl.classList.add('hidden');
     App.showModal('spin-modal');
-    setTimeout(() => initSpinWheel(), 150);
+    setTimeout(function() { initSpinWheel(); }, 150);
   },
 
-  async spinWheel() {
-    const btn = $('spin-button');
-    const wheel = $('wheel');
-    const msg = $('spin-message');
+  spinWheel: async function() {
+    var btn = document.getElementById('spin-button');
+    var wheel = document.getElementById('wheel');
+    var msgEl = document.getElementById('spin-message');
     if (!btn || !wheel || btn.disabled) return;
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SPINNING...';
-    if (msg) { msg.textContent = ''; msg.className = 'message'; }
+    if (msgEl) { msgEl.textContent = ''; msgEl.className = 'message'; }
     wheel.style.transition = 'none';
     wheel.style.transform = 'rotate(0deg)';
-    const svgEl = document.getElementById('wheel-svg');
+    var svgEl = document.getElementById('wheel-svg');
     if (svgEl) { svgEl.style.transition = 'none'; svgEl.style.transform = 'rotate(0deg)'; }
     void wheel.offsetWidth;
     try {
-      const result = await this.reportSpin();
+      var result = await this.reportSpin();
       if (!result.success) {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-sync-alt"></i> TRY AGAIN';
-        if (msg) msg.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> ${result.message || 'Spin failed'}</div>`;
+        if (msgEl) msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> ${result.message || 'Spin failed'}</div>`;
         return;
       }
-      const reward = result.reward;
-      const prizeIndex = result.prize_index !== undefined ? result.prize_index : 5;
-      const angleToPointer = (360 - (prizeIndex * 60 + 30)) % 360;
-      const totalRotation = (6 + Math.floor(Math.random() * 3)) * 360 + angleToPointer;
-      const spinTarget = document.getElementById('wheel-svg') || wheel;
+      var reward = result.reward;
+      var prizeIndex = result.prize_index !== undefined ? result.prize_index : 5;
+      var angleToPointer = (360 - (prizeIndex * 60 + 30)) % 360;
+      var totalRotation = (6 + Math.floor(Math.random() * 3)) * 360 + angleToPointer;
+      var spinTarget = document.getElementById('wheel-svg') || wheel;
       spinTarget.style.transition = 'none';
       spinTarget.style.transform = 'rotate(0deg)';
       void spinTarget.offsetWidth;
       spinTarget.style.transition = 'transform 5s cubic-bezier(0.17, 0.67, 0.05, 1.0)';
       spinTarget.style.transform = 'rotate(' + totalRotation + 'deg)';
-      setTimeout(() => {
+      setTimeout(function() {
         App.updateBalance(result.new_balance);
-        const msgText = reward > 0 ? '🎉 Won ₦' + reward.toLocaleString() + '!' : 'Better luck tomorrow!';
-        if (msg) msg.innerHTML = `<div class="alert-box ${reward > 0 ? 'success' : 'warning'}"><i class="fas fa-${reward > 0 ? 'check-circle' : 'info-circle'}"></i> ${msgText}</div>`;
-        const resEl = $('spin-result');
+        var msgText = reward > 0 ? '🎉 Won ₦' + reward.toLocaleString() + '!' : 'Better luck tomorrow!';
+        if (msgEl) msgEl.innerHTML = `<div class="alert-box ${reward > 0 ? 'success' : 'warning'}"><i class="fas fa-${reward > 0 ? 'check-circle' : 'info-circle'}"></i> ${msgText}</div>`;
+        var resEl = document.getElementById('spin-result');
         if (resEl) { resEl.innerHTML = '<p style="font-size:1.1rem;font-weight:bold;">' + msgText + '</p>'; resEl.classList.remove('hidden'); }
         btn.innerHTML = '<i class="fas fa-check"></i> COME BACK TOMORROW';
         btn.disabled = true;
@@ -1306,23 +1843,23 @@ const Games = {
     } catch (error) {
       console.error('Spin error:', error);
       btn.disabled = false;
-      if (msg) msg.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Network error.</div>`;
+      if (msgEl) msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Network error.</div>`;
       btn.innerHTML = '<i class="fas fa-sync-alt"></i> TRY AGAIN';
     }
   }
 };
 
 // ========== SETTINGS ==========
-const Settings = {
-  async open() {
+var Settings = {
+  open: async function () {
     if (!App.currentUser) return;
     try {
-      const res = await App.requestWithTimeout('/api/user/profile');
-      const data = await res.json();
+      var response = await App.requestWithTimeout('/api/user/profile');
+      var data = await response.json();
       if (!data.success) return;
-      const user = data.user;
-      const hasPin = !!user.withdrawal_pin;
-      let html = `
+      var user = data.user;
+      var hasPin = !!user.withdrawal_pin;
+      var html = `
         <div class="settings-section">
           <h4><i class="fas fa-user-cog"></i> Account Settings</h4>
           <p><strong>Username:</strong> ${user.username}</p>
@@ -1330,10 +1867,10 @@ const Settings = {
         </div>
       `;
       try {
-        const sr = await App.requestWithTimeout('/api/admin/settings');
-        const sd = await sr.json();
+        var sr = await App.requestWithTimeout('/api/admin/settings');
+        var sd = await sr.json();
         if (sd.success) {
-          const s = sd.settings;
+          var s = sd.settings;
           html += '<div class="settings-section"><h4><i class="fas fa-users"></i> Community</h4>';
           if (s.whatsapp_link) html += '<a href="' + s.whatsapp_link + '" target="_blank" class="social-link"><i class="fab fa-whatsapp"></i> WhatsApp</a><br>';
           if (s.telegram_link) html += '<a href="' + s.telegram_link + '" target="_blank" class="social-link"><i class="fab fa-telegram"></i> Telegram</a><br>';
@@ -1370,66 +1907,67 @@ const Settings = {
           </button>
         </div>
       `;
-      $('settings-data').innerHTML = html;
+      document.getElementById('settings-data').innerHTML = html;
       App.showModal('settings-modal');
     } catch (error) { console.error('Settings error:', error); }
   },
 
-  setWithdrawalPin: async function(isChange = false) {
-    let currentPin = '';
+  setWithdrawalPin: async function (isChange) {
+    if (isChange === undefined) isChange = false;
+    var currentPin = '';
     if (isChange) {
       currentPin = prompt('Enter your CURRENT 4-6 digit PIN:');
       if (!currentPin || !/^\d{4,6}$/.test(currentPin)) return;
       try {
-        const res = await App.requestWithTimeout('/api/user/verify-withdrawal-pin', {
+        var response = await App.requestWithTimeout('/api/user/verify-withdrawal-pin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ pin: currentPin }),
           credentials: 'include'
         });
-        const data = await res.json();
+        var data = await response.json();
         if (!data.success) return;
       } catch (error) { return; }
     }
-    const newPin = prompt('Enter your NEW 4-6 digit PIN:');
+    var newPin = prompt('Enter your NEW 4-6 digit PIN:');
     if (!newPin || !/^\d{4,6}$/.test(newPin)) return;
-    const confirmPin = prompt('Confirm your new PIN:');
+    var confirmPin = prompt('Confirm your new PIN:');
     if (newPin !== confirmPin) return;
     try {
-      const result = await GameManager.safeClaim('/api/user/set-withdrawal-pin', { pin: newPin }, 'setpin');
+      var result = await GameManager.safeClaim('/api/user/set-withdrawal-pin', { pin: newPin }, 'setpin');
       if (result.success) App.closeModal('settings-modal');
     } catch (error) { /* silent */ }
   },
 
-  changeWithdrawalPin() { this.setWithdrawalPin(true); },
+  changeWithdrawalPin: function () { this.setWithdrawalPin(true); },
 
-  async changePassword() {
-    const oldPass = prompt("Enter your current password:");
+  changePassword: async function () {
+    var oldPass = prompt("Enter your current password:");
     if (!oldPass) return;
-    const newPass = prompt("Enter a new password (min 6 chars):");
+    var newPass = prompt("Enter a new password (min 6 chars):");
     if (!newPass || newPass.length < 6) return;
-    const confirmPass = prompt("Confirm your new password:");
+    var confirmPass = prompt("Confirm your new password:");
     if (newPass !== confirmPass) return;
     try {
-      const isAdmin = App.currentUser && App.currentUser.is_admin;
-      const endpoint = isAdmin ? '/api/admin/change-password' : '/api/user/change-password';
-      const res = await App.requestWithTimeout(endpoint, {
+      var isAdmin = App.currentUser && App.currentUser.is_admin;
+      var endpoint = isAdmin ? '/api/admin/change-password' : '/api/user/change-password';
+      var response = await App.requestWithTimeout(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ current_password: oldPass, new_password: newPass })
       });
-      const data = await res.json();
+      var data = await response.json();
       if (data.success) {
         App.closeModal('settings-modal');
-        if (isAdmin && data.message && data.message.includes('login again')) {
-          setTimeout(() => { if (confirm("Password changed. Logout and login again?")) Settings.logout(); }, 1000);
+        if (isAdmin && data.message && data.message.indexOf('login again') !== -1) {
+          setTimeout(function() { if (confirm("Password changed. Logout and login again?")) Settings.logout(); }, 1000);
         }
       }
     } catch (error) { /* silent */ }
   },
 
-  logout: async function() {
+  logout: async function () {
     if (!confirm('Logout?')) return;
     try {
       await App.requestWithTimeout('/api/auth/logout', { method: 'POST', credentials: 'include' });
@@ -1442,11 +1980,12 @@ const Settings = {
 
 // ========== SPIN WHEEL ==========
 function initSpinWheel() {
-  const container = $('wheel');
+  var container = document.getElementById('wheel');
   if (!container) return;
   container.innerHTML = '';
   container.style.cssText = 'position:relative;width:280px;height:280px;margin:0 auto;';
-  const prizes = [
+
+  var prizes = [
     { label: '₦1000', color: '#FF0055', textColor: '#fff' },
     { label: '₦500',  color: '#FF8C00', textColor: '#fff' },
     { label: '₦200',  color: '#FFCC00', textColor: '#111' },
@@ -1454,30 +1993,35 @@ function initSpinWheel() {
     { label: '₦50',   color: '#00CCFF', textColor: '#111' },
     { label: '0',     color: '#8000FF', textColor: '#fff' }
   ];
-  const N = prizes.length, cx = 140, cy = 140, r = 130, sliceDeg = 360 / N;
-  const svgNS = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(svgNS, 'svg');
+
+  var N = prizes.length, cx = 140, cy = 140, r = 130, sliceDeg = 360 / N;
+  var svgNS = 'http://www.w3.org/2000/svg';
+  var svg = document.createElementNS(svgNS, 'svg');
   svg.setAttribute('id', 'wheel-svg');
   svg.setAttribute('viewBox', '0 0 280 280');
   svg.setAttribute('width', '280');
   svg.setAttribute('height', '280');
   svg.style.cssText = 'display:block;border-radius:50%;overflow:hidden;filter:drop-shadow(0 0 18px rgba(128,0,255,0.5));';
+
   function polarToCart(cx, cy, r, angleDeg) {
-    const rad = (angleDeg - 90) * Math.PI / 180;
+    var rad = (angleDeg - 90) * Math.PI / 180;
     return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
   }
-  prizes.forEach((prize, i) => {
-    const startAngle = i * sliceDeg, endAngle = startAngle + sliceDeg, midAngle = startAngle + sliceDeg / 2;
-    const p1 = polarToCart(cx, cy, r, startAngle);
-    const p2 = polarToCart(cx, cy, r, endAngle);
-    const path = document.createElementNS(svgNS, 'path');
-    path.setAttribute('d', ['M ' + cx + ' ' + cy, 'L ' + p1.x + ' ' + p1.y, 'A ' + r + ' ' + r + ' 0 0 1 ' + p2.x + ' ' + p2.y, 'Z'].join(' '));
+
+  prizes.forEach(function(prize, i) {
+    var startAngle = i * sliceDeg, endAngle = startAngle + sliceDeg, midAngle = startAngle + sliceDeg / 2;
+    var p1 = polarToCart(cx, cy, r, startAngle);
+    var p2 = polarToCart(cx, cy, r, endAngle);
+    var path = document.createElementNS(svgNS, 'path');
+    var d = ['M ' + cx + ' ' + cy, 'L ' + p1.x + ' ' + p1.y, 'A ' + r + ' ' + r + ' 0 0 1 ' + p2.x + ' ' + p2.y, 'Z'].join(' ');
+    path.setAttribute('d', d);
     path.setAttribute('fill', prize.color);
     path.setAttribute('stroke', '#0A0A1F');
     path.setAttribute('stroke-width', '2');
     svg.appendChild(path);
-    const lp = polarToCart(cx, cy, r * 0.72, midAngle);
-    const text = document.createElementNS(svgNS, 'text');
+
+    var lp = polarToCart(cx, cy, r * 0.72, midAngle);
+    var text = document.createElementNS(svgNS, 'text');
     text.setAttribute('x', lp.x);
     text.setAttribute('y', lp.y);
     text.setAttribute('text-anchor', 'middle');
@@ -1490,7 +2034,8 @@ function initSpinWheel() {
     text.textContent = prize.label;
     svg.appendChild(text);
   });
-  const centerCircle = document.createElementNS(svgNS, 'circle');
+
+  var centerCircle = document.createElementNS(svgNS, 'circle');
   centerCircle.setAttribute('cx', cx);
   centerCircle.setAttribute('cy', cy);
   centerCircle.setAttribute('r', '22');
@@ -1498,7 +2043,8 @@ function initSpinWheel() {
   centerCircle.setAttribute('stroke', '#8000FF');
   centerCircle.setAttribute('stroke-width', '3');
   svg.appendChild(centerCircle);
-  const centerText = document.createElementNS(svgNS, 'text');
+
+  var centerText = document.createElementNS(svgNS, 'text');
   centerText.setAttribute('x', cx);
   centerText.setAttribute('y', cy);
   centerText.setAttribute('text-anchor', 'middle');
@@ -1508,59 +2054,93 @@ function initSpinWheel() {
   centerText.textContent = '★';
   svg.appendChild(centerText);
   container.appendChild(svg);
-  const pointer = document.createElement('div');
-  pointer.style.cssText = `position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-top:22px solid #FFD700;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));z-index:10;`;
+
+  var pointer = document.createElement('div');
+  pointer.style.cssText = `
+    position:absolute;top:-14px;left:50%;
+    transform:translateX(-50%);
+    width:0;height:0;
+    border-left:12px solid transparent;
+    border-right:12px solid transparent;
+    border-top:22px solid #FFD700;
+    filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+    z-index:10;
+  `;
   container.appendChild(pointer);
+  container._currentRotation = 0;
 }
 
-// ========== DOM INIT ==========
+// ========== DOM READY ==========
 document.addEventListener('DOMContentLoaded', function() {
-  qsa('.tab').forEach(tab => {
+  document.querySelectorAll('.tab').forEach(function(tab) {
     tab.addEventListener('click', function() {
-      qsa('.tab').forEach(t => t.classList.remove('active'));
-      qsa('.auth-form').forEach(f => f.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
       tab.classList.add('active');
-      $(tab.dataset.tab + '-form').classList.add('active');
+      var targetForm = tab.dataset.tab + '-form';
+      document.getElementById(targetForm).classList.add('active');
     });
   });
+
+  var buyCouponBtn = document.querySelector('[onclick="Auth.buyCoupon()"]');
+  if (buyCouponBtn) {
+    buyCouponBtn.onclick = function() { Auth.buyCoupon(); };
+  }
 
   Auth.initPasswordToggles();
   App.init();
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const coupon = urlParams.get('coupon');
-  const tab = urlParams.get('tab');
+  var urlParams = new URLSearchParams(window.location.search);
+  var coupon = urlParams.get('coupon');
+  var tab = urlParams.get('tab');
+
   if (coupon) {
-    $('reg-coupon').value = coupon;
+    document.getElementById('reg-coupon').value = coupon;
     if (tab === 'register') {
-      qsa('.tab').forEach(t => t.classList.remove('active'));
-      qs('[data-tab="register"]').classList.add('active');
-      qsa('.auth-form').forEach(f => f.classList.remove('active'));
-      $('register-form').classList.add('active');
+      document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelector('[data-tab="register"]').classList.add('active');
+      document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
+      document.getElementById('register-form').classList.add('active');
     }
   }
 
-  const ref = urlParams.get('ref');
+  var ref = urlParams.get('ref');
   if (ref) {
-    setTimeout(async () => {
-      const result = await PaystackPayment.checkStatus(ref);
+    setTimeout(async function() {
+      var result = await PaystackPayment.checkStatus(ref);
       if (result.success && result.status === 'COMPLETED') {
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     }, 2000);
   }
 
-  const spinModal = $('spin-modal');
+  var spinModal = document.getElementById('spin-modal');
   if (spinModal) {
-    const observer = new MutationObserver(() => {
-      if (!spinModal.classList.contains('hidden')) setTimeout(initSpinWheel, 100);
+    var observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        if (mutation.attributeName === 'class') {
+          var isVisible = !spinModal.classList.contains('hidden');
+          if (isVisible) setTimeout(function() { initSpinWheel(); }, 100);
+        }
+      });
     });
     observer.observe(spinModal, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  var scrollPos = sessionStorage.getItem('flexia_scroll_position');
+  if (scrollPos) {
+    setTimeout(function() {
+      window.scrollTo(0, parseInt(scrollPos));
+      sessionStorage.removeItem('flexia_scroll_position');
+    }, 300);
   }
 });
 
 // ========== GLOBAL EXPORTS ==========
 window.App = App;
+window.GameManager = GameManager;
+window.GameLimiter = GameLimiter;
+window.EnhancedGameLimiter = EnhancedGameLimiter;
 window.Games = Games;
 window.Auth = Auth;
 window.Profile = Profile;
@@ -1570,10 +2150,20 @@ window.Achievements = Achievements;
 window.Settings = Settings;
 window.PaystackPayment = PaystackPayment;
 window.SessionManager = SessionManager;
-window.GameLimiter = GameLimiter;
-window.EnhancedGameLimiter = EnhancedGameLimiter;
 window.checkWithdrawalDay = checkWithdrawalDay;
 window.closeWithdrawalDayModal = closeWithdrawalDayModal;
 window.updateBalance = App.updateBalance.bind(App);
 window.showMessage = App.showMessage.bind(App);
-window.goBackToDashboard = () => window.location.href = 'index.html';
+window.goBackToDashboard = function() { window.location.href = 'index.html'; };
+
+window.claimSnakeReward = async function(apples) {
+  return await GameManager.safeClaim('/api/games/snake/report', { apples_eaten: apples }, 'snake');
+};
+window.claimCoinFlipReward = async function(bet, won) {
+  return await GameManager.safeClaim('/api/games/coinflip/report', { bet: bet, won: won }, 'coinflip');
+};
+window.claimPlinkoReward = async function(bet, multiplier) {
+  return await GameManager.safeClaim('/api/games/plinko/report', { bet: bet, multiplier: multiplier }, 'plinko');
+};
+
+console.log('FLEXIA Script v17.0 - COMPLETE VERSION LOADED');
