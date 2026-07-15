@@ -115,6 +115,10 @@
                             Welcome back
                             <strong id="dashboard-username">User</strong>
                         </div>
+                        <!-- Manual refresh button -->
+                        <button onclick="App.fetchFreshBalance()" class="btn-secondary" style="font-size:0.7rem;padding:4px 10px;border-radius:20px;margin-right:6px;">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
                         <div class="avatar" id="dashboard-avatar" onclick="Settings.logout()">U</div>
                     </div>
                 </div>
@@ -136,52 +140,7 @@
                 </div>
             </div>
 
-            <!-- TODAY'S EARNINGS CARD -->
-            <div class="today-earnings-card">
-                <div class="today-earnings-header">
-                    <span class="today-earnings-label"><i class="fas fa-calendar-day"></i> Today's Earnings</span>
-                    <span id="today-earnings-update" class="today-earnings-update">Just now</span>
-                </div>
-                <div class="today-earnings-amount">
-                    <span class="currency">₦</span>
-                    <span id="today-earnings-total">0.00</span>
-                </div>
-                <div class="today-earnings-breakdown">
-                    <div class="earnings-item">
-                        <span><i class="fas fa-gamepad" style="color:#f87171;"></i> Snake</span>
-                        <span>₦<span id="today-snake">0.00</span> / ₦500</span>
-                    </div>
-                    <div class="earnings-item">
-                        <span><i class="fas fa-coins" style="color:#fbbf24;"></i> Coin Flip</span>
-                        <span>₦<span id="today-coinflip">0.00</span> / ₦1000</span>
-                    </div>
-                    <div class="earnings-item">
-                        <span><i class="fas fa-bowling-ball" style="color:#a855f7;"></i> Plinko</span>
-                        <span>₦<span id="today-plinko">0.00</span> / ₦800</span>
-                    </div>
-                    <div class="earnings-item">
-                        <span><i class="fab fa-tiktok" style="color:#25F4EE;"></i> TikTok</span>
-                        <span>₦<span id="today-tiktok">0.00</span></span>
-                    </div>
-                    <div class="earnings-item">
-                        <span><i class="fas fa-gift" style="color:#34d399;"></i> Referral</span>
-                        <span>₦<span id="today-referral">0.00</span></span>
-                    </div>
-                    <div class="earnings-item">
-                        <span><i class="fas fa-trophy" style="color:#fbbf24;"></i> Achievements</span>
-                        <span>₦<span id="today-achievement">0.00</span></span>
-                    </div>
-                    <div class="earnings-item">
-                        <span><i class="fas fa-sync-alt" style="color:#fb923c;"></i> Spin</span>
-                        <span>₦<span id="today-spin">0.00</span></span>
-                    </div>
-                    <div class="earnings-item">
-                        <span><i class="fas fa-sign-in-alt" style="color:#38bdf8;"></i> Login Bonus</span>
-                        <span>₦<span id="today-login">0.00</span></span>
-                    </div>
-                </div>
-            </div>
-
+            <!-- TODAY'S EARNINGS CARD – REMOVED per request -->
             <!-- QUICK ACTIONS -->
             <div class="quick-actions">
                 <div class="q-btn" onclick="Referral.claimBonuses()">
@@ -538,11 +497,7 @@
                     document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
                     document.getElementById('register-form').classList.add('active');
                 }
-                setTimeout(function() {
-                    if (typeof App !== 'undefined' && App.showMessage) {
-                        App.showMessage('Coupon code loaded! Complete your registration.', 'success', 5000);
-                    }
-                }, 1000);
+                // No welcome message – silent
             }
 
             // Check payment status on return
@@ -552,10 +507,8 @@
                     if (typeof PaystackPayment !== 'undefined') {
                         var result = await PaystackPayment.checkStatus(ref);
                         if (result.success && result.status === 'COMPLETED') {
-                            App.showMessage('Payment successful! Coupon: ' + (result.coupon_code || 'Check your email'), 'success');
+                            // no message – just update state
                             window.history.replaceState({}, document.title, window.location.pathname);
-                        } else if (result.success && result.status === 'PENDING') {
-                            App.showMessage('Payment is still processing. Check your email in a few minutes.', 'info');
                         }
                     }
                 }, 2000);
@@ -565,22 +518,16 @@
         // Placeholder functions for navigation
         function navigateTab(tab) {
             if (tab === 'home') return;
-            if (typeof App !== 'undefined' && App.showMessage) {
-                App.showMessage('Navigating to ' + tab, 'info');
-            }
+            // silent navigation
         }
 
         function viewAllActivity() {
-            if (typeof App !== 'undefined' && App.showMessage) {
-                App.showMessage('Viewing all activity', 'info');
-            }
+            // silent
         }
 
         function openPaymentModal() {
             if (typeof PaystackPayment !== 'undefined') {
                 PaystackPayment.openRegistrationPayment();
-            } else {
-                alert('Payment system loading. Please try again.');
             }
         }
     </script>
