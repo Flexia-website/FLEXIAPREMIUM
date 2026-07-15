@@ -1,5 +1,5 @@
 // script.js - FLEXIA Frontend Logic v17.0 - COMPLETE VERSION
-// ✅ FULL REGISTRATION WITH COUPON VALIDATION ✅ PAYSTACK BUY COUPON ✅ SESSION MANAGEMENT ✅ TODAY'S EARNINGS
+// ✅ FULL REGISTRATION WITH COUPON VALIDATION ✅ PAYSTACK BUY COUPON ✅ SESSION MANAGEMENT ✅ FIXED LOGIN
 
 //========== EMBEDDED CSS ========
 const embeddedCSS = `
@@ -89,12 +89,12 @@ const embeddedCSS = `
   }
 `;
 
-const style = document.createElement('style');
+var style = document.createElement('style');
 style.textContent = embeddedCSS;
 document.head.appendChild(style);
 
 //========== CONFIGURATION ========
-const CONFIG = {
+var CONFIG = {
   MIN_WITHDRAWAL: window.APP_CONFIG?.MIN_WITHDRAWAL || 100000,
   REFERRAL_BONUS: window.APP_CONFIG?.REFERRAL_BONUS || 7500,
   TIKTOK_REWARD: window.APP_CONFIG?.REWARDS?.TIKTOK_BASE || 150,
@@ -113,12 +113,13 @@ const CONFIG = {
 };
 
 //========== CORE APP ==========
-const App = {
+var App = {
   currentUser: null,
   balanceVisible: true,
   lastBalanceUpdate: 0,
 
   init: async function () {
+    console.log('App.init() called');
     await this.checkAuth();
     if (document.getElementById('app-screen')) {
       await Profile.load();
@@ -134,17 +135,22 @@ const App = {
   },
 
   checkAuth: async function () {
+    console.log('App.checkAuth() called');
     try {
-      fetch('/api/config').then(r => r.json()).then(cfg => {
+      fetch('/api/config').then(function(r) {
+        return r.json();
+      }).then(function(cfg) {
         if (cfg.success && cfg.min_withdrawal != null) {
           CONFIG.MIN_WITHDRAWAL = cfg.min_withdrawal;
-          const minEl = document.getElementById('withdraw-min');
-          if (minEl) minEl.textContent = `₦${cfg.min_withdrawal.toLocaleString()}`;
+          var minEl = document.getElementById('withdraw-min');
+          if (minEl) minEl.textContent = '₦' + cfg.min_withdrawal.toLocaleString();
         }
-      }).catch(() => {});
+      }).catch(function() {});
 
-      const response = await this.requestWithTimeout('/api/user/profile');
-      const data = await response.json();
+      var response = await this.requestWithTimeout('/api/user/profile');
+      var data = await response.json();
+      console.log('Auth check response:', data);
+      
       if (data.success) {
         this.currentUser = data.user;
         this.showAppScreen();
@@ -155,7 +161,9 @@ const App = {
           document.body.classList.add('dark-mode');
         }
         SessionManager.init();
+        console.log('User logged in:', data.user.username);
       } else {
+        console.log('No valid session, showing auth screen');
         this.showAuthScreen();
       }
     } catch (err) {
@@ -165,36 +173,55 @@ const App = {
   },
 
   showAppScreen: function () {
-    document.getElementById('auth-screen').classList.add('hidden');
-    document.getElementById('app-screen').classList.remove('hidden');
+    console.log('Showing app screen');
+    var authScreen = document.getElementById('auth-screen');
+    var appScreen = document.getElementById('app-screen');
+    
+    if (authScreen) {
+      authScreen.style.display = 'none';
+    }
+    if (appScreen) {
+      appScreen.style.display = 'block';
+      appScreen.classList.add('active');
+    }
   },
 
   showAuthScreen: function () {
-    document.getElementById('app-screen').classList.add('hidden');
-    document.getElementById('auth-screen').classList.remove('hidden');
+    console.log('Showing auth screen');
+    var authScreen = document.getElementById('auth-screen');
+    var appScreen = document.getElementById('app-screen');
+    
+    if (authScreen) {
+      authScreen.style.display = 'flex';
+    }
+    if (appScreen) {
+      appScreen.style.display = 'none';
+      appScreen.classList.remove('active');
+    }
   },
 
-  refreshBalance: function (force = false) {
+  refreshBalance: function (force) {
+    if (force === undefined) force = false;
     if (!this.currentUser) return;
-    const now = Date.now();
+    var now = Date.now();
     if (!force && (now - this.lastBalanceUpdate) < 3000) {
       return;
     }
-    const display = document.getElementById('balance-display');
+    var display = document.getElementById('balance-display');
     if (display) {
       display.textContent = this.currentUser.balance.toLocaleString(undefined, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       });
     }
-    const minEl = document.getElementById('withdraw-min');
-    if (minEl) minEl.textContent = `₦${CONFIG.MIN_WITHDRAWAL.toLocaleString()}`;
+    var minEl = document.getElementById('withdraw-min');
+    if (minEl) minEl.textContent = '₦' + CONFIG.MIN_WITHDRAWAL.toLocaleString();
 
-    const gameRewardsEl = document.getElementById('game-rewards-display');
-    const gameTypes = ['COINFLIP_WIN', 'PLINKO_WIN', 'PLINKO_REPORT', 'SNAKE_REWARD'];
-    const gameTotal = (this.currentUser.transactions || [])
-      .filter(t => gameTypes.includes(t.type) && parseFloat(t.amount || 0) > 0)
-      .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+    var gameRewardsEl = document.getElementById('game-rewards-display');
+    var gameTypes = ['COINFLIP_WIN', 'PLINKO_WIN', 'PLINKO_REPORT', 'SNAKE_REWARD'];
+    var gameTotal = (this.currentUser.transactions || [])
+      .filter(function(t) { return gameTypes.indexOf(t.type) !== -1 && parseFloat(t.amount || 0) > 0; })
+      .reduce(function(sum, t) { return sum + parseFloat(t.amount || 0); }, 0);
 
     if (gameRewardsEl) {
       gameRewardsEl.textContent = gameTotal.toLocaleString(undefined, {
@@ -203,17 +230,17 @@ const App = {
       });
     }
 
-    const totalBal = parseFloat(this.currentUser.balance);
-    const refTikTokBal = Math.max(0, totalBal - gameTotal);
-    const fmt = (v) => `₦${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    var totalBal = parseFloat(this.currentUser.balance);
+    var refTikTokBal = Math.max(0, totalBal - gameTotal);
+    var fmt = function(v) { return '₦' + v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
 
-    const wdRef = document.getElementById('withdraw-ref-balance');
+    var wdRef = document.getElementById('withdraw-ref-balance');
     if (wdRef) wdRef.textContent = fmt(refTikTokBal);
 
-    const wdGame = document.getElementById('withdraw-game-balance');
+    var wdGame = document.getElementById('withdraw-game-balance');
     if (wdGame) wdGame.textContent = fmt(gameTotal);
 
-    const withdrawBalance = document.getElementById('withdraw-balance');
+    var withdrawBalance = document.getElementById('withdraw-balance');
     if (withdrawBalance) {
       withdrawBalance.textContent = fmt(totalBal);
     }
@@ -224,20 +251,20 @@ const App = {
   fetchFreshBalance: async function () {
     if (!this.currentUser) return;
     try {
-      fetch('/api/config').then(r => r.json()).then(cfg => {
+      fetch('/api/config').then(function(r) { return r.json(); }).then(function(cfg) {
         if (cfg.success && cfg.min_withdrawal != null) {
           CONFIG.MIN_WITHDRAWAL = cfg.min_withdrawal;
-          const minEl = document.getElementById('withdraw-min');
-          if (minEl) minEl.textContent = `₦${cfg.min_withdrawal.toLocaleString()}`;
+          var minEl = document.getElementById('withdraw-min');
+          if (minEl) minEl.textContent = '₦' + cfg.min_withdrawal.toLocaleString();
         }
-      }).catch(() => {});
+      }).catch(function() {});
 
-      const response = await this.requestWithTimeout('/api/user/profile', {
+      var response = await this.requestWithTimeout('/api/user/profile', {
         credentials: 'include',
         headers: { 'Cache-Control': 'no-cache' }
       });
       if (response.ok) {
-        const data = await response.json();
+        var data = await response.json();
         if (data.success && data.user && data.user.balance !== undefined) {
           this.currentUser.balance = parseFloat(data.user.balance);
           if (data.user.transactions) this.currentUser.transactions = data.user.transactions;
@@ -258,7 +285,7 @@ const App = {
 
   toggleBalance: function () {
     this.balanceVisible = !this.balanceVisible;
-    const display = document.getElementById('balance-display');
+    var display = document.getElementById('balance-display');
     if (display) {
       display.textContent = this.balanceVisible
         ? this.currentUser.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })
@@ -267,7 +294,7 @@ const App = {
   },
 
   showModal: function (modalId) {
-    document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
+    document.querySelectorAll('.modal').forEach(function(m) { m.classList.add('hidden'); });
     document.getElementById(modalId).classList.remove('hidden');
   },
 
@@ -275,15 +302,17 @@ const App = {
     document.getElementById(modalId).classList.add('hidden');
   },
 
-  showMessage: function (text, type = 'info', duration = 5000) {
-    document.querySelectorAll('.global-message').forEach(el => el.remove());
-    const messageEl = document.createElement('div');
-    messageEl.className = `global-message ${type}`;
+  showMessage: function (text, type, duration) {
+    if (type === undefined) type = 'info';
+    if (duration === undefined) duration = 5000;
+    document.querySelectorAll('.global-message').forEach(function(el) { el.remove(); });
+    var messageEl = document.createElement('div');
+    messageEl.className = 'global-message ' + type;
     messageEl.textContent = text;
     document.body.appendChild(messageEl);
-    setTimeout(() => {
+    setTimeout(function() {
       messageEl.style.animation = 'slideOut 0.3s ease-out';
-      setTimeout(() => {
+      setTimeout(function() {
         if (messageEl.parentNode) {
           messageEl.remove();
         }
@@ -293,7 +322,7 @@ const App = {
 
   toggleTheme: function () {
     document.body.classList.toggle('dark-mode');
-    const isDark = document.body.classList.contains('dark-mode');
+    var isDark = document.body.classList.contains('dark-mode');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
     fetch('/api/user/set-theme', {
       method: 'POST',
@@ -304,27 +333,28 @@ const App = {
   },
 
   setupTheme: function () {
-    const savedTheme = localStorage.getItem('theme') || 'light';
+    var savedTheme = localStorage.getItem('theme') || 'light';
     if (savedTheme === 'dark') {
       document.body.classList.add('dark-mode');
     }
   },
 
   setupAutoRefresh: function () {
-    setInterval(() => this.fetchFreshBalance(), 10000);
-    setInterval(() => this.updateGameCards(), 30000);
-    document.addEventListener('visibilitychange', () => {
+    var self = this;
+    setInterval(function() { self.fetchFreshBalance(); }, 10000);
+    setInterval(function() { self.updateGameCards(); }, 30000);
+    document.addEventListener('visibilitychange', function() {
       if (document.visibilityState === 'visible') {
-        this.fetchFreshBalance();
+        self.fetchFreshBalance();
         SessionManager.handleAppResume();
       }
     });
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'flexia_balance' && e.newValue && this.currentUser) {
-        const val = parseFloat(e.newValue);
+    window.addEventListener('storage', function(e) {
+      if (e.key === 'flexia_balance' && e.newValue && self.currentUser) {
+        var val = parseFloat(e.newValue);
         if (!isNaN(val)) {
-          this.currentUser.balance = val;
-          this.refreshBalance(true);
+          self.currentUser.balance = val;
+          self.refreshBalance(true);
           TodayEarnings.fetch();
         }
       }
@@ -333,57 +363,57 @@ const App = {
 
   async updateGameCards() {
     if (!this.currentUser) return;
-    const games = [
+    var games = [
       { type: 'snake', element: document.querySelector('.activity-card .icon.snake')?.closest('.activity-card') },
       { type: 'coinflip', element: document.querySelector('.activity-card .icon.coin')?.closest('.activity-card') },
       { type: 'plinko', element: document.querySelector('.activity-card .icon.plinko')?.closest('.activity-card') }
     ];
-    for (const game of games) {
+    for (var i = 0; i < games.length; i++) {
+      var game = games[i];
       if (!game.element) continue;
       try {
-        const response = await this.requestWithTimeout(`/api/games/access?game=${game.type}`, {
+        var response = await this.requestWithTimeout('/api/games/access?game=' + game.type, {
           credentials: 'include',
           headers: { 'Cache-Control': 'no-cache' }
         });
         if (response.ok) {
-          const data = await response.json();
+          var data = await response.json();
           if (data.success) {
             if (data.can_play) {
               game.element.classList.remove('disabled');
               game.element.style.opacity = '1';
               game.element.style.filter = 'none';
               game.element.style.cursor = 'pointer';
-              const badge = game.element.querySelector('.badge');
+              var badge = game.element.querySelector('.badge');
               if (badge && data.remaining_plays !== undefined) {
-                badge.textContent = `${data.remaining_plays} left`;
+                badge.textContent = data.remaining_plays + ' left';
               }
             } else {
               game.element.classList.add('disabled');
-              const badge = game.element.querySelector('.badge');
+              var badge = game.element.querySelector('.badge');
               if (badge) {
-                badge.textContent = `LIMIT`;
+                badge.textContent = 'LIMIT';
                 badge.style.background = '#ff4757';
               }
             }
           }
         }
       } catch (error) {
-        console.error(`Failed to update ${game.type} card:`, error);
+        console.error('Failed to update ' + game.type + ' card:', error);
       }
     }
   },
 
-  requestWithTimeout: async function(url, options = {}, timeout = 10000) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+  requestWithTimeout: async function(url, options, timeout) {
+    if (options === undefined) options = {};
+    if (timeout === undefined) timeout = 10000;
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function() { controller.abort(); }, timeout);
     try {
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal
-      });
+      var response = await fetch(url, Object.assign({}, options, { signal: controller.signal }));
       clearTimeout(timeoutId);
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
+      var contentType = response.headers.get('content-type');
+      if (!contentType || contentType.indexOf('application/json') === -1) {
         throw new Error('Server returned non-JSON response. Please try again.');
       }
       return response;
@@ -398,30 +428,28 @@ const App = {
 };
 
 //========== SESSION PERSISTENCE & RECOVERY ==========
-const SessionManager = {
+var SessionManager = {
   lastActiveTime: null,
   sessionCheckInterval: null,
-  recoveryAttempted: false,
 
   init: function() {
     this.checkSessionStatus();
     this.trackActivity();
-    this.sessionCheckInterval = setInterval(() => {
-      this.refreshSessionIfActive();
-    }, 300000);
+    var self = this;
+    this.sessionCheckInterval = setInterval(function() { self.refreshSessionIfActive(); }, 300000);
     
-    document.addEventListener('visibilitychange', () => {
+    document.addEventListener('visibilitychange', function() {
       if (document.visibilityState === 'visible') {
-        this.handleAppResume();
+        self.handleAppResume();
       }
     });
     
-    window.addEventListener('online', () => {
+    window.addEventListener('online', function() {
       App.showMessage('Connection restored. Refreshing...', 'info', 3000);
-      this.handleAppResume();
+      self.handleAppResume();
     });
     
-    window.addEventListener('offline', () => {
+    window.addEventListener('offline', function() {
       App.showMessage('No internet connection. Reconnecting...', 'warning', 5000);
     });
     
@@ -430,23 +458,23 @@ const SessionManager = {
 
   checkSessionStatus: async function() {
     try {
-      const response = await fetch('/api/session/status', {
+      var response = await fetch('/api/session/status', {
         credentials: 'include'
       });
-      const data = await response.json();
+      var data = await response.json();
       
       if (data.success && data.authenticated) {
         this.lastActiveTime = Date.now();
         
         if (document.getElementById('auth-screen') && 
-            !document.getElementById('auth-screen').classList.contains('hidden')) {
+            document.getElementById('auth-screen').style.display !== 'none') {
           App.showMessage('Session restored. Welcome back!', 'success', 3000);
           await App.checkAuth();
         }
         return true;
       } else {
         if (document.getElementById('app-screen') && 
-            !document.getElementById('app-screen').classList.contains('hidden')) {
+            document.getElementById('app-screen').style.display !== 'none') {
           App.showAuthScreen();
           App.showMessage('Session expired. Please login again.', 'warning', 4000);
         }
@@ -461,11 +489,11 @@ const SessionManager = {
   refreshSessionIfActive: async function() {
     if (App.currentUser) {
       try {
-        const response = await fetch('/api/session/refresh', {
+        var response = await fetch('/api/session/refresh', {
           method: 'POST',
           credentials: 'include'
         });
-        const data = await response.json();
+        var data = await response.json();
         if (data.success) {
           this.lastActiveTime = Date.now();
           console.log('Session refreshed');
@@ -477,18 +505,20 @@ const SessionManager = {
   },
 
   trackActivity: function() {
-    const events = ['click', 'touchstart', 'scroll', 'keydown', 'mousemove'];
-    const activityHandler = () => {
-      this.lastActiveTime = Date.now();
+    var events = ['click', 'touchstart', 'scroll', 'keydown', 'mousemove'];
+    var self = this;
+    var activityHandler = function() {
+      self.lastActiveTime = Date.now();
     };
-    events.forEach(event => {
+    events.forEach(function(event) {
       document.addEventListener(event, activityHandler, { passive: true });
     });
   },
 
   handleAppResume: function() {
     console.log('App resumed, checking session...');
-    this.checkSessionStatus().then(isValid => {
+    var self = this;
+    this.checkSessionStatus().then(function(isValid) {
       if (isValid && App.currentUser) {
         App.fetchFreshBalance();
         TodayEarnings.fetch();
@@ -504,7 +534,7 @@ const SessionManager = {
   saveState: function() {
     if (App.currentUser) {
       try {
-        const state = {
+        var state = {
           userId: App.currentUser.id,
           username: App.currentUser.username,
           balance: App.currentUser.balance,
@@ -520,13 +550,13 @@ const SessionManager = {
 
   restoreFromLocalStorage: function() {
     try {
-      const saved = localStorage.getItem('flexia_session_state');
+      var saved = localStorage.getItem('flexia_session_state');
       if (saved) {
-        const state = JSON.parse(saved);
-        const age = Date.now() - state.lastActive;
+        var state = JSON.parse(saved);
+        var age = Date.now() - state.lastActive;
         if (age < 1800000 && !App.currentUser) {
           console.log('Restoring session from localStorage');
-          this.checkSessionStatus().then(isValid => {
+          this.checkSessionStatus().then(function(isValid) {
             if (isValid) {
               App.checkAuth();
             }
@@ -557,101 +587,11 @@ window.addEventListener('beforeunload', function() {
   SessionManager.saveScrollPosition();
 });
 
-//========== TODAY'S EARNINGS ==========
-const TodayEarnings = {
-  async fetch() {
-    if (!App.currentUser) return;
-    try {
-      const response = await App.requestWithTimeout('/api/user/today-earnings', {
-        credentials: 'include',
-        headers: { 'Cache-Control': 'no-cache' }
-      });
-      const data = await response.json();
-      if (data.success) {
-        this.render(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch today earnings:', error);
-    }
-  },
-
-  render(data) {
-    const total = data.total_earned || 0;
-    const breakdown = data.breakdown || {};
-    const caps = data.caps || {};
-
-    document.getElementById('today-earnings-total').textContent = total.toFixed(2);
-
-    const gameMap = {
-      'SNAKE_REWARD': 'today-snake',
-      'COINFLIP_WIN': 'today-coinflip',
-      'PLINKO_WIN': 'today-plinko',
-      'TIKTOK_DAILY': 'today-tiktok',
-      'REFERRAL_BONUS': 'today-referral',
-      'LOGIN_BONUS': 'today-login',
-      'ACHIEVEMENT_REWARD': 'today-achievement',
-      'SPIN_REWARD': 'today-spin'
-    };
-
-    Object.keys(gameMap).forEach(type => {
-      const el = document.getElementById(gameMap[type]);
-      if (el) {
-        const amount = breakdown[type] || 0;
-        el.textContent = amount.toFixed(2);
-      }
-    });
-
-    const capMap = {
-      'snake': 'today-snake',
-      'coinflip': 'today-coinflip',
-      'plinko': 'today-plinko'
-    };
-    Object.keys(capMap).forEach(game => {
-      const el = document.getElementById(capMap[game]);
-      if (el && caps[game]) {
-        const earned = caps[game].earned || 0;
-        const cap = caps[game].cap || 0;
-        const parent = el.closest('.earnings-item');
-        if (parent) {
-          const label = parent.querySelector('span:last-child');
-          if (label) {
-            label.innerHTML = `₦${earned.toFixed(2)} / ₦${cap}`;
-            if (earned >= cap) {
-              label.innerHTML += ' ✓';
-              label.style.color = '#34d399';
-            } else if (earned > cap * 0.8) {
-              label.style.color = '#fbbf24';
-            } else {
-              label.style.color = '';
-            }
-          }
-        }
-      }
-    });
-
-    const updateEl = document.getElementById('today-earnings-update');
-    if (updateEl) {
-      updateEl.textContent = 'Updated ' + new Date().toLocaleTimeString();
-    }
-  },
-
-  async refresh() {
-    await this.fetch();
-  }
-};
-
-// Auto-refresh every 30 seconds
-setInterval(() => {
-  if (document.getElementById('app-screen').classList.contains('active')) {
-    TodayEarnings.refresh();
-  }
-}, 30000);
-
 //========== AUTHENTICATION ==========
-const Auth = {
+var Auth = {
   togglePasswordVisibility: function(fieldId) {
-    const passwordField = document.getElementById(fieldId);
-    const toggleBtn = passwordField.nextElementSibling;
+    var passwordField = document.getElementById(fieldId);
+    var toggleBtn = passwordField.nextElementSibling;
     if (passwordField.type === 'password') {
       passwordField.type = 'text';
       toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
@@ -664,42 +604,42 @@ const Auth = {
   },
 
   initPasswordToggles: function() {
-    const loginPasswordField = document.getElementById('login-password');
+    var loginPasswordField = document.getElementById('login-password');
     if (loginPasswordField && !loginPasswordField.parentNode?.classList?.contains('password-container')) {
-      const loginContainer = document.createElement('div');
+      var loginContainer = document.createElement('div');
       loginContainer.className = 'password-container';
       loginPasswordField.parentNode.insertBefore(loginContainer, loginPasswordField);
       loginContainer.appendChild(loginPasswordField);
-      const loginToggle = document.createElement('button');
+      var loginToggle = document.createElement('button');
       loginToggle.type = 'button';
       loginToggle.className = 'password-toggle';
       loginToggle.innerHTML = '<i class="fas fa-eye"></i>';
       loginToggle.setAttribute('title', 'Show password');
       loginToggle.setAttribute('aria-label', 'Toggle password visibility');
-      loginToggle.onclick = () => this.togglePasswordVisibility('login-password');
+      loginToggle.onclick = function() { Auth.togglePasswordVisibility('login-password'); };
       loginContainer.appendChild(loginToggle);
     }
-    const regPasswordField = document.getElementById('reg-password');
+    var regPasswordField = document.getElementById('reg-password');
     if (regPasswordField && !regPasswordField.parentNode?.classList?.contains('password-container')) {
-      const regContainer = document.createElement('div');
+      var regContainer = document.createElement('div');
       regContainer.className = 'password-container';
       regPasswordField.parentNode.insertBefore(regContainer, regPasswordField);
       regContainer.appendChild(regPasswordField);
-      const regToggle = document.createElement('button');
+      var regToggle = document.createElement('button');
       regToggle.type = 'button';
       regToggle.className = 'password-toggle';
       regToggle.innerHTML = '<i class="fas fa-eye"></i>';
       regToggle.setAttribute('title', 'Show password');
       regToggle.setAttribute('aria-label', 'Toggle password visibility');
-      regToggle.onclick = () => this.togglePasswordVisibility('reg-password');
+      regToggle.onclick = function() { Auth.togglePasswordVisibility('reg-password'); };
       regContainer.appendChild(regToggle);
     }
   },
 
   login: async function () {
-    const identifier = document.getElementById('login-username').value.trim();
-    const password = document.getElementById('login-password').value;
-    const messageEl = document.getElementById('login-message');
+    var identifier = document.getElementById('login-username').value.trim();
+    var password = document.getElementById('login-password').value;
+    var messageEl = document.getElementById('login-message');
 
     if (!identifier || !password) {
       messageEl.textContent = 'Please fill all fields';
@@ -708,12 +648,12 @@ const Auth = {
     }
 
     try {
-      const response = await App.requestWithTimeout('/api/auth/login', {
+      var response = await App.requestWithTimeout('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: identifier, password })
+        body: JSON.stringify({ username: identifier, password: password })
       });
-      const data = await response.json();
+      var data = await response.json();
 
       messageEl.textContent = data.message;
       messageEl.className = data.success ? 'message success' : 'message error';
@@ -725,10 +665,10 @@ const Auth = {
         document.getElementById('login-username').value = '';
         document.getElementById('login-password').value = '';
 
-        const loginPassword = document.getElementById('login-password');
+        var loginPassword = document.getElementById('login-password');
         if (loginPassword.type === 'text') {
           loginPassword.type = 'password';
-          const toggleBtn = loginPassword.nextElementSibling;
+          var toggleBtn = loginPassword.nextElementSibling;
           if (toggleBtn) {
             toggleBtn.innerHTML = '<i class="fas fa-eye"></i>';
             toggleBtn.setAttribute('title', 'Show password');
@@ -736,6 +676,7 @@ const Auth = {
         }
         await TodayEarnings.fetch();
         SessionManager.init();
+        console.log('Login successful, dashboard shown');
       }
     } catch (error) {
       messageEl.textContent = error.message || 'Network error. Please try again.';
@@ -744,13 +685,13 @@ const Auth = {
   },
 
   register: async function () {
-    const username = document.getElementById('reg-username').value.trim();
-    const password = document.getElementById('reg-password').value;
-    const coupon = document.getElementById('reg-coupon').value.trim().toUpperCase();
-    const referral = document.getElementById('reg-referral').value.trim();
-    const contact = document.getElementById('reg-contact')?.value.trim() || '';
-    const messageEl = document.getElementById('register-message');
-    const btn = document.getElementById('register-btn');
+    var username = document.getElementById('reg-username').value.trim();
+    var password = document.getElementById('reg-password').value;
+    var coupon = document.getElementById('reg-coupon').value.trim().toUpperCase();
+    var referral = document.getElementById('reg-referral').value.trim();
+    var contact = document.getElementById('reg-contact')?.value.trim() || '';
+    var messageEl = document.getElementById('register-message');
+    var btn = document.getElementById('register-btn');
 
     if (!username || !password || !coupon) {
       messageEl.textContent = 'All required fields must be filled';
@@ -776,12 +717,12 @@ const Auth = {
     messageEl.className = 'message info';
 
     try {
-      const couponCheck = await App.requestWithTimeout('/api/auth/validate-coupon', {
+      var couponCheck = await App.requestWithTimeout('/api/auth/validate-coupon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ coupon_code: coupon })
       });
-      const couponData = await couponCheck.json();
+      var couponData = await couponCheck.json();
 
       if (!couponData.success) {
         messageEl.textContent = couponData.message || 'Invalid coupon code. Please check and try again.';
@@ -795,13 +736,13 @@ const Auth = {
       messageEl.textContent = 'Creating your account...';
       messageEl.className = 'message info';
 
-      const response = await App.requestWithTimeout('/api/auth/register', {
+      var response = await App.requestWithTimeout('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, coupon_code: coupon, referral_code: referral, contact })
+        body: JSON.stringify({ username: username, password: password, coupon_code: coupon, referral_code: referral, contact: contact })
       });
 
-      const data = await response.json();
+      var data = await response.json();
 
       if (data.success) {
         messageEl.textContent = 'Account created successfully! Please login.';
@@ -813,10 +754,10 @@ const Auth = {
         document.getElementById('reg-referral').value = '';
         document.getElementById('reg-contact').value = '';
 
-        setTimeout(() => {
-          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        setTimeout(function() {
+          document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
           document.querySelector('[data-tab="login"]').classList.add('active');
-          document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+          document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
           document.getElementById('login-form').classList.add('active');
           document.getElementById('login-message').textContent = 'Account created! Please login with your credentials.';
           document.getElementById('login-message').className = 'message success';
@@ -843,26 +784,116 @@ const Auth = {
 
   buyCoupon: async function () {
     try {
-      const response = await App.requestWithTimeout('/api/whatsapp/numbers');
-      const data = await response.json();
-      const number = (data.success && data.numbers && data.numbers[0]) ? data.numbers[0].number.trim() : '2348160881049';
-      window.open(`https://wa.me/${number}`, '_blank');
+      var response = await App.requestWithTimeout('/api/whatsapp/numbers');
+      var data = await response.json();
+      var number = (data.success && data.numbers && data.numbers[0]) ? data.numbers[0].number.trim() : '2348160881049';
+      window.open('https://wa.me/' + number, '_blank');
     } catch (error) {
       window.open('https://wa.me/2348160881049', '_blank');
     }
   }
 };
 
+//========== TODAY'S EARNINGS ==========
+var TodayEarnings = {
+  async fetch() {
+    if (!App.currentUser) return;
+    try {
+      var response = await App.requestWithTimeout('/api/user/today-earnings', {
+        credentials: 'include',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      var data = await response.json();
+      if (data.success) {
+        this.render(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch today earnings:', error);
+    }
+  },
+
+  render: function(data) {
+    var total = data.total_earned || 0;
+    var breakdown = data.breakdown || {};
+    var caps = data.caps || {};
+
+    document.getElementById('today-earnings-total').textContent = total.toFixed(2);
+
+    var gameMap = {
+      'SNAKE_REWARD': 'today-snake',
+      'COINFLIP_WIN': 'today-coinflip',
+      'PLINKO_WIN': 'today-plinko',
+      'TIKTOK_DAILY': 'today-tiktok',
+      'REFERRAL_BONUS': 'today-referral',
+      'LOGIN_BONUS': 'today-login',
+      'ACHIEVEMENT_REWARD': 'today-achievement',
+      'SPIN_REWARD': 'today-spin'
+    };
+
+    Object.keys(gameMap).forEach(function(type) {
+      var el = document.getElementById(gameMap[type]);
+      if (el) {
+        var amount = breakdown[type] || 0;
+        el.textContent = amount.toFixed(2);
+      }
+    });
+
+    var capMap = {
+      'snake': 'today-snake',
+      'coinflip': 'today-coinflip',
+      'plinko': 'today-plinko'
+    };
+    Object.keys(capMap).forEach(function(game) {
+      var el = document.getElementById(capMap[game]);
+      if (el && caps[game]) {
+        var earned = caps[game].earned || 0;
+        var cap = caps[game].cap || 0;
+        var parent = el.closest('.earnings-item');
+        if (parent) {
+          var label = parent.querySelector('span:last-child');
+          if (label) {
+            label.innerHTML = '₦' + earned.toFixed(2) + ' / ₦' + cap;
+            if (earned >= cap) {
+              label.innerHTML += ' ✓';
+              label.style.color = '#34d399';
+            } else if (earned > cap * 0.8) {
+              label.style.color = '#fbbf24';
+            } else {
+              label.style.color = '';
+            }
+          }
+        }
+      }
+    });
+
+    var updateEl = document.getElementById('today-earnings-update');
+    if (updateEl) {
+      updateEl.textContent = 'Updated ' + new Date().toLocaleTimeString();
+    }
+  },
+
+  refresh: async function() {
+    await this.fetch();
+  }
+};
+
+// Auto-refresh every 30 seconds
+setInterval(function() {
+  if (document.getElementById('app-screen') && document.getElementById('app-screen').style.display !== 'none') {
+    TodayEarnings.refresh();
+  }
+}, 30000);
+
 //========== WITHDRAWAL DAY CHECK ==========
 async function checkWithdrawalDay() {
   try {
-    const response = await fetch('/api/withdrawal/check-day', {
+    var response = await fetch('/api/withdrawal/check-day', {
       credentials: 'include'
     });
-    const data = await response.json();
+    var data = await response.json();
     if (data.success) {
-      const today = new Date().getDate();
-      const days = data.custom_withdrawal_days.length > 0
+      var today = new Date().getDate();
+      var days = data.custom_withdrawal_days.length > 0
         ? data.custom_withdrawal_days
         : data.global_withdrawal_days;
       if (!data.can_withdraw) {
@@ -881,10 +912,10 @@ async function checkWithdrawalDay() {
 }
 
 function showWithdrawalDayModal(canWithdraw, today, days) {
-  const existingModal = document.getElementById('withdrawal-day-modal');
+  var existingModal = document.getElementById('withdrawal-day-modal');
   if (existingModal) existingModal.remove();
-  const sortedDays = days ? [...days].sort((a,b) => a-b) : [];
-  const modal = document.createElement('div');
+  var sortedDays = days ? days.slice().sort(function(a,b){return a-b;}) : [];
+  var modal = document.createElement('div');
   modal.id = 'withdrawal-day-modal';
   modal.className = 'withdrawal-day-modal';
   modal.innerHTML = `
@@ -898,8 +929,8 @@ function showWithdrawalDayModal(canWithdraw, today, days) {
       <div class="withdrawal-day-message">
         <p class="withdrawal-day-text">
           ${canWithdraw
-            ? `You <strong>CAN</strong> withdraw today (Day ${today})!`
-            : `You <strong>cannot</strong> withdraw today (Day ${today}).`
+            ? 'You <strong>CAN</strong> withdraw today (Day ' + today + ')!'
+            : 'You <strong>cannot</strong> withdraw today (Day ' + today + ').'
           }
         </p>
         <div class="withdrawal-day-info">
@@ -910,11 +941,9 @@ function showWithdrawalDayModal(canWithdraw, today, days) {
           <div class="withdrawal-day-days">
             <strong>Withdrawal Days:</strong>
             <div style="margin-top: 8px;">
-              ${sortedDays.map(day => `
-                <span class="withdrawal-day-day ${day === today ? 'current' : ''}">
-                  Day ${day}${day === today ? ' (Today)' : ''}
-                </span>
-              `).join('')}
+              ${sortedDays.map(function(day) {
+                return '<span class="withdrawal-day-day ' + (day === today ? 'current' : '') + '">Day ' + day + (day === today ? ' (Today)' : '') + '</span>';
+              }).join('')}
             </div>
           </div>
         ` : ''}
@@ -943,38 +972,38 @@ function showWithdrawalDayModal(canWithdraw, today, days) {
 }
 
 function closeWithdrawalDayModal() {
-  const modal = document.getElementById('withdrawal-day-modal');
+  var modal = document.getElementById('withdrawal-day-modal');
   if (modal) modal.remove();
 }
 
 function getNextAllowedDay(currentDay, allowedDays) {
   if (!allowedDays || allowedDays.length === 0) return 'Unknown';
-  const sorted = [...allowedDays].sort((a,b) => a-b);
-  for (const day of sorted) {
-    if (day > currentDay) return `Day ${day}`;
+  var sorted = allowedDays.slice().sort(function(a,b){return a-b;});
+  for (var i = 0; i < sorted.length; i++) {
+    if (sorted[i] > currentDay) return 'Day ' + sorted[i];
   }
-  return `Day ${sorted[0]} (next month)`;
+  return 'Day ' + sorted[0] + ' (next month)';
 }
 
 //========== PAYSTACK PAYMENT ==========
-const PaystackPayment = {
+var PaystackPayment = {
   timerInterval: null,
   timerSeconds: 3600,
 
   async initiate() {
-    const email = document.getElementById('payment-email').value.trim();
-    const amount = parseFloat(document.getElementById('payment-amount').value);
-    const btn = document.getElementById('paystack-pay-btn');
-    const msg = document.getElementById('payment-message');
+    var email = document.getElementById('payment-email').value.trim();
+    var amount = parseFloat(document.getElementById('payment-amount').value);
+    var btn = document.getElementById('paystack-pay-btn');
+    var msg = document.getElementById('payment-message');
 
-    if (!email || !email.includes('@')) {
+    if (!email || email.indexOf('@') === -1) {
       msg.textContent = 'Please enter a valid email address';
       msg.className = 'message error';
       return;
     }
 
     if (!amount || amount < CONFIG.PAYSTACK_MIN_AMOUNT) {
-      msg.textContent = `Minimum amount is ₦${CONFIG.PAYSTACK_MIN_AMOUNT}`;
+      msg.textContent = 'Minimum amount is ₦' + CONFIG.PAYSTACK_MIN_AMOUNT;
       msg.className = 'message error';
       return;
     }
@@ -985,14 +1014,14 @@ const PaystackPayment = {
     msg.className = 'message info';
 
     try {
-      const response = await App.requestWithTimeout('/api/paystack/initialize', {
+      var response = await App.requestWithTimeout('/api/paystack/initialize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ email, amount })
+        body: JSON.stringify({ email: email, amount: amount })
       });
 
-      const data = await response.json();
+      var data = await response.json();
 
       if (data.success) {
         msg.textContent = 'Payment initialized!';
@@ -1006,7 +1035,7 @@ const PaystackPayment = {
           this.startTimer(data.expires_at);
         }
 
-        setTimeout(() => {
+        setTimeout(function() {
           window.location.href = data.authorization_url;
         }, 2000);
       } else {
@@ -1024,9 +1053,9 @@ const PaystackPayment = {
     }
   },
 
-  showBankTransferDetails(details, expiresAt) {
-    const container = document.getElementById('bank-transfer-info');
-    const detailsDiv = document.getElementById('transfer-details');
+  showBankTransferDetails: function(details, expiresAt) {
+    var container = document.getElementById('bank-transfer-info');
+    var detailsDiv = document.getElementById('transfer-details');
 
     container.style.display = 'block';
     container.classList.add('visible');
@@ -1060,7 +1089,7 @@ const PaystackPayment = {
     container.scrollIntoView({ behavior: 'smooth', block: 'center' });
   },
 
-  startTimer(expiresAt) {
+  startTimer: function(expiresAt) {
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
     }
@@ -1072,18 +1101,19 @@ const PaystackPayment = {
       this.timerSeconds = 3600;
     }
 
-    const timerEl = document.getElementById('payment-timer-value');
+    var timerEl = document.getElementById('payment-timer-value');
 
-    this.timerInterval = setInterval(() => {
-      this.timerSeconds--;
+    var self = this;
+    this.timerInterval = setInterval(function() {
+      self.timerSeconds--;
 
-      if (this.timerSeconds <= 0) {
-        clearInterval(this.timerInterval);
+      if (self.timerSeconds <= 0) {
+        clearInterval(self.timerInterval);
         timerEl.textContent = '00:00';
         timerEl.className = 'payment-timer-value expired';
         document.getElementById('bank-transfer-info').style.borderColor = '#FF0000';
 
-        const msg = document.getElementById('payment-message');
+        var msg = document.getElementById('payment-message');
         msg.textContent = 'Payment window expired. Please start a new payment.';
         msg.className = 'message error';
 
@@ -1091,13 +1121,13 @@ const PaystackPayment = {
         return;
       }
 
-      const minutes = Math.floor(this.timerSeconds / 60);
-      const seconds = this.timerSeconds % 60;
-      timerEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      var minutes = Math.floor(self.timerSeconds / 60);
+      var seconds = self.timerSeconds % 60;
+      timerEl.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
 
-      if (this.timerSeconds < 300) {
+      if (self.timerSeconds < 300) {
         timerEl.className = 'payment-timer-value danger';
-      } else if (this.timerSeconds < 600) {
+      } else if (self.timerSeconds < 600) {
         timerEl.className = 'payment-timer-value warning';
       } else {
         timerEl.className = 'payment-timer-value';
@@ -1105,7 +1135,7 @@ const PaystackPayment = {
     }, 1000);
   },
 
-  closeModal() {
+  closeModal: function() {
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
       this.timerInterval = null;
@@ -1121,10 +1151,10 @@ const PaystackPayment = {
 
   async checkStatus(reference) {
     try {
-      const response = await App.requestWithTimeout(`/api/paystack/status/${reference}`, {
+      var response = await App.requestWithTimeout('/api/paystack/status/' + reference, {
         credentials: 'include'
       });
-      const data = await response.json();
+      var data = await response.json();
       return data;
     } catch (error) {
       console.error('Status check error:', error);
@@ -1143,12 +1173,12 @@ const PaystackPayment = {
     document.getElementById('payment-timer-value').textContent = '60:00';
     document.getElementById('payment-timer-value').className = 'payment-timer-value';
 
-    const regEmail = document.getElementById('reg-contact')?.value || '';
-    if (regEmail && regEmail.includes('@')) {
+    var regEmail = document.getElementById('reg-contact')?.value || '';
+    if (regEmail && regEmail.indexOf('@') !== -1) {
       document.getElementById('payment-email').value = regEmail;
     }
 
-    const modalInfo = document.querySelector('#paystack-payment-modal .modal-info');
+    var modalInfo = document.querySelector('#paystack-payment-modal .modal-info');
     if (modalInfo) {
       modalInfo.innerHTML = `
         Pay via <strong>Bank Transfer</strong> or <strong>Card</strong> and receive your coupon code via email.
@@ -1181,7 +1211,7 @@ const PaystackPayment = {
       document.getElementById('payment-email').value = App.currentUser.contact;
     }
 
-    const modalInfo = document.querySelector('#paystack-payment-modal .modal-info');
+    var modalInfo = document.querySelector('#paystack-payment-modal .modal-info');
     if (modalInfo) {
       modalInfo.innerHTML = `
         Pay via <strong>Bank Transfer</strong> or <strong>Card</strong> and receive your coupon code via email.
@@ -1191,13 +1221,13 @@ const PaystackPayment = {
 };
 
 //========== GAME MANAGER ==========
-const GameManager = {
+var GameManager = {
   lastClaimTime: 0,
   pendingRequests: new Map(),
 
   async checkDailyLimit(gameType) {
     try {
-      const response = await App.requestWithTimeout(`/api/games/limit-check?game=${gameType}`, {
+      var response = await App.requestWithTimeout('/api/games/limit-check?game=' + gameType, {
         credentials: 'include',
         headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
       });
@@ -1212,20 +1242,21 @@ const GameManager = {
     }
   },
 
-  async safeClaim(endpoint, data, gameType = 'unknown') {
+  async safeClaim(endpoint, data, gameType) {
+    if (gameType === undefined) gameType = 'unknown';
     if (this.pendingRequests.has(gameType)) {
-      console.warn(`Already claiming ${gameType}, ignoring duplicate`);
+      console.warn('Already claiming ' + gameType + ', ignoring duplicate');
       return { success: false, message: "Please wait for the current claim to complete" };
     }
     this.pendingRequests.set(gameType, true);
     try {
-      const response = await App.requestWithTimeout(endpoint, {
+      var response = await App.requestWithTimeout(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Request-ID': Date.now().toString() },
         credentials: 'include',
         body: JSON.stringify(data)
       }, 15000);
-      const result = await response.json();
+      var result = await response.json();
       this.lastClaimTime = Date.now();
       return result;
     } catch (error) {
@@ -1240,7 +1271,7 @@ const GameManager = {
   },
 
   setButtonLoading: function(buttonId, isLoading) {
-    const button = document.getElementById(buttonId);
+    var button = document.getElementById(buttonId);
     if (!button) return;
     if (isLoading) {
       button.classList.add('btn-loading');
@@ -1253,7 +1284,7 @@ const GameManager = {
 };
 
 //========== GAME LIMITER ==========
-const GameLimiter = {
+var GameLimiter = {
   dailyLimits: CONFIG.GAME_DAILY_LIMITS,
   gameFriendlyNames: {
     'snake': 'Snake Game',
@@ -1276,11 +1307,11 @@ const GameLimiter = {
       return false;
     }
     try {
-      const response = await App.requestWithTimeout(`/api/games/access?game=${gameType}`, {
+      var response = await App.requestWithTimeout('/api/games/access?game=' + gameType, {
         credentials: 'include',
         headers: { 'Cache-Control': 'no-cache' }
       });
-      const data = await response.json();
+      var data = await response.json();
       if (!data.success) {
         App.showMessage('Failed to check game access. Please try again.', 'error');
         return false;
@@ -1299,20 +1330,20 @@ const GameLimiter = {
     }
   },
 
-  showLimitModal(gameType, data) {
-    const existingModal = document.getElementById('game-limit-modal');
+  showLimitModal: function(gameType, data) {
+    var existingModal = document.getElementById('game-limit-modal');
     if (existingModal) existingModal.remove();
 
-    const gameInfo = this.gameMessages[gameType] || {
+    var gameInfo = this.gameMessages[gameType] || {
       icon: '🎮',
       title: 'Game Limit Reached',
       message: 'You have reached your daily limit for this game.'
     };
 
-    const limit = this.dailyLimits[gameType] || 5;
-    const played = data?.played_today || limit;
+    var limit = this.dailyLimits[gameType] || 5;
+    var played = data?.played_today || limit;
 
-    const modal = document.createElement('div');
+    var modal = document.createElement('div');
     modal.id = 'game-limit-modal';
     modal.className = 'game-limit-modal';
     modal.innerHTML = `
@@ -1343,24 +1374,25 @@ const GameLimiter = {
     document.body.appendChild(modal);
   },
 
-  closeModal() {
-    const modal = document.getElementById('game-limit-modal');
+  closeModal: function() {
+    var modal = document.getElementById('game-limit-modal');
     if (modal) modal.remove();
   },
 
-  suggestAlternative(currentGame) {
+  suggestAlternative: function(currentGame) {
     this.closeModal();
-    const alternativeGames = Object.keys(this.gameFriendlyNames).filter(game => game !== currentGame);
-    let alternativesHTML = `
+    var alternativeGames = Object.keys(this.gameFriendlyNames).filter(function(game) { return game !== currentGame; });
+    var alternativesHTML = `
       <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:10001;backdrop-filter:blur(10px);">
         <div style="background:linear-gradient(135deg,#0f3460,#1a1a2e);border-radius:20px;padding:30px;max-width:400px;width:90%;border:2px solid #00D4FF;box-shadow:0 20px 40px rgba(0,212,255,0.3);text-align:center;animation:slideIn 0.4s ease-out;">
           <h3 style="color:white;font-family:Orbitron,sans-serif;font-size:1.5rem;margin-bottom:20px;">🎮 Try These Games Instead</h3>
           <div style="display:flex;flex-direction:column;gap:15px;margin:20px 0;">
     `;
-    alternativeGames.forEach(gameType => {
-      const gameName = this.gameFriendlyNames[gameType];
-      const emoji = gameType === 'snake' ? '🐍' : gameType === 'coinflip' ? '🪙' : gameType === 'plinko' ? '🎯' : gameType === 'spin' ? '🎡' : '📱';
-      let onclick = '';
+    var self = this;
+    alternativeGames.forEach(function(gameType) {
+      var gameName = self.gameFriendlyNames[gameType];
+      var emoji = gameType === 'snake' ? '🐍' : gameType === 'coinflip' ? '🪙' : gameType === 'plinko' ? '🎯' : gameType === 'spin' ? '🎡' : '📱';
+      var onclick = '';
       if (gameType === 'snake') onclick = 'window.location.href="snake.html"';
       else if (gameType === 'coinflip') onclick = 'window.location.href="coinflip.html"';
       else if (gameType === 'plinko') onclick = 'window.location.href="plinko.html"';
@@ -1371,7 +1403,7 @@ const GameLimiter = {
           <span style="font-size:1.5rem;">${emoji}</span>
           <div style="text-align:left;">
             <div style="font-size:1.1rem;">${gameName}</div>
-            <div style="font-size:0.8rem;opacity:0.8;">${this.getGameDescription(gameType)}</div>
+            <div style="font-size:0.8rem;opacity:0.8;">${self.getGameDescription(gameType)}</div>
           </div>
         </button>
       `;
@@ -1382,14 +1414,14 @@ const GameLimiter = {
         </div>
       </div>
     `;
-    const altModal = document.createElement('div');
+    var altModal = document.createElement('div');
     altModal.innerHTML = alternativesHTML;
     altModal.id = 'alternative-games-modal';
     document.body.appendChild(altModal);
   },
 
-  getGameDescription(gameType) {
-    const descriptions = {
+  getGameDescription: function(gameType) {
+    var descriptions = {
       'snake': 'Eat apples, earn ₦200 each',
       'coinflip': 'Bet & double your money',
       'plinko': 'Bet & multiply your earnings',
@@ -1399,25 +1431,25 @@ const GameLimiter = {
     return descriptions[gameType] || 'Earn rewards';
   },
 
-  closeAlternativeModal() {
-    const modal = document.getElementById('alternative-games-modal');
+  closeAlternativeModal: function() {
+    var modal = document.getElementById('alternative-games-modal');
     if (modal) modal.remove();
   }
 };
 
 //========== ENHANCED GAME LIMITER WITH AUTO-LOGOUT ==========
-const EnhancedGameLimiter = {
+var EnhancedGameLimiter = {
   async checkAndHandleGameAccess(gameType, targetUrl) {
     if (!App.currentUser) {
       App.showMessage('Please login first', 'error');
       return false;
     }
     try {
-      const response = await App.requestWithTimeout(`/api/games/check-limit-with-logout/${gameType}`, {
+      var response = await App.requestWithTimeout('/api/games/check-limit-with-logout/' + gameType, {
         credentials: 'include',
         headers: { 'Cache-Control': 'no-cache' }
       });
-      const data = await response.json();
+      var data = await response.json();
       if (!data.success) {
         if (data.force_logout || data.action_required === 'logout') {
           this.showForceLogoutModal(gameType, data);
@@ -1440,17 +1472,17 @@ const EnhancedGameLimiter = {
     }
   },
 
-  showForceLogoutModal(gameType, data) {
-    const gameInfo = GameLimiter.gameMessages[gameType] || {
+  showForceLogoutModal: function(gameType, data) {
+    var gameInfo = GameLimiter.gameMessages[gameType] || {
       icon: '🎮',
       title: 'Daily Limit Reached',
       message: 'You have reached your daily limit for this game.'
     };
-    const played = data.played_today || 0;
-    const max = data.max_plays || CONFIG.GAME_DAILY_LIMITS[gameType] || 5;
-    const resetTime = data.reset_time || 'midnight (00:00 UTC)';
+    var played = data.played_today || 0;
+    var max = data.max_plays || CONFIG.GAME_DAILY_LIMITS[gameType] || 5;
+    var resetTime = data.reset_time || 'midnight (00:00 UTC)';
 
-    const modal = document.createElement('div');
+    var modal = document.createElement('div');
     modal.id = 'force-logout-modal';
     modal.className = 'game-limit-modal';
     modal.style.zIndex = '10002';
@@ -1489,14 +1521,14 @@ const EnhancedGameLimiter = {
     `;
     document.body.appendChild(modal);
 
-    let countdown = 10;
-    const countdownEl = document.getElementById('logout-countdown');
-    const countdownInterval = setInterval(() => {
+    var countdown = 10;
+    var countdownEl = document.getElementById('logout-countdown');
+    var countdownInterval = setInterval(function() {
       countdown--;
       if (countdownEl) countdownEl.textContent = countdown;
       if (countdown <= 0) {
         clearInterval(countdownInterval);
-        this.performLogout(gameType);
+        EnhancedGameLimiter.performLogout(gameType);
       }
     }, 1000);
     modal.countdownInterval = countdownInterval;
@@ -1510,7 +1542,7 @@ const EnhancedGameLimiter = {
       });
       document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
       this.showLogoutMessage();
-      setTimeout(() => {
+      setTimeout(function() {
         window.location.href = '/?reason=daily_limit_reached&game=' + gameType;
       }, 2000);
     } catch (error) {
@@ -1519,8 +1551,8 @@ const EnhancedGameLimiter = {
     }
   },
 
-  showLogoutMessage() {
-    const message = document.createElement('div');
+  showLogoutMessage: function() {
+    var message = document.createElement('div');
     message.className = 'global-message warning';
     message.style.position = 'fixed';
     message.style.top = '50%';
@@ -1537,11 +1569,11 @@ const EnhancedGameLimiter = {
       </div>
     `;
     document.body.appendChild(message);
-    setTimeout(() => { if (message.parentNode) message.remove(); }, 3000);
+    setTimeout(function() { if (message.parentNode) message.remove(); }, 3000);
   },
 
-  closeModal() {
-    const modal = document.getElementById('force-logout-modal');
+  closeModal: function() {
+    var modal = document.getElementById('force-logout-modal');
     if (modal) {
       if (modal.countdownInterval) clearInterval(modal.countdownInterval);
       modal.remove();
@@ -1550,13 +1582,13 @@ const EnhancedGameLimiter = {
     window.location.href = '/';
   },
 
-  showLimitReachedModal(gameType, data) {
+  showLimitReachedModal: function(gameType, data) {
     GameLimiter.showLimitModal(gameType, data);
   }
 };
 
 //========== PROFILE ==========
-const Profile = {
+var Profile = {
   open: async function () {
     if (!App.currentUser) return;
     await this.load();
@@ -1565,13 +1597,13 @@ const Profile = {
 
   load: async function () {
     try {
-      const response = await App.requestWithTimeout('/api/user/profile');
-      const data = await response.json();
+      var response = await App.requestWithTimeout('/api/user/profile');
+      var data = await response.json();
       if (data.success) {
         App.currentUser = data.user;
         App.refreshBalance(true);
-        const stats = data.user.game_stats || {};
-        let html = `
+        var stats = data.user.game_stats || {};
+        var html = `
           <div class="profile-section">
             <h4><i class="fas fa-user-circle"></i> Account Information</h4>
             <p><strong>Username:</strong> ${data.user.username}</p>
@@ -1609,19 +1641,19 @@ const Profile = {
   },
 
   setProfilePicture: async function () {
-    const url = document.getElementById('profile-pic-url').value.trim();
+    var url = document.getElementById('profile-pic-url').value.trim();
     if (!url) {
       App.showMessage('Please enter an image URL', 'error');
       return;
     }
     try {
-      const response = await App.requestWithTimeout('/api/user/set-profile-picture', {
+      var response = await App.requestWithTimeout('/api/user/set-profile-picture', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ picture_url: url })
       });
-      const data = await response.json();
+      var data = await response.json();
       if (data.success) {
         App.showMessage('Profile picture updated!', 'success');
         Profile.load();
@@ -1635,15 +1667,15 @@ const Profile = {
 };
 
 //========== REFERRALS ==========
-const Referral = {
+var Referral = {
   open: async function () {
     if (!App.currentUser) return;
     try {
-      const response = await App.requestWithTimeout('/api/user/profile');
-      const data = await response.json();
+      var response = await App.requestWithTimeout('/api/user/profile');
+      var data = await response.json();
       if (data.success) {
-        const unclaimed = data.referrals.unclaimed_bonus;
-        const html = `
+        var unclaimed = data.referrals.unclaimed_bonus;
+        var html = `
           <div class="referral-section">
             <h4><i class="fas fa-users"></i> Your Referral Program</h4>
             <p><strong>Your Referral Code:</strong> <code style="font-size:1.2em;background:#8000FF;padding:5px 10px;border-radius:5px;">${data.user.referral_code}</code></p>
@@ -1651,9 +1683,7 @@ const Referral = {
             <p><strong>Referred Users:</strong> ${data.referrals.count}</p>
             <p><strong>Unclaimed Bonus:</strong> ₦${unclaimed.toLocaleString()}</p>
             ${unclaimed > 0
-              ? `<button class="btn-primary" onclick="Referral.claimBonuses()" style="margin-top:15px;">
-                   <i class="fas fa-gift"></i> Claim ₦${unclaimed.toLocaleString()} Bonus
-                 </button>`
+              ? '<button class="btn-primary" onclick="Referral.claimBonuses()" style="margin-top:15px;"><i class="fas fa-gift"></i> Claim ₦' + unclaimed.toLocaleString() + ' Bonus</button>'
               : '<p style="color:#00FF55;margin-top:15px;">All bonuses claimed!</p>'
             }
           </div>
@@ -1677,11 +1707,11 @@ const Referral = {
   },
 
   copyReferralLink: function (code) {
-    const link = `${window.location.origin}/?ref=${code}`;
-    navigator.clipboard.writeText(link).then(() => {
+    var link = window.location.origin + '/?ref=' + code;
+    navigator.clipboard.writeText(link).then(function() {
       App.showMessage('Referral link copied to clipboard!', 'success');
-    }).catch(() => {
-      const textarea = document.createElement('textarea');
+    }).catch(function() {
+      var textarea = document.createElement('textarea');
       textarea.value = link;
       document.body.appendChild(textarea);
       textarea.select();
@@ -1693,12 +1723,12 @@ const Referral = {
 
   claimBonuses: async function () {
     try {
-      const result = await GameManager.safeClaim('/api/referral/claim', {}, 'referral');
+      var result = await GameManager.safeClaim('/api/referral/claim', {}, 'referral');
       if (!result.success) {
         App.showMessage(result.message, 'error');
         return;
       }
-      App.showMessage(`Bonuses claimed: ₦${result.claimed.toLocaleString()}`, 'success');
+      App.showMessage('Bonuses claimed: ₦' + result.claimed.toLocaleString(), 'success');
       App.updateBalance(result.new_balance);
       Referral.open();
     } catch (error) {
@@ -1708,20 +1738,20 @@ const Referral = {
 };
 
 //========== BANKING ==========
-const Banking = {
+var Banking = {
   banks: [],
 
   async loadBanks() {
     try {
-      const response = await App.requestWithTimeout('/api/banking/banks');
-      const data = await response.json();
+      var response = await App.requestWithTimeout('/api/banking/banks');
+      var data = await response.json();
       if (data.success) {
         this.banks = data.banks;
-        const select = document.getElementById('bank-select');
+        var select = document.getElementById('bank-select');
         if (select) {
           select.innerHTML = '<option value="" disabled selected>Select Bank</option>';
-          data.banks.forEach(bank => {
-            const opt = document.createElement('option');
+          data.banks.forEach(function(bank) {
+            var opt = document.createElement('option');
             opt.value = bank.code;
             opt.textContent = bank.name;
             select.appendChild(opt);
@@ -1737,8 +1767,8 @@ const Banking = {
     }
   },
 
-  loadFallbackBanks() {
-    const fallbackBanks = [
+  loadFallbackBanks: function() {
+    var fallbackBanks = [
       {code: "057", name: "Zenith Bank Plc"}, {code: "058", name: "GTBank"},
       {code: "044", name: "Access Bank"}, {code: "033", name: "UBA"},
       {code: "011", name: "First Bank"}, {code: "070", name: "Fidelity Bank"},
@@ -1751,11 +1781,11 @@ const Banking = {
       {code: "566", name: "VBank"}, {code: "035A", name: "ALAT by Wema"}
     ];
     this.banks = fallbackBanks;
-    const select = document.getElementById('bank-select');
+    var select = document.getElementById('bank-select');
     if (select) {
       select.innerHTML = '<option value="" disabled selected>Select Bank</option>';
-      fallbackBanks.forEach(bank => {
-        const opt = document.createElement('option');
+      fallbackBanks.forEach(function(bank) {
+        var opt = document.createElement('option');
         opt.value = bank.code;
         opt.textContent = bank.name;
         select.appendChild(opt);
@@ -1765,7 +1795,7 @@ const Banking = {
 
   openWithdraw: async function () {
     if (!App.currentUser) return;
-    const canWithdraw = await checkWithdrawalDay();
+    var canWithdraw = await checkWithdrawalDay();
     if (!canWithdraw) return;
     document.getElementById('withdrawal-message').textContent = '';
     if (this.banks.length === 0) await this.loadBanks();
@@ -1777,47 +1807,47 @@ const Banking = {
   },
 
   processWithdrawal: async function () {
-    const userRes = await App.requestWithTimeout('/api/user/profile');
-    const userData = await userRes.json();
+    var userRes = await App.requestWithTimeout('/api/user/profile');
+    var userData = await userRes.json();
     if (!userData.success) {
       App.showMessage('Session expired. Please log in again.', 'error');
       return;
     }
-    const user = userData.user;
+    var user = userData.user;
     if (!user.withdrawal_pin) {
       App.showMessage('You must set a withdrawal PIN before cashing out.', 'info');
       Settings.setWithdrawalPin();
       return;
     }
-    const amount = parseFloat(document.getElementById('withdraw-amount').value);
-    const bankCode = document.getElementById('bank-select').value;
-    const accountNumber = document.getElementById('account-number').value.trim();
-    const accountName = document.getElementById('account-name-manual').value.trim();
+    var amount = parseFloat(document.getElementById('withdraw-amount').value);
+    var bankCode = document.getElementById('bank-select').value;
+    var accountNumber = document.getElementById('account-number').value.trim();
+    var accountName = document.getElementById('account-name-manual').value.trim();
     if (!amount || amount < CONFIG.MIN_WITHDRAWAL) {
-      App.showMessage(`Minimum withdrawal: ₦${CONFIG.MIN_WITHDRAWAL.toLocaleString()}`, 'error');
+      App.showMessage('Minimum withdrawal: ₦' + CONFIG.MIN_WITHDRAWAL.toLocaleString(), 'error');
       return;
     }
-    const combinedBalance = parseFloat(user.balance);
+    var combinedBalance = parseFloat(user.balance);
     if (amount > combinedBalance) {
-      App.showMessage(`Insufficient balance. Total available: ₦${combinedBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 'error');
+      App.showMessage('Insufficient balance. Total available: ₦' + combinedBalance.toLocaleString(undefined, { minimumFractionDigits: 2 }), 'error');
       return;
     }
     if (!bankCode || !accountNumber || accountNumber.length < 10 || isNaN(accountNumber)) {
       App.showMessage('Invalid bank details.', 'error');
       return;
     }
-    const pin = prompt('Enter your 4-6 digit withdrawal PIN:');
+    var pin = prompt('Enter your 4-6 digit withdrawal PIN:');
     if (!pin || !/^\d{4,6}$/.test(pin)) {
       App.showMessage('Valid PIN required.', 'error');
       return;
     }
-    const msgEl = document.getElementById('withdrawal-message');
+    var msgEl = document.getElementById('withdrawal-message');
     msgEl.textContent = 'Processing withdrawal...';
     msgEl.className = 'message info';
     try {
-      const result = await GameManager.safeClaim('/api/banking/withdraw', {
-        amount, bank_code: bankCode, account_number: accountNumber,
-        account_name: accountName, pin
+      var result = await GameManager.safeClaim('/api/banking/withdraw', {
+        amount: amount, bank_code: bankCode, account_number: accountNumber,
+        account_name: accountName, pin: pin
       }, 'withdrawal');
       msgEl.textContent = result.message;
       msgEl.className = result.success ? 'message success' : 'message error';
@@ -1825,7 +1855,7 @@ const Banking = {
         App.updateBalance(result.new_balance);
         App.showMessage('Withdrawal submitted for manual review!', 'success');
         await TodayEarnings.refresh();
-        setTimeout(() => App.closeModal('withdrawal-modal'), 2000);
+        setTimeout(function() { App.closeModal('withdrawal-modal'); }, 2000);
       }
     } catch (error) {
       msgEl.textContent = 'Network error. Please try again.';
@@ -1835,12 +1865,12 @@ const Banking = {
 };
 
 //========== ACHIEVEMENTS ==========
-const Achievements = {
+var Achievements = {
   open: async function () {
     if (!App.currentUser) return;
     try {
-      const response = await App.requestWithTimeout('/api/achievements');
-      const data = await response.json();
+      var response = await App.requestWithTimeout('/api/achievements');
+      var data = await response.json();
       if (data.success) {
         this.achievementsData = data;
         window.location.href = 'achievements.html';
@@ -1855,9 +1885,9 @@ const Achievements = {
 
   claimAllRewards: async function () {
     try {
-      const result = await GameManager.safeClaim('/api/achievements/claim', {}, 'achievements');
+      var result = await GameManager.safeClaim('/api/achievements/claim', {}, 'achievements');
       if (result.success) {
-        App.showMessage(`Achievement rewards claimed! New balance: ₦${result.new_balance.toLocaleString()}`, 'success');
+        App.showMessage('Achievement rewards claimed! New balance: ₦' + result.new_balance.toLocaleString(), 'success');
         App.updateBalance(result.new_balance);
         await TodayEarnings.refresh();
       } else {
@@ -1870,10 +1900,10 @@ const Achievements = {
 };
 
 //========== GAMES ==========
-const Games = {
-  openSnake: () => EnhancedGameLimiter.checkAndHandleGameAccess('snake', 'snake.html'),
-  openCoinFlip: () => EnhancedGameLimiter.checkAndHandleGameAccess('coinflip', 'coinflip.html'),
-  openPlinko: () => EnhancedGameLimiter.checkAndHandleGameAccess('plinko', 'plinko.html'),
+var Games = {
+  openSnake: function() { return EnhancedGameLimiter.checkAndHandleGameAccess('snake', 'snake.html'); },
+  openCoinFlip: function() { return EnhancedGameLimiter.checkAndHandleGameAccess('coinflip', 'coinflip.html'); },
+  openPlinko: function() { return EnhancedGameLimiter.checkAndHandleGameAccess('plinko', 'plinko.html'); },
 
   reportSnake: async function (apples) {
     return await GameManager.safeClaim('/api/games/snake/report', { apples_eaten: apples }, 'snake');
@@ -1894,11 +1924,11 @@ const Games = {
   openTikTok: async function () {
     if (!App.currentUser) return;
     try {
-      const response = await App.requestWithTimeout(`/api/games/check-limit-with-logout/tiktok`, {
+      var response = await App.requestWithTimeout('/api/games/check-limit-with-logout/tiktok', {
         credentials: 'include',
         headers: { 'Cache-Control': 'no-cache' }
       });
-      const data = await response.json();
+      var data = await response.json();
       if (!data.success) {
         if (data.force_logout || data.action_required === 'logout') {
           EnhancedGameLimiter.showForceLogoutModal('tiktok', data);
@@ -1913,33 +1943,33 @@ const Games = {
       console.error('TikTok access check error:', error);
     }
 
-    const msgEl = document.getElementById('tiktok-message');
+    var msgEl = document.getElementById('tiktok-message');
     msgEl.textContent = '';
     msgEl.className = 'message';
     try {
-      const response = await App.requestWithTimeout('/api/games/tiktok/daily');
-      const data = await response.json();
+      var response = await App.requestWithTimeout('/api/games/tiktok/daily');
+      var data = await response.json();
       if (!data.success) {
-        document.getElementById('tiktok-instructions').innerHTML = `<p style="color:#ff5252;">${data.message || 'No TikTok task available today.'}</p>`;
+        document.getElementById('tiktok-instructions').innerHTML = '<p style="color:#ff5252;">' + (data.message || 'No TikTok task available today.') + '</p>';
         document.querySelector('.action-buttons').style.display = 'none';
         App.showModal('tiktok-modal');
         return;
       }
       if (data.already_claimed) {
-        document.getElementById('tiktok-instructions').innerHTML = `<p style="color:#ff9800;">You have already claimed today's TikTok reward!</p>`;
+        document.getElementById('tiktok-instructions').innerHTML = '<p style="color:#ff9800;">You have already claimed today\'s TikTok reward!</p>';
         document.querySelector('.action-buttons').style.display = 'none';
         App.showModal('tiktok-modal');
         return;
       }
       if (!data.task || !data.task.tiktok_link) {
-        document.getElementById('tiktok-instructions').innerHTML = `<p style="color:#ff5252;">Admin hasn't set a TikTok task for today.</p>`;
+        document.getElementById('tiktok-instructions').innerHTML = '<p style="color:#ff5252;">Admin hasn\'t set a TikTok task for today.</p>';
         document.querySelector('.action-buttons').style.display = 'none';
         App.showModal('tiktok-modal');
         return;
       }
       try {
-        const url = new URL(data.task.tiktok_link);
-        const username = url.pathname.split('/')[1] || data.task.tiktok_link;
+        var url = new URL(data.task.tiktok_link);
+        var username = url.pathname.split('/')[1] || data.task.tiktok_link;
         document.getElementById('tiktok-account-name').textContent = '@' + username;
         document.getElementById('tiktok-instructions').innerHTML = `
           <p>Earn <strong>₦${data.task.reward_amount}</strong> for following on TikTok</p>
@@ -1958,26 +1988,26 @@ const Games = {
       App.showModal('tiktok-modal');
     } catch (err) {
       console.error('TikTok load error:', err);
-      document.getElementById('tiktok-instructions').innerHTML = `<p style="color:#ff5252;">Failed to load TikTok task. Please try again.</p>`;
+      document.getElementById('tiktok-instructions').innerHTML = '<p style="color:#ff5252;">Failed to load TikTok task. Please try again.</p>';
       document.querySelector('.action-buttons').style.display = 'none';
       App.showModal('tiktok-modal');
     }
   },
 
   verifyTikTokFollow: async function () {
-    const msgEl = document.getElementById('tiktok-message');
+    var msgEl = document.getElementById('tiktok-message');
     msgEl.textContent = 'Claiming reward...';
     msgEl.className = 'message';
     try {
-      const result = await GameManager.safeClaim('/api/games/tiktok/follow-daily', {}, 'tiktok');
+      var result = await GameManager.safeClaim('/api/games/tiktok/follow-daily', {}, 'tiktok');
       if (result.success) {
         App.updateBalance(result.new_balance);
-        msgEl.textContent = `Success! ₦${result.reward} added to your balance.`;
+        msgEl.textContent = 'Success! ₦' + result.reward + ' added to your balance.';
         msgEl.className = 'message success';
         await TodayEarnings.refresh();
-        setTimeout(() => {
+        setTimeout(function() {
           App.closeModal('tiktok-modal');
-          App.showMessage(`TikTok reward claimed: ₦${result.reward}`, 'success');
+          App.showMessage('TikTok reward claimed: ₦' + result.reward, 'success');
         }, 2000);
       } else {
         msgEl.textContent = result.message || 'Failed to claim reward.';
@@ -1990,12 +2020,12 @@ const Games = {
   },
 
   openTikTokApp: function () {
-    const usernameEl = document.getElementById('tiktok-account-name');
-    const username = usernameEl.textContent.replace('@', '');
+    var usernameEl = document.getElementById('tiktok-account-name');
+    var username = usernameEl.textContent.replace('@', '');
     if (username) {
-      window.open(`snssdk1233://user/@${username}`, '_blank');
-      setTimeout(() => {
-        window.open(`https://www.tiktok.com/@${username}`, '_blank');
+      window.open('snssdk1233://user/@' + username, '_blank');
+      setTimeout(function() {
+        window.open('https://www.tiktok.com/@' + username, '_blank');
       }, 500);
     }
   },
@@ -2003,11 +2033,11 @@ const Games = {
   openSpinWheel: async function() {
     if (!App.currentUser) return;
     try {
-      const response = await App.requestWithTimeout(`/api/games/check-limit-with-logout/spin`, {
+      var response = await App.requestWithTimeout('/api/games/check-limit-with-logout/spin', {
         credentials: 'include',
         headers: { 'Cache-Control': 'no-cache' }
       });
-      const data = await response.json();
+      var data = await response.json();
       if (!data.success) {
         if (data.force_logout || data.action_required === 'logout') {
           EnhancedGameLimiter.showForceLogoutModal('spin', data);
@@ -2021,10 +2051,10 @@ const Games = {
     } catch (error) {
       console.error('Spin access check error:', error);
     }
-    const wheel = document.getElementById('wheel');
-    const button = document.getElementById('spin-button');
-    const msgEl = document.getElementById('spin-message');
-    const resultEl = document.getElementById('spin-result');
+    var wheel = document.getElementById('wheel');
+    var button = document.getElementById('spin-button');
+    var msgEl = document.getElementById('spin-message');
+    var resultEl = document.getElementById('spin-result');
     if (wheel) {
       wheel.style.transition = 'none';
       wheel.style.transform = 'rotate(0deg)';
@@ -2042,13 +2072,13 @@ const Games = {
       resultEl.classList.add('hidden');
     }
     App.showModal('spin-modal');
-    setTimeout(() => initSpinWheel(), 150);
+    setTimeout(function() { initSpinWheel(); }, 150);
   },
 
   spinWheel: async function() {
-    const button = document.getElementById('spin-button');
-    const wheel = document.getElementById('wheel');
-    const msgEl = document.getElementById('spin-message');
+    var button = document.getElementById('spin-button');
+    var wheel = document.getElementById('wheel');
+    var msgEl = document.getElementById('spin-message');
     if (!button || !wheel || button.disabled) return;
     button.disabled = true;
     GameManager.setButtonLoading('spin-button', true);
@@ -2059,14 +2089,14 @@ const Games = {
     }
     wheel.style.transition = 'none';
     wheel.style.transform = 'rotate(0deg)';
-    const svgEl = document.getElementById('wheel-svg');
+    var svgEl = document.getElementById('wheel-svg');
     if (svgEl) {
       svgEl.style.transition = 'none';
       svgEl.style.transform = 'rotate(0deg)';
     }
     void wheel.offsetWidth;
     try {
-      const result = await this.reportSpin(null);
+      var result = await this.reportSpin(null);
       if (!result.success) {
         button.disabled = false;
         GameManager.setButtonLoading('spin-button', false);
@@ -2078,37 +2108,37 @@ const Games = {
         App.showMessage(result.message || 'Spin failed', 'error');
         return;
       }
-      const reward = result.reward;
-      const prizeIndex = result.prize_index !== undefined ? result.prize_index : 5;
-      const segmentMidpointFromTop = prizeIndex * 60 + 30;
-      const angleToPointer = (360 - segmentMidpointFromTop) % 360;
-      const fullSpins = 6 + Math.floor(Math.random() * 3);
-      const totalRotation = (fullSpins * 360) + angleToPointer;
-      const svgWheel = document.getElementById('wheel-svg');
-      const spinTarget = svgWheel || wheel;
+      var reward = result.reward;
+      var prizeIndex = result.prize_index !== undefined ? result.prize_index : 5;
+      var segmentMidpointFromTop = prizeIndex * 60 + 30;
+      var angleToPointer = (360 - segmentMidpointFromTop) % 360;
+      var fullSpins = 6 + Math.floor(Math.random() * 3);
+      var totalRotation = (fullSpins * 360) + angleToPointer;
+      var svgWheel = document.getElementById('wheel-svg');
+      var spinTarget = svgWheel || wheel;
       spinTarget.style.transition = 'none';
       spinTarget.style.transform = 'rotate(0deg)';
       void spinTarget.offsetWidth;
       spinTarget.style.transition = 'transform 5s cubic-bezier(0.17, 0.67, 0.05, 1.0)';
-      spinTarget.style.transform = `rotate(${totalRotation}deg)`;
-      setTimeout(() => {
+      spinTarget.style.transform = 'rotate(' + totalRotation + 'deg)';
+      setTimeout(function() {
         GameManager.setButtonLoading('spin-button', false);
         App.updateBalance(result.new_balance);
-        const resultMsg = reward > 0
-          ? `🎉 Congratulations! You won ₦${reward.toLocaleString()}!`
-          : `Better luck tomorrow!`;
+        var resultMsg = reward > 0
+          ? '🎉 Congratulations! You won ₦' + reward.toLocaleString() + '!'
+          : 'Better luck tomorrow!';
         if (msgEl) {
           msgEl.textContent = resultMsg;
           msgEl.className = reward > 0 ? 'message success' : 'message warning';
         }
-        const resultEl = document.getElementById('spin-result');
+        var resultEl = document.getElementById('spin-result');
         if (resultEl) {
-          resultEl.innerHTML = `<p style="font-size:1.1rem;font-weight:bold;">${resultMsg}</p>`;
+          resultEl.innerHTML = '<p style="font-size:1.1rem;font-weight:bold;">' + resultMsg + '</p>';
           resultEl.classList.remove('hidden');
         }
         button.innerHTML = '<i class="fas fa-check"></i> COME BACK TOMORROW';
         if (reward > 0) {
-          App.showMessage(`You won ₦${reward.toLocaleString()}!`, 'success');
+          App.showMessage('You won ₦' + reward.toLocaleString() + '!', 'success');
           TodayEarnings.refresh();
         }
       }, 5200);
@@ -2127,19 +2157,19 @@ const Games = {
 };
 
 //========== SETTINGS ==========
-const Settings = {
+var Settings = {
   open: async function () {
     if (!App.currentUser) return;
     try {
-      const response = await App.requestWithTimeout('/api/user/profile');
-      const data = await response.json();
+      var response = await App.requestWithTimeout('/api/user/profile');
+      var data = await response.json();
       if (!data.success) {
         App.showMessage('Failed to load settings', 'error');
         return;
       }
-      const user = data.user;
-      const hasPin = !!user.withdrawal_pin;
-      let html = `
+      var user = data.user;
+      var hasPin = !!user.withdrawal_pin;
+      var html = `
         <div class="settings-section">
           <h4><i class="fas fa-user-cog"></i> Account Settings</h4>
           <p><strong>Username:</strong> ${user.username}</p>
@@ -2147,18 +2177,18 @@ const Settings = {
         </div>
       `;
       try {
-        const socialResponse = await App.requestWithTimeout('/api/admin/settings');
-        const socialData = await socialResponse.json();
+        var socialResponse = await App.requestWithTimeout('/api/admin/settings');
+        var socialData = await socialResponse.json();
         if (socialData.success) {
-          const s = socialData.settings;
-          html += `<div class="settings-section"><h4><i class="fas fa-users"></i> Join Our Community</h4>`;
-          if (s.whatsapp_link) html += `<a href="${s.whatsapp_link}" target="_blank" class="social-link"><i class="fab fa-whatsapp"></i> WhatsApp Group</a><br>`;
-          if (s.telegram_link) html += `<a href="${s.telegram_link}" target="_blank" class="social-link"><i class="fab fa-telegram"></i> Telegram Group</a><br>`;
-          if (s.facebook_link) html += `<a href="${s.facebook_link}" target="_blank" class="social-link"><i class="fab fa-facebook"></i> Facebook Group</a><br>`;
+          var s = socialData.settings;
+          html += '<div class="settings-section"><h4><i class="fas fa-users"></i> Join Our Community</h4>';
+          if (s.whatsapp_link) html += '<a href="' + s.whatsapp_link + '" target="_blank" class="social-link"><i class="fab fa-whatsapp"></i> WhatsApp Group</a><br>';
+          if (s.telegram_link) html += '<a href="' + s.telegram_link + '" target="_blank" class="social-link"><i class="fab fa-telegram"></i> Telegram Group</a><br>';
+          if (s.facebook_link) html += '<a href="' + s.facebook_link + '" target="_blank" class="social-link"><i class="fab fa-facebook"></i> Facebook Group</a><br>';
           if (!(s.whatsapp_link || s.telegram_link || s.facebook_link)) {
-            html += `<p class="small-text">No social links configured yet</p>`;
+            html += '<p class="small-text">No social links configured yet</p>';
           }
-          html += `</div>`;
+          html += '</div>';
         }
       } catch (e) {
         console.error('Social links error:', e);
@@ -2207,8 +2237,9 @@ const Settings = {
     }
   },
 
-  setWithdrawalPin: async function (isChange = false) {
-    let currentPin = '';
+  setWithdrawalPin: async function (isChange) {
+    if (isChange === undefined) isChange = false;
+    var currentPin = '';
     if (isChange) {
       currentPin = prompt('Enter your CURRENT 4-6 digit Withdrawal PIN:');
       if (!currentPin) return;
@@ -2217,13 +2248,13 @@ const Settings = {
         return;
       }
       try {
-        const response = await App.requestWithTimeout('/api/user/verify-withdrawal-pin', {
+        var response = await App.requestWithTimeout('/api/user/verify-withdrawal-pin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ pin: currentPin }),
           credentials: 'include'
         });
-        const verifyData = await response.json();
+        var verifyData = await response.json();
         if (!verifyData.success) {
           App.showMessage('Incorrect current PIN.', 'error');
           return;
@@ -2233,18 +2264,18 @@ const Settings = {
         return;
       }
     }
-    const newPin = prompt('Enter your NEW 4-6 digit Withdrawal PIN:');
+    var newPin = prompt('Enter your NEW 4-6 digit Withdrawal PIN:');
     if (!newPin || !/^\d{4,6}$/.test(newPin)) {
       App.showMessage('New PIN must be 4 to 6 digits.', 'error');
       return;
     }
-    const confirmPin = prompt('Confirm your new PIN:');
+    var confirmPin = prompt('Confirm your new PIN:');
     if (newPin !== confirmPin) {
       App.showMessage('PINs do not match.', 'error');
       return;
     }
     try {
-      const result = await GameManager.safeClaim('/api/user/set-withdrawal-pin', { pin: newPin }, 'setpin');
+      var result = await GameManager.safeClaim('/api/user/set-withdrawal-pin', { pin: newPin }, 'setpin');
       if (result.success) {
         App.showMessage('PIN ' + (isChange ? 'changed' : 'set') + ' successfully!', 'success');
         App.closeModal('settings-modal');
@@ -2261,33 +2292,33 @@ const Settings = {
   },
 
   changePassword: async function () {
-    const oldPass = prompt("Enter your current password:");
+    var oldPass = prompt("Enter your current password:");
     if (!oldPass) return;
-    const newPass = prompt("Enter a new password (min 6 characters):");
+    var newPass = prompt("Enter a new password (min 6 characters):");
     if (!newPass || newPass.length < 6) {
       App.showMessage("Password must be at least 6 characters.", "error");
       return;
     }
-    const confirmPass = prompt("Confirm your new password:");
+    var confirmPass = prompt("Confirm your new password:");
     if (newPass !== confirmPass) {
       App.showMessage("Passwords do not match.", "error");
       return;
     }
     try {
-      const isAdmin = App.currentUser && App.currentUser.is_admin;
-      const endpoint = isAdmin ? '/api/admin/change-password' : '/api/user/change-password';
-      const response = await App.requestWithTimeout(endpoint, {
+      var isAdmin = App.currentUser && App.currentUser.is_admin;
+      var endpoint = isAdmin ? '/api/admin/change-password' : '/api/user/change-password';
+      var response = await App.requestWithTimeout(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ current_password: oldPass, new_password: newPass })
       });
-      const data = await response.json();
+      var data = await response.json();
       if (data.success) {
         App.showMessage("Password changed successfully!", "success");
         App.closeModal('settings-modal');
-        if (isAdmin && data.message && data.message.includes('login again')) {
-          setTimeout(() => {
+        if (isAdmin && data.message && data.message.indexOf('login again') !== -1) {
+          setTimeout(function() {
             if (confirm("Admin password changed. Logout and login again?")) {
               Settings.logout();
             }
@@ -2316,12 +2347,12 @@ const Settings = {
 
 //========== SPIN WHEEL ==========
 function initSpinWheel() {
-  const container = document.getElementById('wheel');
+  var container = document.getElementById('wheel');
   if (!container) return;
   container.innerHTML = '';
   container.style.cssText = 'position:relative;width:280px;height:280px;margin:0 auto;';
 
-  const prizes = [
+  var prizes = [
     { label: '₦1000', color: '#FF0055', textColor: '#fff' },
     { label: '₦500',  color: '#FF8C00', textColor: '#fff' },
     { label: '₦200',  color: '#FFCC00', textColor: '#111' },
@@ -2330,9 +2361,9 @@ function initSpinWheel() {
     { label: '0',     color: '#8000FF', textColor: '#fff' }
   ];
 
-  const N = prizes.length, cx = 140, cy = 140, r = 130, sliceDeg = 360 / N;
-  const svgNS = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(svgNS, 'svg');
+  var N = prizes.length, cx = 140, cy = 140, r = 130, sliceDeg = 360 / N;
+  var svgNS = 'http://www.w3.org/2000/svg';
+  var svg = document.createElementNS(svgNS, 'svg');
   svg.setAttribute('id', 'wheel-svg');
   svg.setAttribute('viewBox', '0 0 280 280');
   svg.setAttribute('width', '280');
@@ -2340,29 +2371,29 @@ function initSpinWheel() {
   svg.style.cssText = 'display:block;border-radius:50%;overflow:hidden;filter:drop-shadow(0 0 18px rgba(128,0,255,0.5));';
 
   function polarToCart(cx, cy, r, angleDeg) {
-    const rad = (angleDeg - 90) * Math.PI / 180;
+    var rad = (angleDeg - 90) * Math.PI / 180;
     return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
   }
 
-  prizes.forEach((prize, i) => {
-    const startAngle = i * sliceDeg, endAngle = startAngle + sliceDeg, midAngle = startAngle + sliceDeg / 2;
-    const p1 = polarToCart(cx, cy, r, startAngle);
-    const p2 = polarToCart(cx, cy, r, endAngle);
-    const path = document.createElementNS(svgNS, 'path');
-    const d = [`M ${cx} ${cy}`, `L ${p1.x} ${p1.y}`, `A ${r} ${r} 0 0 1 ${p2.x} ${p2.y}`, 'Z'].join(' ');
+  prizes.forEach(function(prize, i) {
+    var startAngle = i * sliceDeg, endAngle = startAngle + sliceDeg, midAngle = startAngle + sliceDeg / 2;
+    var p1 = polarToCart(cx, cy, r, startAngle);
+    var p2 = polarToCart(cx, cy, r, endAngle);
+    var path = document.createElementNS(svgNS, 'path');
+    var d = ['M ' + cx + ' ' + cy, 'L ' + p1.x + ' ' + p1.y, 'A ' + r + ' ' + r + ' 0 0 1 ' + p2.x + ' ' + p2.y, 'Z'].join(' ');
     path.setAttribute('d', d);
     path.setAttribute('fill', prize.color);
     path.setAttribute('stroke', '#0A0A1F');
     path.setAttribute('stroke-width', '2');
     svg.appendChild(path);
 
-    const lp = polarToCart(cx, cy, r * 0.72, midAngle);
-    const text = document.createElementNS(svgNS, 'text');
+    var lp = polarToCart(cx, cy, r * 0.72, midAngle);
+    var text = document.createElementNS(svgNS, 'text');
     text.setAttribute('x', lp.x);
     text.setAttribute('y', lp.y);
     text.setAttribute('text-anchor', 'middle');
     text.setAttribute('dominant-baseline', 'middle');
-    text.setAttribute('transform', `rotate(${midAngle}, ${lp.x}, ${lp.y})`);
+    text.setAttribute('transform', 'rotate(' + midAngle + ', ' + lp.x + ', ' + lp.y + ')');
     text.setAttribute('fill', prize.textColor);
     text.setAttribute('font-size', '11');
     text.setAttribute('font-weight', 'bold');
@@ -2371,7 +2402,7 @@ function initSpinWheel() {
     svg.appendChild(text);
   });
 
-  const centerCircle = document.createElementNS(svgNS, 'circle');
+  var centerCircle = document.createElementNS(svgNS, 'circle');
   centerCircle.setAttribute('cx', cx);
   centerCircle.setAttribute('cy', cy);
   centerCircle.setAttribute('r', '22');
@@ -2380,7 +2411,7 @@ function initSpinWheel() {
   centerCircle.setAttribute('stroke-width', '3');
   svg.appendChild(centerCircle);
 
-  const centerText = document.createElementNS(svgNS, 'text');
+  var centerText = document.createElementNS(svgNS, 'text');
   centerText.setAttribute('x', cx);
   centerText.setAttribute('y', cy);
   centerText.setAttribute('text-anchor', 'middle');
@@ -2391,7 +2422,7 @@ function initSpinWheel() {
   svg.appendChild(centerText);
   container.appendChild(svg);
 
-  const pointer = document.createElement('div');
+  var pointer = document.createElement('div');
   pointer.style.cssText = `
     position:absolute;top:-14px;left:50%;
     transform:translateX(-50%);
