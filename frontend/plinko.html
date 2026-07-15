@@ -1,1249 +1,445 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plinko 3D - FLEXIA</title>
-    
-    <link rel="icon" type="image/x-icon" href="logo/favicon.ico">
-    <link rel="icon" type="image/png" sizes="32x32" href="logo/flexia-logo.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="logo/flexia-logo.png">
-    <link rel="apple-touch-icon" href="logo/apple-touch-icon.png">
-    <link rel="manifest" href="manifest.json">
-    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-        
-        html, body {
-            height: 100%;
-            width: 100%;
-            overflow: hidden;
-            position: fixed;
-        }
-        
-        body {
-            font-family: 'Arial', sans-serif;
-            background: #000000;
-            color: #FFFFFF;
-            display: flex;
-            flex-direction: column;
-            touch-action: none;
-            user-select: none;
-            -webkit-user-select: none;
-            overscroll-behavior-y: none;
-        }
-        
-        /* Header */
-        .header {
-            background: #0A0A1F;
-            padding: 12px 16px;
-            border-bottom: 2px solid #8000FF;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
-            min-height: 60px;
-        }
-        
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .fullscreen-btn {
-            background: transparent;
-            border: none;
-            color: #8000FF;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 5px;
-            transition: all 0.2s;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .fullscreen-btn:hover {
-            color: #00CCFF;
-        }
-        
-        .header-center {
-            flex: 1;
-            text-align: center;
-        }
-        
-        .header-center h1 {
-            font-size: 1.6rem;
-            color: #8000FF;
-            text-shadow: 0 0 10px rgba(128, 0, 255, 0.6);
-            margin: 0;
-        }
-        
-        .game-subtitle {
-            font-size: 0.75rem;
-            color: #A0A0B5;
-            margin-top: 2px;
-        }
-        
-        .close-btn {
-            background: transparent;
-            border: none;
-            color: #FF0055;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-            padding: 5px 10px;
-            transition: all 0.2s;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .close-btn:hover {
-            color: #FF5599;
-            transform: scale(1.1);
-        }
-        
-        /* Betting Controls */
-        .betting-controls {
-            padding: 15px;
-            display: flex;
-            justify-content: center;
-            gap: 12px;
-            flex-shrink: 0;
-            background: rgba(30, 30, 69, 0.8);
-            border-bottom: 2px solid #8000FF;
-            min-height: 80px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        
-        .bet-input-container {
-            position: relative;
-            flex: 0 0 auto;
-        }
-        
-        .currency-symbol {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #00FFCC;
-            font-weight: bold;
-            font-size: 1.1rem;
-            z-index: 1;
-        }
-        
-        .bet-input {
-            padding: 12px 12px 12px 30px;
-            width: 120px;
-            text-align: center;
-            font-size: 1.1rem;
-            font-weight: bold;
-            border: 2px solid #8000FF;
-            background: #151535;
-            color: #FFFFFF;
-            border-radius: 8px;
-            outline: none;
-            appearance: none;
-            -webkit-appearance: none;
-        }
-        
-        .bet-input:focus {
-            border-color: #00CCFF;
-            box-shadow: 0 0 10px rgba(0, 204, 255, 0.5);
-        }
-        
-        .drop-btn {
-            padding: 12px 20px;
-            font-size: 1rem;
-            font-weight: bold;
-            color: #0A0A1F;
-            background: linear-gradient(45deg, #8000FF, #00CCFF);
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            text-transform: uppercase;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            white-space: nowrap;
-            min-width: 120px;
-            justify-content: center;
-        }
-        
-        .drop-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(128, 0, 255, 0.4);
-        }
-        
-        .drop-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .drop-btn#drop-all-btn {
-            background: linear-gradient(45deg, #FF0055, #FF8800);
-        }
-        
-        /* Main Game Area */
-        .main-game {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 15px;
-            overflow: auto;
-            min-height: 0;
-        }
-        
-        .plinko-container {
-            position: relative;
-            width: 100%;
-            max-width: 500px;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            min-height: 0;
-        }
-        
-        .plinko-board {
-            position: relative;
-            width: 100%;
-            height: 400px;
-            border: 3px solid #8000FF;
-            border-radius: 10px;
-            background: linear-gradient(180deg, #0A0A1F 0%, #151535 100%);
-            overflow: hidden;
-            margin-bottom: 15px;
-            box-shadow: 0 15px 35px rgba(128, 0, 255, 0.4);
-            min-height: 400px;
-        }
-        
-        .peg-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
-        
-        .peg {
-            position: absolute;
-            width: 12px;
-            height: 12px;
-            background: radial-gradient(circle at 30% 30%, #FFFFFF, #FFCC00);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 8px rgba(255, 255, 255, 0.9),
-                        0 0 15px rgba(0, 204, 255, 0.7);
-            z-index: 10;
-            border: 1px solid rgba(255, 255, 255, 0.8);
-        }
-        
-        .ball-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
-        
-        .ball {
-            position: absolute;
-            width: 16px;
-            height: 16px;
-            background: radial-gradient(circle at 30% 30%, #00FFFF, #0088FF);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 100;
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.9),
-                        inset 2px 2px 6px rgba(255, 255, 255, 0.4);
-            animation: ballPulse 1.5s infinite alternate;
-        }
-        
-        /* Multiplier Row */
-        .multiplier-row {
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-            max-width: 500px;
-            margin: 10px 0;
-            padding: 0 5px;
-            gap: 5px;
-        }
-        
-        .multiplier-slot {
-            font-size: 1rem;
-            font-weight: bold;
-            text-align: center;
-            padding: 8px 10px;
-            border-radius: 8px;
-            flex: 1;
-            text-shadow: 0 0 5px currentColor;
-            background: rgba(0, 0, 0, 0.7);
-            border: 2px solid currentColor;
-            transition: all 0.3s;
-            box-shadow: 0 0 10px currentColor;
-            min-width: 0;
-            overflow: hidden;
-        }
-        
-        .multiplier-slot.x10 { color: #FF0055; border-color: #FF0055; }
-        .multiplier-slot.x3 { color: #FFCC00; border-color: #FFCC00; }
-        .multiplier-slot.x0_5 { color: #00FF88; border-color: #00FF88; }
-        
-        .multiplier-slot.active {
-            transform: scale(1.05);
-            box-shadow: 0 0 20px currentColor;
-        }
-        
-        /* Win Display */
-        .win-display {
-            margin: 15px 0;
-            padding: 15px 20px;
-            background: linear-gradient(45deg, rgba(128, 0, 255, 0.3), rgba(0, 204, 255, 0.3));
-            border-radius: 12px;
-            border: 2px solid #8000FF;
-            text-align: center;
-            width: 100%;
-            max-width: 500px;
-            display: none;
-            animation: winPulse 1s ease-in-out;
-            backdrop-filter: blur(10px);
-        }
-        
-        .win-label {
-            font-size: 0.9rem;
-            color: #A0A0B5;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .win-amount {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: #00FF55;
-            text-shadow: 0 0 15px rgba(0, 255, 85, 0.7);
-            margin: 8px 0;
-        }
-        
-        .win-multiplier {
-            font-size: 1rem;
-            color: #00CCFF;
-            margin-top: 5px;
-            font-weight: bold;
-        }
-        
-        /* Stats Panel */
-        .stats-panel {
-            display: flex;
-            gap: 15px;
-            margin-top: 15px;
-            padding: 15px;
-            background: rgba(30, 30, 69, 0.8);
-            border-radius: 10px;
-            border: 2px solid #8000FF;
-            width: 100%;
-            max-width: 500px;
-            justify-content: space-between;
-            backdrop-filter: blur(5px);
-            flex-wrap: wrap;
-        }
-        
-        .stat-item {
-            text-align: center;
-            flex: 1;
-            min-width: 100px;
-        }
-        
-        .stat-label {
-            font-size: 0.8rem;
-            color: #A0A0B5;
-            margin-bottom: 4px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .stat-value {
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: #00FFCC;
-            text-shadow: 0 0 8px rgba(0, 255, 204, 0.5);
-        }
-        
-        .ball-counter {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.8);
-            color: #00FFCC;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: bold;
-            border: 1px solid #8000FF;
-            z-index: 1000;
-            backdrop-filter: blur(5px);
-        }
-        
-        /* Instruction Popup */
-        .instruction-popup {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 9999;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .instruction-popup.show {
-            display: flex;
-        }
-        
-        .instruction-content {
-            background: linear-gradient(135deg, #0A0A1F, #151535);
-            border: 2px solid #8000FF;
-            border-radius: 20px;
-            padding: 30px;
-            max-width: 450px;
-            width: 90%;
-            position: relative;
-            box-shadow: 0 20px 40px rgba(128, 0, 255, 0.3);
-        }
-        
-        .instruction-close {
-            position: absolute;
-            top: 12px;
-            right: 15px;
-            background: transparent;
-            border: none;
-            color: #FF0055;
-            font-size: 24px;
-            cursor: pointer;
-            width: 35px;
-            height: 35px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            transition: all 0.2s;
-        }
-        
-        .instruction-close:hover {
-            background: rgba(255, 0, 85, 0.1);
-            transform: scale(1.1);
-        }
-        
-        .instruction-title {
-            color: #8000FF;
-            font-size: 1.4rem;
-            font-weight: bold;
-            margin-bottom: 20px;
-            text-align: center;
-            text-shadow: 0 0 10px rgba(128, 0, 255, 0.6);
-        }
-        
-        .instruction-step {
-            background: rgba(128, 0, 255, 0.05);
-            border: 1px solid rgba(128, 0, 255, 0.3);
-            border-radius: 10px;
-            padding: 12px;
-            margin-bottom: 10px;
-            font-size: 0.85rem;
-            color: #C0C0D0;
-            line-height: 1.5;
-        }
-        
-        .instruction-step strong {
-            color: #00CCFF;
-        }
-        
-        .instruction-bet-btn {
-            display: block;
-            width: 100%;
-            padding: 14px;
-            margin-top: 20px;
-            background: linear-gradient(45deg, #8000FF, #00CCFF);
-            border: none;
-            border-radius: 10px;
-            color: #0A0A1F;
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .instruction-bet-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(128, 0, 255, 0.4);
-        }
-        
-        /* Animations */
-        @keyframes ballPulse {
-            0% { 
-                box-shadow: 0 0 15px rgba(0, 255, 255, 0.8), 
-                            inset 2px 2px 6px rgba(255, 255, 255, 0.3);
-                transform: translate(-50%, -50%) scale(1);
-            }
-            100% { 
-                box-shadow: 0 0 25px rgba(0, 255, 255, 1), 
-                            inset 2px 2px 6px rgba(255, 255, 255, 0.5);
-                transform: translate(-50%, -50%) scale(1.05);
-            }
-        }
-        
-        @keyframes ballDrop {
-            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-        }
-        
-        @keyframes winPulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.05); opacity: 0.9; }
-        }
-        
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-3px); }
-        }
-        
-        .daily-info-badge {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(0, 0, 0, 0.8);
-            color: #FFD700;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            border: 1px solid #FFD700;
-            z-index: 1000;
-            backdrop-filter: blur(5px);
-        }
-        
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .header-center h1 { font-size: 1.4rem; }
-            .betting-controls { gap: 10px; padding: 12px; min-height: 70px; }
-            .bet-input { width: 100px; padding: 10px 10px 10px 25px; font-size: 1rem; }
-            .drop-btn { padding: 10px 15px; font-size: 0.9rem; min-width: 100px; }
-            .plinko-board { height: 350px; min-height: 350px; }
-            .multiplier-slot { font-size: 0.9rem; padding: 6px 8px; }
-            .win-display { padding: 12px 16px; }
-            .win-amount { font-size: 1.5rem; }
-            .stats-panel { gap: 10px; padding: 12px; }
-            .stat-item { min-width: 80px; }
-            .instruction-content { padding: 25px 20px; }
-            .instruction-title { font-size: 1.2rem; }
-            .instruction-step { font-size: 0.8rem; padding: 10px; }
-        }
-        
-        @media (max-width: 480px) {
-            .header { padding: 10px 12px; min-height: 50px; }
-            .header-center h1 { font-size: 1.2rem; }
-            .betting-controls { flex-direction: row; flex-wrap: wrap; gap: 8px; padding: 10px; min-height: auto; }
-            .bet-input-container { order: 1; width: 100%; }
-            .bet-input { width: 100%; max-width: 120px; margin: 0 auto; }
-            .drop-btn { order: 2; flex: 1; min-width: 0; padding: 10px; }
-            .drop-btn#drop-all-btn { order: 3; flex: 1; }
-            .plinko-board { height: 300px; min-height: 300px; margin-bottom: 10px; }
-            .multiplier-row { gap: 3px; padding: 0; }
-            .multiplier-slot { font-size: 0.8rem; padding: 5px; min-width: 0; }
-            .win-display { margin: 10px 0; padding: 10px 12px; }
-            .win-amount { font-size: 1.3rem; }
-            .stats-panel { flex-direction: column; gap: 8px; padding: 10px; }
-            .stat-item { min-width: 100%; display: flex; justify-content: space-between; align-items: center; }
-            .stat-label { margin-bottom: 0; font-size: 0.75rem; }
-            .stat-value { font-size: 1rem; }
-            .peg { width: 10px; height: 10px; }
-            .instruction-content { padding: 20px 15px; }
-            .instruction-title { font-size: 1.1rem; margin-bottom: 15px; }
-            .instruction-step { font-size: 0.75rem; padding: 8px; margin-bottom: 8px; }
-            .instruction-bet-btn { padding: 12px; font-size: 1rem; }
-        }
-        
-        @media (max-height: 700px) {
-            .plinko-board { height: 280px; min-height: 280px; }
-            .main-game { padding: 10px; }
-            .betting-controls { padding: 10px; min-height: 65px; }
-        }
-        
-        * {
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-        }
-        
-        button, input, select {
-            touch-action: manipulation;
-        }
-        
-        .main-game::-webkit-scrollbar {
-            display: none;
-        }
-        
-        .main-game {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Snake Mine - FLEXIA</title>
+<link rel="icon" type="image/x-icon" href="logo/favicon.ico">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(ellipse at 30% 20%, #1b1135, #0a0518);color:#F0F0F0;font-family:'Rajdhani',sans-serif;display:flex;flex-direction:column;}
+.header{background:rgba(10,6,24,0.85);backdrop-filter:blur(18px);padding:14px 20px;border-bottom:2px solid rgba(128,0,255,0.3);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+.game-logo{display:flex;align-items:center;gap:14px;}
+.game-logo-icon{width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:linear-gradient(45deg,#8000FF,#00CCFF);border-radius:14px;font-size:1.6rem;box-shadow:0 4px 20px rgba(128,0,255,0.3);}
+.header-left h1{font-size:1.4rem;color:#a855f7;font-family:'Orbitron',sans-serif;text-shadow:0 0 20px rgba(128,0,255,0.3);}
+.header-left p{color:#00CCFF;font-size:0.75rem;opacity:0.8;}
+.dashboard-btn{background:linear-gradient(135deg,#a855f7,#6366f1);border:none;border-radius:10px;color:#fff;padding:10px 20px;font-weight:700;cursor:pointer;transition:all 0.3s;font-size:0.85rem;}
+.dashboard-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(168,85,247,0.4);}
+.main-content{flex:1;display:flex;flex-direction:column;padding:12px;gap:12px;overflow:hidden;min-height:0;max-width:1200px;margin:0 auto;width:100%;}
+.game-row{display:flex;flex:1;gap:12px;min-height:0;}
+.game-panel{flex:3;background:rgba(255,255,255,0.02);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:14px;display:flex;flex-direction:column;overflow:hidden;}
+.game-board-container{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;}
+#game-board{border:2px solid rgba(128,0,255,0.3);border-radius:12px;background:#151535;box-shadow:0 10px 30px rgba(128,0,255,0.2);max-width:100%;max-height:100%;touch-action:none;}
+.scores-panel{flex:1;display:flex;flex-direction:column;gap:10px;min-width:180px;}
+.score-card{background:rgba(255,255,255,0.02);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:16px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.score-label{font-size:0.7rem;color:#A0A0B5;margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:1px;}
+.score-value{font-size:1.8rem;font-weight:700;color:#00FFCC;font-family:'Orbitron',sans-serif;}
+.mini-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;width:100%;}
+.mini-stat{text-align:center;padding:6px;background:rgba(128,0,255,0.08);border-radius:8px;border:1px solid rgba(128,0,255,0.15);}
+.mini-label{font-size:0.55rem;color:#A0A0B5;text-transform:uppercase;letter-spacing:0.5px;}
+.mini-value{font-size:0.85rem;color:#00FFCC;font-weight:700;}
+.controls-row{display:flex;gap:10px;flex-shrink:0;padding:0 10px 12px;max-width:1200px;margin:0 auto;width:100%;}
+.action-buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;}
+.action-btn{background:linear-gradient(135deg,#a855f7,#6366f1);border:none;border-radius:10px;color:#fff;font-weight:700;padding:13px;cursor:pointer;transition:all 0.3s;}
+.action-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 24px rgba(168,85,247,0.3);}
+.action-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.happy-popup{position:fixed;top:30%;left:50%;transform:translate(-50%,-50%) scale(0.8);background:linear-gradient(135deg,#ffd966,#ffb347);color:#1e2a2e;padding:20px 30px;border-radius:60px;font-size:1.8rem;font-weight:bold;white-space:nowrap;z-index:3000;box-shadow:0 20px 40px rgba(0,0,0,0.5),0 0 0 8px rgba(255,215,0,0.4);display:flex;align-items:center;gap:14px;letter-spacing:2px;animation:popFly 0.6s cubic-bezier(0.34,1.2,0.64,1) forwards,fadeOutGlow 2s ease-in 0.8s forwards;pointer-events:none;}
+.happy-popup i{font-size:2.4rem;animation:bounceSmile 0.5s infinite alternate;}
+@keyframes popFly{0%{opacity:0;transform:translate(-50%,-50%) scale(0.4)}40%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes fadeOutGlow{from{opacity:1;visibility:visible}to{opacity:0;visibility:hidden}}
+@keyframes bounceSmile{0%{transform:translateY(0)}100%{transform:translateY(-8px)}}
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);backdrop-filter:blur(12px);display:flex;justify-content:center;align-items:center;z-index:1000;}
+.modal-content{background:rgba(20,12,40,0.95);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:30px;max-width:400px;width:92%;text-align:center;box-shadow:0 40px 80px rgba(0,0,0,0.5);}
+.modal-content h2{color:#00FFCC;font-family:'Orbitron',sans-serif;margin-bottom:16px;}
+.modal-btn{padding:12px 24px;border:none;border-radius:10px;font-weight:700;cursor:pointer;flex:1;transition:all 0.3s;}
+.primary-btn{background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;}
+.primary-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(168,85,247,0.3);}
+.secondary-btn{background:rgba(255,255,255,0.06);color:#A0A0B5;border:1px solid rgba(255,255,255,0.06);}
+.secondary-btn:hover{background:rgba(255,255,255,0.1);}
+.hidden{display:none!important;}
+@media(max-width:768px){.game-row{flex-direction:column}.scores-panel{flex-direction:row;flex-wrap:wrap}.score-card{min-width:48%;}.game-panel{flex:2}}
+@media(max-width:480px){.score-value{font-size:1.4rem}.header-left h1{font-size:1.1rem}.action-btn{font-size:0.85rem;padding:10px}.happy-popup{font-size:1.2rem;padding:14px 22px}}
+</style>
 </head>
 <body>
-    <!-- Instruction Popup -->
-    <div class="instruction-popup show" id="instruction-popup">
-        <div class="instruction-content">
-            <button class="instruction-close" onclick="closeInstructionPopup()" title="Close">✕</button>
-            <div class="instruction-title">🎯 HOW TO PLAY PLINKO 3D</div>
-            
-            <div class="instruction-step">
-                <strong>1. Set Your Bet 💰</strong><br>
-                Enter your bet amount (₦100 - ₦50,000) in the input field below.
-            </div>
-            
-            <div class="instruction-step">
-                <strong>2. Add Balls 🎱</strong><br>
-                Click "ADD BALL" to queue multiple balls. Each ball uses your bet amount.
-            </div>
-            
-            <div class="instruction-step">
-                <strong>3. Drop & Watch 🎬</strong><br>
-                Click "DROP ALL" or press SPACE to release all balls. They bounce off pegs and land in multiplier slots!
-            </div>
-            
-            <div class="instruction-step">
-                <strong>4. Multipliers 🏆</strong><br>
-                <span style="color:#FF0055;">×10</span> | 
-                <span style="color:#FFCC00;">×3</span> | 
-                <span style="color:#00FF88;">×0.5</span> | 
-                <span style="color:#FFCC00;">×3</span> | 
-                <span style="color:#FF0055;">×10</span><br>
-                <span style="color:#00FF55;">⚠️ Worst slot returns 0.5× bet (never lose 100%)</span>
-            </div>
-            
-            <div class="instruction-step" style="border-color: #FFD700; background: rgba(255, 215, 0, 0.05);">
-                <strong style="color:#FFD700;">📊 Daily Win Cap: ₦800</strong><br>
-                <span style="font-size:0.8rem;">Track your progress on the cap bar. Resets daily at midnight UTC.</span>
-            </div>
-            
-            <button class="instruction-bet-btn" onclick="closeInstructionPopup()">
-                <i class="fas fa-check-circle"></i> GOT IT! LET'S PLAY
-            </button>
-        </div>
+
+<div class="header">
+  <div class="game-logo">
+    <div class="game-logo-icon">🐍</div>
+    <div class="header-left">
+      <h1>SNAKE MINE</h1>
+      <p id="snake-header-info">🍎 ₦20 each | 🌟 Golden = ₦40 | Daily cap ₦5000</p>
     </div>
+  </div>
+  <button class="dashboard-btn" onclick="window.location.href='index.html'">
+    <i class="fas fa-arrow-left"></i> BACK
+  </button>
+</div>
 
-    <div class="header">
-        <div class="header-left">
-            <button class="fullscreen-btn" onclick="toggleFullscreen()" title="Toggle Fullscreen">
-                ⛶
-            </button>
-        </div>
-        <div class="header-center">
-            <h1>PLINKO 3D</h1>
-            <p class="game-subtitle">Min 0.5× • Max 10× • Daily win cap: ₦800</p>
-        </div>
-        <div class="header-right">
-            <button class="close-btn" onclick="goBackToDashboard()" title="Close">
-                ✕
-            </button>
-        </div>
+<div class="main-content">
+  <div class="game-row">
+    <div class="game-panel">
+      <div class="game-board-container">
+        <canvas id="game-board" width="460" height="460"></canvas>
+      </div>
     </div>
-
-    <div class="betting-controls">
-        <div class="bet-input-container">
-            <span class="currency-symbol">₦</span>
-            <input type="number" class="bet-input" id="bet-amount" value="500" min="100" max="50000" step="100">
+    <div class="scores-panel">
+      <div class="score-card">
+        <div class="score-label">CURRENT SCORE</div>
+        <div class="score-value" id="score">0</div>
+        <div class="mini-stats">
+          <div class="mini-stat"><div class="mini-label">APPLES</div><div class="mini-value" id="apples">0</div></div>
+          <div class="mini-stat"><div class="mini-label">SESSION ₦</div><div class="mini-value" id="live-earnings">₦0</div></div>
         </div>
-        <button class="drop-btn" id="drop-btn" onclick="addBallToQueue()">
-            <i class="fas fa-plus-circle"></i> ADD BALL
-        </button>
-        <button class="drop-btn" id="drop-all-btn" onclick="dropAllBalls()">
-            <i class="fas fa-play"></i> DROP ALL
-        </button>
+      </div>
+      <div class="score-card">
+        <div class="score-label">DAILY EARNINGS</div>
+        <div class="score-value" id="total-earned">₦0</div>
+        <div class="mini-stats">
+          <div class="mini-stat"><div class="mini-label">DAILY CAP</div><div class="mini-value" style="color:#FF8C00;">₦5000</div></div>
+          <div class="mini-stat"><div class="mini-label">REMAINING</div><div class="mini-value" id="remaining-today" style="color:#00FF55;">₦5000</div></div>
+        </div>
+        <div style="margin-top:10px;width:100%;">
+          <div style="background:rgba(255,255,255,0.05);border-radius:6px;height:6px;overflow:hidden;">
+            <div id="cap-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#00FF55,#FF8C00);border-radius:6px;transition:width 0.5s;"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:3px;">
+            <span style="font-size:0.6rem;color:#555;">₦0</span>
+            <span style="font-size:0.6rem;color:#555;">₦5000 cap</span>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
+</div>
 
-    <div class="main-game">
-        <div class="plinko-container">
-            <div class="plinko-board" id="plinko-board">
-                <div class="ball-counter" id="ball-counter">Balls: 0</div>
-                <div class="daily-info-badge" id="daily-badge">💰 Left: ₦800</div>
-                <div class="peg-container" id="peg-container"></div>
-                <div class="ball-container" id="ball-container"></div>
-            </div>
-        </div>
-        
-        <div class="multiplier-row">
-            <div class="multiplier-slot x10" id="slot-0">×10</div>
-            <div class="multiplier-slot x3" id="slot-1">×3</div>
-            <div class="multiplier-slot x0_5" id="slot-2">×0.5</div>
-            <div class="multiplier-slot x3" id="slot-3">×3</div>
-            <div class="multiplier-slot x10" id="slot-4">×10</div>
-        </div>
-        
-        <div class="win-display" id="win-display">
-            <div class="win-label">TOTAL WIN</div>
-            <div class="win-amount" id="win-amount">₦0</div>
-            <div class="win-multiplier" id="win-multiplier">×0.0</div>
-        </div>
-        
-        <div class="stats-panel">
-            <div class="stat-item">
-                <div class="stat-label">BALANCE</div>
-                <div class="stat-value" id="balance">₦0</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-label">ACTIVE BALLS</div>
-                <div class="stat-value" id="active-balls">0</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-label">TOTAL WINS</div>
-                <div class="stat-value" id="total-wins">0</div>
-            </div>
-        </div>
+<div class="controls-row">
+  <div style="flex:1;">
+    <div class="action-buttons">
+      <button class="action-btn" onclick="startGame()" id="start-btn"><i class="fas fa-play"></i> START</button>
+      <button class="action-btn" onclick="manualClaim()" id="claim-btn"><i class="fas fa-trophy"></i> CLAIM</button>
     </div>
+  </div>
+  <button class="dashboard-btn" onclick="window.location.href='index.html'"><i class="fas fa-arrow-left"></i> BACK</button>
+</div>
 
-    <script>
-        // ==================== INSTRUCTION POPUP ====================
-        function closeInstructionPopup() {
-            document.getElementById('instruction-popup').classList.remove('show');
+<div id="game-over-modal" class="modal-overlay hidden">
+  <div class="modal-content">
+    <h2><i class="fas fa-gamepad"></i> GAME OVER</h2>
+    <div style="margin:20px 0;text-align:left;line-height:1.9;">
+      <div>Score: <span id="modal-score" style="color:#00FFCC;font-weight:bold;">0</span></div>
+      <div>Apples: <span id="modal-apples" style="color:#00FFCC;font-weight:bold;">0</span></div>
+      <div>Session Earned: <span id="modal-reward" style="color:#FFD700;font-weight:bold;">₦0</span></div>
+      <div>Daily Total: <span id="modal-daily" style="color:#a855f7;font-weight:bold;">₦0</span></div>
+    </div>
+    <div id="modal-action-area" style="display:flex;gap:10px;">
+      <button class="modal-btn primary-btn" onclick="claimAndClose()"><i class="fas fa-coins"></i> CLAIM & CLOSE</button>
+      <button class="modal-btn secondary-btn" onclick="playAgain()">PLAY AGAIN</button>
+    </div>
+  </div>
+</div>
+
+<div id="instruction-modal" class="modal-overlay">
+  <div class="modal-content">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h2 style="margin:0;color:#00FFCC;"><i class="fas fa-info-circle"></i> How to Play</h2>
+      <button onclick="closeInstructions()" style="background:none;border:none;font-size:2.4rem;color:#888;cursor:pointer;line-height:1;">×</button>
+    </div>
+    <div style="text-align:left;color:#ddd;line-height:1.8;">
+      <p style="font-weight:bold;margin-bottom:10px;">🐍 Control the snake, eat apples, earn ₦!</p>
+      <div style="background:rgba(0,255,80,0.05);padding:16px;border-radius:12px;margin-bottom:14px;border:1px solid rgba(0,255,85,0.15);">
+        <div style="margin-bottom:6px;">🍎 Normal Apple = <strong style="color:#00FF55">₦20</strong></div>
+        <div style="margin-bottom:6px;">✨ Golden Apple = <strong style="color:#FFD700">₦40</strong> (10% chance)</div>
+        <div style="margin-bottom:6px;">🚀 Daily cap: <strong style="color:#FF8C00">₦5000</strong> (resets midnight UTC)</div>
+        <div>🎉 Hit ₦5000 cap → <strong style="color:#00FFCC">Auto-claim + Celebration!</strong></div>
+      </div>
+      <div style="background:rgba(128,0,255,0.05);padding:14px;border-radius:10px;border:1px solid rgba(128,0,255,0.15);">
+        <div style="margin-bottom:5px;">🎮 <strong>Arrow keys</strong> or <strong>Swipe</strong> to move</div>
+        <div style="margin-bottom:5px;">⏸ <strong>SPACE</strong> to start</div>
+        <div>💀 Hit wall or yourself = Game Over</div>
+      </div>
+    </div>
+    <button onclick="closeInstructions()" style="width:100%;padding:14px;margin-top:18px;background:linear-gradient(135deg,#a855f7,#6366f1);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:1rem;cursor:pointer;transition:all 0.3s;">
+      GOT IT — LET'S EAT! 🐍
+    </button>
+  </div>
+</div>
+
+<button onclick="document.getElementById('instruction-modal').style.display='flex'"
+  style="position:fixed;bottom:80px;right:16px;width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#a855f7,#6366f1);border:none;color:#fff;font-size:16px;font-weight:900;cursor:pointer;z-index:200;box-shadow:0 4px 20px rgba(168,85,247,0.4);">?</button>
+
+<script>
+const canvas = document.getElementById('game-board');
+const ctx = canvas.getContext('2d');
+const gridSize = 20;
+const tileCount = canvas.width / gridSize;
+const APPLE_REWARD = 20;
+const GOLDEN_REWARD = 40;
+const DAILY_CAP = 5000;
+
+let snake = [{x:10,y:10}], food = {}, score = 0;
+let direction = 'right', gameRunning = false, gameLoop;
+let dailyEarned = 0, sessionEarned = 0;
+let sessionApples = 0, sessionGolden = 0;
+let capReached = false, isClaiming = false;
+
+function updateCapUI(earned) {
+  dailyEarned = earned;
+  const remaining = Math.max(0, DAILY_CAP - earned);
+  const pct = Math.min((earned / DAILY_CAP) * 100, 100);
+  const bar = document.getElementById('cap-bar');
+  if (bar) {
+    bar.style.width = pct + '%';
+    bar.style.background = pct >= 80 ? 'linear-gradient(90deg,#FF8C00,#FF0055)' : 'linear-gradient(90deg,#00FF55,#FF8C00)';
+  }
+  document.getElementById('total-earned').textContent = '₦' + earned;
+  document.getElementById('remaining-today').textContent = '₦' + remaining;
+  const hdr = document.getElementById('snake-header-info');
+  if (hdr) {
+    hdr.textContent = remaining <= 0 ? '⚠️ Daily cap reached! Come back tomorrow.' : '🍎 ₦' + APPLE_REWARD + ' each | ✨ Golden = ₦' + GOLDEN_REWARD + ' | ₦' + remaining + ' left today';
+    hdr.style.color = remaining <= 0 ? '#FF0055' : '#00CCFF';
+  }
+  if (earned >= DAILY_CAP) { capReached = true; lockClaimBtn(); }
+}
+
+function updateSessionUI() {
+  document.getElementById('live-earnings').textContent = '₦' + sessionEarned;
+  document.getElementById('score').textContent = score;
+  document.getElementById('apples').textContent = sessionApples + sessionGolden;
+}
+
+function lockClaimBtn() {
+  const b = document.getElementById('claim-btn');
+  b.disabled = true;
+  b.innerHTML = '<i class="fas fa-check-circle"></i> CAP REACHED';
+}
+
+function showFunPopup() {
+  const d = document.createElement('div');
+  d.className = 'happy-popup';
+  d.innerHTML = '<i class="fas fa-star"></i> 🎉 ₦5000 CAP REACHED! 🎉 <i class="fas fa-star"></i>';
+  document.body.appendChild(d);
+  setTimeout(() => d && d.remove && d.remove(), 3000);
+}
+
+async function loadDailyEarnings() {
+  try {
+    const r = await fetch('/api/user/profile', {credentials:'include'});
+    if (!r.ok) return;
+    const d = await r.json();
+    if (!d.success) return;
+    const today = new Date().toISOString().slice(0,10);
+    const earned = (d.user.transactions||[])
+      .filter(t => t.type==='SNAKE_REWARD' && (t.timestamp||'').slice(0,10)===today)
+      .reduce((s,t) => s + parseFloat(t.amount||0), 0);
+    updateCapUI(earned);
+    if (d.user.balance !== undefined) {
+      localStorage.setItem('flexia_balance', d.user.balance);
+      if (window.App && window.App.currentUser) {
+        window.App.currentUser.balance = parseFloat(d.user.balance);
+        if (window.App.refreshBalance) window.App.refreshBalance(true);
+      }
+    }
+  } catch(e) {}
+}
+
+async function callBackend(apples, golden) {
+  const r = await fetch('/api/games/snake/report', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    credentials:'include',
+    body: JSON.stringify({apples_eaten: apples + golden, golden_apples: golden})
+  });
+  return await r.json();
+}
+
+async function autoClaim() {
+  if (isClaiming || sessionEarned <= 0) return;
+  isClaiming = true;
+  try {
+    const res = await callBackend(sessionApples, sessionGolden);
+    if (res.success) {
+      updateCapUI(res.daily_earned || DAILY_CAP);
+      if (res.new_balance !== undefined) {
+        localStorage.setItem('flexia_balance', res.new_balance);
+        if (window.App && window.App.currentUser) {
+          window.App.currentUser.balance = parseFloat(res.new_balance);
+          if (window.App.refreshBalance) window.App.refreshBalance(true);
         }
-        
-        // Also show instructions when clicking info icon or pressing '?'
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'i' || e.key === 'I') {
-                e.preventDefault();
-                document.getElementById('instruction-popup').classList.add('show');
-            }
-        });
-        
-        // ==================== CONFIG ====================
-        const API_BASE = '/api';
-        const MIN_BET = 100;
-        const MAX_BET = 50000;
-        const MULTIPLIERS = [10, 3, 0.5, 3, 10];
-        const DAILY_CAP = 800;
-        
-        // ==================== STATE ====================
-        let balance = 0;
-        let gameStats = null;
-        let activeBalls = 0;
-        let totalWins = 0;
-        let balls = [];
-        let pegs = [];
-        let animations = [];
-        let queuedBalls = 0;
-        let isDroppingAll = false;
-        let gameInitialized = false;
-        let betAmount = 500;
-        let totalWinAmount = 0;
-        let dailyWonToday = 0;
-        
-        // ==================== API CALLS ====================
-        async function fetchProfile() {
-            try {
-                const res = await fetch(`${API_BASE}/user/profile`, {
-                    credentials: 'include'
-                });
-                const data = await res.json();
-                if (!data.success) {
-                    alert('Please log in.');
-                    window.location.href = 'index.html';
-                    return;
-                }
-                balance = data.user.balance;
-                gameStats = data.user.game_stats?.plinko || {};
-                
-                // Calculate today's winnings
-                const today = new Date().toISOString().slice(0, 10);
-                const txs = data.user.transactions || [];
-                dailyWonToday = txs
-                    .filter(t => (t.type === 'PLINKO_WIN' || t.type === 'PLINKO_REPORT') && (t.timestamp || '').slice(0, 10) === today)
-                    .reduce((s, t) => s + parseFloat(t.amount || 0), 0);
-                
-                updateCapDisplay();
-                updateStatsDisplay();
-            } catch (error) {
-                console.error('Error fetching profile:', error);
-                alert('Failed to load profile. Please try again.');
-            }
+      }
+      showFunPopup();
+      sessionEarned = sessionApples = sessionGolden = 0;
+      updateSessionUI();
+    }
+  } catch(e) { console.error('Auto-claim error', e); }
+  isClaiming = false;
+}
+
+async function manualClaim() {
+  if (capReached) { alert('🎉 Daily ₦5000 cap reached! Come back tomorrow.'); return; }
+  if (gameRunning) { alert('⚠️ Finish the game first, then claim!'); return; }
+  if (sessionEarned <= 0) { alert('🐍 No earnings yet. Play and eat apples!'); return; }
+  if (isClaiming) return;
+
+  isClaiming = true;
+  const btn = document.getElementById('claim-btn');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CLAIMING...';
+
+  try {
+    const res = await callBackend(sessionApples, sessionGolden);
+    if (res.success) {
+      const earned = res.daily_earned || (dailyEarned + res.reward);
+      updateCapUI(earned);
+      if (res.new_balance !== undefined) {
+        localStorage.setItem('flexia_balance', res.new_balance);
+        if (window.App && window.App.currentUser) {
+          window.App.currentUser.balance = parseFloat(res.new_balance);
+          if (window.App.refreshBalance) window.App.refreshBalance(true);
         }
-        
-        async function submitGameResult(bet, multiplier) {
-            try {
-                const res = await fetch('/api/games/plinko/report', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ bet: bet, multiplier: multiplier })
-                });
-                
-                if (!res.ok) {
-                    const errorText = await res.text();
-                    return { success: false, message: `HTTP ${res.status}: ${errorText}` };
-                }
-                
-                const data = await res.json();
-                return data;
-            } catch (error) {
-                console.error('Error submitting game result:', error);
-                return { success: false, message: 'Network error' };
-            }
-        }
-        
-        // ==================== UTILITIES ====================
-        function goBackToDashboard() {
-            animations.forEach(id => cancelAnimationFrame(id));
-            animations = [];
-            window.location.href = 'index.html';
-        }
-        
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => {
-                    console.log(`Error: ${err.message}`);
-                });
-            } else if (document.exitFullscreen) {
-                document.exitFullscreen();
-            }
-        }
-        
-        function updateCapDisplay() {
-            const remaining = Math.max(0, DAILY_CAP - dailyWonToday);
-            document.getElementById('daily-badge').textContent = `💰 Left: ₦${remaining.toFixed(0)}`;
-            if (remaining <= 0) {
-                document.getElementById('daily-badge').style.borderColor = '#FF0055';
-                document.getElementById('daily-badge').style.color = '#FF0055';
-            }
-        }
-        
-        function updateStatsDisplay() {
-            document.getElementById('balance').textContent = `₦${balance.toLocaleString()}`;
-            document.getElementById('active-balls').textContent = activeBalls;
-            document.getElementById('total-wins').textContent = totalWins;
-            document.getElementById('ball-counter').textContent = `Balls: ${queuedBalls}`;
-        }
-        
-        // ==================== PEGS SETUP ====================
-        function createPegs() {
-            const container = document.getElementById('peg-container');
-            container.innerHTML = '';
-            pegs = [];
-            
-            const board = document.getElementById('plinko-board');
-            const boardWidth = board.clientWidth;
-            const boardHeight = board.clientHeight;
-            
-            const rows = 13;
-            const horizontalSpacing = 35;
-            const verticalSpacing = horizontalSpacing * Math.sin(Math.PI / 3);
-            const startY = 40;
-            
-            for (let row = 0; row < rows; row++) {
-                let pegsInRow;
-                if (row === 0) {
-                    pegsInRow = 2;
-                } else if (row === 1) {
-                    pegsInRow = 3;
-                } else {
-                    pegsInRow = row + 2;
-                }
-                
-                const rowY = startY + (row * verticalSpacing);
-                const rowWidth = (pegsInRow - 1) * horizontalSpacing;
-                const rowOffset = (boardWidth - rowWidth) / 2;
-                
-                for (let col = 0; col < pegsInRow; col++) {
-                    const x = rowOffset + (col * horizontalSpacing);
-                    const y = rowY;
-                    
-                    const peg = {
-                        x: x,
-                        y: y,
-                        radius: 6,
-                        element: document.createElement('div')
-                    };
-                    
-                    peg.element.className = 'peg';
-                    peg.element.style.left = `${peg.x}px`;
-                    peg.element.style.top = `${peg.y}px`;
-                    peg.element.style.width = `${peg.radius * 2}px`;
-                    peg.element.style.height = `${peg.radius * 2}px`;
-                    
-                    container.appendChild(peg.element);
-                    pegs.push(peg);
-                }
-            }
-        }
-        
-        // ==================== BALL MANAGEMENT ====================
-        function addBallToQueue() {
-            const betInput = parseInt(document.getElementById('bet-amount').value);
-            
-            if (isNaN(betInput) || betInput < MIN_BET || betInput > MAX_BET) {
-                alert(`Please enter a valid bet amount between ₦${MIN_BET} and ₦${MAX_BET}`);
-                return;
-            }
-            
-            const totalCost = (queuedBalls + 1) * betInput;
-            if (totalCost > balance) {
-                alert('Insufficient balance for this many balls!');
-                return;
-            }
-            
-            const remaining = DAILY_CAP - dailyWonToday;
-            if (remaining <= 0) {
-                alert('🚫 Daily win cap of ₦800 reached! Come back tomorrow.');
-                return;
-            }
-            
-            betAmount = betInput;
-            queuedBalls++;
-            updateStatsDisplay();
-            
-            const dropBtn = document.getElementById('drop-btn');
-            dropBtn.style.animation = 'bounce 0.3s';
-            setTimeout(() => {
-                dropBtn.style.animation = '';
-            }, 300);
-        }
-        
-        async function dropAllBalls() {
-            if (queuedBalls === 0) {
-                alert('Add some balls first!');
-                return;
-            }
-            
-            if (isDroppingAll) return;
-            
-            const remaining = DAILY_CAP - dailyWonToday;
-            if (remaining <= 0) {
-                alert('🚫 Daily win cap of ₦800 reached! Come back tomorrow.');
-                return;
-            }
-            
-            isDroppingAll = true;
-            const ballsToDrop = queuedBalls;
-            const totalCost = ballsToDrop * betAmount;
-            
-            if (totalCost > balance) {
-                alert('Insufficient balance!');
-                isDroppingAll = false;
-                return;
-            }
-            
-            document.getElementById('drop-btn').disabled = true;
-            document.getElementById('drop-all-btn').disabled = true;
-            document.getElementById('bet-amount').disabled = true;
-            
-            queuedBalls = 0;
-            totalWinAmount = 0;
-            updateStatsDisplay();
-            
-            for (let i = 0; i < ballsToDrop; i++) {
-                setTimeout(() => {
-                    createBall(betAmount);
-                }, i * 200);
-            }
-            
-            setTimeout(() => {
-                isDroppingAll = false;
-                document.getElementById('drop-btn').disabled = false;
-                document.getElementById('drop-all-btn').disabled = false;
-                document.getElementById('bet-amount').disabled = false;
-            }, ballsToDrop * 3000);
-        }
-        
-        function createBall(bet) {
-            const board = document.getElementById('plinko-board');
-            const container = document.getElementById('ball-container');
-            
-            const ballId = Date.now() + Math.random();
-            const ball = {
-                id: ballId,
-                x: board.clientWidth / 2,
-                y: 35,
-                vx: (Math.random() - 0.5) * 0.3,
-                vy: 0.4,
-                radius: 8,
-                element: document.createElement('div'),
-                landed: false,
-                bet: bet,
-                winAmount: 0,
-                multiplier: 0
-            };
-            
-            ball.element.className = 'ball';
-            ball.element.style.left = `${ball.x}px`;
-            ball.element.style.top = `${ball.y}px`;
-            ball.element.style.animation = 'ballDrop 0.3s ease-out';
-            container.appendChild(ball.element);
-            
-            balls.push(ball);
-            activeBalls++;
-            updateStatsDisplay();
-            
-            animateBall(ballId);
-        }
-        
-        // ==================== BALL PHYSICS ====================
-        function animateBall(ballId) {
-            const ballIndex = balls.findIndex(b => b.id === ballId);
-            if (ballIndex === -1 || balls[ballIndex].landed) return;
-            
-            const ball = balls[ballIndex];
-            const board = document.getElementById('plinko-board');
-            const boardWidth = board.clientWidth;
-            const boardHeight = board.clientHeight;
-            
-            ball.vy += 0.22;
-            ball.vx *= 0.996;
-            
-            ball.x += ball.vx;
-            ball.y += ball.vy;
-            
-            if (ball.x - ball.radius < 5) {
-                ball.x = ball.radius + 5;
-                ball.vx = Math.abs(ball.vx) * 0.85;
-            }
-            if (ball.x + ball.radius > boardWidth - 5) {
-                ball.x = boardWidth - ball.radius - 5;
-                ball.vx = -Math.abs(ball.vx) * 0.85;
-            }
-            
-            for (const peg of pegs) {
-                const dx = ball.x - peg.x;
-                const dy = ball.y - peg.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                const collisionDistance = ball.radius + peg.radius;
-                
-                if (distance < collisionDistance) {
-                    const angle = Math.atan2(dy, dx);
-                    const speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
-                    
-                    ball.vx = Math.cos(angle) * speed * 0.8;
-                    ball.vy = Math.sin(angle) * speed * 0.8;
-                    ball.vx += (Math.random() - 0.5) * 0.08;
-                    
-                    const overlap = collisionDistance - distance;
-                    ball.x += Math.cos(angle) * overlap * 1.05;
-                    ball.y += Math.sin(angle) * overlap * 1.05;
-                    
-                    peg.element.style.transform = 'translate(-50%, -50%) scale(1.5)';
-                    peg.element.style.boxShadow = '0 0 20px rgba(0, 255, 255, 1)';
-                    setTimeout(() => {
-                        peg.element.style.transform = 'translate(-50%, -50%) scale(1)';
-                        peg.element.style.boxShadow = '0 0 8px rgba(255, 255, 255, 0.9), 0 0 15px rgba(0, 204, 255, 0.7)';
-                    }, 100);
-                }
-            }
-            
-            ball.element.style.left = `${ball.x}px`;
-            ball.element.style.top = `${ball.y}px`;
-            
-            if (ball.y > boardHeight - 50) {
-                finishBall(ballIndex);
-            } else {
-                const animationId = requestAnimationFrame(() => animateBall(ballId));
-                animations.push(animationId);
-            }
-        }
-        
-        async function finishBall(ballIndex) {
-            const ball = balls[ballIndex];
-            if (ball.landed) return;
+      }
+      sessionEarned = sessionApples = sessionGolden = 0;
+      updateSessionUI();
 
-            ball.landed = true;
-            activeBalls--;
+      if (res.remaining_today <= 0) {
+        showFunPopup(); lockClaimBtn();
+        alert('🎉 CLAIMED ₦' + res.reward + '! You hit the ₦5000 daily cap — amazing!');
+      } else {
+        btn.innerHTML = '<i class="fas fa-check"></i> CLAIMED ₦' + res.reward + '!';
+        setTimeout(() => { btn.disabled=false; btn.innerHTML='<i class="fas fa-trophy"></i> CLAIM'; isClaiming=false; }, 2500);
+        alert('✅ Claimed ₦' + res.reward + '! ₦' + res.remaining_today + ' remaining today.');
+        return;
+      }
+    } else {
+      btn.disabled=false; btn.innerHTML=orig;
+      alert('❌ ' + (res.message || 'Claim failed. Try again.'));
+    }
+  } catch(e) {
+    btn.disabled=false; btn.innerHTML=orig;
+    alert('❌ Network error. Please try again.');
+  }
+  isClaiming = false;
+}
 
-            const boardWidth = document.getElementById('plinko-board').clientWidth;
-            const slotWidth = boardWidth / MULTIPLIERS.length;
+async function claimAndClose() { await manualClaim(); closeModal(); }
 
-            let slotIndex = Math.floor(ball.x / slotWidth);
-            slotIndex = Math.max(0, Math.min(MULTIPLIERS.length - 1, slotIndex));
+async function onAppleEaten(isGolden) {
+  if (capReached) return;
+  const val = isGolden ? GOLDEN_REWARD : APPLE_REWARD;
+  if (dailyEarned + sessionEarned + val > DAILY_CAP) {
+    capReached = true;
+    if (sessionEarned > 0) await autoClaim();
+    return;
+  }
+  sessionEarned += val;
+  if (isGolden) sessionGolden++; else sessionApples++;
+  updateSessionUI();
+  if (dailyEarned + sessionEarned >= DAILY_CAP) { capReached = true; await autoClaim(); }
+}
 
-            const multiplier = MULTIPLIERS[slotIndex];
+function initGame() {
+  snake=[{x:10,y:10}]; direction='right'; score=0;
+  sessionEarned=sessionApples=sessionGolden=0;
+  generateFood(); updateSessionUI(); drawGame();
+}
 
-            // ✅ Highlight slot and start fade-out immediately — no waiting
-            const slotElement = document.getElementById(`slot-${slotIndex}`);
-            if (slotElement) {
-                slotElement.classList.add('active');
-                setTimeout(() => slotElement.classList.remove('active'), 800);
-            }
+function generateFood() {
+  food = { x:Math.floor(Math.random()*tileCount), y:Math.floor(Math.random()*tileCount), golden:Math.random()<0.1 };
+  for (const s of snake) if (s.x===food.x && s.y===food.y) { generateFood(); return; }
+}
 
-            ball.element.style.transition = 'all 0.5s ease-out';
-            ball.element.style.opacity = '0';
-            ball.element.style.transform = 'translate(-50%, -50%) scale(0)';
+function drawGame() {
+  ctx.fillStyle='#151535'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle='rgba(128,0,255,0.08)';
+  for (let x=0;x<tileCount;x++) for (let y=0;y<tileCount;y++) ctx.strokeRect(x*gridSize,y*gridSize,gridSize,gridSize);
+  for (let i=0;i<snake.length;i++) {
+    const s=snake[i];
+    if (i===0) {
+      ctx.fillStyle='#00FFCC'; ctx.fillRect(s.x*gridSize,s.y*gridSize,gridSize-2,gridSize-2);
+      ctx.fillStyle='#0A0A1F';
+      ctx.fillRect(s.x*gridSize+5,s.y*gridSize+5,4,4);
+      ctx.fillRect(s.x*gridSize+11,s.y*gridSize+5,4,4);
+    } else {
+      ctx.fillStyle='rgba(0,255,204,'+(1-(i/snake.length)*0.5)+')';
+      ctx.fillRect(s.x*gridSize,s.y*gridSize,gridSize-2,gridSize-2);
+    }
+  }
+  const pulse=Math.sin(Date.now()/200)*1.5;
+  ctx.fillStyle=food.golden?'#FFD700':'#FF0055';
+  ctx.beginPath();
+  ctx.arc(food.x*gridSize+gridSize/2,food.y*gridSize+gridSize/2,(gridSize-4)/2+pulse,0,2*Math.PI);
+  ctx.fill();
+  if (food.golden) { ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.arc(food.x*gridSize+gridSize/2-3,food.y*gridSize+gridSize/2-3,2,0,2*Math.PI); ctx.fill(); }
+  ctx.fillStyle=food.golden?'#8B6914':'#8B4513';
+  ctx.fillRect(food.x*gridSize+8,food.y*gridSize-2,2,4);
+}
 
-            // ✅ Fire API call immediately alongside the fade-out
-            const result = await submitGameResult(ball.bet, multiplier);
+async function updateGame() {
+  if (!gameRunning) return;
+  const h={x:snake[0].x, y:snake[0].y};
+  if (direction==='up') h.y--; else if (direction==='down') h.y++;
+  else if (direction==='left') h.x--; else h.x++;
+  if (h.x<0||h.x>=tileCount||h.y<0||h.y>=tileCount) { gameOver(); return; }
+  for (let i=1;i<snake.length;i++) if (h.x===snake[i].x&&h.y===snake[i].y) { gameOver(); return; }
+  snake.unshift(h);
+  if (h.x===food.x&&h.y===food.y) {
+    const g=food.golden; score+=g?20:10;
+    await onAppleEaten(g); generateFood();
+  } else { snake.pop(); }
+  drawGame();
+}
 
-            if (result.success) {
-                const netChange = parseFloat(result.net_change || 0);
-                const winAmount = parseFloat(result.win_amount || 0);
-                ball.winAmount = winAmount;
-                ball.multiplier = multiplier;
-                totalWinAmount += netChange;
+function gameOver() {
+  gameRunning=false; clearInterval(gameLoop);
+  document.getElementById('modal-score').textContent = score;
+  document.getElementById('modal-apples').textContent = sessionApples+sessionGolden;
+  document.getElementById('modal-reward').textContent = '₦'+sessionEarned;
+  document.getElementById('modal-daily').textContent  = '₦'+(dailyEarned+sessionEarned);
+  if (sessionEarned<=0||capReached) {
+    document.getElementById('modal-action-area').innerHTML =
+      '<button class="modal-btn primary-btn" onclick="playAgain()">PLAY AGAIN</button><button class="modal-btn secondary-btn" onclick="closeModal()">CLOSE</button>';
+  }
+  document.getElementById('game-over-modal').classList.remove('hidden');
+}
 
-                if (result.new_balance !== undefined) {
-                    balance = parseFloat(result.new_balance);
-                    // ✅ Write to localStorage so dashboard syncs instantly
-                    localStorage.setItem('flexia_balance', result.new_balance);
-                }
+function startGame() {
+  if (gameRunning) return;
+  if (capReached) { alert("🎉 Daily ₦5000 cap reached! Come back tomorrow."); return; }
+  const btn=document.getElementById('start-btn');
+  btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
+  setTimeout(()=>{
+    initGame(); gameRunning=true;
+    if (gameLoop) clearInterval(gameLoop);
+    gameLoop=setInterval(updateGame,120);
+    btn.disabled=false; btn.innerHTML='<i class="fas fa-play"></i> START';
+  },200);
+}
 
-                if (netChange > 0) {
-                    totalWins++;
-                }
+function playAgain() { document.getElementById('game-over-modal').classList.add('hidden'); startGame(); }
+function closeModal() { document.getElementById('game-over-modal').classList.add('hidden'); }
+function changeDirection(d) { const o={up:'down',down:'up',left:'right',right:'left'}; if (o[d]!==direction) direction=d; }
+function closeInstructions() { document.getElementById('instruction-modal').style.display='none'; localStorage.setItem('flexia_snake_seen','1'); }
 
-                if (result.daily_won !== undefined) {
-                    dailyWonToday = parseFloat(result.daily_won) || 0;
-                    updateCapDisplay();
-                    
-                    if (dailyWonToday >= DAILY_CAP) {
-                        isDroppingAll = false;
-                        document.getElementById('drop-btn').disabled = true;
-                        document.getElementById('drop-all-btn').disabled = true;
-                        setTimeout(() => alert('🚫 Daily plinko win cap reached (₦800). Come back tomorrow!'), 100);
-                    }
-                }
-            } else {
-                if (result.message) {
-                    setTimeout(() => alert('❌ ' + result.message), 100);
-                    isDroppingAll = false;
-                    document.getElementById('drop-btn').disabled = false;
-                    document.getElementById('drop-all-btn').disabled = false;
-                    document.getElementById('bet-amount').disabled = false;
-                }
-            }
-            
-            // Clean up ball element (fade already started above)
-            setTimeout(() => {
-                if (ball.element.parentNode) {
-                    ball.element.remove();
-                }
-                balls.splice(ballIndex, 1);
-                
-                if (activeBalls === 0 && !isDroppingAll) {
-                    showTotalWin();
-                }
-                
-                updateStatsDisplay();
-            }, 500);
-        }
-        
-        function showTotalWin() {
-            const winDisplay = document.getElementById('win-display');
-            const winAmountElement = document.getElementById('win-amount');
-            const winMultiplierElement = document.getElementById('win-multiplier');
+function resizeCanvas() {
+  const c=document.querySelector('.game-board-container');
+  const size=Math.min(c.clientWidth,c.clientHeight)-8;
+  canvas.style.width=size+'px'; canvas.style.height=size+'px'; drawGame();
+}
 
-            const displayAmount = totalWinAmount;
-            winAmountElement.textContent = displayAmount >= 0
-                ? `+₦${displayAmount.toLocaleString('en-US', {minimumFractionDigits: 2})}`
-                : `-₦${Math.abs(displayAmount).toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-            winMultiplierElement.textContent = 'Net Result (Balance Updated)';
+document.addEventListener('keydown',e=>{
+  const map={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'};
+  if (map[e.key]) { changeDirection(map[e.key]); e.preventDefault(); }
+  if (e.key===' ') { startGame(); e.preventDefault(); }
+});
+let tx=0,ty=0;
+document.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});
+document.addEventListener('touchend',e=>{
+  const dx=tx-e.changedTouches[0].clientX, dy=ty-e.changedTouches[0].clientY;
+  if (Math.abs(dx)<20&&Math.abs(dy)<20) return;
+  if (Math.abs(dx)>Math.abs(dy)) changeDirection(dx>0?'left':'right');
+  else changeDirection(dy>0?'up':'down');
+});
+window.addEventListener('resize',resizeCanvas);
 
-            winAmountElement.style.color = displayAmount >= 0 ? '#00FF55' : '#FF5555';
-            winDisplay.style.display = 'block';
-            winDisplay.style.animation = 'winPulse 1s ease-in-out';
-
-            updateStatsDisplay();
-
-            setTimeout(() => {
-                winDisplay.style.display = 'none';
-            }, 5000);
-
-            totalWinAmount = 0;
-        }
-        
-        // ==================== INITIALIZATION ====================
-        async function initGame() {
-            if (gameInitialized) return;
-            
-            await fetchProfile();
-            
-            setTimeout(() => createPegs(), 100);
-            
-            const betInput = document.getElementById('bet-amount');
-            betInput.addEventListener('input', function() {
-                let value = parseInt(this.value);
-                if (isNaN(value)) value = MIN_BET;
-                if (value < MIN_BET) value = MIN_BET;
-                if (value > MAX_BET) value = MAX_BET;
-                this.value = value;
-            });
-            
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !isDroppingAll) {
-                    addBallToQueue();
-                } else if (e.key === 'Escape') {
-                    goBackToDashboard();
-                } else if (e.key === 'f' || e.key === 'F') {
-                    toggleFullscreen();
-                } else if (e.key === ' ') {
-                    e.preventDefault();
-                    dropAllBalls();
-                }
-            });
-            
-            document.getElementById('plinko-board').addEventListener('click', (e) => {
-                if (e.target === document.getElementById('plinko-board') && !isDroppingAll) {
-                    addBallToQueue();
-                }
-            });
-            
-            document.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-            });
-            
-            gameInitialized = true;
-        }
-        
-        let resizeTimeout;
-        function handleResize() {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => {
-                createPegs();
-                balls.forEach(ball => {
-                    ball.element.style.left = `${ball.x}px`;
-                    ball.element.style.top = `${ball.y}px`;
-                });
-            }, 250);
-        }
-        
-        window.addEventListener('resize', handleResize);
-        
-        window.addEventListener('beforeunload', function(e) {
-            if (activeBalls > 0 || queuedBalls > 0) {
-                e.preventDefault();
-                e.returnValue = 'You have active balls. Are you sure you want to leave?';
-            }
-        });
-        
-        document.addEventListener('DOMContentLoaded', async () => {
-            await initGame();
-        });
-    </script>
+document.addEventListener('DOMContentLoaded',()=>{
+  if (!localStorage.getItem('flexia_snake_seen')) document.getElementById('instruction-modal').style.display='flex';
+  else document.getElementById('instruction-modal').style.display='none';
+  loadDailyEarnings();
+  initGame();
+  resizeCanvas();
+});
+</script>
 </body>
 </html>
