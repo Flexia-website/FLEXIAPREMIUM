@@ -1,816 +1,573 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>FLEXIA | Referral Banking Platform</title>
-<meta name="google-site-verification" content="y-r0aHL3VuYE3xVBTyAxgRWmUb_PmaP9jYI2C75ciTw" />
-<!-- Favicon -->
-<link rel="icon" type="image/x-icon" href="logo/favicon.ico" />
-<link rel="icon" type="image/png" sizes="32x32" href="logo/flexia-logo.png" />
-<link rel="icon" type="image/png" sizes="16x16" href="logo/flexia-logo.png" />
-<link rel="apple-touch-icon" href="logo/apple-touch-icon.png" />
-<link rel="manifest" href="manifest.json" />
-<!-- Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-<!-- Main CSS -->
-<link rel="stylesheet" href="style.css" />
-
-<!-- === AUTO-LOGOUT SCRIPT === -->
-<script>
-// Check for logout reason on page load
-document.addEventListener('DOMContentLoaded', function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const reason = urlParams.get('reason');
-    const game = urlParams.get('game');
-    
-    if (reason === 'daily_limit_reached') {
-        showWelcomeBackMessage(game);
-    }
-});
-
-function showWelcomeBackMessage(gameType) {
-    const gameNames = {
-        'snake': 'Snake Game',
-        'coinflip': 'Coin Flip',
-        'plinko': 'Plinko 3D',
-        'spin': 'Daily Spin',
-        'tiktok': 'TikTok Follow'
-    };
-    
-    const gameName = gameNames[gameType] || 'the game';
-    
-    // Show toast notification
-    setTimeout(() => {
-        if (typeof App !== 'undefined' && App.showMessage) {
-            App.showMessage(`Welcome back! You were logged out from ${gameName} due to daily limit. Limits reset at midnight.`, 'info', 8000);
-        } else {
-            // Fallback alert
-            alert(`Welcome back! You were logged out from ${gameName} due to daily limit.\n\nDaily game limits reset at midnight (00:00 UTC).`);
-        }
-    }, 1500);
-    
-    // Clean URL
-    window.history.replaceState({}, document.title, window.location.pathname);
-}
-</script>
-
-<!-- === EMBEDDED CUSTOM STYLES (Spin + Merchant Button) === -->
-<style>
-/* --- MERCHANT BUTTON STYLE --- */
-.btn-merchant {
-  background: #8000FF;
-  color: white;
-  border: none;
-  padding: 14px;
-  border-radius: 10px;
-  font-family: 'Orbitron', sans-serif;
-  font-weight: 700;
-  font-size: 0.95rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  margin-top: 15px;
-  transition: background 0.3s ease;
-}
-.btn-merchant:hover {
-  background: #9000FF;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(128, 0, 255, 0.4);
-}
-
-/* --- MODERN SPIN WHEEL SYSTEM --- */
-.wheel-outer-ring {
-  position: relative;
-  width: 280px;  height: 280px;
-  margin: 25px auto;
-  border-radius: 50%;
-  background: #111;
-  padding: 8px;
-  border: 4px solid #222;
-  box-shadow: 0 0 30px rgba(128, 0, 255, 0.3), inset 0 0 20px #000;
-}
-.wheel-outer-ring::before {
-  content: "";
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  border-radius: 50%;
-  border: 2px dashed rgba(255, 255, 255, 0.2);
-  animation: rotateLights 20s linear infinite;
-}
-@keyframes rotateLights {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-#wheel-svg {
-  width: 100%;
-  height: 100%;
-  transition: transform 5s cubic-bezier(0.15, 0, 0, 1);
-}
-.wheel-pointer-modern {
-  position: absolute;
-  top: -12px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 35px;
-  height: 45px;
-  background: gold;
-  clip-path: polygon(50% 100%, 0 0, 100% 0);
-  z-index: 100;
-  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
-}
-#spin-btn-custom {
-  background: linear-gradient(135deg, #8000FF 0%, #FF3333 100%) !important;
-  width: 100%;
-  max-width: 240px;
-  padding: 16px !important;
-  font-family: 'Orbitron', sans-serif !important;
-  font-weight: 900 !important;
-  border: none !important;
-  border-radius: 50px !important;
-  color: white;  cursor: pointer;
-  box-shadow: 0 10px 20px rgba(128, 0, 255, 0.3);
-  margin-top: 15px;
-  transition: 0.3s;
-}
-#spin-btn-custom:disabled {
-  background: #333 !important;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-.result-banner {
-  margin-top: 15px;
-  padding: 12px;
-  border-radius: 8px;
-  font-family: 'Rajdhani', sans-serif;
-  font-weight: 700;
-  display: none;
-  background: rgba(0,0,0,0.5);
-  border: 1px solid #444;
-  text-align: center;
-  font-size: 1rem;
-}
-</style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>FLEXIA · Referral Banking</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="logo/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="logo/flexia-logo.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="logo/flexia-logo.png" />
+    <link rel="apple-touch-icon" href="logo/apple-touch-icon.png" />
+    <link rel="manifest" href="manifest.json" />
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="style.css" />
+    <!-- Config & Script -->
+    <script src="config.js"></script>
+    <script src="script.js"></script>
 </head>
 <body>
 
-<!-- Auth Screen -->
-<div id="auth-screen" class="screen">
-  <div class="auth-container">
-    <div class="auth-header">
-      <div class="logo-container">
-        <div class="logo-icon">
-          <img src="logo/flexia-logo.png" alt="FLEXIA Logo" style="width: 80px; height: 80px; border-radius: 12px;" />
-        </div>
-        <h1 class="app-title">FLEXIA</h1>
-        <p class="app-subtitle">Referral Banking & Earnings Platform</p>
-      </div>
-    </div>
-    <div class="auth-tabs">
-      <div class="tab active" data-tab="login">LOGIN</div>
-      <div class="tab" data-tab="register">REGISTER</div>
-    </div>
-    <div id="login-form" class="auth-form active">
-      <div class="input-group">
-        <input type="text" id="login-username" class="form-input" placeholder="Username" required />
-        <i class="fas fa-user input-icon"></i>
-      </div>
-      <div class="input-group">
-        <input type="password" id="login-password" class="form-input" placeholder="Password" required />
-        <i class="fas fa-lock input-icon"></i>
-      </div>
-      <button class="btn-primary" onclick="Auth.login()">
-        <i class="fas fa-sign-in-alt"></i> ENTER VAULT
-      </button>
-      <div class="test-login-info">
-        <p><strong>Login:</strong> with your login details</p>
-      </div>
-      <div id="login-message" class="message"></div>
-    </div>
-    <div id="register-form" class="auth-form">
-      <div class="input-group">
-        <input type="text" id="reg-username" class="form-input" placeholder="Choose Username" required />
-        <i class="fas fa-user input-icon"></i>
-      </div>
-      <div class="input-group">
-        <input type="password" id="reg-password" class="form-input" placeholder="Create Password" required />
-        <i class="fas fa-lock input-icon"></i>
-      </div>
-      <div class="input-group">
-        <input type="text" id="reg-coupon" class="form-input" placeholder="Coupon Code" required />
-        <i class="fas fa-ticket input-icon"></i>
-      </div>
-      <div class="input-group">
-        <input type="text" id="reg-referral" class="form-input" placeholder="Referral Code (Optional)" />
-        <i class="fas fa-user-plus input-icon"></i>
-      </div>
-      <div class="input-group">
-        <input type="text" id="reg-contact" class="form-input" placeholder="Email or Phone (Optional)" />
-        <i class="fas fa-envelope input-icon"></i>
-      </div>
-      <button class="btn-primary" onclick="Auth.register()">
-        <i class="fas fa-user-plus"></i> CREATE ACCOUNT
-      </button>
+    <div class="grid-bg"></div>
 
-      <!-- === NEW MERCHANT BUTTON === -->
-      <button class="btn-merchant" onclick="openMerchantChat()">
-        <i class="fas fa-store"></i> Buy Coupon from Merchant
-      </button>
-
-      <div id="register-message" class="message"></div>
-      <div class="info-box">
-        <h4><i class="fas fa-gift"></i> Referral Program</h4>
-        <p>Earn <strong>₦7,500</strong> for each friend you refer!</p>
-        <p class="small-text">Share your referral code after registration</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- App Screen (Hidden by Default) -->
-<div id="app-screen" class="screen hidden">
-  <div class="grid-bg"></div>
-  <header class="app-header">
-    <div class="header-content">
-      <div class="header-logo">
-        <div class="header-logo-icon">
-          <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 35px; height: 35px; border-radius: 8px;" />
-        </div>
-        <div class="header-logo-text">FLEXIA</div>
-      </div>
-      <div class="welcome-message">
-        <i class="fas fa-user-circle"></i>
-        <span id="welcome-text">Welcome, User!</span>
-      </div>
-      <div class="header-actions">
-        <button class="icon-btn" onclick="App.toggleBalance()" title="Toggle Balance">
-          <i class="fas fa-eye"></i>
-        </button>
-        <div class="user-avatar" onclick="Profile.open()" id="user-avatar">U</div>
-      </div>
-    </div>
-  </header>
-  <main class="app-main">
-    <section class="balance-section">
-      <div class="balance-card">
-        <div class="balance-label"><i class="fas fa-users" style="font-size:0.75rem;opacity:0.7;"></i> REFER &amp; TIKTOK BALANCE</div>
-        <div class="balance-amount">
-          <span class="currency">₦</span>
-          <span id="balance-display" class="amount">0.00</span>
-        </div>
-
-        <!-- Game Rewards Mini Display -->
-        <div class="game-rewards-row">
-          <div class="game-rewards-mini">
-            <span class="game-rewards-icon">🎮</span>
-            <div class="game-rewards-text">
-              <span class="game-rewards-label">GAME REWARDS</span>
-              <span class="game-rewards-amount">₦<span id="game-rewards-display">0.00</span></span>
+    <!-- ============================================================
+         AUTH SCREEN
+         ============================================================ -->
+    <div id="auth-screen">
+        <div class="auth-container">
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <img src="logo/flexia-logo.png" alt="FLEXIA Logo" />
+                </div>
+                <h1 class="app-title">FLEXIA</h1>
+                <p class="app-subtitle">Referral Banking &amp; Earnings Platform</p>
             </div>
-          </div>
+
+            <div class="auth-tabs">
+                <button class="tab active" data-tab="login">LOGIN</button>
+                <button class="tab" data-tab="register">REGISTER</button>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <div id="login-form" class="auth-form active">
+                <div class="input-group">
+                    <input type="text" id="login-username" class="form-input" placeholder="Username" />
+                    <i class="fas fa-user input-icon"></i>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="login-password" class="form-input" placeholder="Password" />
+                    <i class="fas fa-lock input-icon"></i>
+                </div>
+                <button class="btn-primary" id="login-btn" onclick="Auth.login()">
+                    <i class="fas fa-sign-in-alt"></i> ENTER VAULT
+                </button>
+                <div id="login-message" class="message"></div>
+            </div>
+
+            <!-- REGISTER FORM -->
+            <div id="register-form" class="auth-form">
+                <div class="input-group">
+                    <input type="text" id="reg-username" class="form-input" placeholder="Choose Username" required />
+                    <i class="fas fa-user input-icon"></i>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="reg-password" class="form-input" placeholder="Create Password" required />
+                    <i class="fas fa-lock input-icon"></i>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="reg-coupon" class="form-input" placeholder="Coupon Code" required />
+                    <i class="fas fa-ticket input-icon"></i>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="reg-referral" class="form-input" placeholder="Referral Code (Optional)" />
+                    <i class="fas fa-user-plus input-icon"></i>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="reg-contact" class="form-input" placeholder="Email or Phone (Optional)" />
+                    <i class="fas fa-envelope input-icon"></i>
+                </div>
+                <button class="btn-primary" id="register-btn" onclick="Auth.register()">
+                    <i class="fas fa-user-plus"></i> CREATE ACCOUNT
+                </button>
+
+                <!-- BUY COUPON BUTTONS - REGISTRATION MODE (NO LOGIN REQUIRED) -->
+                <div style="text-align: center; margin-top: 12px; display: flex; flex-direction: column; gap: 8px; width: 100%;">
+                    <button class="btn-merchant paystack" onclick="PaystackPayment.openRegistrationPayment()" style="width:100%;justify-content:center;background:linear-gradient(135deg,#8000FF,#00CCFF);color:#fff;border:none;">
+                        <i class="fas fa-credit-card"></i> Buy Coupon via Paystack
+                    </button>
+                    <button class="btn-merchant" onclick="Auth.buyCoupon()" style="width:100%;justify-content:center;">
+                        <i class="fas fa-store"></i> Buy Coupon from Merchant
+                    </button>
+                </div>
+
+                <div id="register-message" class="message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         DASHBOARD SCREEN
+         ============================================================ -->
+    <div id="app-screen">
+        <div class="dashboard">
+
+            <!-- STICKY HEADER -->
+            <header class="app-header">
+                <div class="header-row">
+                    <div class="brand">
+                        <div class="brand-icon">
+                            <img src="logo/flexia-logo.png" alt="FLEXIA" />
+                        </div>
+                        <span class="brand-name">FLEXIA</span>
+                    </div>
+                    <div class="header-right">
+                        <div class="greeting">
+                            Welcome back
+                            <strong id="dashboard-username">User</strong>
+                        </div>
+                        <div class="avatar" id="dashboard-avatar" onclick="Settings.logout()">U</div>
+                    </div>
+                </div>
+                <div class="scroll-progress-container">
+                    <div class="scroll-progress-bar" id="scrollProgressBar"></div>
+                </div>
+            </header>
+
+            <!-- BALANCE CARD -->
+            <div class="balance-card">
+                <div class="balance-label"><i class="fas fa-wallet"></i> Total Balance</div>
+                <div class="balance-amount">
+                    <span class="currency">₦</span><span id="balance-display">0.00</span>
+                </div>
+                <div class="balance-breakdown">
+                    <span class="item"><i class="fas fa-users"></i> Refer &amp; TikTok: <strong id="refer-balance">₦0.00</strong></span>
+                    <span class="item"><i class="fas fa-gamepad"></i> Games: <strong id="game-balance">₦0.00</strong></span>
+                    <span class="item"><i class="fas fa-arrow-up up"></i> <span id="weekly-change">+₦0</span></span>
+                </div>
+            </div>
+
+            <!-- TODAY'S EARNINGS CARD -->
+            <div class="today-earnings-card">
+                <div class="today-earnings-header">
+                    <span class="today-earnings-label"><i class="fas fa-calendar-day"></i> Today's Earnings</span>
+                    <span id="today-earnings-update" class="today-earnings-update">Just now</span>
+                </div>
+                <div class="today-earnings-amount">
+                    <span class="currency">₦</span>
+                    <span id="today-earnings-total">0.00</span>
+                </div>
+                <div class="today-earnings-breakdown">
+                    <div class="earnings-item">
+                        <span><i class="fas fa-gamepad" style="color:#f87171;"></i> Snake</span>
+                        <span>₦<span id="today-snake">0.00</span> / ₦500</span>
+                    </div>
+                    <div class="earnings-item">
+                        <span><i class="fas fa-coins" style="color:#fbbf24;"></i> Coin Flip</span>
+                        <span>₦<span id="today-coinflip">0.00</span> / ₦1000</span>
+                    </div>
+                    <div class="earnings-item">
+                        <span><i class="fas fa-bowling-ball" style="color:#a855f7;"></i> Plinko</span>
+                        <span>₦<span id="today-plinko">0.00</span> / ₦800</span>
+                    </div>
+                    <div class="earnings-item">
+                        <span><i class="fab fa-tiktok" style="color:#25F4EE;"></i> TikTok</span>
+                        <span>₦<span id="today-tiktok">0.00</span></span>
+                    </div>
+                    <div class="earnings-item">
+                        <span><i class="fas fa-gift" style="color:#34d399;"></i> Referral</span>
+                        <span>₦<span id="today-referral">0.00</span></span>
+                    </div>
+                    <div class="earnings-item">
+                        <span><i class="fas fa-trophy" style="color:#fbbf24;"></i> Achievements</span>
+                        <span>₦<span id="today-achievement">0.00</span></span>
+                    </div>
+                    <div class="earnings-item">
+                        <span><i class="fas fa-sync-alt" style="color:#fb923c;"></i> Spin</span>
+                        <span>₦<span id="today-spin">0.00</span></span>
+                    </div>
+                    <div class="earnings-item">
+                        <span><i class="fas fa-sign-in-alt" style="color:#38bdf8;"></i> Login Bonus</span>
+                        <span>₦<span id="today-login">0.00</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QUICK ACTIONS -->
+            <div class="quick-actions">
+                <div class="q-btn" onclick="Referral.claimBonuses()">
+                    <i class="fas fa-gift gold"></i>
+                    <span>Claim</span>
+                </div>
+                <div class="q-btn" onclick="Games.openSpinWheel()">
+                    <i class="fas fa-sync-alt teal"></i>
+                    <span>Spin</span>
+                </div>
+                <div class="q-btn" onclick="Banking.openWithdraw()">
+                    <i class="fas fa-paper-plane purple"></i>
+                    <span>Transfer</span>
+                </div>
+                <div class="q-btn" onclick="Achievements.open()">
+                    <i class="fas fa-chart-line blue"></i>
+                    <span>Stats</span>
+                </div>
+            </div>
+
+            <!-- REWARDS BAR -->
+            <div class="rewards-bar">
+                <div class="left">
+                    <span class="icon"><i class="fas fa-trophy"></i></span>
+                    <div class="info">
+                        <div class="label">Game Rewards</div>
+                        <div class="value" id="game-rewards-display">₦0.00</div>
+                    </div>
+                </div>
+                <span class="badge" id="weekly-badge">+₦0 this week</span>
+            </div>
+
+            <!-- GAMES -->
+            <div class="section-title"><i class="fas fa-gamepad"></i> Play &amp; Earn</div>
+            <div class="game-grid">
+                <div class="activity-card" onclick="Games.openSnake()">
+                    <div class="icon snake"><i class="fas fa-gamepad"></i></div>
+                    <div class="name">Snake</div>
+                    <div class="sub">₦200/eat</div>
+                    <span class="badge free">Free</span>
+                </div>
+                <div class="activity-card" onclick="Games.openCoinFlip()">
+                    <div class="icon coin"><i class="fas fa-coins"></i></div>
+                    <div class="name">Coin Flip</div>
+                    <div class="sub">Bet &amp; Double</div>
+                    <span class="badge bet">Min ₦100</span>
+                </div>
+                <div class="activity-card" onclick="Games.openPlinko()">
+                    <div class="icon plinko"><i class="fas fa-bowling-ball"></i></div>
+                    <div class="name">Plinko</div>
+                    <div class="sub">Bet &amp; Multiply</div>
+                    <span class="badge bet">Min ₦100</span>
+                </div>
+                <div class="activity-card" onclick="Games.openTikTok()">
+                    <div class="icon tiktok"><i class="fab fa-tiktok"></i></div>
+                    <div class="name">TikTok</div>
+                    <div class="sub">Follow = ₦150</div>
+                    <span class="badge daily">1/Day</span>
+                </div>
+                <div class="activity-card" onclick="Referral.open()">
+                    <div class="icon refer"><i class="fas fa-users"></i></div>
+                    <div class="name">Refer</div>
+                    <div class="sub">₦7,500/friend</div>
+                    <span class="badge bonus">Bonus</span>
+                </div>
+                <div class="activity-card" onclick="Games.openSpinWheel()">
+                    <div class="icon spin"><i class="fas fa-sync-alt"></i></div>
+                    <div class="name">Spin</div>
+                    <div class="sub">Win up to ₦1000</div>
+                    <span class="badge daily">1/Day</span>
+                </div>
+            </div>
+
+            <!-- ACHIEVEMENTS -->
+            <div class="section-title"><i class="fas fa-trophy"></i> Achievements</div>
+            <div class="game-grid">
+                <div class="activity-card" onclick="Achievements.open()">
+                    <div class="icon trophy"><i class="fas fa-trophy"></i></div>
+                    <div class="name">Achievements</div>
+                    <div class="sub">Track Progress</div>
+                    <span class="badge new">New</span>
+                </div>
+                <div class="activity-card" onclick="window.location.href='receipt.html'">
+                    <div class="icon receipt"><i class="fas fa-receipt"></i></div>
+                    <div class="name">Receipt</div>
+                    <div class="sub">View &amp; Download</div>
+                    <span class="badge new">New</span>
+                </div>
+                <div class="activity-card" onclick="window.location.href='receipt.html?history=true'">
+                    <div class="icon history"><i class="fas fa-history"></i></div>
+                    <div class="name">History</div>
+                    <div class="sub">Past Transactions</div>
+                    <span class="badge new">New</span>
+                </div>
+            </div>
+
+            <!-- ACTIVITY FEED -->
+            <div class="feed" id="activity-feed">
+                <div class="feed-header">
+                    <span><i class="fas fa-clock" style="margin-right:4px;"></i> Recent Activity</span>
+                    <i class="fas fa-chevron-right" onclick="viewAllActivity()"></i>
+                </div>
+                <div id="feed-items">
+                    <!-- Populated by script -->
+                </div>
+            </div>
+
+            <!-- BOTTOM NAV -->
+            <nav class="bottom-nav">
+                <div class="nav-item active" onclick="navigateTab('home')">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </div>
+                <div class="nav-item" onclick="Banking.openWithdraw()">
+                    <i class="fas fa-wallet"></i>
+                    <span>Cashout</span>
+                </div>
+                <div class="nav-item" onclick="Achievements.open()">
+                    <i class="fas fa-trophy"></i>
+                    <span>Awards</span>
+                </div>
+                <div class="nav-item" onclick="window.location.href='receipt.html'">
+                    <i class="fas fa-receipt"></i>
+                    <span>Receipt</span>
+                </div>
+                <div class="nav-item" onclick="Settings.open()">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </div>
+            </nav>
+
+        </div>
+    </div>
+
+    <!-- ============================================================
+         MODALS
+         ============================================================ -->
+    <div id="modals-container">
+        <!-- Withdrawal Modal -->
+        <div id="withdrawal-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-logo">
+                    <div class="modal-logo-icon">
+                        <img src="logo/flexia-logo.png" alt="FLEXIA" />
+                    </div>
+                </div>
+                <h3 class="modal-title">CASH-OUT VAULT</h3>
+
+                <div class="withdraw-balance-breakdown">
+                    <div class="withdraw-balance-row">
+                        <span class="withdraw-balance-label"><i class="fas fa-users"></i> Refer &amp; TikTok</span>
+                        <span class="withdraw-balance-val" id="withdraw-ref-balance">₦0.00</span>
+                    </div>
+                    <div class="withdraw-balance-row">
+                        <span class="withdraw-balance-label"><i class="fas fa-gamepad"></i> Game Rewards</span>
+                        <span class="withdraw-balance-val" id="withdraw-game-balance">₦0.00</span>
+                    </div>
+                    <div class="withdraw-balance-divider"></div>
+                    <div class="withdraw-balance-row total">
+                        <span class="withdraw-balance-label">Total Available</span>
+                        <strong id="withdraw-balance">₦0.00</strong>
+                    </div>
+                </div>
+
+                <p class="modal-info">Minimum Withdrawal: <strong id="withdraw-min">₦100,000.00</strong></p>
+                <div class="input-group">
+                    <input type="number" id="withdraw-amount" class="form-input" placeholder="Amount (e.g., 100000)" required />
+                </div>
+                <div class="input-group">
+                    <select id="bank-select" class="form-input" required>
+                        <option value="" disabled selected>Select Bank</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="account-number" class="form-input" placeholder="Account Number" required />
+                </div>
+                <div class="input-group">
+                    <input type="text" id="account-name-manual" class="form-input" placeholder="Account Name (Manual)" required />
+                </div>
+                <button class="btn-primary" onclick="Banking.processWithdrawal()">
+                    <i class="fas fa-paper-plane"></i> SUBMIT WITHDRAWAL
+                </button>
+                <div id="withdrawal-message" class="message"></div>
+                <button class="btn-close" onclick="App.closeModal('withdrawal-modal')">CLOSE</button>
+            </div>
         </div>
 
-        <div class="balance-controls">
-          <button class="control-btn" onclick="Referral.claimBonuses()">
-            <i class="fas fa-gift"></i> Claim Bonuses
-          </button>
-          <button class="control-btn" onclick="customSpinEngine.openModal()">
-            <i class="fas fa-sync-alt"></i> Daily Spin
-          </button>
+        <!-- Referral Modal -->
+        <div id="referral-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-logo">
+                    <div class="modal-logo-icon">
+                        <img src="logo/flexia-logo.png" alt="FLEXIA" />
+                    </div>
+                </div>
+                <h3 class="modal-title">Refer &amp; Earn</h3>
+                <div id="referral-data">Loading referral data...</div>
+                <button class="btn-close" onclick="App.closeModal('referral-modal')">CLOSE</button>
+            </div>
         </div>
-      </div>
-    </section>
-    <section class="activities-section">
-      <h3 class="section-title"><i class="fas fa-gamepad"></i> Earn & Play</h3>
-      <div class="activities-grid">
-        <div class="activity-card" onclick="window.location.href='snake.html'">
-          <div class="card-icon game"><i class="fas fa-gamepad"></i></div>
-          <div class="card-title">Snake Mine</div>
-          <div class="card-subtitle">Eat = ₦200 Each</div>
-          <div class="card-badge free">FREE</div>
-        </div>
-        <div class="activity-card" onclick="window.location.href='coinflip.html'">
-          <div class="card-icon coin"><i class="fas fa-coins"></i></div>
-          <div class="card-title">Coin Flip</div>
-          <div class="card-subtitle">Bet & Double</div>
-          <div class="card-badge bet">Min: ₦100</div>
-        </div>
-        <div class="activity-card" onclick="window.location.href='plinko.html'">
-          <div class="card-icon play"><i class="fas fa-bowling-ball"></i></div>
-          <div class="card-title">Plinko 3D</div>
-          <div class="card-subtitle">Bet & Multiply</div>
-          <div class="card-badge bet">Min: ₦100</div>
-        </div>
-        <div class="activity-card" onclick="Games.openTikTok()">
-          <div class="card-icon tiktok"><i class="fab fa-tiktok"></i></div>
-          <div class="card-title">TikTok Follow</div>
-          <div class="card-subtitle">Follow = ₦150</div>
-          <div class="card-badge daily">1/Day</div>
-        </div>
-        <div class="activity-card" onclick="Referral.open()">
-          <div class="card-icon referral"><i class="fas fa-users"></i></div>
-          <div class="card-title">Refer & Earn</div>
-          <div class="card-subtitle">₦7,500/Friend</div>
-          <div class="card-badge bonus">Bonus</div>
-        </div>
-        <div class="activity-card" onclick="customSpinEngine.openModal()">
-          <div class="card-icon spin"><i class="fas fa-sync-alt"></i></div>
-          <div class="card-title">Daily Spin</div>
-          <div class="card-subtitle">Win Up To ₦1000</div>
-          <div class="card-badge daily">1/Day</div>
-        </div>
-      </div>
-    </section>
-    <section class="activities-section">
-      <h3 class="section-title"><i class="fas fa-trophy"></i> Achievements & Records</h3>
-      <div class="activities-grid">
-        <div class="activity-card" onclick="window.location.href='achievements.html'">
-          <div class="card-icon game"><i class="fas fa-trophy"></i></div>
-          <div class="card-title">Achievements</div>
-          <div class="card-subtitle">Track Your Progress</div>
-          <div class="card-badge free">NEW</div>
-        </div>
-        <div class="activity-card" onclick="window.location.href='receipt.html'">
-          <div class="card-icon coin"><i class="fas fa-receipt"></i></div>
-          <div class="card-title">Withdraw Receipt</div>
-          <div class="card-subtitle">View & Download</div>
-          <div class="card-badge free">NEW</div>
-        </div>
-        <div class="activity-card" onclick="window.location.href='receipt.html?history=true'">
-          <div class="card-icon play"><i class="fas fa-history"></i></div>
-          <div class="card-title">Withdraw History</div>
-          <div class="card-subtitle">Past Transactions</div>
-          <div class="card-badge free">NEW</div>
-        </div>
-      </div>
-    </section>
-  </main>
-  <nav class="bottom-nav">
-    <div class="nav-item active" onclick="App.showScreen('home')">
-      <i class="fas fa-home"></i>
-      <span>Home</span>
-    </div>
-    <div class="nav-item" onclick="Banking.openWithdraw()">
-      <i class="fas fa-wallet"></i>
-      <span>Cashout</span>
-    </div>
-    <div class="nav-item" onclick="window.location.href='achievements.html'">
-      <i class="fas fa-trophy"></i>
-      <span>Achievements</span>
-    </div>
-    <div class="nav-item" onclick="window.location.href='receipt.html'">
-      <i class="fas fa-receipt"></i>
-      <span>Receipt</span>
-    </div>
-    <div class="nav-item" onclick="Settings.open()">
-      <i class="fas fa-cog"></i>
-      <span>Settings</span>
-    </div>
-  </nav>
-</div>
 
-<!-- Modals Container -->
-<div id="modals-container">
-  <!-- Withdrawal Modal -->
-  <div id="withdrawal-modal" class="modal hidden">
-    <div class="modal-content">
-      <div class="modal-logo">
-        <div class="modal-logo-icon">
-          <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 40px; height: 40px;" />
+        <!-- Profile Modal -->
+        <div id="profile-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-logo">
+                    <div class="modal-logo-icon">
+                        <img src="logo/flexia-logo.png" alt="FLEXIA" />
+                    </div>
+                </div>
+                <h3 class="modal-title">User Profile</h3>
+                <div id="profile-data">...</div>
+                <button class="btn-close" onclick="App.closeModal('profile-modal')">CLOSE</button>
+            </div>
         </div>
-      </div>
-      <h3 class="modal-title">CASH-OUT VAULT</h3>
 
-      <!-- Balance Breakdown -->
-      <div class="withdraw-balance-breakdown">
-        <div class="withdraw-balance-row">
-          <span class="withdraw-balance-label"><i class="fas fa-users"></i> Refer &amp; TikTok</span>
-          <span class="withdraw-balance-val" id="withdraw-ref-balance">₦0.00</span>
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-logo">
+                    <div class="modal-logo-icon">
+                        <img src="logo/flexia-logo.png" alt="FLEXIA" />
+                    </div>
+                </div>
+                <h3 class="modal-title">Settings</h3>
+                <div id="settings-data">...</div>
+                <button class="btn-close" onclick="App.closeModal('settings-modal')">CLOSE</button>
+            </div>
         </div>
-        <div class="withdraw-balance-row">
-          <span class="withdraw-balance-label">🎮 Game Rewards</span>
-          <span class="withdraw-balance-val" id="withdraw-game-balance">₦0.00</span>
-        </div>
-        <div class="withdraw-balance-divider"></div>
-        <div class="withdraw-balance-row total">
-          <span class="withdraw-balance-label">💰 Total Available</span>
-          <strong id="withdraw-balance">₦0.00</strong>
-        </div>
-      </div>
 
-      <p class="modal-info">Minimum Withdrawal: <strong id="withdraw-min">₦100,000.00</strong></p>
-      <div class="input-group">
-        <input type="number" id="withdraw-amount" class="form-input" placeholder="Amount (e.g., 100000)" required />
-      </div>
-      <div class="input-group">
-        <select id="bank-select" class="form-input" required>
-          <option value="" disabled selected>Select Bank</option>
-        </select>
-      </div>
-      <div class="input-group">
-        <input type="text" id="account-number" class="form-input" placeholder="Account Number" required />
-      </div>
-      <div class="input-group">
-        <input type="text" id="account-name-manual" class="form-input" placeholder="Account Name (Manual)" required />
-      </div>
-      <button class="btn-primary" onclick="Banking.processWithdrawal()">
-        <i class="fas fa-paper-plane"></i> SUBMIT WITHDRAWAL
-      </button>
-      <div id="withdrawal-message" class="message"></div>
-      <button class="btn-close" onclick="App.closeModal('withdrawal-modal')">CLOSE</button>
-    </div>
-  </div>
+        <!-- TikTok Modal -->
+        <div id="tiktok-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-logo">
+                    <div class="modal-logo-icon">
+                        <img src="logo/flexia-logo.png" alt="FLEXIA" />
+                    </div>
+                </div>
+                <h3 class="modal-title">TIKTOK FOLLOW</h3>
+                <p class="modal-info">Earn <strong>₦150.00</strong> for following on TikTok</p>
+                <div id="tiktok-instructions">
+                    <p>Follow the account below on TikTok to earn ₦150.00</p>
+                    <div class="tiktok-account-display">
+                        <strong id="tiktok-account-name">Loading...</strong>
+                    </div>
+                    <p class="small-text">Search this username on TikTok and follow the account</p>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn-secondary" onclick="Games.openTikTokApp()">
+                        <i class="fab fa-tiktok"></i> OPEN TIKTOK
+                    </button>
+                    <button class="btn-primary" onclick="Games.verifyTikTokFollow()">
+                        <i class="fas fa-check"></i> I FOLLOWED
+                    </button>
+                </div>
+                <div id="tiktok-message" class="message"></div>
+                <button class="btn-close" onclick="App.closeModal('tiktok-modal')">CLOSE</button>
+            </div>
+        </div>
 
-  <!-- Other Modals -->
-  <div id="referral-modal" class="modal hidden">
-    <div class="modal-content">
-      <div class="modal-logo">
-        <div class="modal-logo-icon">
-          <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 40px; height: 40px;" />
+        <!-- Spin Modal -->
+        <div id="spin-modal" class="modal hidden">
+            <div class="modal-content" style="background: #0a0a0a; border: 1px solid #333; text-align: center;">
+                <div class="modal-logo">
+                    <div class="modal-logo-icon">
+                        <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 40px; height: 40px;" />
+                    </div>
+                </div>
+                <h3 class="modal-title" style="color: #fff; letter-spacing: 2px;">CYBER SPIN</h3>
+                <div id="wheel" style="position:relative;width:280px;height:280px;margin:0 auto;"></div>
+                <button id="spin-button" class="btn-primary" onclick="Games.spinWheel()" style="max-width:240px;margin:15px auto;">
+                    <i class="fas fa-sync-alt"></i> SPIN WHEEL
+                </button>
+                <div id="spin-message" class="message"></div>
+                <div id="spin-result" class="hidden" style="margin-top:10px;"></div>
+                <button class="btn-close" onclick="App.closeModal('spin-modal')" style="margin-top:20px;opacity:0.5;">CLOSE</button>
+            </div>
         </div>
-      </div>
-      <h3 class="modal-title">Refer & Earn</h3>
-      <div id="referral-data">Loading referral data...</div>
-      <button class="btn-close" onclick="App.closeModal('referral-modal')">CLOSE</button>
-    </div>
-  </div>
-  <div id="profile-modal" class="modal hidden">
-    <div class="modal-content">
-      <div class="modal-logo">
-        <div class="modal-logo-icon">
-          <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 40px; height: 40px;" />
-        </div>
-      </div>
-      <h3 class="modal-title">User Profile</h3>
-      <div id="profile-data">...</div>
-      <button class="btn-close" onclick="App.closeModal('profile-modal')">CLOSE</button>
-    </div>
-  </div>
-  <div id="settings-modal" class="modal hidden">
-    <div class="modal-content">
-      <div class="modal-logo">
-        <div class="modal-logo-icon">
-          <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 40px; height: 40px;" />
-        </div>
-      </div>
-      <h3 class="modal-title">Settings</h3>
-      <div id="settings-data">...</div>
-      <button class="btn-close" onclick="App.closeModal('settings-modal')">CLOSE</button>
-    </div>
-  </div>
-  <div id="tiktok-modal" class="modal hidden">
-    <div class="modal-content">
-      <div class="modal-logo">
-        <div class="modal-logo-icon">
-          <img src="logo/flexia-logo.png" alt="FLEXIA" style="width: 40px; height: 40px;" />
-        </div>
-      </div>
-      <h3 class="modal-title">TIKTOK FOLLOW</h3>
-      <p class="modal-info">Earn <strong>₦150.00</strong> for following on TikTok</p>
-      <div id="tiktok-instructions">
-        <p>Follow the account below on TikTok to earn ₦150.00</p>
-        <div class="tiktok-account-display">
-          <strong id="tiktok-account-name">Loading...</strong>
-        </div>
-        <p class="small-text">Search this username on TikTok and follow the account</p>
-      </div>
-      <div class="action-buttons">
-        <button class="btn-secondary" onclick="Games.openTikTokApp()">
-          <i class="fab fa-tiktok"></i> OPEN TIKTOK
-        </button>
-        <button class="btn-primary" onclick="Games.verifyTikTokFollow()">
-          <i class="fas fa-check"></i> I FOLLOWED
-        </button>
-      </div>
-      <div id="tiktok-message" class="message"></div>
-      <button class="btn-close" onclick="App.closeModal('tiktok-modal')">CLOSE</button>
-    </div>
-  </div>
 
-  <!-- === CYBER SPIN MODAL (from spin.html) === -->
-  <div id="spin-modal" class="modal hidden">
-    <div class="modal-content" style="background: #0a0a0a; border: 1px solid #333; text-align: center;">
-      <h3 class="modal-title" style="color: #fff; letter-spacing: 2px;">CYBER SPIN</h3>
-      <div class="wheel-outer-ring">
-        <div class="wheel-pointer-modern"></div>
-        <svg id="wheel-svg" viewBox="0 0 300 300">
-          <defs>
-            <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style="stop-color:#8000FF;" />
-              <stop offset="100%" style="stop-color:#4B0082;" />
-            </linearGradient>
-            <linearGradient id="darkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style="stop-color:#222;" />
-              <stop offset="100%" style="stop-color:#000;" />
-            </linearGradient>
-          </defs>
-          <g id="segments-group"></g>
-          <circle cx="150" cy="150" r="12" fill="#fff" />
-        </svg>
-      </div>
-      <button id="spin-btn-custom" onclick="customSpinEngine.initSpin()">INITIATE SPIN</button>
-      <div id="custom-result-banner" class="result-banner"></div>
-      <button class="btn-close" onclick="App.closeModal('spin-modal')" style="margin-top: 20px; opacity: 0.5;">CLOSE</button>
+        <!-- Paystack Payment Modal -->
+        <div id="paystack-payment-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-logo">
+                    <div class="modal-logo-icon">
+                        <img src="logo/flexia-logo.png" alt="FLEXIA" />
+                    </div>
+                </div>
+                <h3 class="modal-title">Buy Coupon Code</h3>
+
+                <p class="modal-info">
+                    Pay via <strong>Bank Transfer</strong> or <strong>Card</strong> and receive your coupon code via email.
+                </p>
+
+                <div class="payment-methods-badges">
+                    <span class="payment-method-badge bank"><i class="fas fa-university"></i> Bank Transfer</span>
+                    <span class="payment-method-badge card"><i class="fas fa-credit-card"></i> Card</span>
+                    <span class="payment-method-badge ussd"><i class="fas fa-mobile-alt"></i> USSD</span>
+                    <span class="payment-method-badge qr"><i class="fas fa-qrcode"></i> QR</span>
+                </div>
+
+                <div class="input-group">
+                    <input type="email" id="payment-email" class="form-input" placeholder="Your Email Address" required />
+                    <i class="fas fa-envelope input-icon"></i>
+                </div>
+
+                <div class="input-group">
+                    <input type="number" id="payment-amount" class="form-input" placeholder="Amount (₦)" min="500" value="500" />
+                    <i class="fas fa-money-bill-wave input-icon"></i>
+                </div>
+
+                <button class="btn-primary" onclick="PaystackPayment.initiate()" id="paystack-pay-btn">
+                    <i class="fas fa-credit-card"></i> Pay Now
+                </button>
+
+                <div id="bank-transfer-info" class="bank-transfer-info">
+                    <h4><i class="fas fa-university"></i> Bank Transfer Details</h4>
+                    <div id="transfer-details" class="bank-transfer-details">
+                        <!-- Dynamically populated -->
+                    </div>
+                    <div class="payment-timer-container">
+                        <span class="payment-timer-label"><i class="fas fa-clock"></i> Time Remaining:</span>
+                        <span id="payment-timer-value" class="payment-timer-value">60:00</span>
+                    </div>
+                    <p class="payment-timer-note">
+                        <i class="fas fa-info-circle"></i> Transfer the exact amount before the timer expires
+                    </p>
+                </div>
+
+                <div id="payment-message" class="message"></div>
+                <button class="btn-close" onclick="PaystackPayment.closeModal()">CLOSE</button>
+            </div>
+        </div>
     </div>
-  </div>
 
-</div> <!-- #modals-container -->
+    <script>
+        // Additional init
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('FLEXIA Production Frontend v17.0 Loaded');
 
-<!-- Enhanced Referral Sharing -->
-<script>
-const originalReferralOpen = window.Referral?.open || function() {};
-window.Referral = window.Referral || {};
-Referral.open = function() {
-  originalReferralOpen();
-  setTimeout(() => {
-    const dataEl = document.getElementById('referral-data');
-    if (!dataEl || !dataEl.innerHTML.includes('Your Referral Code')) return;
-    const codeMatch = dataEl.innerHTML.match(/<strong>([A-Z0-9]+)<\/strong>/);
-    if (!codeMatch) return;
-    const code = codeMatch[1];
-    if (dataEl.querySelector('.share-referral-btn')) return;
-    const btn = document.createElement('button');
-    btn.className = 'btn-primary';
-    btn.style.marginTop = '15px';
-    btn.innerHTML = '<i class="fas fa-share-alt"></i> Share Referral Link';
-    btn.onclick = () => {
-      const link = `${window.location.origin}?ref=${code}`;
-      if (navigator.share) {
-        navigator.share({ title: 'FLEXIA', text: `Join FLEXIA! Use my code: ${code}`, url: link });
-      } else {
-        navigator.clipboard.writeText(link).then(() => {
-          if (window.App && App.showMessage) {
-            App.showMessage('Link copied!', 'success');
-          } else {
-            alert('Referral link copied to clipboard!');
-          }
+            // Auto-fill coupon from URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const coupon = urlParams.get('coupon');
+            const tab = urlParams.get('tab');
+
+            if (coupon) {
+                document.getElementById('reg-coupon').value = coupon;
+                if (tab === 'register') {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelector('[data-tab="register"]').classList.add('active');
+                    document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+                    document.getElementById('register-form').classList.add('active');
+                }
+                setTimeout(() => {
+                    if (typeof App !== 'undefined' && App.showMessage) {
+                        App.showMessage('📧 Coupon code loaded! Complete your registration.', 'success', 5000);
+                    }
+                }, 1000);
+            }
         });
-      }
-    };
-    dataEl.appendChild(btn);
-  }, 300);
-};
-</script>
 
-<!-- Main App Script -->
-<script src="script.js"></script>
-
-<!-- === CUSTOM SPIN ENGINE WITH BACKEND SYNC - FIXED === -->
-<script>
-const customSpinEngine = {
-  // 6 segments EXACTLY matching backend prizes array: [1000,500,200,100,50,0]
-  segments: [
-    { label: "₦1000", color: "#FF0055", textColor: "#fff", val: 1000 },
-    { label: "₦500",  color: "#FF8C00", textColor: "#fff", val: 500  },
-    { label: "₦200",  color: "#FFCC00", textColor: "#111", val: 200  },
-    { label: "₦100",  color: "#00C851", textColor: "#fff", val: 100  },
-    { label: "₦50",   color: "#00CCFF", textColor: "#111", val: 50   },
-    { label: "🎲 0",  color: "#8000FF", textColor: "#fff", val: 0    }
-  ],
-  isSpinning: false,
-
-  // Draw SVG wheel with exact segment positions
-  setup() {
-    const group = document.getElementById('segments-group');
-    if (!group) return;
-    group.innerHTML = '';
-
-    const N = this.segments.length; // 6
-    const cx = 150, cy = 150, r = 140;
-    const sliceDeg = 360 / N; // 60°
-
-    function polar(cx, cy, r, deg) {
-      const rad = (deg - 90) * Math.PI / 180;
-      return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-    }
-
-    this.segments.forEach((seg, i) => {
-      const startDeg = i * sliceDeg;
-      const endDeg   = startDeg + sliceDeg;
-      const midDeg   = startDeg + sliceDeg / 2;
-
-      const p1 = polar(cx, cy, r, startDeg);
-      const p2 = polar(cx, cy, r, endDeg);
-
-      // Pie slice
-      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', `M${cx},${cy} L${p1.x},${p1.y} A${r},${r} 0 0,1 ${p2.x},${p2.y} Z`);
-      path.setAttribute('fill', seg.color);
-      path.setAttribute('stroke', '#0A0A1F');
-      path.setAttribute('stroke-width', '2');
-      group.appendChild(path);
-
-      // Label at 72% radius on midpoint angle
-      const lp = polar(cx, cy, r * 0.72, midDeg);
-      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      text.setAttribute('x', lp.x);
-      text.setAttribute('y', lp.y);
-      text.setAttribute('text-anchor', 'middle');
-      text.setAttribute('dominant-baseline', 'middle');
-      text.setAttribute('transform', `rotate(${midDeg}, ${lp.x}, ${lp.y})`);
-      text.setAttribute('fill', seg.textColor);
-      text.setAttribute('font-size', '11');
-      text.setAttribute('font-weight', 'bold');
-      text.setAttribute('font-family', 'Orbitron, Arial, sans-serif');
-      text.textContent = seg.label;
-      group.appendChild(text);
-    });
-  },
-
-  openModal() {
-    // Setup wheel every time modal opens
-    this.setup();
-
-    if (window.App && App.showModal) {
-      App.showModal('spin-modal');
-    } else {
-      const m = document.getElementById('spin-modal');
-      if (m) m.classList.remove('hidden');
-    }
-
-    // Reset wheel
-    const wheel = document.getElementById('wheel-svg');
-    if (wheel) {
-      wheel.style.transition = 'none';
-      wheel.style.transform = 'rotate(0deg)';
-    }
-
-    // Reset banner
-    const banner = document.getElementById('custom-result-banner');
-    if (banner) { banner.style.display = 'none'; banner.innerHTML = ''; }
-
-    // Reset button
-    const btn = document.getElementById('spin-btn-custom');
-    if (btn) { btn.disabled = false; btn.textContent = 'INITIATE SPIN'; }
-
-    this.isSpinning = false;
-  },
-
-  async initSpin() {
-    if (this.isSpinning) return;
-
-    const btn    = document.getElementById('spin-btn-custom');
-    const wheel  = document.getElementById('wheel-svg');
-    const banner = document.getElementById('custom-result-banner');
-
-    if (!btn || !wheel || !banner) {
-      alert('Spin wheel not ready. Please close and reopen.');
-      return;
-    }
-
-    // Lock UI immediately
-    this.isSpinning = true;
-    btn.disabled = true;
-    btn.textContent = 'CONNECTING...';
-    banner.style.display = 'none';
-    banner.innerHTML = '';
-
-    try {
-      // ✅ STEP 1: Call backend FIRST — backend decides winner
-      btn.textContent = 'SPINNING...';
-      const res = await fetch('/api/spin/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
-        credentials: 'include',
-        body: JSON.stringify({})
-      });
-
-      const result = await res.json();
-
-      if (!result.success) {
-        banner.innerHTML = `<span style="color:#FF3333">⚠️ ${result.message || 'Spin failed. Try again.'}</span>`;
-        banner.style.display = 'block';
-        this.isSpinning = false;
-        btn.disabled = false;
-        btn.textContent = 'INITIATE SPIN';
-        return;
-      }
-
-      // ✅ STEP 2: Use prize_index from backend for EXACT segment landing
-      // SVG segments drawn clockwise from top (0°):
-      //   Segment 0 (₦1000): midpoint = 30°
-      //   Segment 1 (₦500):  midpoint = 90°
-      //   Segment 2 (₦200):  midpoint = 150°
-      //   Segment 3 (₦100):  midpoint = 210°
-      //   Segment 4 (₦50):   midpoint = 270°
-      //   Segment 5 (₦0):    midpoint = 330°
-      //
-      // When wheel rotates clockwise by θ°, the point that was at θ° from top
-      // comes to the pointer. So to bring segment i's midpoint to the pointer:
-      //   θ = 360 - midpoint = 360 - (i*60 + 30)
-      const prizeIndex = result.prize_index !== undefined ? result.prize_index : 5;
-      const segmentMidpoint = prizeIndex * 60 + 30;
-      const angleToPointer = (360 - segmentMidpoint) % 360;
-
-      // 6-8 full spins + exact landing angle
-      const fullSpins = 6 + Math.floor(Math.random() * 3);
-      const totalRotation = (fullSpins * 360) + angleToPointer;
-
-      // ✅ STEP 3: Animate wheel to land EXACTLY on winning segment
-      wheel.style.transition = 'transform 5s cubic-bezier(0.17, 0.67, 0.05, 1.0)';
-      wheel.style.transform  = `rotate(${totalRotation}deg)`;
-
-      // ✅ STEP 4: Show result after animation (5s)
-      setTimeout(() => {
-        const reward = result.reward || 0;
-        const isBonusSpin = result.is_bonus_spin || false;
-
-        if (reward > 0) {
-          banner.innerHTML = `
-            <span style="color:#00FF55;font-size:1.1rem;font-weight:bold;">
-              ${isBonusSpin ? '🌟 BONUS SPIN! ' : '🎉 '}WON: ₦${reward.toLocaleString()}!
-            </span>`;
-        } else {
-          banner.innerHTML = `<span style="color:#A0A0B5;">😢 No win this time. Come back tomorrow!</span>`;
-        }
-        banner.style.display = 'block';
-
-        // Update balance
-        if (result.new_balance !== undefined) {
-          const balEls = document.querySelectorAll('#balance-display, .balance-amount, [data-balance]');
-          balEls.forEach(el => {
-            el.textContent = parseFloat(result.new_balance).toLocaleString('en-US', { minimumFractionDigits: 2 });
-          });
-          if (window.App && App.updateBalance) App.updateBalance(result.new_balance);
-          if (window.App && App.currentUser) App.currentUser.balance = result.new_balance;
+        // Placeholder functions for navigation
+        function navigateTab(tab) {
+            if (tab === 'home') return;
+            if (typeof App !== 'undefined' && App.showMessage) {
+                App.showMessage('Navigating to ' + tab, 'info');
+            }
         }
 
-        btn.disabled = true; // Already spun today
-        btn.textContent = '✓ COME BACK TOMORROW';
-        this.isSpinning = false;
-
-      }, 5200); // match 5s animation + buffer
-
-    } catch (err) {
-      console.error('Spin error:', err);
-      banner.innerHTML = `<span style="color:#FF3333">❌ Network error. Please try again.</span>`;
-      banner.style.display = 'block';
-      this.isSpinning = false;
-      btn.disabled = false;
-      btn.textContent = 'TRY AGAIN';
-    }
-  }
-};
-
-// Initialize on DOM ready
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('Initializing spin engine...');
-  
-  // Setup wheel with a small delay to ensure DOM is ready
-  setTimeout(() => {
-    try {
-      customSpinEngine.setup();
-      console.log('Spin wheel SVG setup complete');
-    } catch (error) {
-      console.error('Error setting up spin wheel:', error);
-    }
-  }, 500);
-  
-  // Expose to global scope for other buttons
-  if (!window.Games) window.Games = {};
-  window.Games.openSpinWheel = () => customSpinEngine.openModal();
-  window.Games.spinWheel = () => customSpinEngine.initSpin();
-  
-  console.log('Spin engine initialized and ready');
-});
-</script>
-
-<!-- === MERCHANT CHAT FUNCTION === -->
-<script>
-function openMerchantChat() {
-  window.open('https://chat-3zot.onrender.com', '_blank');
-}
-</script>
-
-<!-- Emergency fallbacks -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const requiredFunctions = {
-    'updateBalance': (newBalance) => {
-      console.log('Balance update:', newBalance);
-      const els = document.querySelectorAll('[id*="balance"], .balance');
-      els.forEach(el => {
-        if (el.textContent.includes('₦')) {
-          el.textContent = `₦${newBalance.toLocaleString()}`;
+        function viewAllActivity() {
+            if (typeof App !== 'undefined' && App.showMessage) {
+                App.showMessage('Viewing all activity', 'info');
+            }
         }
-      });
-    },
-    'showMessage': (text, type) => alert(`[${type || 'INFO'}] ${text}`),
-    'goBackToDashboard': () => window.location.href = 'index.html'
-  };
-  Object.keys(requiredFunctions).forEach(funcName => {
-    if (typeof window[funcName] !== 'function') {
-      window[funcName] = requiredFunctions[funcName];
-    }
-  });
-});
-</script>
+
+        // ✅ This is now replaced by PaystackPayment.openRegistrationPayment()
+        // But keep for backward compatibility
+        function openPaymentModal() {
+            if (typeof PaystackPayment !== 'undefined') {
+                PaystackPayment.openRegistrationPayment();
+            } else {
+                alert('Payment system loading. Please try again.');
+            }
+        }
+    </script>
+
 </body>
 </html>
