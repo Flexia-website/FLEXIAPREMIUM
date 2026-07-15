@@ -2,486 +2,190 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Coin Flip - FLEXIA</title>
 <link rel="icon" type="image/x-icon" href="logo/favicon.ico">
-<link rel="icon" type="image/png" sizes="32x32" href="logo/flexia-logo.png">
-<link rel="icon" type="image/png" sizes="16x16" href="logo/flexia-logo.png">
-<link rel="apple-touch-icon" href="logo/apple-touch-icon.png">
-<link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-body {
-  font-family: 'Arial', sans-serif;
-  background: linear-gradient(135deg, #0A0A1F, #151535);
-  color: #F0F0F0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 15px;
-}
-.game-container {
-  text-align: center;
-  max-width: 500px;
-  width: 100%;
-}
-.game-header {
-  margin-bottom: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.back-btn {
-  background: linear-gradient(45deg, #8000FF, #00CCFF);
-  border: none;
-  border-radius: 8px;
-  color: #0A0A1F;
-  padding: 10px 18px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
-}
-.back-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(128, 0, 255, 0.4);
-}
-.game-logo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.game-logo-icon {
-  width: 45px;
-  height: 45px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(45deg, #8000FF, #00CCFF);
-  border-radius: 12px;
-  color: white;
-  font-weight: bold;
-  font-size: 1.4rem;
-  box-shadow: 0 5px 15px rgba(128, 0, 255, 0.3);
-}
-.game-title {
-  font-size: 1.8rem;
-  color: #8000FF;
-  text-shadow: 0 0 10px rgba(128, 0, 255, 0.6);
-  line-height: 1.2;
-}
-.game-subtitle {
-  color: #00CCFF;
-  font-size: 0.85rem;
-}
-.betting-section {
-  background: rgba(30, 30, 69, 0.8);
-  border-radius: 12px;
-  padding: 18px;
-  margin-bottom: 20px;
-  border: 1px solid #8000FF;
-}
-.balance-info {
-  font-size: 1.1rem;
-  margin-bottom: 12px;
-  color: #00FFCC;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.cap-mini {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.75rem;
-  color: #FFD700;
-  background: rgba(255,215,0,0.1);
-  padding: 4px 10px;
-  border-radius: 20px;
-  border: 1px solid #FFD700;
-}
-.input-group {
-  margin-bottom: 15px;
-}
-.bet-input {
-  width: 100%;
-  padding: 14px;
-  background: #151535;
-  border: 2px solid #8000FF;
-  border-radius: 10px;
-  color: #F0F0F0;
-  font-size: 1.2rem;
-  text-align: center;
-  outline: none;
-}
-.bet-input:focus {
-  border-color: #00CCFF;
-  box-shadow: 0 0 10px rgba(0, 204, 255, 0.5);
-}
-.choice-buttons {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-.choice-btn {
-  flex: 1;
-  padding: 18px;
-  background: rgba(128, 0, 255, 0.2);
-  border: 2px solid #8000FF;
-  border-radius: 10px;
-  color: #F0F0F0;
-  font-size: 1.1rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-.choice-btn:hover {
-  background: rgba(128, 0, 255, 0.4);
-}
-.choice-btn.active {
-  background: #8000FF;
-  box-shadow: 0 0 15px rgba(128, 0, 255, 0.7);
-}
-.coin-container {
-  margin: 20px 0 15px;
-  perspective: 1000px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.coin-3d {
-  width: 140px;
-  height: 140px;
-  position: relative;
-  transform-style: preserve-3d;
-  transition: transform 2s cubic-bezier(0.68, -0.55, 0.27, 1.55);
-}
-.coin-face {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  backface-visibility: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2.5rem;
-  font-weight: bold;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-  border: 5px solid #FFD700;
-}
-.heads {
-  background: linear-gradient(45deg, #FFD700, #D4AF37);
-  color: #8B4513;
-  transform: rotateY(0deg);
-}
-.tails {
-  background: linear-gradient(45deg, #C0C0C0, #A9A9A9);
-  color: #2F4F4F;
-  transform: rotateY(180deg);
-}
-.coin-edge {
-  position: absolute;
-  width: 100%;
-  height: 20px;
-  background: linear-gradient(45deg, #B8860B, #DAA520, #B8860B);
-  border-radius: 50%;
-  top: 50%;
-  transform: translateY(-50%) rotateX(90deg);
-  box-shadow: 0 0 10px rgba(184, 134, 11, 0.5);
-}
-.coin-shadow {
-  width: 150px;
-  height: 25px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 50%;
-  margin-top: 15px;
-  filter: blur(5px);
-}
-.flip-btn {
-  padding: 14px 30px;
-  background: linear-gradient(45deg, #8000FF, #00CCFF);
-  border: none;
-  border-radius: 10px;
-  color: #0A0A1F;
-  font-size: 1.1rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  width: 100%;
-}
-.flip-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(128, 0, 255, 0.4);
-}
-.flip-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.flip-btn.processing {
-  background: linear-gradient(45deg, #555555, #777777);
-  animation: pulse 1s infinite;
-}
-.result-section {
-  background: rgba(0, 255, 204, 0.1);
-  border-radius: 10px;
-  padding: 15px;
-  margin-top: 15px;
-  border: 1px solid #00FFCC;
-  display: none;
-  animation: fadeIn 0.5s;
-}
-.winning-streak {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 10px;
-  flex-wrap: wrap;
-}
-.streak-dot {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: #A0A0B5;
-}
-.streak-dot.win {
-  background: #00FF55;
-  box-shadow: 0 0 8px #00FF55;
-}
-.streak-dot.loss {
-  background: #FF0055;
-  box-shadow: 0 0 8px #FF0055;
-}
-.message {
-  padding: 10px 14px;
-  border-radius: 8px;
-  margin: 10px 0;
-  font-size: 0.9rem;
-  display: none;
-}
-.message.success { background: rgba(0,255,85,0.1); border:1px solid #00FF55; color:#00FF55; display:block; }
-.message.error { background: rgba(255,0,85,0.1); border:1px solid #FF0055; color:#FF5555; display:block; }
-.message.info { background: rgba(0,204,255,0.1); border:1px solid #00CCFF; color:#00CCFF; display:block; }
-
-/* Instruction Popup */
-.instruction-popup {
-  display: none;
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.92);
-  z-index: 9999;
-  align-items: center;
-  justify-content: center;
-}
-.instruction-popup.show {
-  display: flex;
-}
-.instruction-content {
-  background: linear-gradient(135deg, #0A0A1F, #151535);
-  border: 2px solid #FFD700;
-  border-radius: 20px;
-  padding: 25px;
-  max-width: 420px;
-  width: 90%;
-  position: relative;
-  box-shadow: 0 20px 40px rgba(255, 215, 0, 0.25);
-}
-.instruction-close {
-  position: absolute;
-  top: 12px;
-  right: 15px;
-  background: transparent;
-  border: none;
-  color: #FF0055;
-  font-size: 24px;
-  cursor: pointer;
-  width: 35px;
-  height: 35px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: all 0.2s;
-}
-.instruction-close:hover {
-  background: rgba(255, 0, 85, 0.15);
-  transform: scale(1.1);
-}
-.instruction-title {
-  color: #FFD700;
-  font-size: 1.3rem;
-  font-weight: bold;
-  margin-bottom: 20px;
-  text-align: center;
-}
-.instruction-step {
-  background: rgba(255, 215, 0, 0.05);
-  border: 1px solid rgba(255, 215, 0, 0.25);
-  border-radius: 10px;
-  padding: 12px;
-  margin-bottom: 10px;
-  font-size: 0.85rem;
-  color: #C0C0D0;
-  line-height: 1.5;
-}
-.instruction-step strong {
-  color: #FFD700;
-}
-.instruction-bet-btn {
-  display: block;
-  width: 100%;
-  padding: 14px;
-  margin-top: 18px;
-  background: linear-gradient(45deg, #8000FF, #00CCFF);
-  border: none;
-  border-radius: 10px;
-  color: #0A0A1F;
-  font-size: 1.05rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.instruction-bet-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(128, 0, 255, 0.4);
-}
-
-@keyframes coinToss {
-  0% { transform: rotateY(0deg) translateY(0); }
-  25% { transform: rotateY(180deg) translateY(-50px); }
-  50% { transform: rotateY(360deg) translateY(0); }
-  75% { transform: rotateY(540deg) translateY(-30px); }
-  100% { transform: rotateY(720deg) translateY(0); }
-}
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-.coin-tossing {
-  animation: coinToss 2s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
-}
-.shadow-pulsing {
-  animation: shadowPulse 2s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
-}
-@keyframes shadowPulse {
-  0%, 100% { transform: scale(1); opacity: 0.5; }
-  50% { transform: scale(1.15); opacity: 0.3; }
-}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(ellipse at 30% 20%, #1b1135, #0a0518);color:#F0F0F0;font-family:'Rajdhani',sans-serif;display:flex;flex-direction:column;}
+.header{background:rgba(10,6,24,0.85);backdrop-filter:blur(18px);padding:14px 20px;border-bottom:2px solid rgba(128,0,255,0.3);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+.game-logo{display:flex;align-items:center;gap:14px;}
+.game-logo-icon{width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:linear-gradient(45deg,#8000FF,#00CCFF);border-radius:14px;font-size:1.6rem;box-shadow:0 4px 20px rgba(128,0,255,0.3);}
+.header-left h1{font-size:1.4rem;color:#a855f7;font-family:'Orbitron',sans-serif;text-shadow:0 0 20px rgba(128,0,255,0.3);}
+.header-left p{color:#00CCFF;font-size:0.75rem;opacity:0.8;}
+.dashboard-btn{background:linear-gradient(135deg,#a855f7,#6366f1);border:none;border-radius:10px;color:#fff;padding:10px 20px;font-weight:700;cursor:pointer;transition:all 0.3s;font-size:0.85rem;}
+.dashboard-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(168,85,247,0.4);}
+.main-content{flex:1;display:flex;flex-direction:column;padding:12px;gap:12px;overflow:hidden;min-height:0;max-width:1200px;margin:0 auto;width:100%;}
+.game-row{display:flex;flex:1;gap:12px;min-height:0;}
+.game-panel{flex:1;background:rgba(255,255,255,0.02);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:20px;display:flex;flex-direction:column;}
+.coin-container{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.coin-3d{width:150px;height:150px;position:relative;transform-style:preserve-3d;transition:transform 2s cubic-bezier(0.68,-0.55,0.27,1.55);}
+.coin-face{position:absolute;width:100%;height:100%;border-radius:50%;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;font-size:2.8rem;font-weight:700;box-shadow:0 0 30px rgba(0,0,0,0.5);border:6px solid #FFD700;}
+.heads{background:linear-gradient(45deg,#FFD700,#D4AF37);color:#8B4513;transform:rotateY(0deg);}
+.tails{background:linear-gradient(45deg,#C0C0C0,#A9A9A9);color:#2F4F4F;transform:rotateY(180deg);}
+.coin-edge{position:absolute;width:100%;height:20px;background:linear-gradient(45deg,#B8860B,#DAA520,#B8860B);border-radius:50%;top:50%;transform:translateY(-50%) rotateX(90deg);}
+.coin-shadow{width:160px;height:25px;background:rgba(0,0,0,0.3);border-radius:50%;margin-top:15px;filter:blur(8px);}
+.scores-panel{flex:0.8;display:flex;flex-direction:column;gap:10px;min-width:180px;}
+.score-card{background:rgba(255,255,255,0.02);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:16px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.score-label{font-size:0.7rem;color:#A0A0B5;text-transform:uppercase;letter-spacing:1px;}
+.score-value{font-size:1.8rem;font-weight:700;color:#00FFCC;font-family:'Orbitron',sans-serif;}
+.mini-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;width:100%;}
+.mini-stat{text-align:center;padding:6px;background:rgba(128,0,255,0.08);border-radius:8px;border:1px solid rgba(128,0,255,0.15);}
+.mini-label{font-size:0.55rem;color:#A0A0B5;text-transform:uppercase;letter-spacing:0.5px;}
+.mini-value{font-size:0.85rem;color:#00FFCC;font-weight:700;}
+.balance-info{display:flex;justify-content:space-between;margin-bottom:10px;color:#00FFCC;font-size:0.95rem;}
+.cap-mini{display:flex;align-items:center;gap:6px;font-size:0.7rem;color:#FFD700;background:rgba(255,215,0,0.08);padding:4px 12px;border-radius:20px;border:1px solid rgba(255,215,0,0.2);}
+.choice-buttons{display:flex;gap:10px;margin:12px 0;}
+.choice-btn{flex:1;padding:14px;background:rgba(128,0,255,0.15);border:2px solid rgba(128,0,255,0.3);border-radius:10px;color:#F0F0F0;font-weight:700;cursor:pointer;transition:all 0.3s;}
+.choice-btn:hover{background:rgba(128,0,255,0.3);}
+.choice-btn.active{background:#8000FF;border-color:#8000FF;box-shadow:0 0 20px rgba(128,0,255,0.5);}
+.bet-input{width:100%;padding:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(128,0,255,0.3);border-radius:10px;color:#F0F0F0;font-size:1.1rem;text-align:center;outline:none;transition:all 0.3s;}
+.bet-input:focus{border-color:#00CCFF;box-shadow:0 0 15px rgba(0,204,255,0.2);}
+.flip-btn{width:100%;padding:14px;background:linear-gradient(135deg,#a855f7,#6366f1);border:none;border-radius:10px;color:#fff;font-weight:700;cursor:pointer;transition:all 0.3s;margin-top:10px;}
+.flip-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 24px rgba(168,85,247,0.3);}
+.flip-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.result-display{padding:12px;border-radius:10px;margin-top:10px;display:none;text-align:center;}
+.result-display.show{display:block;}
+.result-display.win{background:rgba(0,255,85,0.08);border:1px solid rgba(0,255,85,0.2);}
+.result-display.loss{background:rgba(255,0,85,0.08);border:1px solid rgba(255,0,85,0.2);}
+.result-display .amount{font-size:1.4rem;font-weight:700;}
+.result-display.win .amount{color:#00FF55;}
+.result-display.loss .amount{color:#FF0055;}
+.winning-streak{display:flex;justify-content:center;gap:6px;margin-top:10px;flex-wrap:wrap;}
+.streak-dot{width:10px;height:10px;border-radius:50%;background:#333;}
+.streak-dot.win{background:#00FF55;box-shadow:0 0 8px rgba(0,255,85,0.3);}
+.streak-dot.loss{background:#FF0055;box-shadow:0 0 8px rgba(255,0,85,0.3);}
+.instruction-popup{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);backdrop-filter:blur(12px);z-index:9999;align-items:center;justify-content:center;}
+.instruction-popup.show{display:flex;}
+.instruction-content{background:rgba(20,12,40,0.95);backdrop-filter:blur(20px);border:1px solid rgba(255,215,0,0.2);border-radius:20px;padding:28px;max-width:420px;width:90%;position:relative;box-shadow:0 20px 40px rgba(0,0,0,0.5);}
+.instruction-close{position:absolute;top:12px;right:15px;background:transparent;border:none;color:#FF0055;font-size:24px;cursor:pointer;width:35px;height:35px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:all 0.2s;}
+.instruction-close:hover{background:rgba(255,0,85,0.1);transform:scale(1.1);}
+.instruction-title{color:#FFD700;font-size:1.3rem;font-family:'Orbitron',sans-serif;margin-bottom:20px;text-align:center;}
+.instruction-step{background:rgba(255,215,0,0.03);border:1px solid rgba(255,215,0,0.1);border-radius:10px;padding:12px;margin-bottom:10px;font-size:0.85rem;color:#C0C0D0;line-height:1.5;}
+.instruction-step strong{color:#FFD700;}
+.instruction-bet-btn{display:block;width:100%;padding:14px;margin-top:18px;background:linear-gradient(135deg,#a855f7,#6366f1);border:none;border-radius:10px;color:#fff;font-weight:700;cursor:pointer;transition:all 0.3s;}
+.instruction-bet-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(168,85,247,0.3);}
+@keyframes coinToss{0%{transform:rotateY(0deg) translateY(0);}25%{transform:rotateY(180deg) translateY(-50px);}50%{transform:rotateY(360deg) translateY(0);}75%{transform:rotateY(540deg) translateY(-30px);}100%{transform:rotateY(720deg) translateY(0);}}
+@keyframes shadowPulse{0%,100%{transform:scale(1);opacity:0.5;}50%{transform:scale(1.15);opacity:0.3;}}
+.coin-tossing{animation:coinToss 2s cubic-bezier(0.68,-0.55,0.27,1.55) forwards;}
+.shadow-pulsing{animation:shadowPulse 2s cubic-bezier(0.68,-0.55,0.27,1.55) forwards;}
+@media(max-width:768px){.game-row{flex-direction:column}.scores-panel{flex-direction:row;flex-wrap:wrap}.score-card{min-width:48%;}.coin-3d{width:120px;height:120px}}
+@media(max-width:480px){.coin-3d{width:100px;height:100px}.coin-face{font-size:2rem}.choice-btn{font-size:0.85rem;padding:12px}}
 </style>
 </head>
 <body>
 
-<!-- Instruction Popup -->
+<div class="header">
+  <div class="game-logo">
+    <div class="game-logo-icon"><i class="fas fa-coins"></i></div>
+    <div class="header-left">
+      <h1>COIN FLIP</h1>
+      <p>Win 1.8x · Daily cap ₦5000</p>
+    </div>
+  </div>
+  <button class="dashboard-btn" onclick="window.location.href='index.html'">
+    <i class="fas fa-arrow-left"></i> BACK
+  </button>
+</div>
+
+<div class="main-content">
+  <div class="game-row">
+    <div class="game-panel">
+      <div class="balance-info">
+        <span>Balance: <span id="balance">₦0.00</span></span>
+        <span class="cap-mini" id="cap-badge">💰 Left: ₦5000</span>
+      </div>
+      <div class="input-group">
+        <input type="number" class="bet-input" id="bet-amount" placeholder="Enter bet amount" min="100" value="100">
+        <p style="margin-top:4px;font-size:0.7rem;color:#A0A0B5;">Min ₦100 • Win pays ×1.8</p>
+      </div>
+      <div class="choice-buttons">
+        <button class="choice-btn" id="heads-btn" onclick="selectChoice('heads')"><i class="fas fa-crown"></i> HEADS</button>
+        <button class="choice-btn" id="tails-btn" onclick="selectChoice('tails')"><i class="fas fa-feather"></i> TAILS</button>
+      </div>
+      <div class="coin-container">
+        <div class="coin-3d" id="coin-3d">
+          <div class="coin-face heads">H</div>
+          <div class="coin-face tails">T</div>
+          <div class="coin-edge"></div>
+        </div>
+        <div class="coin-shadow" id="coin-shadow"></div>
+        <div class="winning-streak" id="winning-streak"></div>
+        <div class="result-display" id="result-display">
+          <div id="result-text"></div>
+          <div class="amount" id="result-amount"></div>
+        </div>
+      </div>
+      <button class="flip-btn" id="flip-btn" onclick="flipCoin()" disabled>
+        <i class="fas fa-coins"></i> FLIP COIN
+      </button>
+    </div>
+    <div class="scores-panel">
+      <div class="score-card">
+        <div class="score-label">TOTAL WINS</div>
+        <div class="score-value" id="total-wins">0</div>
+        <div class="mini-stats">
+          <div class="mini-stat"><div class="mini-label">WINS</div><div class="mini-value" id="wins-count">0</div></div>
+          <div class="mini-stat"><div class="mini-label">LOSSES</div><div class="mini-value" id="losses-count">0</div></div>
+        </div>
+      </div>
+      <div class="score-card">
+        <div class="score-label">DAILY EARNINGS</div>
+        <div class="score-value" id="daily-earned">₦0</div>
+        <div class="mini-stats">
+          <div class="mini-stat"><div class="mini-label">CAP</div><div class="mini-value" style="color:#FF8C00;">₦5000</div></div>
+          <div class="mini-stat"><div class="mini-label">REMAINING</div><div class="mini-value" id="daily-remaining" style="color:#00FF55;">₦5000</div></div>
+        </div>
+        <div style="margin-top:8px;width:100%;">
+          <div style="background:rgba(255,255,255,0.05);border-radius:6px;height:6px;overflow:hidden;">
+            <div id="cap-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#00FF55,#FF8C00);border-radius:6px;transition:width 0.5s;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="controls-row" style="display:flex;gap:10px;flex-shrink:0;padding:0 10px 12px;max-width:1200px;margin:0 auto;width:100%;">
+  <div style="flex:1;"></div>
+  <button class="dashboard-btn" onclick="window.location.href='index.html'"><i class="fas fa-arrow-left"></i> BACK</button>
+</div>
+
 <div class="instruction-popup show" id="instruction-popup">
   <div class="instruction-content">
-    <button class="instruction-close" onclick="closeInstructionPopup()" title="Close">✕</button>
+    <button class="instruction-close" onclick="closeInstructionPopup()">✕</button>
     <div class="instruction-title">🪙 HOW TO PLAY COIN FLIP</div>
-    
-    <div class="instruction-step">
-      <strong>1. Choose Heads or Tails</strong><br>
-      Click the HEADS or TAILS button to make your prediction.
-    </div>
-    <div class="instruction-step">
-      <strong>2. Set Your Bet 💰</strong><br>
-      Enter any amount (min ₦100). Win pays <b style="color:#00FF55;">1.8× your bet</b>!
-    </div>
-    <div class="instruction-step">
-      <strong>3. Flip & Win 🏆</strong><br>
-      Press FLIP COIN or use keyboard (H/T to select, Space/Enter to flip).
-      The coin will spin and land on a side.
-    </div>
-    <div class="instruction-step" style="border-color:#FF0055; background:rgba(255,0,85,0.05);">
+    <div class="instruction-step"><strong>1. Choose Heads or Tails</strong><br>Click HEADS or TAILS to make your prediction.</div>
+    <div class="instruction-step"><strong>2. Set Your Bet 💰</strong><br>Enter any amount (min ₦100). Win pays <b style="color:#00FF55;">1.8× your bet</b>!</div>
+    <div class="instruction-step"><strong>3. Flip & Win 🏆</strong><br>Press FLIP COIN. The coin will spin and land on a side.</div>
+    <div class="instruction-step" style="border-color:rgba(255,0,85,0.2);background:rgba(255,0,85,0.03);">
       <strong style="color:#FF0055;">⚠️ Important</strong><br>
-      10% house edge on wins. Daily cap of <b>₦1,000</b>. Max 5 plays per day.
+      Daily win cap of <b>₦5,000</b>. Max 5 plays per day.
     </div>
-    
     <button class="instruction-bet-btn" onclick="closeInstructionPopup()">
       <i class="fas fa-check-circle"></i> GOT IT, LET'S PLAY!
     </button>
   </div>
 </div>
 
-<div class="game-container">
-  <div class="game-header">
-    <button class="back-btn" onclick="goBackToDashboard()">
-      <i class="fas fa-arrow-left"></i> Dashboard
-    </button>
-    <div class="game-logo">
-      <div class="game-logo-icon">
-        <i class="fas fa-coins"></i>
-      </div>
-      <div>
-        <h1 class="game-title">COIN FLIP</h1>
-        <p class="game-subtitle">Win 1.8x · Daily cap ₦1,000</p>
-      </div>
-    </div>
-  </div>
-  
-  <div class="betting-section">
-    <div class="balance-info">
-      <span>Balance: <span id="balance">₦0.00</span></span>
-      <span class="cap-mini" id="cap-badge">💰 Left: ₦1,000</span>
-    </div>
-    
-    <div class="input-group">
-      <input type="number" class="bet-input" id="bet-amount" placeholder="Enter bet amount" min="100" value="100">
-      <p style="margin-top: 6px; font-size:0.8rem; color:#A0A0B5;">Min bet ₦100 • Win pays ×1.8</p>
-    </div>
-    
-    <div class="choice-buttons">
-      <button class="choice-btn" id="heads-btn" onclick="selectChoice('heads')">
-        <i class="fas fa-crown"></i> HEADS
-      </button>
-      <button class="choice-btn" id="tails-btn" onclick="selectChoice('tails')">
-        <i class="fas fa-feather"></i> TAILS
-      </button>
-    </div>
-    
-    <div class="coin-container">
-      <div class="coin-3d" id="coin-3d">
-        <div class="coin-face heads">H</div>
-        <div class="coin-face tails">T</div>
-        <div class="coin-edge"></div>
-      </div>
-      <div class="coin-shadow" id="coin-shadow"></div>
-    </div>
-    
-    <div class="winning-streak" id="winning-streak"></div>
-    <div id="message" class="message"></div>
-    
-    <button class="flip-btn" id="flip-btn" onclick="flipCoin()" disabled>
-      <i class="fas fa-coins"></i> FLIP COIN
-    </button>
-  </div>
-  
-  <div class="result-section" id="result-section">
-    <div class="result-message" id="result-message"></div>
-    <div class="coin-result" id="coin-result"></div>
-    <div class="winnings" id="winnings"></div>
-  </div>
-</div>
-
 <script>
-// ==================== INSTRUCTION POPUP ====================
+const COIN_CAP = 5000;
+const MIN_BET = 100;
+const MAX_BET = 50000;
+
+let userChoice = null;
+let betAmount = 100;
+let isFlipping = false;
+let winningStreak = [];
+let userBalance = 0;
+let dailyWon = 0;
+let wins = 0;
+let losses = 0;
+
+const flipBtn = document.getElementById('flip-btn');
+const resultDisplay = document.getElementById('result-display');
+
 function closeInstructionPopup() {
   document.getElementById('instruction-popup').classList.remove('show');
 }
@@ -492,125 +196,85 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// ==================== GAME STATE ====================
-let userChoice = null;
-let betAmount = 100;
-let isFlipping = false;
-let winningStreak = [];
-let userBalance = 0;
-let dailyWon = 0;
-const COIN_CAP = 1000;
-
-const flipBtn = document.getElementById('flip-btn');
-const resultSection = document.getElementById('result-section');
-const messageEl = document.getElementById('message');
-
-function showMessage(text, type='info') {
-  messageEl.textContent = text;
-  messageEl.className = `message ${type}`;
-  setTimeout(() => { messageEl.style.display = 'none'; }, 5000);
-}
-
-function goBackToDashboard() {
-  window.location.href = 'index.html';
-}
-
-function selectChoice(choice) {
-  if (isFlipping) return;
-  userChoice = choice;
-  document.getElementById('heads-btn').classList.remove('active');
-  document.getElementById('tails-btn').classList.remove('active');
-  document.getElementById(choice + '-btn').classList.add('active');
-  checkFlipButton();
-}
-
-function checkFlipButton() {
-  const betInput = document.getElementById('bet-amount');
-  betAmount = parseFloat(betInput.value) || 0;
-  if (betAmount < 100) { betAmount = 100; betInput.value = 100; }
-  if (betAmount > 50000) { betAmount = 50000; betInput.value = 50000; }
+function updateCapUI(earned) {
+  dailyWon = earned || 0;
+  const remaining = Math.max(0, COIN_CAP - dailyWon);
+  const pct = Math.min((dailyWon / COIN_CAP) * 100, 100);
+  const bar = document.getElementById('cap-bar');
+  if (bar) {
+    bar.style.width = pct + '%';
+    bar.style.background = pct >= 80 ? 'linear-gradient(90deg,#FF8C00,#FF0055)' : 'linear-gradient(90deg,#00FF55,#FF8C00)';
+  }
+  document.getElementById('daily-earned').textContent = '₦' + dailyWon;
+  document.getElementById('daily-remaining').textContent = '₦' + remaining;
+  document.getElementById('cap-badge').textContent = '💰 Left: ₦' + remaining;
   
-  if (betAmount > userBalance) {
-    flipBtn.disabled = true;
-    return;
-  }
-  if (userChoice && betAmount >= 100 && !isFlipping) {
-    flipBtn.disabled = false;
-  } else {
-    flipBtn.disabled = true;
-  }
-}
-
-async function flipCoin() {
-  if (isFlipping) return;
   if (dailyWon >= COIN_CAP) {
-    alert('🚫 Daily win cap of ₦1,000 reached. Come back tomorrow!');
+    document.getElementById('cap-badge').style.borderColor = '#FF0055';
+    document.getElementById('cap-badge').style.color = '#FF0055';
+    flipBtn.disabled = true;
+    flipBtn.innerHTML = '<i class="fas fa-lock"></i> CAP REACHED';
+  }
+}
+
+function updateStreak() {
+  const container = document.getElementById('winning-streak');
+  if (!winningStreak.length) {
+    container.innerHTML = '<div style="font-size:0.7rem;color:#A0A0B5;">No games yet</div>';
     return;
   }
-  isFlipping = true;
-  flipBtn.disabled = true;
-  flipBtn.classList.add('processing');
-  flipBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> FLIPPING...';
-  document.getElementById('heads-btn').disabled = true;
-  document.getElementById('tails-btn').disabled = true;
-  document.getElementById('bet-amount').disabled = true;
-  resultSection.style.display = 'none';
-  
-  const bet = betAmount;
-  const coinResult = Math.random() > 0.5 ? 'heads' : 'tails';
-  const win = (userChoice === coinResult);
-  
-  const coin = document.getElementById('coin-3d');
-  const shadow = document.getElementById('coin-shadow');
-  coin.classList.add('coin-tossing');
-  shadow.classList.add('shadow-pulsing');
+  container.innerHTML = '';
+  winningStreak.forEach(r => {
+    const dot = document.createElement('div');
+    dot.className = 'streak-dot ' + r;
+    container.appendChild(dot);
+  });
+}
 
-  // ✅ Fire API call immediately alongside animation — don't wait for animation to finish
-  const apiPromise = processCoinFlip(bet, win);
-  
-  setTimeout(async () => {
-    coin.classList.remove('coin-tossing');
-    shadow.classList.remove('shadow-pulsing');
-    
-    try {
-      // API has had 2 seconds to complete — should already be resolved
-      const result = await apiPromise;
-      if (result.success) {
-        dailyWon = result.daily_won || dailyWon;
-        updateCapBadge();
-        userBalance = parseFloat(result.new_balance);
-        document.getElementById('balance').textContent = `₦${userBalance.toFixed(2)}`;
-        // ✅ Write to localStorage so dashboard syncs instantly
-        localStorage.setItem('flexia_balance', result.new_balance);
-        
-        if (dailyWon >= COIN_CAP) {
-          showMessage('🚫 Daily cap reached. Come back tomorrow!', 'error');
-          flipBtn.disabled = true;
-          flipBtn.innerHTML = '<i class="fas fa-lock"></i> CAP REACHED';
+function showResult(win, coinResult, bet, payout) {
+  resultDisplay.className = 'result-display show ' + (win ? 'win' : 'loss');
+  document.getElementById('result-text').textContent = win ? '🎉 YOU WIN!' : '💔 YOU LOSE!';
+  const profit = win ? (payout - bet) : -bet;
+  document.getElementById('result-amount').textContent = (win ? '+' : '') + '₦' + profit.toFixed(2);
+  setTimeout(() => { resultDisplay.className = 'result-display'; }, 3000);
+}
+
+async function loadProfile() {
+  try {
+    const r = await fetch('/api/user/profile', { credentials: 'include' });
+    const d = await r.json();
+    if (d.success) {
+      userBalance = parseFloat(d.user.balance) || 0;
+      document.getElementById('balance').textContent = '₦' + userBalance.toFixed(2);
+      
+      const stats = d.user.game_stats || {};
+      if (stats.coin_flip) {
+        wins = stats.coin_flip.wins || 0;
+        losses = stats.coin_flip.losses || 0;
+        document.getElementById('total-wins').textContent = wins + losses;
+        document.getElementById('wins-count').textContent = wins;
+        document.getElementById('losses-count').textContent = losses;
+        if (stats.coin_flip.current_streak) {
+          winningStreak = Array(Math.min(stats.coin_flip.current_streak, 10)).fill('win');
+          updateStreak();
         }
-        
-        winningStreak.push(win ? 'win' : 'loss');
-        if (winningStreak.length > 10) winningStreak.shift();
-        updateWinningStreak();
-        showResult(win, coinResult, bet, result.payout || 0);
-      } else {
-        throw new Error(result.message || 'Failed to process');
       }
-    } catch (error) {
-      showMessage('❌ ' + error.message, 'error');
-      userChoice = null;
-      document.getElementById('heads-btn').classList.remove('active');
-      document.getElementById('tails-btn').classList.remove('active');
+      
+      const today = new Date().toISOString().slice(0,10);
+      const earned = (d.user.transactions||[])
+        .filter(t => t.type==='COINFLIP_WIN' && (t.timestamp||'').slice(0,10)===today)
+        .reduce((s,t) => s + parseFloat(t.amount||0), 0);
+      updateCapUI(earned);
+      
+      if (d.user.balance !== undefined) {
+        localStorage.setItem('flexia_balance', d.user.balance);
+        if (window.App && window.App.currentUser) {
+          window.App.currentUser.balance = parseFloat(d.user.balance);
+          if (window.App.refreshBalance) window.App.refreshBalance(true);
+        }
+      }
     }
-    
-    isFlipping = false;
-    flipBtn.classList.remove('processing');
-    flipBtn.innerHTML = '<i class="fas fa-coins"></i> FLIP COIN';
-    document.getElementById('heads-btn').disabled = false;
-    document.getElementById('tails-btn').disabled = false;
-    document.getElementById('bet-amount').disabled = false;
-    checkFlipButton();
-  }, 2000);
+  } catch(e) { console.error('Profile load error:', e); }
 }
 
 async function processCoinFlip(bet, won) {
@@ -623,66 +287,112 @@ async function processCoinFlip(bet, won) {
   return await response.json();
 }
 
-function showResult(win, coinResult, bet, payout) {
-  document.getElementById('result-message').textContent = win ? 'YOU WIN! 🎉' : 'YOU LOSE! 💔';
-  document.getElementById('result-message').style.color = win ? '#00FF55' : '#FF0055';
-  document.getElementById('coin-result').textContent = `Coin landed on ${coinResult.toUpperCase()}`;
-  const profit = payout - bet;
-  document.getElementById('winnings').textContent = win ? `+₦${profit.toFixed(2)}` : `-₦${bet.toFixed(2)}`;
-  document.getElementById('winnings').style.color = win ? '#00FF55' : '#FF0055';
-  resultSection.style.display = 'block';
-  
-  userChoice = null;
+function selectChoice(choice) {
+  if (isFlipping) return;
+  userChoice = choice;
   document.getElementById('heads-btn').classList.remove('active');
   document.getElementById('tails-btn').classList.remove('active');
+  document.getElementById(choice + '-btn').classList.add('active');
+  checkFlipButton();
 }
 
-function updateWinningStreak() {
-  const container = document.getElementById('winning-streak');
-  if (!winningStreak.length) {
-    container.innerHTML = '<div style="font-size:0.8rem;color:#A0A0B5;">No games yet</div>';
-    return;
-  }
-  container.innerHTML = '';
-  winningStreak.forEach(r => {
-    const dot = document.createElement('div');
-    dot.className = `streak-dot ${r}`;
-    container.appendChild(dot);
-  });
-}
-
-function updateCapBadge() {
-  const remaining = Math.max(0, COIN_CAP - dailyWon);
-  document.getElementById('cap-badge').textContent = `💰 Left: ₦${remaining.toFixed(0)}`;
-  if (remaining <= 0) {
-    document.getElementById('cap-badge').style.borderColor = '#FF0055';
-    document.getElementById('cap-badge').style.color = '#FF0055';
+function checkFlipButton() {
+  const input = document.getElementById('bet-amount');
+  betAmount = parseFloat(input.value) || 0;
+  if (betAmount < MIN_BET) { betAmount = MIN_BET; input.value = MIN_BET; }
+  if (betAmount > MAX_BET) { betAmount = MAX_BET; input.value = MAX_BET; }
+  if (betAmount > userBalance || dailyWon >= COIN_CAP || !userChoice || isFlipping) {
+    flipBtn.disabled = true;
+  } else {
+    flipBtn.disabled = false;
   }
 }
 
-async function loadProfile() {
-  try {
-    const res = await fetch('/api/user/profile', { credentials: 'include' });
-    const data = await res.json();
-    if (data.success) {
-      userBalance = parseFloat(data.user.balance) || 0;
-      document.getElementById('balance').textContent = `₦${userBalance.toFixed(2)}`;
-      const today = new Date().toISOString().slice(0,10);
-      const txs = data.user.transactions || [];
-      dailyWon = txs.filter(t => t.type==='COINFLIP_WIN' && (t.timestamp||'').slice(0,10)===today)
-                    .reduce((s,t)=> s + parseFloat(t.amount||0),0);
-      updateCapBadge();
+async function flipCoin() {
+  if (isFlipping || dailyWon >= COIN_CAP) return;
+  isFlipping = true;
+  flipBtn.disabled = true;
+  flipBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> FLIPPING...';
+  document.getElementById('heads-btn').disabled = true;
+  document.getElementById('tails-btn').disabled = true;
+  document.getElementById('bet-amount').disabled = true;
+
+  const bet = betAmount;
+  const coinResult = Math.random() > 0.5 ? 'heads' : 'tails';
+  const win = (userChoice === coinResult);
+
+  const coin = document.getElementById('coin-3d');
+  const shadow = document.getElementById('coin-shadow');
+  coin.classList.add('coin-tossing');
+  shadow.classList.add('shadow-pulsing');
+
+  const apiPromise = processCoinFlip(bet, win);
+
+  setTimeout(async () => {
+    coin.classList.remove('coin-tossing');
+    shadow.classList.remove('shadow-pulsing');
+    
+    try {
+      const result = await apiPromise;
+      if (result.success) {
+        userBalance = parseFloat(result.new_balance);
+        document.getElementById('balance').textContent = '₦' + userBalance.toFixed(2);
+        localStorage.setItem('flexia_balance', result.new_balance);
+        if (window.App && window.App.currentUser) {
+          window.App.currentUser.balance = parseFloat(result.new_balance);
+          if (window.App.refreshBalance) window.App.refreshBalance(true);
+        }
+        
+        if (result.daily_won !== undefined) {
+          updateCapUI(result.daily_won);
+        }
+        
+        if (win) {
+          wins++;
+          winningStreak.push('win');
+        } else {
+          losses++;
+          winningStreak.push('loss');
+        }
+        if (winningStreak.length > 10) winningStreak.shift();
+        document.getElementById('total-wins').textContent = wins + losses;
+        document.getElementById('wins-count').textContent = wins;
+        document.getElementById('losses-count').textContent = losses;
+        updateStreak();
+        
+        showResult(win, coinResult, bet, result.payout || 0);
+        
+        if (dailyWon >= COIN_CAP) {
+          flipBtn.innerHTML = '<i class="fas fa-lock"></i> CAP REACHED';
+          flipBtn.disabled = true;
+        }
+      } else {
+        alert('❌ ' + (result.message || 'Failed to process'));
+      }
+    } catch (error) {
+      alert('❌ Network error. Please try again.');
     }
-  } catch(e) { console.log('Profile load error', e); }
+    
+    isFlipping = false;
+    flipBtn.innerHTML = '<i class="fas fa-coins"></i> FLIP COIN';
+    document.getElementById('heads-btn').disabled = false;
+    document.getElementById('tails-btn').disabled = false;
+    document.getElementById('bet-amount').disabled = false;
+    userChoice = null;
+    document.getElementById('heads-btn').classList.remove('active');
+    document.getElementById('tails-btn').classList.remove('active');
+    checkFlipButton();
+  }, 2000);
 }
 
 document.getElementById('bet-amount').addEventListener('input', checkFlipButton);
+
 document.addEventListener('keydown', (e) => {
   if (isFlipping) return;
   if (e.key === 'h' || e.key === 'H') selectChoice('heads');
   if (e.key === 't' || e.key === 'T') selectChoice('tails');
   if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); if (!flipBtn.disabled) flipCoin(); }
-  if (e.key === 'Escape') goBackToDashboard();
+  if (e.key === 'Escape') window.location.href = 'index.html';
 });
 
 document.addEventListener('DOMContentLoaded', () => {
