@@ -1,11 +1,11 @@
-// Frontend Configuration
+// Frontend Configuration - FLEXIA v17.0
 window.APP_CONFIG = {
     // API Configuration
     API_BASE_URL: '/api',
     
     // App Information
     APP_NAME: 'FLEXIA',
-    VERSION: '2.0.0',
+    VERSION: '17.0.0',
     SUPPORT_EMAIL: 'support@flexia.com',
     
     // Financial Configuration
@@ -25,5 +25,22 @@ window.APP_CONFIG = {
     REWARDS: {
         SNAKE_APPLE: 200,
         TIKTOK_BASE: 150
+    },
+    
+    // Game Daily Limits
+    GAME_DAILY_LIMITS: {
+        'snake': 17,
+        'coinflip': 12,
+        'plinko': 12,
+        'spin': 1,
+        'tiktok': 3
+    },
+    
+    // Paystack Configuration
+    PAYSTACK: {
+        PUBLIC_KEY: 'pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+        MIN_AMOUNT: 500,
+        MAX_AMOUNT: 1000000,
+        CURRENCY: 'NGN'
     }
 };
