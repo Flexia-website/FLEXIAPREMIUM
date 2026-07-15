@@ -1,8 +1,17 @@
-flask
-flask-cors
-psycopg2-binary
-itsdangerous
+# FLEXIA Platform - Production Dependencies v17.0
+
+# Web Framework
+Flask
 gunicorn
 gevent
-requests
+python-dotenv
+
+# Database
+psycopg2-binary
+
+# Security
+itsdangerous
 werkzeug
+
+# HTTP Requests
+requests
