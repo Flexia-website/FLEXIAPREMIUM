@@ -1,8 +1,9 @@
 // ============================================================
-// FLEXIA Frontend - COMPLETE PRODUCTION VERSION v17.0
+// FLEXIA Frontend - COMPLETE PRODUCTION VERSION v17.2
 // All features: Auth, Games, Banking, Referrals, Achievements
 // Paystack: Test keys for verification (FREE), Live keys for payments
 // No auto-refresh, no user notifications, premium UI
+// Registration payment: NO LOGIN REQUIRED
 // ============================================================
 
 // ========== EMBEDDED CSS ==========
@@ -881,7 +882,7 @@ var PaystackPayment = {
     var btn = document.getElementById('paystack-pay-btn');
     var msg = document.getElementById('payment-message');
 
-    // Registration payment - NO LOGIN REQUIRED
+    // ✅ NO LOGIN REQUIRED - Anyone can buy a coupon
     if (!email || email.indexOf('@') === -1) {
       msg.textContent = 'Please enter a valid email address';
       msg.className = 'message error';
@@ -905,6 +906,7 @@ var PaystackPayment = {
         amount: amount 
       };
 
+      // ✅ No login required - backend handles this
       var response = await App.requestWithTimeout('/api/paystack/initialize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2306,4 +2308,4 @@ window.claimPlinkoReward = async function(bet, multiplier) {
   return await GameManager.safeClaim('/api/games/plinko/report', { bet: bet, multiplier: multiplier }, 'plinko');
 };
 
-console.log('FLEXIA Script v17.0 - COMPLETE VERSION LOADED');
+console.log('FLEXIA Script v17.2 - COMPLETE VERSION LOADED');
