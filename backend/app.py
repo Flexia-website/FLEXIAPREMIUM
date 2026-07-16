@@ -51,6 +51,7 @@ class Config:
     SESSION_DURATION_HOURS = 24
     DEFAULT_WITHDRAWAL_DAYS = [7, 14, 25, 30]
     MIN_COUPON_AMOUNT = int(os.environ.get('MIN_COUPON_AMOUNT', 8000))
+    TIMEZONE_OFFSET = int(os.environ.get('TIMEZONE_OFFSET', 0))  # hours offset from UTC (e.g., 1 for Nigeria)
 
     ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'flexiaadmin')
     ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'passwordinnumber1')
@@ -69,6 +70,10 @@ class Config:
     SESSION_COOKIE_SAMESITE = 'Lax'
 
 CONFIG = Config()
+
+def get_local_day():
+    """Return the current day-of-month adjusted by TIMEZONE_OFFSET."""
+    return (datetime.utcnow() + timedelta(hours=Config.TIMEZONE_OFFSET)).day
 
 app = Flask(__name__, static_folder=CONFIG.FRONTEND_DIR)
 app.secret_key = CONFIG.SECRET_KEY
@@ -372,7 +377,7 @@ def rate_limit(store, key, max_per_min=5):
 
 claim_locks = {}
 claim_locks_mutex = threading.Lock()
-claim_lock_timeout = 5
+claim_lock_timeout = 2
 
 def acquire_claim_lock(user_id, game_type):
     key = f"{user_id}_{game_type}"
@@ -1047,7 +1052,7 @@ def check_game_cooldown(user_id, game_type):
             try:
                 last_game = datetime.fromisoformat(row[0])
                 now = datetime.utcnow()
-                if (now - last_game).total_seconds() < 1:
+                if (now - last_game).total_seconds() < 0.5:
                     return False
             except:
                 pass
@@ -1072,7 +1077,7 @@ def update_last_game_timestamp(user_id):
         return_db_connection(conn)
 
 def is_withdrawal_day(user_id=None):
-    today = datetime.utcnow().day
+    today = get_local_day()
     if user_id is None:
         return today in get_global_withdrawal_days()
     conn = get_db()
@@ -1294,13 +1299,25 @@ def generate_coupon_code():
 def generate_and_save_coupon(amount, email, transaction_ref):
     conn = get_db()
     cursor = conn.cursor()
+    is_postgres = os.environ.get('DATABASE_URL') is not None
+    ph = '%s' if is_postgres else '?'
     try:
         coupon_code = generate_coupon_code()
-        cursor.execute("SELECT code FROM coupons WHERE code = %s", (coupon_code,))
+        cursor.execute(f"SELECT code FROM coupons WHERE code = {ph}", (coupon_code,))
         while cursor.fetchone():
             coupon_code = generate_coupon_code()
-            cursor.execute("SELECT code FROM coupons WHERE code = %s", (coupon_code,))
-        cursor.execute('INSERT INTO coupons (code, status, metadata) VALUES (%s, %s, %s)', (coupon_code, 'AVAILABLE', json.dumps({'generated_by': 'paystack', 'amount_paid': amount, 'email': email, 'transaction_ref': transaction_ref, 'payment_method': 'bank_transfer', 'generated_at': datetime.utcnow().isoformat()})))
+            cursor.execute(f"SELECT code FROM coupons WHERE code = {ph}", (coupon_code,))
+        cursor.execute(
+            f"INSERT INTO coupons (code, status, metadata) VALUES ({ph}, {ph}, {ph})",
+            (coupon_code, 'AVAILABLE', json.dumps({
+                'generated_by': 'paystack',
+                'amount_paid': amount,
+                'email': email,
+                'transaction_ref': transaction_ref,
+                'payment_method': 'bank_transfer',
+                'generated_at': datetime.utcnow().isoformat()
+            }))
+        )
         conn.commit()
         app.logger.info(f"Coupon generated: {coupon_code} for {email}")
         return coupon_code
@@ -1899,7 +1916,7 @@ def admin_change_password():
 @require_auth
 def check_withdrawal_day():
     user = get_current_user()
-    today = datetime.utcnow().day
+    today = get_local_day()
     conn = None
 
     try:
@@ -2784,7 +2801,7 @@ def get_achievements():
         cursor.execute(f'SELECT COUNT(*) FROM transactions WHERE user_id = {ph} AND type = {ph}', (user['id'], 'WITHDRAWAL'))
         total_withdrawals = cursor.fetchone()[0]
 
-        cursor.execute('SELECT COUNT(*) FROM users WHERE referred_by = %s', (user.get('referral_code', ''),))
+        cursor.execute(f'SELECT COUNT(*) FROM users WHERE referred_by = {ph}', (user.get('referral_code', ''),))
         referrals = cursor.fetchone()[0]
 
         today = datetime.utcnow().date()
@@ -3114,7 +3131,7 @@ def paystack_callback():
         reference = request.args.get('reference')
 
         if not reference:
-            return redirect(f"{CONFIG.FRONTEND_DIR}/payment-failed.html?error=No+reference+provided")
+            return redirect(f"/?payment=failed&error=No+reference+provided")
 
         # USE LIVE KEYS TO VERIFY PAYMENTS
         verification_key = PAYSTACK_LIVE_SECRET_KEY or PAYSTACK_SECRET_KEY
@@ -3129,13 +3146,13 @@ def paystack_callback():
 
         if not data.get('status'):
             app.logger.error(f"Paystack verification failed: {data}")
-            return redirect(f"{CONFIG.FRONTEND_DIR}/payment-failed.html?ref={reference}&error=Verification+failed")
+            return redirect(f"/?payment=failed&ref={reference}&error=Verification+failed")
 
         transaction = data['data']
 
         if transaction['status'] != 'success':
             app.logger.warning(f"Transaction not successful: {transaction['status']}")
-            return redirect(f"{CONFIG.FRONTEND_DIR}/payment-failed.html?ref={reference}&error=Transaction+not+successful")
+            return redirect(f"/?payment=failed&ref={reference}&error=Transaction+not+successful")
 
         email = transaction['customer']['email']
         amount = transaction['amount'] / 100
@@ -3161,37 +3178,41 @@ def paystack_callback():
 
         conn = get_db()
         cursor = conn.cursor()
+        ph = '%s' if os.environ.get('DATABASE_URL') else '?'
 
-        cursor.execute('UPDATE transactions SET status = %s, details = %s WHERE type = \'PAYSTACK_INIT\' AND details LIKE %s',
-                      ('COMPLETED', json.dumps({
-                          'reference': reference,
-                          'coupon_code': coupon_code if coupon_code else None,
-                          'email': email,
-                          'amount': amount,
-                          'payment_method': payment_method,
-                          'coupon_sent': email_sent,
-                          'coupon_generated': coupon_code is not None,
-                          'minimum_amount_required': MIN_COUPON_AMOUNT,
-                          'payment_accepted': True,
-                          'paystack_data': transaction
-                      }), f'%{reference}%'))
+        cursor.execute(
+            f"UPDATE transactions SET status = {ph}, details = {ph} "
+            f"WHERE type = 'PAYSTACK_INIT' AND details LIKE {ph}",
+            ('COMPLETED', json.dumps({
+                'reference': reference,
+                'coupon_code': coupon_code if coupon_code else None,
+                'email': email,
+                'amount': amount,
+                'payment_method': payment_method,
+                'coupon_sent': email_sent,
+                'coupon_generated': coupon_code is not None,
+                'minimum_amount_required': MIN_COUPON_AMOUNT,
+                'payment_accepted': True,
+                'paystack_data': transaction
+            }), f'%{reference}%')
+        )
         conn.commit()
         return_db_connection(conn)
 
         app.logger.info(f"Payment processed: {reference}, amount: ₦{amount}, coupon: {coupon_code if coupon_code else 'NOT GENERATED'}")
 
         if coupon_code:
-            return redirect(f"{CONFIG.FRONTEND_DIR}/payment-success.html?ref={reference}")
+            return redirect(f"/?payment=success&ref={reference}")
         else:
-            return redirect(f"{CONFIG.FRONTEND_DIR}/payment-success.html?ref={reference}&nocoupon=true")
+            return redirect(f"/?payment=success&ref={reference}&nocoupon=true")
 
     except requests.exceptions.Timeout:
         app.logger.error("Paystack verification timeout")
-        return redirect(f"{CONFIG.FRONTEND_DIR}/payment-failed.html?error=Timeout+verifying+payment")
+        return redirect(f"/?payment=failed&error=Timeout+verifying+payment")
     except Exception as e:
         app.logger.error(f"Paystack callback error: {e}")
         app.logger.error(traceback.format_exc())
-        return redirect(f"{CONFIG.FRONTEND_DIR}/payment-failed.html?error={str(e)}")
+        return redirect(f"/?payment=failed&error={urllib.parse.quote(str(e))}")
 
 @app.route('/api/paystack/status/<reference>', methods=['GET'])
 def get_paystack_status(reference):
