@@ -3030,9 +3030,9 @@ def get_whatsapp_numbers():
         return_db_connection(conn)
 
 @app.route('/api/paystack/initialize', methods=['POST'])
-@require_auth
 def initialize_paystack_payment():
-    user = get_current_user()
+    # No authentication required - anyone can buy a coupon
+    user = get_current_user()  # Will be None if not logged in
     data = request.get_json()
 
     email = data.get('email')
