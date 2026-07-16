@@ -1,6 +1,7 @@
 // ============================================================
 // FLEXIA Frontend - COMPLETE PRODUCTION VERSION v17.0
 // All features: Auth, Games, Banking, Referrals, Achievements
+// Paystack: Test keys for verification (FREE), Live keys for payments
 // No auto-refresh, no user notifications, premium UI
 // ============================================================
 
@@ -335,7 +336,6 @@ var App = {
     }
   },
 
-  // AUTO-REFRESH DISABLED per user request
   setupAutoRefresh: function () {
     // No auto-refresh - user controls when to refresh
   },
@@ -609,7 +609,7 @@ var Auth = {
   },
 
   register: async function () {
-    var username = document.getElementById('reg-username').value.trim();
+    var username = document.getElementById('reg-username').value.trim().toLowerCase();
     var password = document.getElementById('reg-password').value;
     var coupon = document.getElementById('reg-coupon').value.trim().toUpperCase();
     var referral = document.getElementById('reg-referral').value.trim();
@@ -631,6 +631,12 @@ var Auth = {
 
     if (password.length < 6) {
       messageEl.textContent = 'Password must be at least 6 characters';
+      messageEl.className = 'message error';
+      return;
+    }
+
+    if (coupon.length < 4) {
+      messageEl.textContent = 'Please enter a valid coupon code';
       messageEl.className = 'message error';
       return;
     }
@@ -663,7 +669,13 @@ var Auth = {
       var response = await App.requestWithTimeout('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username, password: password, coupon_code: coupon, referral_code: referral, contact: contact })
+        body: JSON.stringify({
+          username: username,
+          password: password,
+          coupon_code: coupon,
+          referral_code: referral,
+          contact: contact
+        })
       });
 
       var data = await response.json();
@@ -869,6 +881,7 @@ var PaystackPayment = {
     var btn = document.getElementById('paystack-pay-btn');
     var msg = document.getElementById('payment-message');
 
+    // Registration payment - NO LOGIN REQUIRED
     if (!email || email.indexOf('@') === -1) {
       msg.textContent = 'Please enter a valid email address';
       msg.className = 'message error';
@@ -887,11 +900,16 @@ var PaystackPayment = {
     msg.className = 'message info';
 
     try {
+      var requestBody = { 
+        email: email, 
+        amount: amount 
+      };
+
       var response = await App.requestWithTimeout('/api/paystack/initialize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ email: email, amount: amount })
+        body: JSON.stringify(requestBody)
       });
 
       var data = await response.json();
@@ -1035,6 +1053,7 @@ var PaystackPayment = {
     }
   },
 
+  // ✅ REGISTRATION PAYMENT - NO LOGIN REQUIRED
   openRegistrationPayment: function() {
     App.showModal('paystack-payment-modal');
     document.getElementById('payment-message').textContent = '';
@@ -1054,39 +1073,16 @@ var PaystackPayment = {
     var modalInfo = document.querySelector('#paystack-payment-modal .modal-info');
     if (modalInfo) {
       modalInfo.innerHTML = `
+        <div style="margin-bottom: 12px;">
+          <span style="background: rgba(0,255,85,0.1); color: #00FF55; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 600;">
+            <i class="fas fa-user-plus"></i> No Login Required
+          </span>
+        </div>
         Pay via <strong>Bank Transfer</strong> or <strong>Card</strong> and receive your coupon code via email.
         <br><br>
         <span style="color: #00FF55; font-size: 0.85rem;">
           <i class="fas fa-info-circle"></i> After payment, use the coupon code to register!
         </span>
-      `;
-    }
-  },
-
-  openDashboardPayment: function() {
-    if (!App.currentUser) {
-      return;
-    }
-    App.showModal('paystack-payment-modal');
-    document.getElementById('payment-message').textContent = '';
-    document.getElementById('payment-message').className = 'message';
-    document.getElementById('paystack-pay-btn').disabled = false;
-    document.getElementById('paystack-pay-btn').innerHTML = '<i class="fas fa-credit-card"></i> Pay Now';
-    document.getElementById('bank-transfer-info').style.display = 'none';
-    document.getElementById('bank-transfer-info').classList.remove('visible');
-    document.getElementById('payment-timer-value').textContent = '60:00';
-    document.getElementById('payment-timer-value').className = 'payment-timer-value';
-
-    if (App.currentUser && App.currentUser.email) {
-      document.getElementById('payment-email').value = App.currentUser.email;
-    } else if (App.currentUser && App.currentUser.contact) {
-      document.getElementById('payment-email').value = App.currentUser.contact;
-    }
-
-    var modalInfo = document.querySelector('#paystack-payment-modal .modal-info');
-    if (modalInfo) {
-      modalInfo.innerHTML = `
-        Pay via <strong>Bank Transfer</strong> or <strong>Card</strong> and receive your coupon code via email.
       `;
     }
   }
@@ -1498,6 +1494,8 @@ var Referral = {
 // ========== BANKING ==========
 var Banking = {
   banks: [],
+  verifyingAccount: false,
+  verificationTimeout: null,
 
   async loadBanks() {
     try {
@@ -1551,6 +1549,104 @@ var Banking = {
     }
   },
 
+  verifyAccount: async function() {
+    var bankCode = document.getElementById('bank-select').value;
+    var accountNumber = document.getElementById('account-number').value.trim();
+    var nameDisplay = document.getElementById('account-name-display');
+    var nameField = document.getElementById('account-name-manual');
+    var spinner = document.getElementById('verify-spinner');
+    var statusEl = document.getElementById('account-verification-status');
+    
+    nameDisplay.style.display = 'none';
+    nameDisplay.style.borderColor = '';
+    nameDisplay.style.background = '';
+    nameField.style.borderColor = '';
+    nameField.style.background = '';
+    nameField.value = '';
+    statusEl.innerHTML = '';
+    
+    if (!bankCode) {
+      return;
+    }
+    
+    if (!accountNumber || accountNumber.length < 10 || !accountNumber.match(/^\d+$/)) {
+      if (accountNumber.length > 0) {
+        statusEl.innerHTML = '<i class="fas fa-exclamation-circle" style="color: #FFA500;"></i>';
+      }
+      return;
+    }
+    
+    spinner.style.display = 'inline-block';
+    this.verifyingAccount = true;
+    
+    if (this.verificationTimeout) {
+      clearTimeout(this.verificationTimeout);
+    }
+    
+    try {
+      var response = await App.requestWithTimeout('/api/banking/verify-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          bank_code: bankCode,
+          account_number: accountNumber
+        })
+      }, 10000);
+      
+      var data = await response.json();
+      
+      spinner.style.display = 'none';
+      this.verifyingAccount = false;
+      
+      if (data.success) {
+        nameDisplay.style.display = 'block';
+        nameDisplay.style.borderColor = 'rgba(0,255,85,0.3)';
+        nameDisplay.style.background = 'rgba(0,255,85,0.05)';
+        document.getElementById('verified-account-name').textContent = data.account_name;
+        nameField.value = data.account_name;
+        nameField.style.borderColor = '#00FF55';
+        nameField.style.background = 'rgba(0,255,85,0.05)';
+        statusEl.innerHTML = '<i class="fas fa-check-circle" style="color: #00FF55;"></i>';
+      } else {
+        nameDisplay.style.display = 'block';
+        nameDisplay.style.borderColor = 'rgba(255,0,85,0.3)';
+        nameDisplay.style.background = 'rgba(255,0,85,0.05)';
+        document.getElementById('verified-account-name').textContent = data.message || 'Unable to verify account';
+        document.getElementById('verified-account-name').style.color = '#FF5555';
+        nameField.value = '';
+        nameField.style.borderColor = '#FF0055';
+        nameField.style.background = 'rgba(255,0,85,0.05)';
+        statusEl.innerHTML = '<i class="fas fa-times-circle" style="color: #FF0055;"></i>';
+        
+        this.verificationTimeout = setTimeout(() => {
+          nameDisplay.style.display = 'none';
+          nameField.style.borderColor = '';
+          nameField.style.background = '';
+          statusEl.innerHTML = '';
+        }, 5000);
+      }
+    } catch (error) {
+      console.error('Verification error:', error);
+      spinner.style.display = 'none';
+      this.verifyingAccount = false;
+      
+      nameDisplay.style.display = 'block';
+      nameDisplay.style.borderColor = 'rgba(255,165,0,0.3)';
+      nameDisplay.style.background = 'rgba(255,165,0,0.05)';
+      document.getElementById('verified-account-name').textContent = 'Network error. Please try again.';
+      document.getElementById('verified-account-name').style.color = '#FFA500';
+      statusEl.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: #FFA500;"></i>';
+      
+      this.verificationTimeout = setTimeout(() => {
+        nameDisplay.style.display = 'none';
+        nameField.style.borderColor = '';
+        nameField.style.background = '';
+        statusEl.innerHTML = '';
+      }, 5000);
+    }
+  },
+
   openWithdraw: async function () {
     if (!App.currentUser) return;
     var canWithdraw = await checkWithdrawalDay();
@@ -1561,6 +1657,8 @@ var Banking = {
     document.getElementById('bank-select').selectedIndex = 0;
     document.getElementById('account-number').value = '';
     document.getElementById('account-name-manual').value = '';
+    document.getElementById('account-name-display').style.display = 'none';
+    document.getElementById('account-verification-status').innerHTML = '';
     App.showModal('withdrawal-modal');
   },
 
@@ -1597,8 +1695,18 @@ var Banking = {
       return;
     }
     
-    if (!bankCode || !accountNumber || accountNumber.length < 10 || isNaN(accountNumber)) {
-      msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Invalid bank details.</div>`;
+    if (!bankCode) {
+      msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Please select a bank.</div>`;
+      return;
+    }
+    
+    if (!accountNumber || accountNumber.length < 10 || isNaN(accountNumber)) {
+      msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Please enter a valid 10-digit account number.</div>`;
+      return;
+    }
+    
+    if (!accountName) {
+      msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Please verify your account number first.</div>`;
       return;
     }
     
@@ -1612,8 +1720,11 @@ var Banking = {
     
     try {
       var result = await GameManager.safeClaim('/api/banking/withdraw', {
-        amount: amount, bank_code: bankCode, account_number: accountNumber,
-        account_name: accountName, pin: pin
+        amount: amount, 
+        bank_code: bankCode, 
+        account_number: accountNumber,
+        account_name: accountName, 
+        pin: pin
       }, 'withdrawal');
       
       if (result.success) {
@@ -1896,8 +2007,9 @@ var Settings = {
         </div>
         <div class="settings-section">
           <h4><i class="fas fa-shopping-cart"></i> Buy Coupon</h4>
-          <button class="btn-primary" onclick="PaystackPayment.openDashboardPayment()" style="width:100%;background:linear-gradient(135deg,#00CCFF,#8000FF);">
-            <i class="fas fa-credit-card"></i> Buy Coupon via Paystack
+          <p style="font-size:0.8rem;color:#A0A0B5;margin-bottom:8px;">Coupons are for new users who want to register on the platform.</p>
+          <button class="btn-primary" onclick="window.location.href='/#register'" style="width:100%;background:linear-gradient(135deg,#00CCFF,#8000FF);">
+            <i class="fas fa-user-plus"></i> Go to Registration to Buy
           </button>
         </div>
         <div class="settings-section">
@@ -2112,6 +2224,34 @@ document.addEventListener('DOMContentLoaded', function() {
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     }, 2000);
+  }
+
+  // Account number verification - auto-verify on input
+  var accountInput = document.getElementById('account-number');
+  if (accountInput) {
+    accountInput.addEventListener('input', function() {
+      if (this.value.length >= 10 && document.getElementById('bank-select').value) {
+        Banking.verifyAccount();
+      }
+    });
+    
+    accountInput.addEventListener('keyup', function() {
+      if (this.value.length < 10) {
+        document.getElementById('account-name-display').style.display = 'none';
+        document.getElementById('account-name-manual').value = '';
+        document.getElementById('account-verification-status').innerHTML = '';
+      }
+    });
+  }
+  
+  var bankSelect = document.getElementById('bank-select');
+  if (bankSelect) {
+    bankSelect.addEventListener('change', function() {
+      var accountNumber = document.getElementById('account-number').value.trim();
+      if (accountNumber.length >= 10) {
+        Banking.verifyAccount();
+      }
+    });
   }
 
   var spinModal = document.getElementById('spin-modal');
