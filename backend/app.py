@@ -3062,8 +3062,8 @@ def initialize_paystack_payment():
             'reference': reference,
             'callback_url': PAYSTACK_CALLBACK_URL,
             'metadata': json.dumps({
-                'user_id': user['id'],
-                'username': user['username'],
+                'user_id': user['id'] if user else None,
+                'username': user['username'] if user else None,
                 'coupon_amount': amount,
                 'type': 'coupon_purchase',
                 'email': email
@@ -3078,7 +3078,7 @@ def initialize_paystack_payment():
             cursor = conn.cursor()
 
             cursor.execute('INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp) VALUES (%s, %s, %s, %s, %s, %s, %s)',
-                          (f"PAY-{secrets.token_hex(8)}", user['id'], 'PAYSTACK_INIT', amount, 'PENDING',
+                          (f"PAY-{secrets.token_hex(8)}", user['id'] if user else None, 'PAYSTACK_INIT', amount, 'PENDING',
                            json.dumps({
                                'reference': reference,
                                'email': email,
