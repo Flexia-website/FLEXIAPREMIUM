@@ -1,5 +1,5 @@
 // ============================================================
-// FLEXIA Frontend - COMPLETE PRODUCTION VERSION v17.2
+// FLEXIA Frontend - COMPLETE PRODUCTION VERSION v17.3
 // All features: Auth, Games, Banking, Referrals, Achievements
 // Paystack: Test keys for verification (FREE), Live keys for payments
 // No auto-refresh, no user notifications, premium UI
@@ -93,11 +93,120 @@ const embeddedCSS = `
     from { opacity: 1; transform: translateX(-50%) translateY(0); }
     to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
   }
+  .payment-modal-content {
+    max-width: 400px;
+    text-align: center;
+  }
+  .payment-modal-content .modal-title.success {
+    color: #00FF55;
+  }
+  .payment-modal-content .modal-title.failed {
+    color: #FF4757;
+  }
+  #payment-coupon-display {
+    background: #1a1a35;
+    padding: 12px;
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+    color: #FFD700;
+    margin: 12px 0;
+    word-break: break-all;
+  }
+  .payment-timer-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: rgba(255, 0, 0, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 0, 0, 0.1);
+  }
+  .payment-timer-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+  .payment-timer-value {
+    font-family: monospace;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #6BCB77;
+  }
+  .payment-timer-value.warning {
+    color: #FFD93D;
+  }
+  .payment-timer-value.danger {
+    color: #FF6B6B;
+    animation: pulse 1s infinite;
+  }
+  .payment-timer-value.expired {
+    color: #FF0000;
+    animation: none;
+  }
+  .payment-timer-note {
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    margin-top: 8px;
+  }
+  .bank-transfer-info {
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(0, 255, 85, 0.03);
+    border-radius: 12px;
+    border: 1px solid rgba(0, 255, 85, 0.1);
+    display: none;
+  }
+  .bank-transfer-info.visible {
+    display: block;
+    animation: fadeSlide 0.3s ease;
+  }
+  .bank-transfer-info h4 {
+    color: var(--success);
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    margin-bottom: 10px;
+  }
+  .bank-transfer-details {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 12px;
+    border-radius: 8px;
+    margin: 8px 0;
+  }
+  .bank-transfer-details .row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  }
+  .bank-transfer-details .row:last-child {
+    border-bottom: none;
+  }
+  .bank-transfer-details .label {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+  }
+  .bank-transfer-details .value {
+    color: var(--text-light);
+    font-weight: 600;
+    font-size: 0.8rem;
+  }
+  .bank-transfer-details .value.account-number {
+    color: var(--success);
+    font-family: monospace;
+    font-size: 1.1rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
 `;
 
-var style = document.createElement('style');
-style.textContent = embeddedCSS;
-document.head.appendChild(style);
+// Inject CSS
+(function() {
+  var style = document.createElement('style');
+  style.textContent = embeddedCSS;
+  document.head.appendChild(style);
+})();
 
 // ========== CONFIGURATION ==========
 var CONFIG = {
@@ -115,7 +224,9 @@ var CONFIG = {
     'spin': 1,
     'tiktok': 3
   },
-  PAYSTACK_MIN_AMOUNT: window.APP_CONFIG?.PAYSTACK?.MIN_AMOUNT || 500
+  PAYSTACK_MIN_AMOUNT: window.APP_CONFIG?.PAYSTACK?.MIN_AMOUNT || 500,
+  MAX_RETRY_ATTEMPTS: 3,
+  RETRY_DELAY: 2000
 };
 
 // ========== CORE APP ==========
@@ -123,6 +234,7 @@ var App = {
   currentUser: null,
   balanceVisible: true,
   lastBalanceUpdate: 0,
+  _balanceRefreshInterval: null,
 
   init: async function () {
     console.log('App.init() called');
@@ -134,7 +246,24 @@ var App = {
       if (this.currentUser) {
         SessionManager.init();
         this.updateBalanceDisplay();
+        this.startBalanceRefresh();
       }
+    }
+  },
+
+  startBalanceRefresh: function() {
+    if (this._balanceRefreshInterval) {
+      clearInterval(this._balanceRefreshInterval);
+    }
+    this._balanceRefreshInterval = setInterval(function() {
+      App.fetchFreshBalance();
+    }, 30000);
+  },
+
+  stopBalanceRefresh: function() {
+    if (this._balanceRefreshInterval) {
+      clearInterval(this._balanceRefreshInterval);
+      this._balanceRefreshInterval = null;
     }
   },
 
@@ -166,6 +295,7 @@ var App = {
         }
         SessionManager.init();
         console.log('User logged in:', data.user.username);
+        this.checkPaymentStatus();
       } else {
         console.log('No valid session, showing auth screen');
         this.showAuthScreen();
@@ -174,6 +304,111 @@ var App = {
       console.error('Auth check failed:', err);
       this.showAuthScreen();
     }
+  },
+
+  checkPaymentStatus: function() {
+    var params = new URLSearchParams(window.location.search);
+    var status = params.get('payment');
+    var ref = params.get('ref');
+    var error = params.get('error');
+
+    if (!status) return;
+
+    if (status === 'success' && ref) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setTimeout(async function() {
+        try {
+          var result = await PaystackPayment.checkStatus(ref);
+          if (result.success && result.coupon_code) {
+            App.showPaymentSuccessModal(result.coupon_code);
+          } else {
+            App.showPaymentSuccessModal(null);
+          }
+        } catch (e) {
+          App.showPaymentSuccessModal(null);
+        }
+      }, 1000);
+    } else if (status === 'failed') {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      App.showMessage('❌ Payment failed: ' + (error || 'Please try again.'), 'error', 8000);
+    }
+  },
+
+  showPaymentSuccessModal: function(couponCode) {
+    var existing = document.getElementById('payment-success-modal');
+    if (existing) existing.remove();
+    
+    var modal = document.createElement('div');
+    modal.id = 'payment-success-modal';
+    modal.style.cssText = `
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100000;
+      animation: fadeIn 0.3s ease;
+    `;
+    
+    var content = document.createElement('div');
+    content.style.cssText = `
+      background: rgba(20, 12, 40, 0.95);
+      border: 2px solid #00FF55;
+      border-radius: 24px;
+      padding: 40px 32px;
+      max-width: 440px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5);
+      animation: modalSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    `;
+    
+    var couponHTML = couponCode ? `
+      <div style="background: #1a1a35; padding: 16px; border-radius: 12px; margin: 16px 0; border: 2px solid #FFD700;">
+        <div style="font-size: 0.7rem; color: #A0A0B5; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Your Coupon Code</div>
+        <div style="font-family: 'Orbitron', monospace; font-size: 1.8rem; color: #FFD700; letter-spacing: 3px; font-weight: bold;">${couponCode}</div>
+      </div>
+      <p style="color: #A0A0B5; font-size: 0.8rem;">Use this code to register on FLEXIA</p>
+    ` : `
+      <p style="color: #A0A0B5; font-size: 0.9rem;">Check your email for the coupon code.</p>
+    `;
+    
+    content.innerHTML = `
+      <div style="font-size: 3rem; margin-bottom: 10px;">✅</div>
+      <h2 style="color: #00FF55; font-family: 'Orbitron', sans-serif; font-size: 1.4rem; margin-bottom: 8px;">Payment Successful!</h2>
+      ${couponHTML}
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button onclick="App.closePaymentSuccessModal()" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #8000FF, #00CCFF); border: none; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; transition: all 0.3s;">
+          <i class="fas fa-check"></i> OK, Got It!
+        </button>
+        <button onclick="window.location.href='index.html'" style="flex: 1; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: #A0A0B5; cursor: pointer; transition: all 0.3s;">
+          <i class="fas fa-home"></i> Dashboard
+        </button>
+      </div>
+    `;
+    
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+    
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        App.closePaymentSuccessModal();
+      }
+    });
+    
+    document.addEventListener('keydown', function handler(e) {
+      if (e.key === 'Escape') {
+        App.closePaymentSuccessModal();
+        document.removeEventListener('keydown', handler);
+      }
+    });
+  },
+
+  closePaymentSuccessModal: function() {
+    var modal = document.getElementById('payment-success-modal');
+    if (modal) modal.remove();
   },
 
   showAppScreen: function () {
@@ -202,6 +437,7 @@ var App = {
       appScreen.style.display = 'none';
       appScreen.classList.remove('active');
     }
+    this.stopBalanceRefresh();
   },
 
   updateBalanceDisplay: function () {
@@ -277,6 +513,7 @@ var App = {
     if (this.currentUser) {
       this.currentUser.balance = newBalance;
       this.updateBalanceDisplay();
+      localStorage.setItem('flexia_balance', newBalance);
     }
   },
 
@@ -337,10 +574,6 @@ var App = {
     }
   },
 
-  setupAutoRefresh: function () {
-    // No auto-refresh - user controls when to refresh
-  },
-
   requestWithTimeout: async function(url, options, timeout) {
     if (options === undefined) options = {};
     if (timeout === undefined) timeout = 10000;
@@ -383,10 +616,6 @@ var SessionManager = {
     
     window.addEventListener('online', function() {
       self.handleAppResume();
-    });
-    
-    window.addEventListener('offline', function() {
-      // silent
     });
     
     console.log('Session Manager initialized');
@@ -507,7 +736,6 @@ var SessionManager = {
   }
 };
 
-// Save state on beforeunload
 window.addEventListener('beforeunload', function() {
   SessionManager.saveState();
   SessionManager.saveScrollPosition();
@@ -882,7 +1110,6 @@ var PaystackPayment = {
     var btn = document.getElementById('paystack-pay-btn');
     var msg = document.getElementById('payment-message');
 
-    // ✅ NO LOGIN REQUIRED - Anyone can buy a coupon
     if (!email || email.indexOf('@') === -1) {
       msg.textContent = 'Please enter a valid email address';
       msg.className = 'message error';
@@ -906,7 +1133,6 @@ var PaystackPayment = {
         amount: amount 
       };
 
-      // ✅ No login required - backend handles this
       var response = await App.requestWithTimeout('/api/paystack/initialize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1055,7 +1281,6 @@ var PaystackPayment = {
     }
   },
 
-  // ✅ REGISTRATION PAYMENT - NO LOGIN REQUIRED
   openRegistrationPayment: function() {
     App.showModal('paystack-payment-modal');
     document.getElementById('payment-message').textContent = '';
@@ -1112,32 +1337,53 @@ var GameManager = {
     }
   },
 
-  async safeClaim(endpoint, data, gameType) {
+  safeClaim: async function(endpoint, data, gameType) {
     if (gameType === undefined) gameType = 'unknown';
     if (this.pendingRequests.has(gameType)) {
       console.warn('Already claiming ' + gameType + ', ignoring duplicate');
       return { success: false, message: "Please wait for the current claim to complete" };
     }
     this.pendingRequests.set(gameType, true);
-    try {
-      var response = await App.requestWithTimeout(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Request-ID': Date.now().toString() },
-        credentials: 'include',
-        body: JSON.stringify(data)
-      }, 15000);
-      var result = await response.json();
-      this.lastClaimTime = Date.now();
-      return result;
-    } catch (error) {
-      console.error('Claim error:', error);
-      if (error.name === 'AbortError') {
-        return { success: false, message: "Request timed out. Please try again." };
+    
+    var attempts = 0;
+    var maxAttempts = CONFIG.MAX_RETRY_ATTEMPTS || 3;
+    var lastError = null;
+    
+    while (attempts < maxAttempts) {
+      attempts++;
+      try {
+        var response = await App.requestWithTimeout(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Request-ID': Date.now().toString() },
+          credentials: 'include',
+          body: JSON.stringify(data)
+        }, 15000);
+        var result = await response.json();
+        this.lastClaimTime = Date.now();
+        
+        if (!result.success && result.message && 
+            (result.message.toLowerCase().includes('wait') || 
+             result.message.toLowerCase().includes('rate') ||
+             result.message.toLowerCase().includes('cooldown'))) {
+          console.log('Rate limited, waiting ' + (CONFIG.RETRY_DELAY * attempts) + 'ms before retry');
+          await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY * attempts));
+          continue;
+        }
+        
+        return result;
+      } catch (error) {
+        console.error('Claim attempt ' + attempts + ' failed:', error);
+        lastError = error;
+        if (attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY * attempts));
+        }
       }
-      return { success: false, message: error.message || "Connection error." };
-    } finally {
-      this.pendingRequests.delete(gameType);
     }
+    
+    if (lastError && lastError.name === 'AbortError') {
+      return { success: false, message: "Request timed out. Please try again." };
+    }
+    return { success: false, message: lastError ? lastError.message : "Connection error. Please try again." };
   },
 
   setButtonLoading: function(buttonId, isLoading) {
@@ -1164,9 +1410,9 @@ var GameLimiter = {
     'tiktok': 'TikTok Follow'
   },
   gameMessages: {
-    'snake': { icon: '🐍', title: 'Snake Game Limit Reached', message: 'You have played Snake 5 times today. Come back tomorrow for more fun!' },
-    'coinflip': { icon: '🪙', title: 'Coin Flip Limit Reached', message: 'You have played Coin Flip 2 times today. Daily limit reached!' },
-    'plinko': { icon: '🎯', title: 'Plinko Limit Reached', message: 'You have played Plinko 2 times today. Try again tomorrow!' },
+    'snake': { icon: '🐍', title: 'Snake Game Limit Reached', message: 'You have played Snake 17 times today. Come back tomorrow for more fun!' },
+    'coinflip': { icon: '🪙', title: 'Coin Flip Limit Reached', message: 'You have played Coin Flip 12 times today. Daily limit reached!' },
+    'plinko': { icon: '🎯', title: 'Plinko Limit Reached', message: 'You have played Plinko 12 times today. Try again tomorrow!' },
     'spin': { icon: '🎡', title: 'Daily Spin Limit Reached', message: 'You have already used your daily spin today! Come back tomorrow.' },
     'tiktok': { icon: '📱', title: 'TikTok Daily Limit Reached', message: 'You have already claimed TikTok reward today! Come back tomorrow.' }
   },
@@ -1278,7 +1524,7 @@ var GameLimiter = {
   }
 };
 
-// ========== ENHANCED GAME LIMITER (NO AUTO-LOGOUT) ==========
+// ========== ENHANCED GAME LIMITER ==========
 var EnhancedGameLimiter = {
   async checkAndHandleGameAccess(gameType, targetUrl) {
     if (!App.currentUser) {
@@ -1768,19 +2014,35 @@ var Games = {
   openPlinko: function() { return EnhancedGameLimiter.checkAndHandleGameAccess('plinko', 'plinko.html'); },
 
   reportSnake: async function (apples) {
-    return await GameManager.safeClaim('/api/games/snake/report', { apples_eaten: apples }, 'snake');
+    var result = await GameManager.safeClaim('/api/games/snake/report', { apples_eaten: apples }, 'snake');
+    if (result && result.success && result.new_balance !== undefined) {
+      App.updateBalance(result.new_balance);
+    }
+    return result;
   },
 
   reportCoinFlip: async function (bet, won) {
-    return await GameManager.safeClaim('/api/games/coinflip/report', { bet: bet, won: won }, 'coinflip');
+    var result = await GameManager.safeClaim('/api/games/coinflip/report', { bet: bet, won: won }, 'coinflip');
+    if (result && result.success && result.new_balance !== undefined) {
+      App.updateBalance(result.new_balance);
+    }
+    return result;
   },
 
   reportPlinko: async function (bet, multiplier) {
-    return await GameManager.safeClaim('/api/games/plinko/report', { bet: bet, multiplier: multiplier }, 'plinko');
+    var result = await GameManager.safeClaim('/api/games/plinko/report', { bet: bet, multiplier: multiplier }, 'plinko');
+    if (result && result.success && result.new_balance !== undefined) {
+      App.updateBalance(result.new_balance);
+    }
+    return result;
   },
 
   reportSpin: async function (_unused) {
-    return await GameManager.safeClaim('/api/spin/execute', {}, 'spin');
+    var result = await GameManager.safeClaim('/api/spin/execute', {}, 'spin');
+    if (result && result.success && result.new_balance !== undefined) {
+      App.updateBalance(result.new_balance);
+    }
+    return result;
   },
 
   openTikTok: async function () {
@@ -2228,7 +2490,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 2000);
   }
 
-  // Account number verification - auto-verify on input
   var accountInput = document.getElementById('account-number');
   if (accountInput) {
     accountInput.addEventListener('input', function() {
@@ -2308,4 +2569,4 @@ window.claimPlinkoReward = async function(bet, multiplier) {
   return await GameManager.safeClaim('/api/games/plinko/report', { bet: bet, multiplier: multiplier }, 'plinko');
 };
 
-console.log('FLEXIA Script v17.2 - COMPLETE VERSION LOADED');
+console.log('FLEXIA Script v17.3 - COMPLETE VERSION LOADED');
