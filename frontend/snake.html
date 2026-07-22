@@ -217,6 +217,36 @@ function showFunPopup() {
   setTimeout(() => d && d.remove && d.remove(), 3000);
 }
 
+// ═══ BALANCE SYNC - INSTANT UPDATE ═══
+function syncBalanceAfterClaim() {
+  fetch('/api/user/profile', { credentials: 'include', headers: { 'Cache-Control': 'no-cache' } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success && data.user) {
+        var balance = parseFloat(data.user.balance) || 0;
+        localStorage.setItem('flexia_balance', balance);
+        
+        // Update all balance displays on the page
+        document.querySelectorAll('.balance-display, #balance, #user-balance, .balance-amount').forEach(function(el) {
+          el.textContent = '₦' + balance.toFixed(2);
+        });
+        
+        // Update header balance if exists
+        var headerBalance = document.getElementById('header-balance');
+        if (headerBalance) headerBalance.textContent = '₦' + balance.toFixed(2);
+        
+        // Update the main dashboard balance if App is available
+        if (window.App && window.App.currentUser) {
+          window.App.currentUser.balance = balance;
+          if (window.App.updateBalanceDisplay) window.App.updateBalanceDisplay();
+        }
+        
+        console.log('✅ Balance synced instantly: ₦' + balance.toFixed(2));
+      }
+    })
+    .catch(function(e) { console.error('Balance sync error:', e); });
+}
+
 // ═══ BACKEND LOAD ═══
 async function loadDailyEarnings() {
   try {
@@ -229,7 +259,14 @@ async function loadDailyEarnings() {
       .filter(t => t.type==='SNAKE_REWARD' && (t.timestamp||'').slice(0,10)===today)
       .reduce((s,t) => s + parseFloat(t.amount||0), 0);
     updateCapUI(earned);
-  } catch(e) {}
+    // Also sync balance immediately on load
+    if (d.user.balance !== undefined) {
+      localStorage.setItem('flexia_balance', d.user.balance);
+      if (window.App && window.App.currentUser) {
+        window.App.currentUser.balance = parseFloat(d.user.balance);
+      }
+    }
+  } catch(e) { console.error('Load daily earnings error:', e); }
 }
 
 // ═══ REAL BACKEND CLAIM ═══
@@ -250,11 +287,14 @@ async function autoClaim() {
     const res = await callBackend(sessionApples, sessionGolden);
     if (res.success) {
       updateCapUI(res.daily_earned || DAILY_CAP);
-      if (res.new_balance !== undefined) localStorage.setItem('flexia_balance', res.new_balance);
+      if (res.new_balance !== undefined) {
+        localStorage.setItem('flexia_balance', res.new_balance);
+        // INSTANT BALANCE SYNC
+        syncBalanceAfterClaim();
+      }
       showFunPopup();
       sessionEarned = sessionApples = sessionGolden = 0;
       updateSessionUI();
-      syncBalanceAfterClaim();
     }
   } catch(e) { console.error('Auto-claim error', e); }
   isClaiming = false;
@@ -310,6 +350,8 @@ async function manualClaim() {
     
     if (result.new_balance !== undefined) {
       localStorage.setItem('flexia_balance', result.new_balance);
+      // INSTANT BALANCE SYNC
+      syncBalanceAfterClaim();
     }
     
     sessionEarned = sessionApples = sessionGolden = 0;
@@ -329,7 +371,6 @@ async function manualClaim() {
       alert('✅ Claimed ₦' + result.reward + '! ₦' + result.remaining_today + ' remaining today.');
       return;
     }
-    syncBalanceAfterClaim();
   } catch(e) {
     console.error('Claim error:', e);
     btn.disabled=false; 
@@ -468,30 +509,6 @@ document.addEventListener('DOMContentLoaded',()=>{
   initGame();
   resizeCanvas();
 });
-
-// ═══════════════════════════════════════════════════════════════
-// ═══ BALANCE SYNC - ADDED ═══
-// ═══════════════════════════════════════════════════════════════
-function syncBalanceAfterClaim() {
-    fetch('/api/user/profile', { credentials: 'include' })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            if (data.success && data.user) {
-                var balance = parseFloat(data.user.balance) || 0;
-                localStorage.setItem('flexia_balance', balance);
-                document.querySelectorAll('.balance-display, #balance, #user-balance, .balance-amount').forEach(function(el) {
-                    el.textContent = '₦' + balance.toFixed(2);
-                });
-                var headerBalance = document.getElementById('header-balance');
-                if (headerBalance) headerBalance.textContent = '₦' + balance.toFixed(2);
-                if (window.App && window.App.currentUser) {
-                    window.App.currentUser.balance = balance;
-                    if (window.App.updateBalanceDisplay) window.App.updateBalanceDisplay();
-                }
-            }
-        })
-        .catch(function(e) { console.error('Balance sync error:', e); });
-}
 </script>
 </body>
 </html>
