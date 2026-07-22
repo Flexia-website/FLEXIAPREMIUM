@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        /* ====================== FLEXIA ADMIN CSS ====================== */
         * {
             margin: 0;
             padding: 0;
@@ -176,7 +175,6 @@
             display: none !important;
         }
         
-        /* Tab Navigation */
         .admin-tabs {
             display: flex;
             gap: 5px;
@@ -215,7 +213,6 @@
             display: block;
         }
         
-        /* Table Styles */
         .table-container {
             overflow-x: auto;
             margin-top: 15px;
@@ -242,7 +239,6 @@
             background: #151528;
         }
         
-        /* Badges */
         .badge {
             padding: 4px 8px;
             border-radius: 12px;
@@ -270,7 +266,6 @@
             color: white;
         }
         
-        /* Modal Styles */
         .modal-content {
             background: #0d0d1a;
             color: #e0e0ff;
@@ -289,7 +284,6 @@
             filter: invert(1) grayscale(100%) brightness(200%);
         }
         
-        /* Day Selector */
         .day-selector {
             max-height: 200px;
             overflow-y: auto;
@@ -323,7 +317,6 @@
             font-weight: bold;
         }
         
-        /* Stats Cards */
         .stats-card {
             background: #121225;
             border-radius: 10px;
@@ -344,7 +337,6 @@
             font-size: 14px;
         }
         
-        /* Withdrawal Status Report */
         .status-indicator {
             display: inline-block;
             width: 12px;
@@ -365,7 +357,6 @@
             background: #ff9800;
         }
         
-        /* Global Withdrawal Days Display */
         .global-days-display {
             background: #121225;
             border: 2px solid #7b61ff;
@@ -392,7 +383,6 @@
             margin-top: 8px;
         }
         
-        /* Backup Section */
         .backup-item {
             background: #151528;
             padding: 12px;
@@ -414,7 +404,6 @@
             margin-bottom: 10px;
         }
         
-        /* Health Status */
         .health-status {
             padding: 10px;
             border-radius: 8px;
@@ -444,7 +433,6 @@
             color: #00eeff;
         }
         
-        /* Database Management Cards */
         .card.bg-dark {
             background: #121225 !important;
         }
@@ -472,7 +460,6 @@
             border-color: #252540;
         }
         
-        /* Form Elements */
         .form-check-input:checked {
             background-color: #7b61ff;
             border-color: #7b61ff;
@@ -498,6 +485,17 @@
         .form-control:focus {
             border-color: #7b61ff;
             box-shadow: 0 0 0 0.25rem rgba(123, 97, 255, 0.25);
+        }
+        
+        /* Timezone display */
+        .timezone-display {
+            background: rgba(0, 238, 255, 0.05);
+            border: 1px solid rgba(0, 238, 255, 0.1);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            color: #00eeff;
+            display: inline-block;
         }
         
         @media (max-width: 768px) {
@@ -541,7 +539,6 @@
             </div>
         </header>
         
-        <!-- Tab Navigation -->
         <div class="admin-tabs">
             <button class="tab-btn active" onclick="showTab('dashboard')">
                 <i class="fas fa-tachometer-alt"></i> Dashboard
@@ -592,6 +589,7 @@
                         <div class="text-end">
                             <div><small>Database: <span id="db-status" class="badge badge-success">Connected</span></small></div>
                             <div><small>Connection Pool: <span id="pool-status" class="badge badge-success">Active</span></small></div>
+                            <div><small><span class="timezone-display" id="timezone-display">Loading...</span></small></div>
                         </div>
                     </div>
                 </div>
@@ -643,9 +641,7 @@
         
         <!-- Database Management Tab -->
         <div id="database" class="tab-content">
-            <!-- Enhanced Database Clearance Section -->
-            <div class="admin-section" style="background: linear-gradient(135deg, #1a1a2e 0%, #0f172a 100%); 
-                                             border: 2px solid #ff4757; border-left: 5px solid #ff4757;">
+            <div class="admin-section" style="background: linear-gradient(135deg, #1a1a2e 0%, #0f172a 100%); border: 2px solid #ff4757; border-left: 5px solid #ff4757;">
                 <h3 style="color: #ff4757;">
                     <i class="fas fa-database"></i> Database Management
                 </h3>
@@ -749,7 +745,6 @@
                     </div>
                 </div>
 
-                <!-- Add to Database Management section -->
                 <div class="admin-section mt-4">
                     <h3><i class="fas fa-file-export"></i> Complete Database Backup</h3>
                     <div class="mb-3">
@@ -848,6 +843,7 @@
         <div id="globalSettings" class="tab-content">
             <div class="admin-section">
                 <h3><i class="fas fa-globe"></i> Global Withdrawal Settings</h3>
+                <div class="timezone-display mb-3" id="global-settings-timezone">Loading timezone...</div>
                 <p style="color: #a0a0c0; margin-bottom: 20px;">
                     Set the default withdrawal days for all users. Users with custom settings will not be affected.
                 </p>
@@ -1009,6 +1005,7 @@
                     <button onclick="loadWithdrawalReport()" class="btn btn-primary">
                         <i class="fas fa-sync-alt"></i> Refresh Report
                     </button>
+                    <span class="timezone-display ms-3" id="report-timezone">Loading...</span>
                 </div>
                 <div class="table-container">
                     <table>
@@ -1317,6 +1314,44 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
         }
         
+        // ================================ TIMEZONE HELPERS ================================
+        async function fetchTimezoneInfo() {
+            try {
+                const response = await fetch('/api/withdrawal/check-day', {
+                    credentials: 'include',
+                    headers: { 'Cache-Control': 'no-cache' }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    return {
+                        today: data.today,
+                        today_date: data.today_date,
+                        timezone_display: data.timezone_display || 'UTC',
+                        offset: data.timezone_offset || 0
+                    };
+                }
+            } catch (e) {
+                console.error('Timezone fetch error:', e);
+            }
+            return {
+                today: new Date().getDate(),
+                today_date: new Date().toISOString().split('T')[0],
+                timezone_display: 'UTC',
+                offset: 0
+            };
+        }
+        
+        async function updateTimezoneDisplay() {
+            const info = await fetchTimezoneInfo();
+            const displayText = `${info.timezone_display} • ${info.today_date} (Day ${info.today})`;
+            
+            document.querySelectorAll('.timezone-display').forEach(el => {
+                el.textContent = displayText;
+            });
+            
+            return info;
+        }
+        
         // ================================ AUTH FUNCTIONS ================================
         function adminLogout() {
             fetch('/api/auth/logout', {
@@ -1450,7 +1485,6 @@
         }
         
         // ================================ DATABASE BACKUP/RESTORE FUNCTIONS ================================
-        // Export full database
         async function exportFullDatabase() {
             try {
                 showMessage('Preparing database export...', 'info');
@@ -1483,7 +1517,6 @@
             }
         }
         
-        // Restore database functions
         document.getElementById('restore-file').addEventListener('change', function(e) {
             selectedRestoreFile = e.target.files[0];
             const restoreBtn = document.getElementById('restore-btn');
@@ -1566,18 +1599,15 @@
         
         async function previewDatabaseClear() {
             try {
-                // Collect user selections
                 const clearUsers = document.getElementById('clear-users').checked;
                 const clearTransactions = document.getElementById('clear-transactions').checked;
                 const clearGameplays = document.getElementById('clear-gameplays').checked;
                 const resetCoupons = document.getElementById('reset-coupons').checked;
                 const backupOption = document.getElementById('backup-option').value;
                 
-                // Fetch current stats for preview
                 const response = await fetchData('/api/admin/stats');
                 if (response.success) {
                     const stats = response.stats;
-                    const adminUser = await fetchData('/api/admin/user/1'); // Assuming admin is ID 1
                     
                     const previewContent = document.getElementById('previewClearContent');
                     previewContent.innerHTML = `
@@ -1677,7 +1707,6 @@
                 const confirmModal = new bootstrap.Modal(document.getElementById('confirmClearModal'));
                 confirmModal.show();
                 
-                // Enable/disable execute button based on confirmation
                 const confirmationInput = document.getElementById('sudo-confirmation');
                 const acknowledgeCheckbox = document.getElementById('acknowledge-risk');
                 const executeBtn = document.getElementById('execute-clear-btn');
@@ -1714,7 +1743,6 @@
                 if (data.success) {
                     showMessage('✅ Database cleared successfully!', 'success');
                     
-                    // Show detailed results
                     setTimeout(() => {
                         alert(`
 ✅ DATABASE CLEARANCE COMPLETE
@@ -1730,7 +1758,6 @@
 ⚠️ ${data.warning}
                         `);
                         
-                        // Refresh the page
                         window.location.reload();
                     }, 1000);
                     
@@ -1752,13 +1779,11 @@
                 modal.hide();
             }
             
-            // Reset form
             document.getElementById('sudo-confirmation').value = '';
             document.getElementById('acknowledge-risk').checked = false;
             document.getElementById('execute-clear-btn').disabled = true;
         }
         
-        // Export Data Function
         async function exportDatabaseData() {
             const format = document.getElementById('export-format').value;
             const exportUsers = document.getElementById('export-users').checked;
@@ -1889,8 +1914,8 @@
         // ================================ DASHBOARD FUNCTIONS ================================
         async function loadDashboard() {
             try {
-                // First check health
                 await checkHealth();
+                await updateTimezoneDisplay();
                 
                 const [usersRes, txRes, statsRes] = await Promise.all([
                     fetchData('/api/admin/users'),
@@ -1904,7 +1929,6 @@
                     
                     document.getElementById('total-users-count').textContent = formatNumber(totalUsers);
                     document.getElementById('total-balance').textContent = formatCurrency(totalBalance);
-                    document.getElementById('today-date').textContent = new Date().getDate();
                 }
                 
                 if (txRes.success) {
@@ -1997,6 +2021,7 @@
             tab.innerHTML = `
                 <div class="admin-section">
                     <h3><i class="fas fa-globe"></i> Global Withdrawal Settings</h3>
+                    <div class="timezone-display mb-3" id="global-settings-timezone">Loading timezone...</div>
                     <p style="color: #a0a0c0; margin-bottom: 20px;">
                         Set the default withdrawal days for all users. Users with custom settings will not be affected.
                     </p>
@@ -2041,12 +2066,14 @@
                             <li>Existing users without custom settings will use these days</li>
                             <li>Users with custom withdrawal day settings will NOT be affected</li>
                             <li>If no days are selected, the system will use default days: 7, 14, 25, 30</li>
+                            <li>Server timezone is used for day calculation (<span id="settings-tz-note">UTC</span>)</li>
                         </ul>
                     </div>
                 </div>
             `;
             
             renderGlobalDaySelector();
+            updateTimezoneDisplay();
         }
         
         function renderGlobalDaySelector() {
@@ -2380,13 +2407,8 @@
                 : [];
             
             try {
-                // First toggle restriction
                 await postData(`/api/admin/user/${selectedUserId}/toggle-restrict`, {});
-                
-                // Set limit
                 await postData(`/api/admin/user/${selectedUserId}/set-limit`, { limit: limit });
-                
-                // Set custom withdrawal days
                 await postData(`/api/admin/user/${selectedUserId}/set-custom-days`, { days: customDays });
                 
                 showMessage('User settings updated!', 'success');
@@ -2394,7 +2416,7 @@
                 modal.hide();
                 loadUsers();
                 if (withdrawalReportData) {
-                    loadWithdrawalReport(); // Refresh report
+                    loadWithdrawalReport();
                 }
             } catch (err) {
                 console.error('Save settings error:', err);
@@ -2636,6 +2658,7 @@
                             <button onclick="loadWithdrawalReport()" class="btn btn-primary">
                                 <i class="fas fa-sync-alt"></i> Refresh Report
                             </button>
+                            <span class="timezone-display ms-3" id="report-timezone">Loading...</span>
                         </div>
                         <div class="table-container">
                             <table>
@@ -2665,6 +2688,22 @@
                 if (reportRes.success) {
                     withdrawalReportData = reportRes;
                     renderWithdrawalReport(reportRes);
+                    
+                    // Fetch timezone info for display
+                    try {
+                        const checkRes = await fetch('/api/withdrawal/check-day', {
+                            credentials: 'include',
+                            headers: { 'Cache-Control': 'no-cache' }
+                        });
+                        const checkData = await checkRes.json();
+                        if (checkData.success) {
+                            const todayDisplay = checkData.today_date + ' (Day ' + checkData.today + ') ' + checkData.timezone_display;
+                            document.getElementById('report-today').textContent = todayDisplay;
+                            document.getElementById('report-timezone').textContent = checkData.timezone_display + ' • Day ' + checkData.today;
+                        }
+                    } catch (err) {
+                        console.warn('Could not fetch timezone info:', err);
+                    }
                 }
             } catch (err) {
                 console.error('Load report error:', err);
@@ -2675,7 +2714,6 @@
             document.getElementById('report-total-users').textContent = formatNumber(report.total_users);
             document.getElementById('report-can-withdraw').textContent = formatNumber(report.users_withdrawal_today);
             document.getElementById('report-restricted').textContent = formatNumber(report.users_restricted);
-            document.getElementById('report-today').textContent = report.today;
             
             const tbody = document.getElementById('withdrawal-report-users');
             if (!report.users || report.users.length === 0) {
@@ -2732,7 +2770,6 @@
                     document.getElementById('whatsapp-link').value = s.whatsapp_link || '';
                     document.getElementById('telegram-link').value = s.telegram_link || '';
                     document.getElementById('facebook-link').value = s.facebook_link || '';
-                    // Populate min withdrawal with live DB value
                     const minWd = s.min_withdrawal != null ? s.min_withdrawal : 100000;
                     document.getElementById('min-withdrawal-input').value = minWd;
                 }
@@ -2760,7 +2797,7 @@
                 showMessage('Network error.', 'error', 'social-message');
             }
         }
-
+        
         async function saveMinWithdrawal() {
             const val = parseFloat(document.getElementById('min-withdrawal-input').value);
             if (isNaN(val) || val < 0) {
@@ -2800,24 +2837,27 @@
             }
             
             try {
-                // First check if admin is logged in
                 const profile = await fetchData('/api/user/profile');
                 if (!profile.success) {
                     showMessage('Session expired', 'error', 'password-message');
                     return;
                 }
                 
-                // Update password through profile update
-                const result = await postData('/api/user/update-profile', {
+                const result = await postData('/api/admin/change-password', {
                     current_password: current,
                     new_password: newPass
                 });
                 
                 if (result.success) {
-                    showMessage('Password changed!', 'success', 'password-message');
+                    showMessage('Password changed! Please login again.', 'success', 'password-message');
                     document.getElementById('current-password').value = '';
                     document.getElementById('new-password').value = '';
                     document.getElementById('confirm-password').value = '';
+                    setTimeout(() => {
+                        if (confirm('Password changed. Logout and login again?')) {
+                            adminLogout();
+                        }
+                    }, 2000);
                 } else {
                     showMessage(result.message, 'error', 'password-message');
                 }
@@ -2986,12 +3026,11 @@
                     currentUserData = data.user;
                     loadDashboard();
                     
-                    // Start auto-refresh for dashboard
                     setInterval(() => {
                         if (document.querySelector('.tab-content.active').id === 'dashboard') {
                             loadDashboard();
                         }
-                    }, 30000); // Refresh every 30 seconds
+                    }, 30000);
                 })
                 .catch(() => window.location.href = '/');
         });
