@@ -12,8 +12,6 @@
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:radial-gradient(ellipse at 30% 20%, #1b1135, #0a0518);color:#F0F0F0;font-family:'Rajdhani',sans-serif;min-height:100vh;padding:12px;}
 .container{max-width:900px;margin:0 auto;}
-
-/* HEADER - Compact */
 .header{background:rgba(255,255,255,0.02);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
 .logo{display:flex;align-items:center;gap:10px;}
 .logo-icon{width:36px;height:36px;background:linear-gradient(45deg,#8000FF,#00CCFF);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:#fff;font-family:'Orbitron',sans-serif;box-shadow:0 2px 12px rgba(128,0,255,0.25);}
@@ -21,23 +19,15 @@ body{background:radial-gradient(ellipse at 30% 20%, #1b1135, #0a0518);color:#F0F
 .header-right{display:flex;align-items:center;gap:12px;font-size:0.8rem;}
 .header-right .user{color:#00FFCC;font-weight:600;}
 .header-right .bal{color:#A0A0B5;}
-
-/* NAV - Compact */
 .nav{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap;background:rgba(255,255,255,0.02);border-radius:10px;padding:4px;border:1px solid rgba(255,255,255,0.04);}
 .nav a{padding:6px 14px;border-radius:8px;color:#A0A0B5;text-decoration:none;font-size:0.75rem;font-weight:600;transition:all 0.3s;display:flex;align-items:center;gap:6px;}
 .nav a:hover{background:rgba(255,255,255,0.03);color:#F0F0F0;}
 .nav a.active{background:rgba(168,85,247,0.15);color:#a855f7;}
-
-/* MAIN CONTENT */
 .main{background:rgba(255,255,255,0.02);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:16px;}
-
-/* STATS BAR - Compact */
 .stats-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
 .stat-item{background:rgba(128,0,255,0.06);border:1px solid rgba(128,0,255,0.1);border-radius:8px;padding:6px 14px;display:flex;align-items:center;gap:8px;flex:1;min-width:80px;}
 .stat-item .num{font-size:1.1rem;font-weight:700;color:#00FFCC;font-family:'Orbitron',monospace;}
 .stat-item .lbl{font-size:0.55rem;color:#A0A0B5;text-transform:uppercase;letter-spacing:0.5px;}
-
-/* CLAIM BUTTON - Compact */
 .claim-bar{background:linear-gradient(135deg,rgba(128,0,255,0.06),rgba(0,204,255,0.06));border:1px solid rgba(0,255,85,0.15);border-radius:10px;padding:10px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
 .claim-bar .msg{font-size:0.8rem;color:#A0A0B5;}
 .claim-bar .msg strong{color:#00FF55;}
@@ -45,14 +35,10 @@ body{background:radial-gradient(ellipse at 30% 20%, #1b1135, #0a0518);color:#F0F
 .claim-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,255,85,0.25);}
 .claim-btn:disabled{opacity:0.5;cursor:not-allowed;}
 .claim-btn .spinner{display:none;}
-
-/* CATEGORY FILTER - Compact */
 .categories{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap;}
 .cat-btn{padding:4px 12px;background:transparent;border:1px solid rgba(255,255,255,0.04);border-radius:14px;color:#A0A0B5;cursor:pointer;font-size:0.65rem;font-weight:600;transition:all 0.3s;}
 .cat-btn:hover{background:rgba(255,255,255,0.02);color:#F0F0F0;}
 .cat-btn.active{background:rgba(168,85,247,0.12);border-color:rgba(168,85,247,0.2);color:#a855f7;}
-
-/* ACHIEVEMENT GRID - Compact */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;}
 .card{background:rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:12px;display:flex;gap:10px;align-items:flex-start;transition:all 0.3s;position:relative;}
 .card:hover{transform:translateY(-2px);border-color:rgba(128,0,255,0.15);}
@@ -70,32 +56,22 @@ body{background:radial-gradient(ellipse at 30% 20%, #1b1135, #0a0518);color:#F0F
 .card .info .meta .cash{color:#00FF55;}
 .card .badge-unlocked{position:absolute;top:6px;right:6px;background:#00FF55;color:#0a0618;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.5rem;font-weight:700;}
 .card .badge-new{position:absolute;top:6px;right:30px;background:#ff0055;color:#fff;padding:1px 6px;border-radius:6px;font-size:0.45rem;font-weight:700;}
-
-/* LOADING */
 .loading{text-align:center;padding:30px;color:#A0A0B5;}
 .loading .spinner{width:28px;height:28px;border:3px solid rgba(255,255,255,0.05);border-left-color:#8000FF;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 8px;}
 @keyframes spin{to{transform:rotate(360deg);}}
-
-/* MESSAGE */
 .msg{display:none;padding:8px 12px;border-radius:8px;font-size:0.75rem;margin-bottom:10px;text-align:center;}
 .msg.success{background:rgba(0,255,85,0.06);border:1px solid rgba(0,255,85,0.15);color:#00FF55;display:block;}
 .msg.error{background:rgba(255,0,85,0.06);border:1px solid rgba(255,0,85,0.15);color:#FF5555;display:block;}
 .msg.info{background:rgba(0,204,255,0.06);border:1px solid rgba(0,204,255,0.15);color:#00CCFF;display:block;}
-
-/* FOOTER */
 .footer{text-align:center;padding:12px;color:#A0A0B5;font-size:0.65rem;margin-top:12px;border-top:1px solid rgba(255,255,255,0.02);}
 .footer a{color:#00CCFF;text-decoration:none;margin:0 6px;}
 .footer a:hover{text-decoration:underline;}
-
-/* RESPONSIVE */
 @media(max-width:600px){.grid{grid-template-columns:1fr 1fr;}}
 @media(max-width:400px){.grid{grid-template-columns:1fr;}.stats-bar{flex-direction:column;}.claim-bar{flex-direction:column;text-align:center;}.header{flex-wrap:wrap;gap:6px;}}
 </style>
 </head>
 <body>
 <div class="container">
-
-<!-- HEADER - Compact -->
 <header class="header">
   <div class="logo">
     <div class="logo-icon">F</div>
@@ -106,8 +82,6 @@ body{background:radial-gradient(ellipse at 30% 20%, #1b1135, #0a0518);color:#F0F
     <span class="bal"><i class="fas fa-wallet"></i> ₦<span id="balance">0.00</span></span>
   </div>
 </header>
-
-<!-- NAV - Compact -->
 <nav class="nav">
   <a href="index.html"><i class="fas fa-home"></i> Home</a>
   <a href="snake.html"><i class="fas fa-gamepad"></i> Snake</a>
@@ -115,29 +89,19 @@ body{background:radial-gradient(ellipse at 30% 20%, #1b1135, #0a0518);color:#F0F
   <a href="plinko.html"><i class="fas fa-bullseye"></i> Plinko</a>
   <a href="achievements.html" class="active"><i class="fas fa-trophy"></i> Awards</a>
 </nav>
-
-<!-- MAIN -->
 <div class="main">
-
-  <!-- Message -->
   <div id="msg" class="msg"></div>
-
-  <!-- Stats Bar -->
   <div class="stats-bar">
     <div class="stat-item"><span class="num" id="total">0</span><span class="lbl">Total</span></div>
     <div class="stat-item"><span class="num" id="unlocked">0</span><span class="lbl">Unlocked</span></div>
     <div class="stat-item"><span class="num" id="points">0</span><span class="lbl">Points</span></div>
   </div>
-
-  <!-- Claim Bar -->
   <div class="claim-bar">
     <span class="msg"><i class="fas fa-gift"></i> Claim your achievement rewards manually</span>
     <button class="claim-btn" id="claimBtn" onclick="claimRewards()">
       <i class="fas fa-coins"></i> CLAIM ALL
     </button>
   </div>
-
-  <!-- Categories -->
   <div class="categories">
     <button class="cat-btn active" data-cat="all">All</button>
     <button class="cat-btn" data-cat="gaming">Gaming</button>
@@ -145,21 +109,15 @@ body{background:radial-gradient(ellipse at 30% 20%, #1b1135, #0a0518);color:#F0F
     <button class="cat-btn" data-cat="streaks">Streaks</button>
     <button class="cat-btn" data-cat="special">Special</button>
   </div>
-
-  <!-- Grid -->
   <div class="grid" id="grid">
     <div class="loading" id="loading"><div class="spinner"></div>Loading...</div>
   </div>
-
 </div>
-
-<!-- FOOTER -->
 <div class="footer">
   <span>FLEXIA © 2026</span>
   <a href="receipt.html">Receipt</a>
   <a href="index.html">Dashboard</a>
 </div>
-
 </div>
 
 <script>
@@ -181,6 +139,22 @@ function showMessage(text, type = 'info') {
   if (type !== 'error') {
     setTimeout(() => { el.className = 'msg'; }, 4000);
   }
+}
+
+function handleAchievementError(error) {
+    console.error('Achievement error:', error);
+    var grid = document.getElementById('grid');
+    if (grid) {
+        grid.innerHTML = `
+            <div style="grid-column:1/-1;text-align:center;padding:40px;color:#ff4757;">
+                <i class="fas fa-exclamation-triangle" style="font-size:2rem;margin-bottom:10px;display:block;"></i>
+                <p>Failed to load achievements.</p>
+                <button onclick="location.reload()" style="margin-top:15px;padding:8px 20px;background:#8000FF;border:none;border-radius:8px;color:#fff;cursor:pointer;">
+                    <i class="fas fa-sync-alt"></i> Retry
+                </button>
+            </div>
+        `;
+    }
 }
 
 async function loadProfile() {
@@ -226,7 +200,10 @@ async function loadAchievements() {
       renderAchievements(achievements);
       if (loading) loading.style.display = 'none';
     } else { showMessage('Failed to load achievements', 'error'); }
-  } catch (e) { console.error('Load error:', e); showMessage('Network error loading achievements', 'error'); if (loading) { loading.style.display = 'none'; loading.innerHTML = '<div style="color:#ff5555;font-size:2rem;margin-bottom:8px;"><i class="fas fa-exclamation-triangle"></i></div><p style="color:#ff5555;font-size:0.8rem;">Failed to load</p><button onclick="loadAchievements()" style="background:linear-gradient(135deg,#a855f7,#6366f1);color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;margin-top:6px;font-size:0.7rem;">Retry</button>'; } }
+  } catch (e) { 
+    console.error('Load error:', e); 
+    showMessage('Network error loading achievements', 'error'); 
+    handleAchievementError(e);
   } finally { isLoading = false; }
 }
 
@@ -261,7 +238,6 @@ function renderAchievements(list) {
   });
 }
 
-// Category filter
 document.querySelectorAll('.cat-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
@@ -298,13 +274,10 @@ async function claimRewards() {
 async function init() {
   await loadProfile();
   await loadAchievements();
-  // Auto-refresh every 60 seconds
   setInterval(() => { loadAchievements(); }, 60000);
 }
 
 document.addEventListener('DOMContentLoaded', init);
-
-// Quick refresh on visibility change
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     loadAchievements();
