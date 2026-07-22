@@ -2503,14 +2503,11 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   var ref = urlParams.get('ref');
-  if (ref) {
-    setTimeout(async function() {
-      var result = await PaystackPayment.checkStatus(ref);
-      if (result.success && result.status === 'COMPLETED') {
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-    }, 2000);
-  }
+  // Note: payment status is handled by App.checkPaymentStatus() (called via
+  // App.init() -> checkAuth()), which correctly gates on ?payment=success
+  // before acting. A duplicate check + history.replaceState() used to run
+  // here too, causing PaystackPayment.checkStatus() to fire twice per load
+  // and risking a race that stripped the query string early.
 
   var accountInput = document.getElementById('account-number');
   if (accountInput) {
