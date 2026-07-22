@@ -1010,11 +1010,25 @@ def get_game_friendly_name(game_type):
     names = {'snake': 'Snake Game', 'coinflip': 'Coin Flip', 'plinko': 'Plinko 3D', 'spin': 'Daily Spin', 'tiktok': 'TikTok Follow'}
     return names.get(game_type, game_type)
 
-def update_user_balance(user_id, amount_change):
-    conn = None
+def update_user_balance(user_id, amount_change, conn=None, cursor=None):
+    """
+    Update a user's balance atomically.
+
+    If conn/cursor are supplied, reuses the caller's connection and does
+    NOT commit or release it — the caller owns that transaction and must
+    commit/rollback/release itself. This lets the balance update and the
+    accompanying transaction-log INSERT happen in a single atomic commit,
+    so a crash between them can't leave a balance change with no record.
+
+    If conn/cursor are omitted, falls back to the old self-contained
+    behavior (own connection, own commit, own release) for callers that
+    don't need to combine it with other writes.
+    """
+    owns_connection = conn is None
     try:
-        conn = get_db()
-        cursor = conn.cursor()
+        if owns_connection:
+            conn = get_db()
+            cursor = conn.cursor()
         ph = '%s' if os.environ.get('DATABASE_URL') else '?'
         if os.environ.get('DATABASE_URL'):
             cursor.execute(f'UPDATE users SET balance = balance + {ph} WHERE id = {ph} RETURNING balance', (amount_change, user_id))
@@ -1023,16 +1037,21 @@ def update_user_balance(user_id, amount_change):
             cursor.execute(f'SELECT balance FROM users WHERE id = {ph}', (user_id,))
         row = cursor.fetchone()
         new_balance = float(row[0]) if row and row[0] else 0.0
-        conn.commit()
+        if owns_connection:
+            conn.commit()
         app.logger.info(f"Atomic balance update for user {user_id}: {amount_change}, new balance: {new_balance}")
         return new_balance
     except Exception as e:
         app.logger.error(f"Balance update error: {str(e)}")
-        if conn:
+        if owns_connection and conn:
             conn.rollback()
+        else:
+            # Re-raise so the caller's own except/rollback handles it —
+            # the caller owns this transaction and needs to know it failed.
+            raise
         return None
     finally:
-        if conn:
+        if owns_connection and conn:
             return_db_connection(conn)
 
 def check_game_cooldown(user_id, game_type):
@@ -2146,7 +2165,6 @@ def report_snake_enhanced():
             SNAKE_DAILY_CAP = 5000
 
             if earned_today >= SNAKE_DAILY_CAP:
-                return_db_connection(conn)
                 return jsonify({
                     "success": False,
                     "message": f"Daily snake earnings cap reached (₦{SNAKE_DAILY_CAP}). Come back tomorrow!",
@@ -2157,7 +2175,7 @@ def report_snake_enhanced():
             if earned_today + reward > SNAKE_DAILY_CAP:
                 reward = SNAKE_DAILY_CAP - earned_today
 
-            new_balance = update_user_balance(user['id'], reward)
+            new_balance = update_user_balance(user['id'], reward, conn, cursor)
 
             if new_balance is None:
                 return jsonify({"success": False, "message": "Failed to update balance"}), 500
@@ -2253,7 +2271,6 @@ def report_coinflip_enhanced():
                 COINFLIP_WIN_CAP = 5000
 
                 if won_today >= COINFLIP_WIN_CAP:
-                    return_db_connection(conn)
                     return jsonify({
                         "success": False,
                         "message": f"Daily coinflip win cap reached (₦{COINFLIP_WIN_CAP}). Come back tomorrow!",
@@ -2268,7 +2285,7 @@ def report_coinflip_enhanced():
                 won_today = 0
                 COINFLIP_WIN_CAP = 5000
 
-            new_balance = update_user_balance(user['id'], net_change)
+            new_balance = update_user_balance(user['id'], net_change, conn, cursor)
 
             if new_balance is None:
                 return jsonify({"success": False, "message": "Failed to update balance"}), 500
@@ -2369,7 +2386,6 @@ def report_plinko_enhanced():
                 plinko_won_today = float(cursor.fetchone()[0] or 0)
 
                 if plinko_won_today >= PLINKO_WIN_CAP:
-                    return_db_connection(conn)
                     return jsonify({
                         "success": False,
                         "message": f"Daily plinko win cap reached (₦{PLINKO_WIN_CAP}). Come back tomorrow!",
@@ -2383,7 +2399,7 @@ def report_plinko_enhanced():
             else:
                 plinko_won_today = 0
 
-            new_balance = update_user_balance(user['id'], net_change)
+            new_balance = update_user_balance(user['id'], net_change, conn, cursor)
 
             if new_balance is None:
                 return jsonify({"success": False, "message": "Failed to update balance"}), 500
@@ -2427,6 +2443,9 @@ def report_plinko_enhanced():
             if conn:
                 conn.rollback()
             return jsonify({"success": False, "message": f"Failed to process: {str(e)}"}), 500
+        finally:
+            if conn:
+                return_db_connection(conn)
     finally:
         release_claim_lock(user['id'], 'PLINKO')
 
@@ -2464,7 +2483,7 @@ def execute_spin():
         import random
         reward = random.choices(rewards, weights=weights, k=1)[0]
 
-        new_balance = update_user_balance(user['id'], reward)
+        new_balance = update_user_balance(user['id'], reward, conn, cursor)
 
         if new_balance is None:
             return jsonify({"success": False, "message": "Failed to update balance"}), 500
@@ -2550,60 +2569,64 @@ def follow_tiktok_daily_enhanced():
         conn = get_db()
         cursor = conn.cursor()
 
-        cursor.execute('SELECT 1 FROM transactions WHERE user_id = %s AND type = %s AND DATE(timestamp) = %s', (user['id'], 'TIKTOK_DAILY', today))
-        if cursor.fetchone():
-            return jsonify({"success": False, "message": "Already claimed today"}), 400
+        try:
+            cursor.execute('SELECT 1 FROM transactions WHERE user_id = %s AND type = %s AND DATE(timestamp) = %s', (user['id'], 'TIKTOK_DAILY', today))
+            if cursor.fetchone():
+                return jsonify({"success": False, "message": "Already claimed today"}), 400
 
-        cursor.execute('SELECT reward_amount FROM tiktok_daily WHERE date = %s', (today,))
-        task_row = cursor.fetchone()
+            cursor.execute('SELECT reward_amount FROM tiktok_daily WHERE date = %s', (today,))
+            task_row = cursor.fetchone()
 
-        if not task_row:
-            return jsonify({"success": False, "message": "No task for today"}), 404
+            if not task_row:
+                return jsonify({"success": False, "message": "No task for today"}), 404
 
-        cursor.execute(f'SELECT COUNT(*) FROM transactions WHERE user_id = {ph} AND type = %s AND DATE(timestamp) = %s', (user['id'], 'TIKTOK_DAILY', today))
-        tasks_done_today = cursor.fetchone()[0]
+            cursor.execute(f'SELECT COUNT(*) FROM transactions WHERE user_id = {ph} AND type = %s AND DATE(timestamp) = %s', (user['id'], 'TIKTOK_DAILY', today))
+            tasks_done_today = cursor.fetchone()[0]
 
-        tiered_rewards = {0: 50, 1: 75, 2: 100}
-        reward = tiered_rewards.get(tasks_done_today, 50)
+            tiered_rewards = {0: 50, 1: 75, 2: 100}
+            reward = tiered_rewards.get(tasks_done_today, 50)
 
-        limit_check = check_game_limit_with_logout(user['id'], 'tiktok')
-        if not limit_check.get("can_play", False):
+            limit_check = check_game_limit_with_logout(user['id'], 'tiktok')
+            if not limit_check.get("can_play", False):
+                return jsonify({
+                    "success": False,
+                    "message": f"Daily TikTok limit reached! {limit_check.get('reason', '')}",
+                    "force_logout": True,
+                    "redirect": True,
+                    "details": limit_check
+                }), 403
+
+            new_balance = update_user_balance(user['id'], reward, conn, cursor)
+
+            if new_balance is None:
+                return jsonify({"success": False, "message": "Failed to update balance"}), 500
+
+            tx_id = f"TIKTOK-{secrets.token_hex(8)}"
+            cursor.execute(f'INSERT INTO transactions (id, user_id, type, amount, status, timestamp) VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph})',
+                          (tx_id, user['id'], 'TIKTOK_DAILY', reward, 'COMPLETED', datetime.utcnow().isoformat()))
+            conn.commit()
+
+            app.logger.info(f"TikTok daily claimed by {user['username']}: reward: {reward}")
+
+            task_number = tasks_done_today + 1
+            next_reward = tiered_rewards.get(tasks_done_today + 1, None)
+
             return jsonify({
-                "success": False,
-                "message": f"Daily TikTok limit reached! {limit_check.get('reason', '')}",
-                "force_logout": True,
-                "redirect": True,
-                "details": limit_check
-            }), 403
-
-        new_balance = update_user_balance(user['id'], reward)
-
-        if new_balance is None:
-            return jsonify({"success": False, "message": "Failed to update balance"}), 500
-
-        tx_id = f"TIKTOK-{secrets.token_hex(8)}"
-        cursor.execute(f'INSERT INTO transactions (id, user_id, type, amount, status, timestamp) VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph})',
-                      (tx_id, user['id'], 'TIKTOK_DAILY', reward, 'COMPLETED', datetime.utcnow().isoformat()))
-        conn.commit()
-        return_db_connection(conn)
-
-        app.logger.info(f"TikTok daily claimed by {user['username']}: reward: {reward}")
-
-        task_number = tasks_done_today + 1
-        next_reward = tiered_rewards.get(tasks_done_today + 1, None)
-
-        return jsonify({
-            "success": True,
-            "reward": reward,
-            "new_balance": new_balance,
-            "task_number": task_number,
-            "next_reward": next_reward,
-            "message": f"Task {task_number}/3 complete! Earned ₦{reward}" + (f" | Next task: ₦{next_reward}" if next_reward else " | All tasks done today!")
-        })
-
-    except Exception as e:
-        app.logger.error(f"TikTok follow error: {e}")
-        return jsonify({"success": False, "message": f"Failed to process: {str(e)}"}), 500
+                "success": True,
+                "reward": reward,
+                "new_balance": new_balance,
+                "task_number": task_number,
+                "next_reward": next_reward,
+                "message": f"Task {task_number}/3 complete! Earned ₦{reward}" + (f" | Next task: ₦{next_reward}" if next_reward else " | All tasks done today!")
+            })
+        except Exception as e:
+            app.logger.error(f"TikTok follow error: {e}")
+            if conn:
+                conn.rollback()
+            return jsonify({"success": False, "message": f"Failed to process: {str(e)}"}), 500
+        finally:
+            if conn:
+                return_db_connection(conn)
     finally:
         release_claim_lock(user['id'], 'TIKTOK')
 
@@ -2648,7 +2671,7 @@ def claim_daily_login_bonus():
             reward = 20
             milestone = None
 
-        new_balance = update_user_balance(user['id'], reward)
+        new_balance = update_user_balance(user['id'], reward, conn, cursor)
 
         if new_balance is None:
             return jsonify({"success": False, "message": "Failed to update balance"}), 500
@@ -2736,41 +2759,45 @@ def claim_referral_bonus():
         conn = get_db()
         cursor = conn.cursor()
 
-        cursor.execute(f'SELECT COUNT(*) FROM users WHERE referred_by = {ph}', (user.get('referral_code', ''),))
-        referrals = cursor.fetchone()[0]
+        try:
+            cursor.execute(f'SELECT COUNT(*) FROM users WHERE referred_by = {ph}', (user.get('referral_code', ''),))
+            referrals = cursor.fetchone()[0]
 
-        total_bonus = referrals * CONFIG.REFERRAL_BONUS
-        claimed = int(user.get('claimed_bonuses', 0))
-        unclaimed = total_bonus - claimed
+            total_bonus = referrals * CONFIG.REFERRAL_BONUS
+            claimed = int(user.get('claimed_bonuses', 0))
+            unclaimed = total_bonus - claimed
 
-        if unclaimed <= 0:
-            return jsonify({"success": False, "message": "No bonus to claim"}), 400
+            if unclaimed <= 0:
+                return jsonify({"success": False, "message": "No bonus to claim"}), 400
 
-        new_balance = update_user_balance(user['id'], unclaimed)
+            new_balance = update_user_balance(user['id'], unclaimed, conn, cursor)
 
-        if new_balance is None:
-            return jsonify({"success": False, "message": "Failed to update balance"}), 500
+            if new_balance is None:
+                return jsonify({"success": False, "message": "Failed to update balance"}), 500
 
-        cursor.execute('UPDATE users SET claimed_bonuses = %s WHERE id = %s', (total_bonus, user['id']))
+            cursor.execute('UPDATE users SET claimed_bonuses = %s WHERE id = %s', (total_bonus, user['id']))
 
-        tx_id = f"REF-{secrets.token_hex(8)}"
-        cursor.execute(f'INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp) VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})',
-                      (tx_id, user['id'], 'REFERRAL_BONUS', unclaimed, 'COMPLETED', json.dumps({"refs": referrals}), datetime.utcnow().isoformat()))
-        conn.commit()
-        return_db_connection(conn)
+            tx_id = f"REF-{secrets.token_hex(8)}"
+            cursor.execute(f'INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp) VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})',
+                          (tx_id, user['id'], 'REFERRAL_BONUS', unclaimed, 'COMPLETED', json.dumps({"refs": referrals}), datetime.utcnow().isoformat()))
+            conn.commit()
 
-        app.logger.info(f"Referral bonus claimed by {user['username']}: {unclaimed}")
+            app.logger.info(f"Referral bonus claimed by {user['username']}: {unclaimed}")
 
-        return jsonify({
-            "success": True,
-            "claimed": unclaimed,
-            "new_balance": new_balance,
-            "message": f"Success! Claimed ₦{unclaimed} referral bonus"
-        })
-
-    except Exception as e:
-        app.logger.error(f"Referral error: {e}")
-        return jsonify({"success": False, "message": f"Failed to claim: {str(e)}"}), 500
+            return jsonify({
+                "success": True,
+                "claimed": unclaimed,
+                "new_balance": new_balance,
+                "message": f"Success! Claimed ₦{unclaimed} referral bonus"
+            })
+        except Exception as e:
+            app.logger.error(f"Referral error: {e}")
+            if conn:
+                conn.rollback()
+            return jsonify({"success": False, "message": f"Failed to claim: {str(e)}"}), 500
+        finally:
+            if conn:
+                return_db_connection(conn)
     finally:
         release_claim_lock(user['id'], 'REFERRAL')
 
@@ -3003,7 +3030,7 @@ def withdraw():
     cursor = conn.cursor()
 
     try:
-        new_balance = update_user_balance(user['id'], -amount)
+        new_balance = update_user_balance(user['id'], -amount, conn, cursor)
 
         if new_balance is None:
             return jsonify({"success": False, "message": "Failed to update balance"}), 500
@@ -3354,7 +3381,7 @@ def admin_adjust_user_balance(user_id):
     cursor = conn.cursor()
 
     try:
-        new_balance = update_user_balance(user_id, amount)
+        new_balance = update_user_balance(user_id, amount, conn, cursor)
 
         if new_balance is None:
             return jsonify({"success": False, "message": "Failed to update balance"}), 500
@@ -3715,7 +3742,7 @@ def admin_approve_withdrawal():
         new_status = 'COMPLETED' if action == 'APPROVE' else 'FAILED'
 
         if action == 'REJECT':
-            update_user_balance(user_id, amount)
+            update_user_balance(user_id, amount, conn, cursor)
 
         cursor.execute('UPDATE transactions SET status = %s WHERE id = %s', (new_status, transaction_id))
         conn.commit()
