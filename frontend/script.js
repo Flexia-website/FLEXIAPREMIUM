@@ -976,10 +976,9 @@ async function checkWithdrawalDay() {
       if (!canWithdraw) {
         showWithdrawalDayModal(false, today, days, timezoneDisplay, todayDate);
         return false;
-      } else {
-        showWithdrawalDayModal(true, today, days, timezoneDisplay, todayDate);
-        return true;
       }
+      // Allowed: don't interrupt the flow with an extra modal, just proceed.
+      return true;
     } else {
       // Fallback: use browser time only if server fails
       var todayBrowser = new Date().getDate();
@@ -1360,46 +1359,53 @@ var GameManager = {
       return { success: false, message: "Please wait for the current claim to complete" };
     }
     this.pendingRequests.set(gameType, true);
-    
-    var attempts = 0;
-    var maxAttempts = CONFIG.MAX_RETRY_ATTEMPTS || 3;
-    var lastError = null;
-    
-    while (attempts < maxAttempts) {
-      attempts++;
-      try {
-        var response = await App.requestWithTimeout(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Request-ID': Date.now().toString() },
-          credentials: 'include',
-          body: JSON.stringify(data)
-        }, 15000);
-        var result = await response.json();
-        this.lastClaimTime = Date.now();
-        
-        if (!result.success && result.message && 
-            (result.message.toLowerCase().includes('wait') || 
-             result.message.toLowerCase().includes('rate') ||
-             result.message.toLowerCase().includes('cooldown'))) {
-          console.log('Rate limited, waiting ' + (CONFIG.RETRY_DELAY * attempts) + 'ms before retry');
-          await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY * attempts));
-          continue;
-        }
-        
-        return result;
-      } catch (error) {
-        console.error('Claim attempt ' + attempts + ' failed:', error);
-        lastError = error;
-        if (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY * attempts));
+
+    try {
+      var attempts = 0;
+      var maxAttempts = CONFIG.MAX_RETRY_ATTEMPTS || 3;
+      var lastError = null;
+
+      while (attempts < maxAttempts) {
+        attempts++;
+        try {
+          var response = await App.requestWithTimeout(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Request-ID': Date.now().toString() },
+            credentials: 'include',
+            body: JSON.stringify(data)
+          }, 15000);
+          var result = await response.json();
+          this.lastClaimTime = Date.now();
+
+          if (!result.success && result.message &&
+              (result.message.toLowerCase().includes('wait') ||
+               result.message.toLowerCase().includes('rate') ||
+               result.message.toLowerCase().includes('cooldown'))) {
+            console.log('Rate limited, waiting ' + (CONFIG.RETRY_DELAY * attempts) + 'ms before retry');
+            await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY * attempts));
+            continue;
+          }
+
+          return result;
+        } catch (error) {
+          console.error('Claim attempt ' + attempts + ' failed:', error);
+          lastError = error;
+          if (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY * attempts));
+          }
         }
       }
+
+      if (lastError && lastError.name === 'AbortError') {
+        return { success: false, message: "Request timed out. Please try again." };
+      }
+      return { success: false, message: lastError ? lastError.message : "Connection error. Please try again." };
+    } finally {
+      // CRITICAL FIX: always release the lock, otherwise every claim after
+      // the first one for this gameType is permanently blocked for the
+      // rest of the session (affects withdrawals, achievements, referral claim, etc.)
+      this.pendingRequests.delete(gameType);
     }
-    
-    if (lastError && lastError.name === 'AbortError') {
-      return { success: false, message: "Request timed out. Please try again." };
-    }
-    return { success: false, message: lastError ? lastError.message : "Connection error. Please try again." };
   },
 
   setButtonLoading: function(buttonId, isLoading) {
