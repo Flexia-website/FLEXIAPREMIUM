@@ -1,9 +1,7 @@
 // ============================================================
-// FLEXIA Frontend - COMPLETE PRODUCTION VERSION v17.3
+// FLEXIA Frontend - COMPLETE PRODUCTION VERSION v17.5
 // All features: Auth, Games, Banking, Referrals, Achievements
-// Paystack: Test keys for verification (FREE), Live keys for payments
-// No auto-refresh, no user notifications, premium UI
-// Registration payment: NO LOGIN REQUIRED
+// Fixed: Withdrawal day check uses SERVER time, not browser time
 // ============================================================
 
 // ========== EMBEDDED CSS ==========
@@ -959,25 +957,34 @@ var Auth = {
   }
 };
 
-// ========== WITHDRAWAL DAY CHECK ==========
+// ========== WITHDRAWAL DAY CHECK - FIXED USING SERVER TIME ==========
 async function checkWithdrawalDay() {
   try {
     var response = await fetch('/api/withdrawal/check-day', {
       credentials: 'include'
     });
     var data = await response.json();
+    
     if (data.success) {
-      var today = new Date().getDate();
-      var days = data.custom_withdrawal_days.length > 0
-        ? data.custom_withdrawal_days
-        : data.global_withdrawal_days;
-      if (!data.can_withdraw) {
-        showWithdrawalDayModal(false, today, days);
+      // Use SERVER data, not browser time
+      var today = data.today;
+      var days = data.used_days || data.global_withdrawal_days || [];
+      var canWithdraw = data.can_withdraw;
+      var timezoneDisplay = data.timezone_display || 'UTC';
+      var todayDate = data.today_date || new Date().toISOString().split('T')[0];
+      
+      if (!canWithdraw) {
+        showWithdrawalDayModal(false, today, days, timezoneDisplay, todayDate);
         return false;
       } else {
-        showWithdrawalDayModal(true, today, days);
+        showWithdrawalDayModal(true, today, days, timezoneDisplay, todayDate);
         return true;
       }
+    } else {
+      // Fallback: use browser time only if server fails
+      var todayBrowser = new Date().getDate();
+      console.warn('Using browser time for fallback:', todayBrowser);
+      return true;
     }
   } catch (error) {
     console.error('Withdrawal day check error:', error);
@@ -985,12 +992,14 @@ async function checkWithdrawalDay() {
   }
 }
 
-function showWithdrawalDayModal(canWithdraw, today, days) {
+function showWithdrawalDayModal(canWithdraw, today, days, timezoneDisplay, todayDate) {
   var existingModal = document.getElementById('withdrawal-day-modal');
   if (existingModal) existingModal.remove();
   
   var sortedDays = days ? days.slice().sort(function(a,b){return a-b;}) : [];
   var nextDay = getNextAllowedDay(today, sortedDays);
+  var todayDateDisplay = todayDate || new Date().toISOString().split('T')[0];
+  var timezoneInfo = timezoneDisplay || 'UTC';
   
   var modal = document.createElement('div');
   modal.id = 'withdrawal-day-modal';
@@ -1012,6 +1021,8 @@ function showWithdrawalDayModal(canWithdraw, today, days) {
       allDays.push('<span class="' + dayClass + '">' + i + '</span>');
     }
     daysHTML = allDays.join('');
+  } else {
+    daysHTML = '<span style="color:#ff6b6b;">No withdrawal days configured</span>';
   }
   
   modalContent.innerHTML = `
@@ -1026,11 +1037,13 @@ function showWithdrawalDayModal(canWithdraw, today, days) {
         ? 'You <strong>CAN</strong> withdraw today (Day <strong>' + today + '</strong>)'
         : 'You <strong>CANNOT</strong> withdraw today (Day <strong>' + today + '</strong>)'
       }
+      <br><small style="color:#666;">Server Time: ${timezoneInfo} • Date: ${todayDateDisplay}</small>
     </p>
     
     <div class="withdrawal-day-info-row">
       <i class="fas fa-calendar-day"></i>
       <span>Today: Day ${today}</span>
+      <span style="margin-left:auto;font-size:0.7rem;color:#666;">${timezoneInfo}</span>
     </div>
     
     <div class="withdrawal-day-days-container">
@@ -1048,6 +1061,10 @@ function showWithdrawalDayModal(canWithdraw, today, days) {
         <span>Next allowed day: <strong>${nextDay}</strong></span>
       </div>
     ` : ''}
+    
+    <div style="margin-top:8px;font-size:0.7rem;color:#666;border-top:1px solid rgba(255,255,255,0.05);padding-top:8px;">
+      Server Timezone: ${timezoneInfo}
+    </div>
     
     <div class="withdrawal-day-buttons">
       ${canWithdraw ? `
@@ -1067,7 +1084,6 @@ function showWithdrawalDayModal(canWithdraw, today, days) {
   
   modal.appendChild(modalContent);
   document.body.appendChild(modal);
-  
   document.body.style.overflow = 'hidden';
   
   modal.addEventListener('click', function(e) {
@@ -2569,4 +2585,4 @@ window.claimPlinkoReward = async function(bet, multiplier) {
   return await GameManager.safeClaim('/api/games/plinko/report', { bet: bet, multiplier: multiplier }, 'plinko');
 };
 
-console.log('FLEXIA Script v17.3 - COMPLETE VERSION LOADED');
+console.log('FLEXIA Script v17.5 - WITHDRAWAL DAY FIX COMPLETE');
