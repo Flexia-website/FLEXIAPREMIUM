@@ -239,6 +239,29 @@ function showResult(win, coinResult, bet, payout) {
   setTimeout(() => { resultDisplay.className = 'result-display'; }, 3000);
 }
 
+// ═══ BALANCE SYNC - INSTANT UPDATE ═══
+function syncBalanceAfterClaim() {
+  fetch('/api/user/profile', { credentials: 'include', headers: { 'Cache-Control': 'no-cache' } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success && data.user) {
+        var balance = parseFloat(data.user.balance) || 0;
+        localStorage.setItem('flexia_balance', balance);
+        document.querySelectorAll('.balance-display, #balance, #user-balance, .balance-amount').forEach(function(el) {
+          el.textContent = '₦' + balance.toFixed(2);
+        });
+        var headerBalance = document.getElementById('header-balance');
+        if (headerBalance) headerBalance.textContent = '₦' + balance.toFixed(2);
+        if (window.App && window.App.currentUser) {
+          window.App.currentUser.balance = balance;
+          if (window.App.updateBalanceDisplay) window.App.updateBalanceDisplay();
+        }
+        console.log('✅ Balance synced instantly: ₦' + balance.toFixed(2));
+      }
+    })
+    .catch(function(e) { console.error('Balance sync error:', e); });
+}
+
 async function loadProfile() {
   try {
     const r = await fetch('/api/user/profile', { credentials: 'include' });
@@ -270,7 +293,6 @@ async function loadProfile() {
         localStorage.setItem('flexia_balance', d.user.balance);
         if (window.App && window.App.currentUser) {
           window.App.currentUser.balance = parseFloat(d.user.balance);
-          if (window.App.refreshBalance) window.App.refreshBalance(true);
         }
       }
     }
@@ -366,6 +388,7 @@ async function flipCoin() {
           flipBtn.innerHTML = '<i class="fas fa-lock"></i> CAP REACHED';
           flipBtn.disabled = true;
         }
+        // INSTANT BALANCE SYNC
         syncBalanceAfterClaim();
       } else {
         alert('❌ ' + (result.message || 'Failed to process'));
@@ -401,30 +424,6 @@ document.addEventListener('DOMContentLoaded', () => {
   selectChoice('heads');
   checkFlipButton();
 });
-
-// ═══════════════════════════════════════════════════════════════
-// ═══ BALANCE SYNC - ADDED ═══
-// ═══════════════════════════════════════════════════════════════
-function syncBalanceAfterClaim() {
-    fetch('/api/user/profile', { credentials: 'include' })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            if (data.success && data.user) {
-                var balance = parseFloat(data.user.balance) || 0;
-                localStorage.setItem('flexia_balance', balance);
-                document.querySelectorAll('.balance-display, #balance, #user-balance, .balance-amount').forEach(function(el) {
-                    el.textContent = '₦' + balance.toFixed(2);
-                });
-                var headerBalance = document.getElementById('header-balance');
-                if (headerBalance) headerBalance.textContent = '₦' + balance.toFixed(2);
-                if (window.App && window.App.currentUser) {
-                    window.App.currentUser.balance = balance;
-                    if (window.App.updateBalanceDisplay) window.App.updateBalanceDisplay();
-                }
-            }
-        })
-        .catch(function(e) { console.error('Balance sync error:', e); });
-}
 </script>
 </body>
 </html>
