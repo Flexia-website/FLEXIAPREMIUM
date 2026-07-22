@@ -236,39 +236,38 @@ async function downloadReceipt() {
   } catch(err) { console.error('Download failed:', err); alert('Failed to download receipt.'); }
 }
 
-async function checkWithdrawalStatus() {
+// ═══════════════════════════════════════════════════════════════
+// ═══ WITHDRAWAL CHECK - ADDED ═══
+// ═══════════════════════════════════════════════════════════════
+function checkWithdrawalStatus() {
   const statusEl = document.getElementById('withdrawal-status-message');
   const daysInfoEl = document.getElementById('withdrawal-days-info');
   const checkContainer = document.getElementById('withdrawal-check');
   if (statusEl) statusEl.textContent = 'Checking...';
   try {
-    const profileRes = await fetch('/api/user/profile');
-    const profileData = await profileRes.json();
-    if (!profileData.success) { if (statusEl) statusEl.innerHTML = '<span class="not-allowed-day">Please login</span>'; return; }
-    const today = new Date();
-    const todayDay = today.getDate();
-    const todayMonth = today.toLocaleString('default', { month: 'long' });
-    try {
-      const settingsRes = await fetch('/api/admin/global-withdrawal-days', { credentials: 'include' });
-      if (settingsRes.ok) {
-        const settingsData = await settingsRes.json();
-        if (settingsData.success) {
-          const withdrawalDays = settingsData.days || [7,14,25,30];
-          const isAllowed = withdrawalDays.includes(todayDay);
+    fetch('/api/withdrawal/check-day', { credentials: 'include' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success) {
+          var today = new Date().getDate();
+          var days = data.custom_withdrawal_days.length > 0 
+            ? data.custom_withdrawal_days 
+            : data.global_withdrawal_days;
           if (statusEl) {
-            statusEl.innerHTML = isAllowed ? `<span class="allowed-day">✅ Withdrawals ALLOWED today (${todayMonth} ${todayDay})</span>` : `<span class="not-allowed-day">❌ Withdrawals NOT ALLOWED today (${todayMonth} ${todayDay})</span>`;
+            statusEl.innerHTML = data.can_withdraw 
+              ? '<span class="allowed-day">✅ Withdrawals ALLOWED today (Day ' + today + ')</span>'
+              : '<span class="not-allowed-day">❌ Withdrawals NOT ALLOWED today (Day ' + today + ')</span>';
           }
           if (daysInfoEl) {
-            daysInfoEl.innerHTML = `<strong>Allowed Days:</strong> ${withdrawalDays.sort((a,b)=>a-b).join(', ')}<br><small>Today is ${todayMonth} ${todayDay} (Day ${todayDay})</small>`;
+            daysInfoEl.innerHTML = '<strong>Allowed Days:</strong> ' + days.sort(function(a,b){return a-b;}).join(', ');
           }
           if (checkContainer) checkContainer.style.display = 'block';
-          return;
         }
-      }
-    } catch(adminError) { console.log('Admin endpoint not accessible'); }
-    if (checkContainer) checkContainer.style.display = 'block';
-    if (statusEl) statusEl.innerHTML = `<span class="${'not-allowed-day'}">Could not determine withdrawal status</span>`;
-    if (daysInfoEl) daysInfoEl.innerHTML = `<strong>Today is:</strong> ${todayMonth} ${todayDay} (Day ${todayDay})<br><small>Contact admin for withdrawal days</small>`;
+      })
+      .catch(function(e) { 
+        console.error('Withdrawal check error:', e);
+        if (statusEl) statusEl.innerHTML = '<span class="not-allowed-day">Error checking status</span>';
+      });
   } catch(error) { console.error('Withdrawal check error:', error); if (statusEl) statusEl.innerHTML = '<span class="not-allowed-day">Error checking status</span>'; }
 }
 
@@ -278,7 +277,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const isHistory = urlParams.get('history') === 'true';
   if (isHistory) { document.getElementById('history-toggle').textContent = 'View Single Receipt'; loadHistory(); }
   else { document.getElementById('history-toggle').textContent = 'View All History'; loadSingleReceipt(); }
-  setTimeout(() => checkWithdrawalStatus(), 1000);
+  setTimeout(function() { checkWithdrawalStatus(); }, 1000);
 });
 </script>
 </body>
