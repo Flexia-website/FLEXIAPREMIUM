@@ -250,11 +250,11 @@ async function autoClaim() {
     const res = await callBackend(sessionApples, sessionGolden);
     if (res.success) {
       updateCapUI(res.daily_earned || DAILY_CAP);
-      // ✅ Sync balance to dashboard immediately
       if (res.new_balance !== undefined) localStorage.setItem('flexia_balance', res.new_balance);
       showFunPopup();
       sessionEarned = sessionApples = sessionGolden = 0;
       updateSessionUI();
+      syncBalanceAfterClaim();
     }
   } catch(e) { console.error('Auto-claim error', e); }
   isClaiming = false;
@@ -273,31 +273,68 @@ async function manualClaim() {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CLAIMING...';
 
   try {
-    const res = await callBackend(sessionApples, sessionGolden);
-    if (res.success) {
-      const earned = res.daily_earned || (dailyEarned + res.reward);
-      updateCapUI(earned);
-      // ✅ Sync balance to dashboard immediately
-      if (res.new_balance !== undefined) localStorage.setItem('flexia_balance', res.new_balance);
-      sessionEarned = sessionApples = sessionGolden = 0;
-      updateSessionUI();
-
-      if (res.remaining_today <= 0) {
-        showFunPopup(); lockClaimBtn();
-        alert('\U0001f389 CLAIMED \u20a6' + res.reward + '! You hit the \u20a6500 daily cap — amazing!');
-      } else {
-        btn.innerHTML = '<i class="fas fa-check"></i> CLAIMED \u20a6' + res.reward + '!';
-        setTimeout(() => { btn.disabled=false; btn.innerHTML='<i class="fas fa-trophy"></i> CLAIM'; isClaiming=false; }, 2500);
-        alert('\u2705 Claimed \u20a6' + res.reward + '! \u20a6' + res.remaining_today + ' remaining today.');
-        return;
+    let attempts = 0;
+    let success = false;
+    let result = null;
+    
+    while (attempts < 3 && !success) {
+      attempts++;
+      try {
+        result = await callBackend(sessionApples, sessionGolden);
+        if (result.success) {
+          success = true;
+          break;
+        } else {
+          if (result.message && result.message.includes('wait')) {
+            await new Promise(resolve => setTimeout(resolve, 2000 * attempts));
+            continue;
+          }
+          break;
+        }
+      } catch (e) {
+        console.error(`Attempt ${attempts} failed:`, e);
+        if (attempts < 3) {
+          await new Promise(resolve => setTimeout(resolve, 2000 * attempts));
+        } else {
+          throw e;
+        }
       }
-    } else {
-      btn.disabled=false; btn.innerHTML=orig;
-      alert('\u274c ' + (res.message || 'Claim failed. Try again.'));
     }
+    
+    if (!success || !result) {
+      throw new Error('Failed to claim reward after multiple attempts');
+    }
+
+    const earned = result.daily_earned || (dailyEarned + result.reward);
+    updateCapUI(earned);
+    
+    if (result.new_balance !== undefined) {
+      localStorage.setItem('flexia_balance', result.new_balance);
+    }
+    
+    sessionEarned = sessionApples = sessionGolden = 0;
+    updateSessionUI();
+
+    if (result.remaining_today <= 0) {
+      showFunPopup(); 
+      lockClaimBtn();
+      alert('🎉 CLAIMED ₦' + result.reward + '! You hit the ₦500 daily cap — amazing!');
+    } else {
+      btn.innerHTML = '<i class="fas fa-check"></i> CLAIMED ₦' + result.reward + '!';
+      setTimeout(() => { 
+        btn.disabled=false; 
+        btn.innerHTML='<i class="fas fa-trophy"></i> CLAIM'; 
+        isClaiming=false; 
+      }, 2500);
+      alert('✅ Claimed ₦' + result.reward + '! ₦' + result.remaining_today + ' remaining today.');
+      return;
+    }
+    syncBalanceAfterClaim();
   } catch(e) {
-    btn.disabled=false; btn.innerHTML=orig;
-    alert('\u274c Network error. Please try again.');
+    console.error('Claim error:', e);
+    btn.disabled=false; 
+    btn.innerHTML=orig;
+    alert('❌ ' + (e.message || 'Network error. Please try again.'));
   }
   isClaiming = false;
 }
@@ -431,6 +468,30 @@ document.addEventListener('DOMContentLoaded',()=>{
   initGame();
   resizeCanvas();
 });
+
+// ═══════════════════════════════════════════════════════════════
+// ═══ BALANCE SYNC - ADDED ═══
+// ═══════════════════════════════════════════════════════════════
+function syncBalanceAfterClaim() {
+    fetch('/api/user/profile', { credentials: 'include' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success && data.user) {
+                var balance = parseFloat(data.user.balance) || 0;
+                localStorage.setItem('flexia_balance', balance);
+                document.querySelectorAll('.balance-display, #balance, #user-balance, .balance-amount').forEach(function(el) {
+                    el.textContent = '₦' + balance.toFixed(2);
+                });
+                var headerBalance = document.getElementById('header-balance');
+                if (headerBalance) headerBalance.textContent = '₦' + balance.toFixed(2);
+                if (window.App && window.App.currentUser) {
+                    window.App.currentUser.balance = balance;
+                    if (window.App.updateBalanceDisplay) window.App.updateBalanceDisplay();
+                }
+            }
+        })
+        .catch(function(e) { console.error('Balance sync error:', e); });
+}
 </script>
 </body>
 </html>
