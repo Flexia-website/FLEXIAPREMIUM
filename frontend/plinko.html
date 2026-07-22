@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Snake Mine - FLEXIA</title>
+<title>Plinko 3D - FLEXIA</title>
 <link rel="icon" type="image/x-icon" href="logo/favicon.ico">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
@@ -56,10 +56,10 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
 
 <div class="header">
   <div class="game-logo">
-    <div class="game-logo-icon">🐍</div>
+    <div class="game-logo-icon">🎯</div>
     <div class="header-left">
-      <h1>SNAKE MINE</h1>
-      <p id="snake-header-info">🍎 ₦20 each | 🌟 Golden = ₦40 | Daily cap ₦5000</p>
+      <h1>PLINKO 3D</h1>
+      <p id="plinko-header-info">Bet & Multiply · Daily cap ₦3000</p>
     </div>
   </div>
   <button class="dashboard-btn" onclick="window.location.href='index.html'">
@@ -76,19 +76,19 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
     </div>
     <div class="scores-panel">
       <div class="score-card">
-        <div class="score-label">CURRENT SCORE</div>
-        <div class="score-value" id="score">0</div>
+        <div class="score-label">CURRENT BET</div>
+        <div class="score-value" id="current-bet">₦0</div>
         <div class="mini-stats">
-          <div class="mini-stat"><div class="mini-label">APPLES</div><div class="mini-value" id="apples">0</div></div>
-          <div class="mini-stat"><div class="mini-label">SESSION ₦</div><div class="mini-value" id="live-earnings">₦0</div></div>
+          <div class="mini-stat"><div class="mini-label">MULTIPLIER</div><div class="mini-value" id="current-multiplier">0x</div></div>
+          <div class="mini-stat"><div class="mini-label">WIN/LOSS</div><div class="mini-value" id="win-loss">0</div></div>
         </div>
       </div>
       <div class="score-card">
         <div class="score-label">DAILY EARNINGS</div>
         <div class="score-value" id="total-earned">₦0</div>
         <div class="mini-stats">
-          <div class="mini-stat"><div class="mini-label">DAILY CAP</div><div class="mini-value" style="color:#FF8C00;">₦5000</div></div>
-          <div class="mini-stat"><div class="mini-label">REMAINING</div><div class="mini-value" id="remaining-today" style="color:#00FF55;">₦5000</div></div>
+          <div class="mini-stat"><div class="mini-label">DAILY CAP</div><div class="mini-value" style="color:#FF8C00;">₦3000</div></div>
+          <div class="mini-stat"><div class="mini-label">REMAINING</div><div class="mini-value" id="remaining-today" style="color:#00FF55;">₦3000</div></div>
         </div>
         <div style="margin-top:10px;width:100%;">
           <div style="background:rgba(255,255,255,0.05);border-radius:6px;height:6px;overflow:hidden;">
@@ -96,7 +96,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
           </div>
           <div style="display:flex;justify-content:space-between;margin-top:3px;">
             <span style="font-size:0.6rem;color:#555;">₦0</span>
-            <span style="font-size:0.6rem;color:#555;">₦5000 cap</span>
+            <span style="font-size:0.6rem;color:#555;">₦3000 cap</span>
           </div>
         </div>
       </div>
@@ -107,7 +107,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
 <div class="controls-row">
   <div style="flex:1;">
     <div class="action-buttons">
-      <button class="action-btn" onclick="startGame()" id="start-btn"><i class="fas fa-play"></i> START</button>
+      <button class="action-btn" onclick="dropBall()" id="drop-btn"><i class="fas fa-bowling-ball"></i> DROP BALL</button>
       <button class="action-btn" onclick="manualClaim()" id="claim-btn"><i class="fas fa-trophy"></i> CLAIM</button>
     </div>
   </div>
@@ -118,9 +118,9 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
   <div class="modal-content">
     <h2><i class="fas fa-gamepad"></i> GAME OVER</h2>
     <div style="margin:20px 0;text-align:left;line-height:1.9;">
-      <div>Score: <span id="modal-score" style="color:#00FFCC;font-weight:bold;">0</span></div>
-      <div>Apples: <span id="modal-apples" style="color:#00FFCC;font-weight:bold;">0</span></div>
-      <div>Session Earned: <span id="modal-reward" style="color:#FFD700;font-weight:bold;">₦0</span></div>
+      <div>Bet: <span id="modal-bet" style="color:#00FFCC;font-weight:bold;">₦0</span></div>
+      <div>Multiplier: <span id="modal-multiplier" style="color:#FFD700;font-weight:bold;">0x</span></div>
+      <div>Result: <span id="modal-result" style="color:#00FF55;font-weight:bold;">0</span></div>
       <div>Daily Total: <span id="modal-daily" style="color:#a855f7;font-weight:bold;">₦0</span></div>
     </div>
     <div id="modal-action-area" style="display:flex;gap:10px;">
@@ -137,21 +137,21 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
       <button onclick="closeInstructions()" style="background:none;border:none;font-size:2.4rem;color:#888;cursor:pointer;line-height:1;">×</button>
     </div>
     <div style="text-align:left;color:#ddd;line-height:1.8;">
-      <p style="font-weight:bold;margin-bottom:10px;">🐍 Control the snake, eat apples, earn ₦!</p>
+      <p style="font-weight:bold;margin-bottom:10px;">🎯 Drop the ball and multiply your bet!</p>
       <div style="background:rgba(0,255,80,0.05);padding:16px;border-radius:12px;margin-bottom:14px;border:1px solid rgba(0,255,85,0.15);">
-        <div style="margin-bottom:6px;">🍎 Normal Apple = <strong style="color:#00FF55">₦20</strong></div>
-        <div style="margin-bottom:6px;">✨ Golden Apple = <strong style="color:#FFD700">₦40</strong> (10% chance)</div>
-        <div style="margin-bottom:6px;">🚀 Daily cap: <strong style="color:#FF8C00">₦5000</strong> (resets midnight UTC)</div>
-        <div>🎉 Hit ₦5000 cap → <strong style="color:#00FFCC">Auto-claim + Celebration!</strong></div>
+        <div style="margin-bottom:6px;">💰 Bet amount: <strong style="color:#00FF55">Min ₦100, Max ₦50000</strong></div>
+        <div style="margin-bottom:6px;">📈 Multipliers: <strong style="color:#FFD700">0.5x, 1.0x, 3.0x, 10.0x</strong></div>
+        <div style="margin-bottom:6px;">🚀 Daily cap: <strong style="color:#FF8C00">₦3000</strong> (resets midnight UTC)</div>
+        <div>🎉 Hit ₦3000 cap → <strong style="color:#00FFCC">Auto-claim + Celebration!</strong></div>
       </div>
       <div style="background:rgba(128,0,255,0.05);padding:14px;border-radius:10px;border:1px solid rgba(128,0,255,0.15);">
-        <div style="margin-bottom:5px;">🎮 <strong>Arrow keys</strong> or <strong>Swipe</strong> to move</div>
-        <div style="margin-bottom:5px;">⏸ <strong>SPACE</strong> to start</div>
-        <div>💀 Hit wall or yourself = Game Over</div>
+        <div style="margin-bottom:5px;">🎮 Click <strong>DROP BALL</strong> to play</div>
+        <div style="margin-bottom:5px;">💀 If you lose, you lose your bet</div>
+        <div>🏆 If you win, you get <strong>bet × multiplier</strong></div>
       </div>
     </div>
     <button onclick="closeInstructions()" style="width:100%;padding:14px;margin-top:18px;background:linear-gradient(135deg,#a855f7,#6366f1);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:1rem;cursor:pointer;transition:all 0.3s;">
-      GOT IT — LET'S EAT! 🐍
+      GOT IT — LET'S PLAY! 🎯
     </button>
   </div>
 </div>
@@ -164,20 +164,22 @@ const canvas = document.getElementById('game-board');
 const ctx = canvas.getContext('2d');
 const gridSize = 20;
 const tileCount = canvas.width / gridSize;
-const APPLE_REWARD = 20;
-const GOLDEN_REWARD = 40;
-const DAILY_CAP = 5000;
+const PLINKO_CAP = 3000;
+const MIN_BET = 100;
+const MAX_BET = 50000;
 
-let snake = [{x:10,y:10}], food = {}, score = 0;
-let direction = 'right', gameRunning = false, gameLoop;
-let dailyEarned = 0, sessionEarned = 0;
-let sessionApples = 0, sessionGolden = 0;
-let capReached = false, isClaiming = false;
+let betAmount = 100;
+let multiplier = 0;
+let dailyEarned = 0;
+let sessionEarned = 0;
+let isClaiming = false;
+let capReached = false;
+let gameRunning = false;
 
 function updateCapUI(earned) {
   dailyEarned = earned;
-  const remaining = Math.max(0, DAILY_CAP - earned);
-  const pct = Math.min((earned / DAILY_CAP) * 100, 100);
+  const remaining = Math.max(0, PLINKO_CAP - earned);
+  const pct = Math.min((earned / PLINKO_CAP) * 100, 100);
   const bar = document.getElementById('cap-bar');
   if (bar) {
     bar.style.width = pct + '%';
@@ -185,18 +187,12 @@ function updateCapUI(earned) {
   }
   document.getElementById('total-earned').textContent = '₦' + earned;
   document.getElementById('remaining-today').textContent = '₦' + remaining;
-  const hdr = document.getElementById('snake-header-info');
-  if (hdr) {
-    hdr.textContent = remaining <= 0 ? '⚠️ Daily cap reached! Come back tomorrow.' : '🍎 ₦' + APPLE_REWARD + ' each | ✨ Golden = ₦' + GOLDEN_REWARD + ' | ₦' + remaining + ' left today';
-    hdr.style.color = remaining <= 0 ? '#FF0055' : '#00CCFF';
-  }
-  if (earned >= DAILY_CAP) { capReached = true; lockClaimBtn(); }
+  if (earned >= PLINKO_CAP) { capReached = true; lockClaimBtn(); }
 }
 
 function updateSessionUI() {
-  document.getElementById('live-earnings').textContent = '₦' + sessionEarned;
-  document.getElementById('score').textContent = score;
-  document.getElementById('apples').textContent = sessionApples + sessionGolden;
+  document.getElementById('current-bet').textContent = '₦' + betAmount;
+  document.getElementById('current-multiplier').textContent = multiplier + 'x';
 }
 
 function lockClaimBtn() {
@@ -208,7 +204,7 @@ function lockClaimBtn() {
 function showFunPopup() {
   const d = document.createElement('div');
   d.className = 'happy-popup';
-  d.innerHTML = '<i class="fas fa-star"></i> 🎉 ₦5000 CAP REACHED! 🎉 <i class="fas fa-star"></i>';
+  d.innerHTML = '<i class="fas fa-star"></i> 🎉 ₦3000 CAP REACHED! 🎉 <i class="fas fa-star"></i>';
   document.body.appendChild(d);
   setTimeout(() => d && d.remove && d.remove(), 3000);
 }
@@ -221,25 +217,21 @@ async function loadDailyEarnings() {
     if (!d.success) return;
     const today = new Date().toISOString().slice(0,10);
     const earned = (d.user.transactions||[])
-      .filter(t => t.type==='SNAKE_REWARD' && (t.timestamp||'').slice(0,10)===today)
+      .filter(t => t.type==='PLINKO_WIN' && (t.timestamp||'').slice(0,10)===today)
       .reduce((s,t) => s + parseFloat(t.amount||0), 0);
     updateCapUI(earned);
     if (d.user.balance !== undefined) {
       localStorage.setItem('flexia_balance', d.user.balance);
-      if (window.App && window.App.currentUser) {
-        window.App.currentUser.balance = parseFloat(d.user.balance);
-        if (window.App.refreshBalance) window.App.refreshBalance(true);
-      }
     }
   } catch(e) {}
 }
 
-async function callBackend(apples, golden) {
-  const r = await fetch('/api/games/snake/report', {
+async function callBackend(bet, multiplier) {
+  const r = await fetch('/api/games/plinko/report', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     credentials:'include',
-    body: JSON.stringify({apples_eaten: apples + golden, golden_apples: golden})
+    body: JSON.stringify({ bet: bet, multiplier: multiplier })
   });
   return await r.json();
 }
@@ -248,28 +240,22 @@ async function autoClaim() {
   if (isClaiming || sessionEarned <= 0) return;
   isClaiming = true;
   try {
-    const res = await callBackend(sessionApples, sessionGolden);
+    const res = await callBackend(betAmount, multiplier);
     if (res.success) {
-      updateCapUI(res.daily_earned || DAILY_CAP);
-      if (res.new_balance !== undefined) {
-        localStorage.setItem('flexia_balance', res.new_balance);
-        if (window.App && window.App.currentUser) {
-          window.App.currentUser.balance = parseFloat(res.new_balance);
-          if (window.App.refreshBalance) window.App.refreshBalance(true);
-        }
-      }
+      updateCapUI(res.daily_won || PLINKO_CAP);
+      if (res.new_balance !== undefined) localStorage.setItem('flexia_balance', res.new_balance);
       showFunPopup();
-      sessionEarned = sessionApples = sessionGolden = 0;
+      sessionEarned = 0;
       updateSessionUI();
+      syncBalanceAfterClaim();
     }
   } catch(e) { console.error('Auto-claim error', e); }
   isClaiming = false;
 }
 
 async function manualClaim() {
-  if (capReached) { alert('🎉 Daily ₦5000 cap reached! Come back tomorrow.'); return; }
-  if (gameRunning) { alert('⚠️ Finish the game first, then claim!'); return; }
-  if (sessionEarned <= 0) { alert('🐍 No earnings yet. Play and eat apples!'); return; }
+  if (capReached) { alert('🎉 Daily ₦3000 cap reached! Come back tomorrow.'); return; }
+  if (sessionEarned <= 0) { alert('🎯 No earnings yet. Drop a ball to earn!'); return; }
   if (isClaiming) return;
 
   isClaiming = true;
@@ -279,167 +265,151 @@ async function manualClaim() {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> CLAIMING...';
 
   try {
-    const res = await callBackend(sessionApples, sessionGolden);
-    if (res.success) {
-      const earned = res.daily_earned || (dailyEarned + res.reward);
-      updateCapUI(earned);
-      if (res.new_balance !== undefined) {
-        localStorage.setItem('flexia_balance', res.new_balance);
-        if (window.App && window.App.currentUser) {
-          window.App.currentUser.balance = parseFloat(res.new_balance);
-          if (window.App.refreshBalance) window.App.refreshBalance(true);
+    let attempts = 0;
+    let success = false;
+    let result = null;
+    
+    while (attempts < 3 && !success) {
+      attempts++;
+      try {
+        result = await callBackend(betAmount, multiplier);
+        if (result.success) {
+          success = true;
+          break;
+        } else {
+          if (result.message && result.message.includes('wait')) {
+            await new Promise(resolve => setTimeout(resolve, 2000 * attempts));
+            continue;
+          }
+          break;
+        }
+      } catch (e) {
+        console.error(`Attempt ${attempts} failed:`, e);
+        if (attempts < 3) {
+          await new Promise(resolve => setTimeout(resolve, 2000 * attempts));
+        } else {
+          throw e;
         }
       }
-      sessionEarned = sessionApples = sessionGolden = 0;
-      updateSessionUI();
-
-      if (res.remaining_today <= 0) {
-        showFunPopup(); lockClaimBtn();
-        alert('🎉 CLAIMED ₦' + res.reward + '! You hit the ₦5000 daily cap — amazing!');
-      } else {
-        btn.innerHTML = '<i class="fas fa-check"></i> CLAIMED ₦' + res.reward + '!';
-        setTimeout(() => { btn.disabled=false; btn.innerHTML='<i class="fas fa-trophy"></i> CLAIM'; isClaiming=false; }, 2500);
-        alert('✅ Claimed ₦' + res.reward + '! ₦' + res.remaining_today + ' remaining today.');
-        return;
-      }
-    } else {
-      btn.disabled=false; btn.innerHTML=orig;
-      alert('❌ ' + (res.message || 'Claim failed. Try again.'));
     }
+    
+    if (!success || !result) {
+      throw new Error('Failed to claim reward after multiple attempts');
+    }
+
+    const earned = result.daily_won || (dailyEarned + result.net_change);
+    updateCapUI(earned);
+    
+    if (result.new_balance !== undefined) {
+      localStorage.setItem('flexia_balance', result.new_balance);
+    }
+    
+    sessionEarned = 0;
+    updateSessionUI();
+
+    if (result.daily_won >= PLINKO_CAP) {
+      showFunPopup(); 
+      lockClaimBtn();
+      alert('🎉 CLAIMED ₦' + result.net_change + '! You hit the ₦3000 daily cap — amazing!');
+    } else {
+      btn.innerHTML = '<i class="fas fa-check"></i> CLAIMED ₦' + result.net_change + '!';
+      setTimeout(() => { 
+        btn.disabled=false; 
+        btn.innerHTML='<i class="fas fa-trophy"></i> CLAIM'; 
+        isClaiming=false; 
+      }, 2500);
+      alert('✅ Claimed ₦' + result.net_change + '! ₦' + (PLINKO_CAP - result.daily_won) + ' remaining today.');
+      return;
+    }
+    syncBalanceAfterClaim();
   } catch(e) {
-    btn.disabled=false; btn.innerHTML=orig;
-    alert('❌ Network error. Please try again.');
+    console.error('Claim error:', e);
+    btn.disabled=false; 
+    btn.innerHTML=orig;
+    alert('❌ ' + (e.message || 'Network error. Please try again.'));
   }
   isClaiming = false;
 }
 
 async function claimAndClose() { await manualClaim(); closeModal(); }
 
-async function onAppleEaten(isGolden) {
-  if (capReached) return;
-  const val = isGolden ? GOLDEN_REWARD : APPLE_REWARD;
-  if (dailyEarned + sessionEarned + val > DAILY_CAP) {
-    capReached = true;
-    if (sessionEarned > 0) await autoClaim();
-    return;
+function dropBall() {
+  if (capReached) { alert('🎉 Daily ₦3000 cap reached! Come back tomorrow.'); return; }
+  const multipliers = [0.5, 1.0, 3.0, 10.0];
+  multiplier = multipliers[Math.floor(Math.random() * multipliers.length)];
+  const win = multiplier > 1;
+  const winAmount = betAmount * multiplier;
+  const netChange = winAmount - betAmount;
+  
+  if (dailyEarned + netChange > PLINKO_CAP && netChange > 0) {
+    netChange = PLINKO_CAP - dailyEarned;
+    if (netChange <= 0) { alert('Cap reached!'); return; }
+    winAmount = betAmount + netChange;
   }
-  sessionEarned += val;
-  if (isGolden) sessionGolden++; else sessionApples++;
+  
+  sessionEarned += netChange;
   updateSessionUI();
-  if (dailyEarned + sessionEarned >= DAILY_CAP) { capReached = true; await autoClaim(); }
-}
-
-function initGame() {
-  snake=[{x:10,y:10}]; direction='right'; score=0;
-  sessionEarned=sessionApples=sessionGolden=0;
-  generateFood(); updateSessionUI(); drawGame();
-}
-
-function generateFood() {
-  food = { x:Math.floor(Math.random()*tileCount), y:Math.floor(Math.random()*tileCount), golden:Math.random()<0.1 };
-  for (const s of snake) if (s.x===food.x && s.y===food.y) { generateFood(); return; }
-}
-
-function drawGame() {
-  ctx.fillStyle='#151535'; ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.strokeStyle='rgba(128,0,255,0.08)';
-  for (let x=0;x<tileCount;x++) for (let y=0;y<tileCount;y++) ctx.strokeRect(x*gridSize,y*gridSize,gridSize,gridSize);
-  for (let i=0;i<snake.length;i++) {
-    const s=snake[i];
-    if (i===0) {
-      ctx.fillStyle='#00FFCC'; ctx.fillRect(s.x*gridSize,s.y*gridSize,gridSize-2,gridSize-2);
-      ctx.fillStyle='#0A0A1F';
-      ctx.fillRect(s.x*gridSize+5,s.y*gridSize+5,4,4);
-      ctx.fillRect(s.x*gridSize+11,s.y*gridSize+5,4,4);
-    } else {
-      ctx.fillStyle='rgba(0,255,204,'+(1-(i/snake.length)*0.5)+')';
-      ctx.fillRect(s.x*gridSize,s.y*gridSize,gridSize-2,gridSize-2);
-    }
+  
+  document.getElementById('modal-bet').textContent = '₦' + betAmount;
+  document.getElementById('modal-multiplier').textContent = multiplier + 'x';
+  document.getElementById('modal-result').textContent = win ? 'WIN +₦' + netChange : 'LOSS -₦' + Math.abs(netChange);
+  document.getElementById('modal-daily').textContent = '₦' + (dailyEarned + sessionEarned);
+  
+  if (sessionEarned > 0) {
+    document.getElementById('modal-action-area').innerHTML = `
+      <button class="modal-btn primary-btn" onclick="claimAndClose()"><i class="fas fa-coins"></i> CLAIM & CLOSE</button>
+      <button class="modal-btn secondary-btn" onclick="playAgain()">PLAY AGAIN</button>
+    `;
+  } else {
+    document.getElementById('modal-action-area').innerHTML = `
+      <button class="modal-btn primary-btn" onclick="playAgain()">PLAY AGAIN</button>
+      <button class="modal-btn secondary-btn" onclick="closeModal()">CLOSE</button>
+    `;
   }
-  const pulse=Math.sin(Date.now()/200)*1.5;
-  ctx.fillStyle=food.golden?'#FFD700':'#FF0055';
-  ctx.beginPath();
-  ctx.arc(food.x*gridSize+gridSize/2,food.y*gridSize+gridSize/2,(gridSize-4)/2+pulse,0,2*Math.PI);
-  ctx.fill();
-  if (food.golden) { ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.arc(food.x*gridSize+gridSize/2-3,food.y*gridSize+gridSize/2-3,2,0,2*Math.PI); ctx.fill(); }
-  ctx.fillStyle=food.golden?'#8B6914':'#8B4513';
-  ctx.fillRect(food.x*gridSize+8,food.y*gridSize-2,2,4);
-}
-
-async function updateGame() {
-  if (!gameRunning) return;
-  const h={x:snake[0].x, y:snake[0].y};
-  if (direction==='up') h.y--; else if (direction==='down') h.y++;
-  else if (direction==='left') h.x--; else h.x++;
-  if (h.x<0||h.x>=tileCount||h.y<0||h.y>=tileCount) { gameOver(); return; }
-  for (let i=1;i<snake.length;i++) if (h.x===snake[i].x&&h.y===snake[i].y) { gameOver(); return; }
-  snake.unshift(h);
-  if (h.x===food.x&&h.y===food.y) {
-    const g=food.golden; score+=g?20:10;
-    await onAppleEaten(g); generateFood();
-  } else { snake.pop(); }
-  drawGame();
-}
-
-function gameOver() {
-  gameRunning=false; clearInterval(gameLoop);
-  document.getElementById('modal-score').textContent = score;
-  document.getElementById('modal-apples').textContent = sessionApples+sessionGolden;
-  document.getElementById('modal-reward').textContent = '₦'+sessionEarned;
-  document.getElementById('modal-daily').textContent  = '₦'+(dailyEarned+sessionEarned);
-  if (sessionEarned<=0||capReached) {
-    document.getElementById('modal-action-area').innerHTML =
-      '<button class="modal-btn primary-btn" onclick="playAgain()">PLAY AGAIN</button><button class="modal-btn secondary-btn" onclick="closeModal()">CLOSE</button>';
-  }
+  
   document.getElementById('game-over-modal').classList.remove('hidden');
+  
+  if (dailyEarned + sessionEarned >= PLINKO_CAP) {
+    capReached = true;
+    if (sessionEarned > 0) autoClaim();
+  }
 }
 
-function startGame() {
-  if (gameRunning) return;
-  if (capReached) { alert("🎉 Daily ₦5000 cap reached! Come back tomorrow."); return; }
-  const btn=document.getElementById('start-btn');
-  btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
-  setTimeout(()=>{
-    initGame(); gameRunning=true;
-    if (gameLoop) clearInterval(gameLoop);
-    gameLoop=setInterval(updateGame,120);
-    btn.disabled=false; btn.innerHTML='<i class="fas fa-play"></i> START';
-  },200);
-}
-
-function playAgain() { document.getElementById('game-over-modal').classList.add('hidden'); startGame(); }
+function playAgain() { document.getElementById('game-over-modal').classList.add('hidden'); }
 function closeModal() { document.getElementById('game-over-modal').classList.add('hidden'); }
-function changeDirection(d) { const o={up:'down',down:'up',left:'right',right:'left'}; if (o[d]!==direction) direction=d; }
-function closeInstructions() { document.getElementById('instruction-modal').style.display='none'; localStorage.setItem('flexia_snake_seen','1'); }
-
-function resizeCanvas() {
-  const c=document.querySelector('.game-board-container');
-  const size=Math.min(c.clientWidth,c.clientHeight)-8;
-  canvas.style.width=size+'px'; canvas.style.height=size+'px'; drawGame();
-}
-
-document.addEventListener('keydown',e=>{
-  const map={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'};
-  if (map[e.key]) { changeDirection(map[e.key]); e.preventDefault(); }
-  if (e.key===' ') { startGame(); e.preventDefault(); }
-});
-let tx=0,ty=0;
-document.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});
-document.addEventListener('touchend',e=>{
-  const dx=tx-e.changedTouches[0].clientX, dy=ty-e.changedTouches[0].clientY;
-  if (Math.abs(dx)<20&&Math.abs(dy)<20) return;
-  if (Math.abs(dx)>Math.abs(dy)) changeDirection(dx>0?'left':'right');
-  else changeDirection(dy>0?'up':'down');
-});
-window.addEventListener('resize',resizeCanvas);
+function closeInstructions() { document.getElementById('instruction-modal').style.display='none'; localStorage.setItem('flexia_plinko_seen','1'); }
 
 document.addEventListener('DOMContentLoaded',()=>{
-  if (!localStorage.getItem('flexia_snake_seen')) document.getElementById('instruction-modal').style.display='flex';
+  if (!localStorage.getItem('flexia_plinko_seen')) document.getElementById('instruction-modal').style.display='flex';
   else document.getElementById('instruction-modal').style.display='none';
   loadDailyEarnings();
-  initGame();
-  resizeCanvas();
+  betAmount = 100;
+  updateSessionUI();
 });
+
+// ═══════════════════════════════════════════════════════════════
+// ═══ BALANCE SYNC - ADDED ═══
+// ═══════════════════════════════════════════════════════════════
+function syncBalanceAfterClaim() {
+    fetch('/api/user/profile', { credentials: 'include' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success && data.user) {
+                var balance = parseFloat(data.user.balance) || 0;
+                localStorage.setItem('flexia_balance', balance);
+                document.querySelectorAll('.balance-display, #balance, #user-balance, .balance-amount').forEach(function(el) {
+                    el.textContent = '₦' + balance.toFixed(2);
+                });
+                var headerBalance = document.getElementById('header-balance');
+                if (headerBalance) headerBalance.textContent = '₦' + balance.toFixed(2);
+                if (window.App && window.App.currentUser) {
+                    window.App.currentUser.balance = balance;
+                    if (window.App.updateBalanceDisplay) window.App.updateBalanceDisplay();
+                }
+            }
+        })
+        .catch(function(e) { console.error('Balance sync error:', e); });
+}
 </script>
 </body>
 </html>
