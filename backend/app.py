@@ -1,4 +1,4 @@
-# backend/app.py - COMPLETE PRODUCTION VERSION v17.2
+# backend/app.py - COMPLETE PRODUCTION VERSION v17.4
 # FLEXIA Platform - FULL INTEGRATION WITH PAYSTACK, BREVO API, SESSION MANAGEMENT
 # GEVENT ASYNC - HANDLES UNLIMITED SIMULTANEOUS USERS
 
@@ -51,7 +51,7 @@ class Config:
     SESSION_DURATION_HOURS = 24
     DEFAULT_WITHDRAWAL_DAYS = [7, 14, 25, 30]
     MIN_COUPON_AMOUNT = int(os.environ.get('MIN_COUPON_AMOUNT', 8000))
-    TIMEZONE_OFFSET = int(os.environ.get('TIMEZONE_OFFSET', 0))  # hours offset from UTC (e.g., 1 for Nigeria)
+    TIMEZONE_OFFSET = int(os.environ.get('TIMEZONE_OFFSET', 0))
 
     ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'flexiaadmin')
     ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'passwordinnumber1')
@@ -83,18 +83,12 @@ BREVO_SENDER_EMAIL = os.environ.get('BREVO_SENDER_EMAIL', 'noreply@flexia.com')
 BREVO_SENDER_NAME = os.environ.get('BREVO_SENDER_NAME', 'FLEXIA Platform')
 BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 
-# LIVE KEYS - For real coupon payments (users pay real money)
 PAYSTACK_LIVE_SECRET_KEY = os.environ.get('PAYSTACK_LIVE_SECRET_KEY', '')
 PAYSTACK_LIVE_PUBLIC_KEY = os.environ.get('PAYSTACK_LIVE_PUBLIC_KEY', '')
-
-# TEST KEYS - For account verification (FREE, no cost)
 PAYSTACK_TEST_SECRET_KEY = os.environ.get('PAYSTACK_TEST_SECRET_KEY', 'sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
 PAYSTACK_TEST_PUBLIC_KEY = os.environ.get('PAYSTACK_TEST_PUBLIC_KEY', 'pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-
-# DEFAULT KEYS - Fallback if specific keys not set (uses live for payments)
 PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY', PAYSTACK_LIVE_SECRET_KEY or PAYSTACK_TEST_SECRET_KEY)
 PAYSTACK_PUBLIC_KEY = os.environ.get('PAYSTACK_PUBLIC_KEY', PAYSTACK_LIVE_PUBLIC_KEY or PAYSTACK_TEST_PUBLIC_KEY)
-
 PAYSTACK_CALLBACK_URL = os.environ.get('PAYSTACK_CALLBACK_URL', 'https://yourdomain.com/api/paystack/callback')
 
 def setup_logging():
@@ -2078,13 +2072,15 @@ def check_game_limit_with_logout_endpoint(game_type):
 @require_auth
 def force_logout_from_game(game_type):
     user = get_current_user()
+    is_postgres = os.environ.get('DATABASE_URL') is not None
+    ph = '%s' if is_postgres else '?'
 
     conn = get_db()
     cursor = conn.cursor()
 
     try:
         tx_id = f"LOGOUT-{secrets.token_hex(8)}"
-        cursor.execute('INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp) VALUES (%s, %s, %s, %s, %s, %s, %s)',
+        cursor.execute(f'INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp) VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})',
                       (tx_id, user['id'], 'FORCE_LOGOUT', 0, 'COMPLETED', json.dumps({"gt":game_type,"r":"limit"}), datetime.utcnow().isoformat()))
         conn.commit()
     except Exception as e:
@@ -2439,18 +2435,21 @@ def report_plinko_enhanced():
 def execute_spin():
     user = get_current_user()
     today = datetime.utcnow().date().isoformat()
+    is_postgres = os.environ.get('DATABASE_URL') is not None
+    ph = '%s' if is_postgres else '?'
 
     conn = get_db()
     cursor = conn.cursor()
 
     try:
-        ph = '%s' if os.environ.get('DATABASE_URL') else '?'
-
         cursor.execute(f'SELECT 1 FROM transactions WHERE user_id = {ph} AND type = \'SPIN_REWARD\' AND DATE(timestamp) = {ph}', (user['id'], today))
         if cursor.fetchone() is not None:
             return jsonify({"success": False, "message": "You have already spun today. Come back tomorrow!"}), 400
 
-        cursor.execute("SELECT COUNT(*) FROM transactions WHERE user_id = %s AND type = 'SPIN_REWARD' AND timestamp >= NOW() - INTERVAL '7 days'" if os.environ.get('DATABASE_URL') else "SELECT COUNT(*) FROM transactions WHERE user_id = ? AND type = 'SPIN_REWARD' AND timestamp >= datetime('now', '-7 days')", (user['id'],))
+        if is_postgres:
+            cursor.execute("SELECT COUNT(*) FROM transactions WHERE user_id = %s AND type = 'SPIN_REWARD' AND timestamp >= NOW() - INTERVAL '7 days'", (user['id'],))
+        else:
+            cursor.execute("SELECT COUNT(*) FROM transactions WHERE user_id = ? AND type = 'SPIN_REWARD' AND timestamp >= datetime('now', '-7 days')", (user['id'],))
         spins_last_7_days = cursor.fetchone()[0]
 
         is_bonus_spin = spins_last_7_days >= 6
@@ -2471,7 +2470,7 @@ def execute_spin():
             return jsonify({"success": False, "message": "Failed to update balance"}), 500
 
         tx_id = f"SPIN-{secrets.token_hex(8)}"
-        cursor.execute('INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp) VALUES (%s, %s, %s, %s, %s, %s, %s)',
+        cursor.execute(f'INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp) VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})',
                       (tx_id, user['id'], 'SPIN_REWARD', reward, 'COMPLETED', json.dumps({"g": "spin"}), datetime.utcnow().isoformat()))
         conn.commit()
 
@@ -2541,6 +2540,8 @@ def follow_tiktok_daily_enhanced():
 
     user = get_current_user()
     today = datetime.utcnow().date().isoformat()
+    is_postgres = os.environ.get('DATABASE_URL') is not None
+    ph = '%s' if is_postgres else '?'
 
     if not acquire_claim_lock(user['id'], 'TIKTOK'):
         return jsonify({"success": False, "message": "Please wait 2 seconds between claims"}), 429
@@ -2559,7 +2560,6 @@ def follow_tiktok_daily_enhanced():
         if not task_row:
             return jsonify({"success": False, "message": "No task for today"}), 404
 
-        ph = '%s' if os.environ.get('DATABASE_URL') else '?'
         cursor.execute(f'SELECT COUNT(*) FROM transactions WHERE user_id = {ph} AND type = %s AND DATE(timestamp) = %s', (user['id'], 'TIKTOK_DAILY', today))
         tasks_done_today = cursor.fetchone()[0]
 
@@ -2582,7 +2582,7 @@ def follow_tiktok_daily_enhanced():
             return jsonify({"success": False, "message": "Failed to update balance"}), 500
 
         tx_id = f"TIKTOK-{secrets.token_hex(8)}"
-        cursor.execute('INSERT INTO transactions (id, user_id, type, amount, status, timestamp) VALUES (%s, %s, %s, %s, %s, %s)',
+        cursor.execute(f'INSERT INTO transactions (id, user_id, type, amount, status, timestamp) VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph})',
                       (tx_id, user['id'], 'TIKTOK_DAILY', reward, 'COMPLETED', datetime.utcnow().isoformat()))
         conn.commit()
         return_db_connection(conn)
@@ -2726,6 +2726,8 @@ def get_login_bonus_status():
 @require_auth
 def claim_referral_bonus():
     user = get_current_user()
+    is_postgres = os.environ.get('DATABASE_URL') is not None
+    ph = '%s' if is_postgres else '?'
 
     if not acquire_claim_lock(user['id'], 'REFERRAL'):
         return jsonify({"success": False, "message": "Please wait before claiming again"}), 429
@@ -2734,7 +2736,7 @@ def claim_referral_bonus():
         conn = get_db()
         cursor = conn.cursor()
 
-        cursor.execute('SELECT COUNT(*) FROM users WHERE referred_by = %s', (user.get('referral_code', ''),))
+        cursor.execute(f'SELECT COUNT(*) FROM users WHERE referred_by = {ph}', (user.get('referral_code', ''),))
         referrals = cursor.fetchone()[0]
 
         total_bonus = referrals * CONFIG.REFERRAL_BONUS
@@ -2752,7 +2754,7 @@ def claim_referral_bonus():
         cursor.execute('UPDATE users SET claimed_bonuses = %s WHERE id = %s', (total_bonus, user['id']))
 
         tx_id = f"REF-{secrets.token_hex(8)}"
-        cursor.execute('INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp) VALUES (%s, %s, %s, %s, %s, %s, %s)',
+        cursor.execute(f'INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp) VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})',
                       (tx_id, user['id'], 'REFERRAL_BONUS', unclaimed, 'COMPLETED', json.dumps({"refs": referrals}), datetime.utcnow().isoformat()))
         conn.commit()
         return_db_connection(conn)
@@ -2920,7 +2922,6 @@ def verify_bank_account():
         return jsonify({"success": False, "message": "Invalid account number"}), 400
     
     try:
-        # USE TEST KEYS FOR VERIFICATION (FREE)
         verification_key = PAYSTACK_TEST_SECRET_KEY or PAYSTACK_SECRET_KEY
 
         headers = {
@@ -2964,6 +2965,8 @@ def verify_bank_account():
 def withdraw():
     user = get_current_user()
     data = request.get_json()
+    is_postgres = os.environ.get('DATABASE_URL') is not None
+    ph = '%s' if is_postgres else '?'
 
     amount = float(data.get('amount', 0))
     bank_code = data.get('bank_code')
@@ -3006,7 +3009,7 @@ def withdraw():
             return jsonify({"success": False, "message": "Failed to update balance"}), 500
 
         tx_id = f"TX-{int(datetime.utcnow().timestamp())}"
-        cursor.execute('INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp) VALUES (%s, %s, %s, %s, %s, %s, %s)',
+        cursor.execute(f'INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp) VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})',
                       (tx_id, user['id'], 'WITHDRAWAL', amount, 'PENDING', json.dumps({'bc':bank_code,'an':account_number,'nm':account_name}), datetime.utcnow().isoformat()))
         conn.commit()
 
@@ -3048,9 +3051,10 @@ def get_whatsapp_numbers():
 
 @app.route('/api/paystack/initialize', methods=['POST'])
 def initialize_paystack_payment():
-    # No authentication required - anyone can buy a coupon
-    user = get_current_user()  # Will be None if not logged in
+    user = get_current_user()
     data = request.get_json()
+    is_postgres = os.environ.get('DATABASE_URL') is not None
+    ph = '%s' if is_postgres else '?'
 
     email = data.get('email')
     amount = data.get('amount')
@@ -3065,7 +3069,6 @@ def initialize_paystack_payment():
         amount_kobo = int(amount * 100)
         reference = f"FLEX-{secrets.token_hex(8)}"
 
-        # USE LIVE KEYS FOR REAL PAYMENTS
         payment_key = PAYSTACK_LIVE_SECRET_KEY or PAYSTACK_SECRET_KEY
 
         headers = {
@@ -3094,7 +3097,7 @@ def initialize_paystack_payment():
             conn = get_db()
             cursor = conn.cursor()
 
-            cursor.execute('INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp) VALUES (%s, %s, %s, %s, %s, %s, %s)',
+            cursor.execute(f'INSERT INTO transactions (id, user_id, type, amount, status, details, timestamp) VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})',
                           (f"PAY-{secrets.token_hex(8)}", user['id'] if user else None, 'PAYSTACK_INIT', amount, 'PENDING',
                            json.dumps({
                                'reference': reference,
@@ -3133,7 +3136,6 @@ def paystack_callback():
         if not reference:
             return redirect(f"/?payment=failed&error=No+reference+provided")
 
-        # USE LIVE KEYS TO VERIFY PAYMENTS
         verification_key = PAYSTACK_LIVE_SECRET_KEY or PAYSTACK_SECRET_KEY
 
         headers = {
@@ -3218,9 +3220,11 @@ def paystack_callback():
 def get_paystack_status(reference):
     conn = get_db()
     cursor = conn.cursor()
+    is_postgres = os.environ.get('DATABASE_URL') is not None
+    ph = '%s' if is_postgres else '?'
 
     try:
-        cursor.execute('SELECT status, details FROM transactions WHERE type = \'PAYSTACK_INIT\' AND details LIKE %s ORDER BY timestamp DESC LIMIT 1', (f'%{reference}%',))
+        cursor.execute(f'SELECT status, details FROM transactions WHERE type = \'PAYSTACK_INIT\' AND details LIKE {ph} ORDER BY timestamp DESC LIMIT 1', (f'%{reference}%',))
         row = cursor.fetchone()
 
         if not row:
@@ -3248,6 +3252,8 @@ def get_paystack_status(reference):
         return jsonify({"success": False, "message": "Failed to get status"}), 500
     finally:
         return_db_connection(conn)
+
+# ==================== ADMIN ROUTES ====================
 
 @app.route('/api/admin/users', methods=['GET'])
 @require_admin
@@ -3936,6 +3942,8 @@ def admin_delete_all_coupons():
 def admin_add_bulk_coupons():
     data = request.get_json()
     codes = data.get('codes', [])
+    is_postgres = os.environ.get('DATABASE_URL') is not None
+    ph = '%s' if is_postgres else '?'
 
     if not isinstance(codes, list):
         return jsonify({"success": False, "message": "Invalid codes format"}), 400
@@ -3957,7 +3965,7 @@ def admin_add_bulk_coupons():
 
         for code in valid_codes:
             try:
-                cursor.execute('INSERT INTO coupons (code, status) VALUES (%s, %s) ON CONFLICT (code) DO NOTHING', (code, 'AVAILABLE'))
+                cursor.execute(f'INSERT INTO coupons (code, status) VALUES ({ph}, {ph}) ON CONFLICT (code) DO NOTHING', (code, 'AVAILABLE'))
                 if cursor.rowcount > 0:
                     added_count += 1
             except:
@@ -3989,13 +3997,15 @@ def admin_load_coupons_from_file():
         if not codes:
             return jsonify({"success": False, "message": "No coupons in file"}), 400
 
+        is_postgres = os.environ.get('DATABASE_URL') is not None
+        ph = '%s' if is_postgres else '?'
         conn = get_db()
         cursor = conn.cursor()
 
         loaded = 0
         for code in codes:
             try:
-                cursor.execute('INSERT INTO coupons (code, status) VALUES (%s, %s) ON CONFLICT (code) DO NOTHING', (code, 'AVAILABLE'))
+                cursor.execute(f'INSERT INTO coupons (code, status) VALUES ({ph}, {ph}) ON CONFLICT (code) DO NOTHING', (code, 'AVAILABLE'))
                 loaded += 1
             except:
                 continue
@@ -4709,7 +4719,7 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "uptime": get_uptime(),
             "database": db_status,
-            "version": "17.2",
+            "version": "17.4",
             "stats": {
                 "total_users": user_count,
                 "pending_withdrawals": pending_withdrawals
@@ -4730,7 +4740,7 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "database": f"error: {str(e)}",
             "uptime": get_uptime(),
-            "version": "17.2"
+            "version": "17.4"
         }), 503
 
 def get_uptime():
@@ -4762,7 +4772,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug = os.getenv('ENV') != 'production'
 
-    app.logger.info(f"Starting Flexia Platform v17.2 on port {port} (debug: {debug})")
+    app.logger.info(f"Starting Flexia Platform v17.4 on port {port} (debug: {debug})")
     app.logger.info(f"Frontend directory: {CONFIG.FRONTEND_DIR}")
     app.logger.info(f"Database: {'PostgreSQL' if os.environ.get('DATABASE_URL') else 'SQLite'}")
     app.logger.info(f"Paystack Integration: Enabled")
@@ -4770,8 +4780,7 @@ if __name__ == '__main__':
     app.logger.info(f"Session Management: Enabled")
     app.logger.info(f"Game Limits: Enabled")
     app.logger.info(f"Admin: {CONFIG.ADMIN_USERNAME}")
-    app.logger.info(f"Success Page: {CONFIG.FRONTEND_DIR}/payment-success.html")
-    app.logger.info(f"Failed Page: {CONFIG.FRONTEND_DIR}/payment-failed.html")
+    app.logger.info(f"Time Zone Offset: {CONFIG.TIMEZONE_OFFSET} hours")
     app.logger.info(f"Bank Verification: Enabled via Paystack")
 
     app.run(host='0.0.0.0', port=port, debug=debug)
