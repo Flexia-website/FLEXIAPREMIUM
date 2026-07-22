@@ -1194,11 +1194,6 @@ body {
   font-size: 0.6rem;
   color: var(--text-muted);
   margin-top: 8px;
-  text-align: center;
-}
-
-.payment-timer-note i {
-  margin-right: 4px;
 }
 
 /* ============================================================
@@ -2017,6 +2012,69 @@ body {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
+}
+
+/* ============================================================
+   PAYMENT STATUS MODAL - ADDED
+   ============================================================ */
+.payment-modal-content {
+    max-width: 400px;
+    text-align: center;
+}
+.payment-modal-content .modal-title.success {
+    color: #00FF55;
+}
+.payment-modal-content .modal-title.failed {
+    color: #FF4757;
+}
+#payment-coupon-display {
+    background: #1a1a35;
+    padding: 12px;
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+    color: #FFD700;
+    margin: 12px 0;
+    word-break: break-all;
+}
+
+/* Payment Success Modal (Persistent) */
+#payment-success-modal {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100000;
+    animation: fadeIn 0.3s ease;
+}
+#payment-success-modal .modal-box {
+    background: rgba(20, 12, 40, 0.95);
+    border: 2px solid #00FF55;
+    border-radius: 24px;
+    padding: 40px 32px;
+    max-width: 440px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5);
+    animation: modalSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#payment-success-modal .coupon-display {
+    background: #1a1a35;
+    padding: 16px;
+    border-radius: 12px;
+    margin: 16px 0;
+    border: 2px solid #FFD700;
+}
+#payment-success-modal .coupon-code {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.8rem;
+    color: #FFD700;
+    letter-spacing: 3px;
+    font-weight: bold;
 }
 
 /* ============================================================
