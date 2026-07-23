@@ -1,4 +1,4 @@
-# backend/app.py - COMPLETE PRODUCTION VERSION v17.4
+# backend/app.py - COMPLETE PRODUCTION VERSION v17.5
 # FLEXIA Platform - FULL INTEGRATION WITH PAYSTACK, BREVO API, SESSION MANAGEMENT
 # GEVENT ASYNC - HANDLES UNLIMITED SIMULTANEOUS USERS
 
@@ -85,8 +85,8 @@ BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 
 PAYSTACK_LIVE_SECRET_KEY = os.environ.get('PAYSTACK_LIVE_SECRET_KEY', '')
 PAYSTACK_LIVE_PUBLIC_KEY = os.environ.get('PAYSTACK_LIVE_PUBLIC_KEY', '')
-PAYSTACK_TEST_SECRET_KEY = os.environ.get('PAYSTACK_TEST_SECRET_KEY', 'sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-PAYSTACK_TEST_PUBLIC_KEY = os.environ.get('PAYSTACK_TEST_PUBLIC_KEY', 'pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+PAYSTACK_TEST_SECRET_KEY = os.environ.get('PAYSTACK_TEST_SECRET_KEY', '')
+PAYSTACK_TEST_PUBLIC_KEY = os.environ.get('PAYSTACK_TEST_PUBLIC_KEY', '')
 PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY', PAYSTACK_LIVE_SECRET_KEY or PAYSTACK_TEST_SECRET_KEY)
 PAYSTACK_PUBLIC_KEY = os.environ.get('PAYSTACK_PUBLIC_KEY', PAYSTACK_LIVE_PUBLIC_KEY or PAYSTACK_TEST_PUBLIC_KEY)
 PAYSTACK_CALLBACK_URL = os.environ.get('PAYSTACK_CALLBACK_URL', 'https://yourdomain.com/api/paystack/callback')
@@ -782,7 +782,32 @@ def init_db():
         bank_count = bank_count[0] if bank_count else 0
 
     if bank_count == 0:
-        banks = [("057", "Zenith Bank Plc"), ("058", "GTBank"), ("044", "Access Bank"), ("033", "UBA"), ("011", "First Bank"), ("070", "Fidelity Bank"), ("050", "Ecobank"), ("039", "Stanbic IBTC"), ("214", "FCMB"), ("232", "Sterling Bank"), ("032", "Union Bank"), ("035", "Wema Bank"), ("082", "Keystone Bank"), ("215", "Unity Bank"), ("076", "Polaris Bank"), ("565", "OPay"), ("100", "PalmPay"), ("50211", "Kuda Bank"), ("566", "VBank"), ("035A", "ALAT by Wema")]
+        # ========== CORRECTED BANK LIST ==========
+        banks = [
+            ("011", "First Bank of Nigeria"),
+            ("033", "United Bank for Africa"),
+            ("035", "Wema Bank"),
+            ("035A", "ALAT by Wema"),
+            ("039", "Stanbic IBTC Bank"),
+            ("044", "Access Bank"),
+            ("050", "Ecobank Nigeria"),
+            ("057", "Zenith Bank"),
+            ("058", "Guaranty Trust Bank"),
+            ("070", "Fidelity Bank"),
+            ("076", "Polaris Bank"),
+            ("082", "Keystone Bank"),
+            ("214", "FCMB"),
+            ("215", "Unity Bank"),
+            ("232", "Sterling Bank"),
+            ("032", "Union Bank of Nigeria"),
+            ("100", "PalmPay"),
+            ("102", "Suntrust Bank"),
+            ("103", "Globus Bank"),
+            ("101", "Providus Bank"),
+            ("50211", "Kuda Bank"),
+            ("566", "VBank"),
+            ("999", "OPay")  # Corrected from 565
+        ]
         for bank in banks:
             try:
                 cursor.execute(f'INSERT INTO banks (code, name, is_active) VALUES ({ph}, {ph}, {ph})', (bank[0], bank[1], True))
@@ -991,17 +1016,20 @@ def get_min_withdrawal():
     conn = get_db()
     cursor = conn.cursor()
     try:
+        # Ensure column exists – rollback if ALTER fails
         try:
             cursor.execute('ALTER TABLE admin_settings ADD COLUMN min_withdrawal REAL DEFAULT 100000')
             conn.commit()
         except Exception:
-            pass
+            conn.rollback()  # ignore if column already exists
+
         cursor.execute('SELECT min_withdrawal FROM admin_settings LIMIT 1')
         row = cursor.fetchone()
         if row and row[0] is not None:
             return float(row[0])
     except Exception as e:
         app.logger.error(f"Error getting min_withdrawal: {e}")
+        conn.rollback()
     finally:
         return_db_connection(conn)
     return CONFIG.MIN_WITHDRAWAL
@@ -2949,7 +2977,8 @@ def verify_bank_account():
         return jsonify({"success": False, "message": "Invalid account number"}), 400
     
     try:
-        verification_key = PAYSTACK_TEST_SECRET_KEY or PAYSTACK_SECRET_KEY
+        # 🔥 FIX: Use the correct secret key (live or test as resolved)
+        verification_key = PAYSTACK_SECRET_KEY
 
         headers = {
             'Authorization': f'Bearer {verification_key}',
@@ -3281,6 +3310,36 @@ def get_paystack_status(reference):
         return_db_connection(conn)
 
 # ==================== ADMIN ROUTES ====================
+
+@app.route('/api/admin/sync-banks', methods=['POST'])
+@require_admin
+def sync_banks_from_paystack():
+    """Fetch the latest bank list from Paystack and update the database."""
+    if not PAYSTACK_SECRET_KEY:
+        return jsonify({"success": False, "message": "Paystack secret key not set"}), 400
+
+    try:
+        headers = {'Authorization': f'Bearer {PAYSTACK_SECRET_KEY}'}
+        resp = requests.get('https://api.paystack.co/bank?country=nigeria', headers=headers, timeout=10)
+        data = resp.json()
+        if not data.get('status'):
+            return jsonify({"success": False, "message": data.get('message', 'Failed to fetch banks')}), 500
+
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM banks')  # Clear old list
+        for bank in data['data']:
+            cursor.execute(
+                'INSERT INTO banks (code, name, is_active) VALUES (%s, %s, %s)',
+                (bank['code'], bank['name'], True)
+            )
+        conn.commit()
+        return_json = {"success": True, "message": f"Synced {len(data['data'])} banks"}
+        return_db_connection(conn)
+        return jsonify(return_json)
+    except Exception as e:
+        app.logger.error(f"Bank sync error: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
 
 @app.route('/api/admin/users', methods=['GET'])
 @require_admin
@@ -4746,7 +4805,7 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "uptime": get_uptime(),
             "database": db_status,
-            "version": "17.4",
+            "version": "17.5",
             "stats": {
                 "total_users": user_count,
                 "pending_withdrawals": pending_withdrawals
@@ -4767,7 +4826,7 @@ def api_health():
             "timestamp": datetime.utcnow().isoformat(),
             "database": f"error: {str(e)}",
             "uptime": get_uptime(),
-            "version": "17.4"
+            "version": "17.5"
         }), 503
 
 def get_uptime():
@@ -4799,7 +4858,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug = os.getenv('ENV') != 'production'
 
-    app.logger.info(f"Starting Flexia Platform v17.4 on port {port} (debug: {debug})")
+    app.logger.info(f"Starting Flexia Platform v17.5 on port {port} (debug: {debug})")
     app.logger.info(f"Frontend directory: {CONFIG.FRONTEND_DIR}")
     app.logger.info(f"Database: {'PostgreSQL' if os.environ.get('DATABASE_URL') else 'SQLite'}")
     app.logger.info(f"Paystack Integration: Enabled")
