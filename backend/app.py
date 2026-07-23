@@ -578,6 +578,7 @@ def check_game_limit(game_type):
 @app.route('/api/games/snake/report', methods=['POST'])
 @login_required
 def snake_report():
+    user = g.user
     data = request.get_json()
     apples = data.get('apples_eaten', 0)
     golden = data.get('golden_apples', 0)
@@ -624,6 +625,7 @@ def snake_report():
 @app.route('/api/games/coinflip/report', methods=['POST'])
 @login_required
 def coinflip_report():
+    user = g.user
     data = request.get_json()
     bet = data.get('bet', 0)
     won = data.get('won', False)
@@ -683,6 +685,7 @@ def coinflip_report():
 @app.route('/api/games/plinko/report', methods=['POST'])
 @login_required
 def plinko_report():
+    user = g.user
     data = request.get_json()
     bet = data.get('bet', 0)
     multiplier = data.get('multiplier', 0)
@@ -741,6 +744,7 @@ def plinko_report():
 @app.route('/api/spin/execute', methods=['POST'])
 @login_required
 def spin_execute():
+    user = g.user
     if not user.game_stats:
         stats = GameStats(user_id=user.id)
         db.session.add(stats)
@@ -771,6 +775,7 @@ def spin_execute():
 @app.route('/api/games/tiktok/daily', methods=['GET'])
 @login_required
 def tiktok_daily():
+    user = g.user
     today = get_today_utc()
     task = TikTokTask.query.filter_by(date=today).first()
     if not task:
@@ -797,6 +802,7 @@ def tiktok_daily():
 @app.route('/api/games/tiktok/follow-daily', methods=['POST'])
 @login_required
 def tiktok_follow():
+    user = g.user
     today = get_today_utc()
     if not user.game_stats:
         stats = GameStats(user_id=user.id)
@@ -863,6 +869,7 @@ def verify_account():
 @app.route('/api/banking/withdraw', methods=['POST'])
 @login_required
 def withdraw():
+    user = g.user
     data = request.get_json()
     amount = data.get('amount')
     bank_code = data.get('bank_code')
@@ -909,6 +916,7 @@ def withdraw():
 @app.route('/api/referral/claim', methods=['POST'])
 @login_required
 def claim_referral():
+    user = g.user
     unclaimed_refs = Referral.query.filter_by(referrer_id=user.id, bonus_claimed=False).all()
     if not unclaimed_refs:
         return jsonify({'success': False, 'message': 'No unclaimed bonuses'}), 400
@@ -926,6 +934,7 @@ def claim_referral():
 @app.route('/api/achievements', methods=['GET'])
 @login_required
 def get_achievements():
+    user = g.user
     predefined = [
         {'id': 'first_win', 'title': 'First Win', 'description': 'Win your first game', 'icon': 'fas fa-trophy', 'category': 'gaming', 'points': 10, 'cash_reward': 50, 'target': 1},
         {'id': 'snake_10', 'title': 'Snake Pro', 'description': 'Eat 10 apples in Snake', 'icon': 'fas fa-gamepad', 'category': 'gaming', 'points': 20, 'cash_reward': 100, 'target': 10},
@@ -1009,6 +1018,7 @@ def get_achievements():
 @app.route('/api/achievements/claim', methods=['POST'])
 @login_required
 def claim_achievement_rewards():
+    user = g.user
     unlocked = Achievement.query.filter_by(user_id=user.id, unlocked=True, processed=False).all()
     if not unlocked:
         return jsonify({'success': False, 'message': 'No rewards to claim'}), 400
@@ -1025,9 +1035,9 @@ def claim_achievement_rewards():
 @app.route('/api/withdrawal/check-day', methods=['GET'])
 @login_required
 def check_withdrawal_day():
+    user = g.user
     today = get_today_utc()
     today_day = today.day
-    user = g.user
     can_withdraw = is_withdrawal_day(user, today_day)
     global_days = [d.day for d in GlobalWithdrawalDay.query.all()]
     custom_days = [int(d) for d in user.custom_withdrawal_days.split(',')] if user.custom_withdrawal_days else []
@@ -1509,6 +1519,26 @@ def paystack_status(reference):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+# -------------------- STATIC FILE SERVING --------------------
+@app.route('/')
+def serve_index():
+    return send_from_directory(app.static_folder, 'index.html')
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(app.static_folder, 'logo/favicon.ico')
+
+@app.route('/<path:path>')
+def serve_static(path):
+    """Serve static files; if not found, fallback to index.html (SPA)."""
+    if path.startswith('api/'):
+        return jsonify({'error': 'Not found'}), 404
+    full_path = os.path.join(app.static_folder, path)
+    if os.path.isfile(full_path):
+        return send_from_directory(app.static_folder, path)
+    return send_from_directory(app.static_folder, 'index.html')
+
+
 # -------------------- HEALTH & SESSION --------------------
 @app.route('/api/health', methods=['GET'])
 def health():
@@ -1535,27 +1565,7 @@ def session_refresh():
     return jsonify({'success': True})
 
 
-# -------------------- STATIC FILE SERVING --------------------
-@app.route('/')
-def serve_index():
-    return send_from_directory(app.static_folder, 'index.html')
-
-@app.route('/favicon.ico')
-def favicon():
-    return send_from_directory(app.static_folder, 'logo/favicon.ico')
-
-@app.route('/<path:path>')
-def serve_static(path):
-    """Serve static files; if not found, fallback to index.html (SPA)."""
-    if path.startswith('api/'):
-        return jsonify({'error': 'Not found'}), 404
-    full_path = os.path.join(app.static_folder, path)
-    if os.path.isfile(full_path):
-        return send_from_directory(app.static_folder, path)
-    return send_from_directory(app.static_folder, 'index.html')
-
-
-# -------------------- DATABASE INIT --------------------
+# -------------------- DATABASE INIT (at module level) --------------------
 def init_db():
     with app.app_context():
         db.create_all()
@@ -1578,11 +1588,10 @@ def init_db():
                 db.session.add(GlobalWithdrawalDay(day=d))
             db.session.commit()
 
+# Initialize database on startup
+init_db()
 
 # -------------------- MAIN --------------------
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        init_db()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
