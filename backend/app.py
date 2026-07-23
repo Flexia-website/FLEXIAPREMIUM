@@ -180,14 +180,6 @@ class TikTokTask(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 
-class WhatsAppNumber(db.Model):
-    __tablename__ = 'whatsapp_numbers'
-    id = db.Column(db.Integer, primary_key=True)
-    number = db.Column(db.String(20), unique=True, nullable=False)
-    label = db.Column(db.String(50))
-    is_active = db.Column(db.Boolean, default=True)
-
-
 class SocialSettings(db.Model):
     __tablename__ = 'social_settings'
     id = db.Column(db.Integer, primary_key=True)
@@ -339,20 +331,8 @@ def create_transaction(user_id, amount, tx_type, status='COMPLETED', details=Non
 
 
 def check_achievements(user):
-    """Check and unlock achievements for user. Returns list of newly unlocked."""
-    # This is a simplified example; you can expand with more achievements.
-    new_achievements = []
-    # 1. First deposit / registration? We'll skip for now.
-    # 2. Referral count
-    referral_count = Referral.query.filter_by(referrer_id=user.id, bonus_claimed=True).count()
-    # 3. Games played
-    stats = user.game_stats
-    if stats:
-        snake_plays = stats.snake_plays_today  # not total; we can use total from transactions
-        # etc.
-    # For simplicity, we'll create some static achievements.
-    # In production, this would be more sophisticated.
-    return new_achievements
+    # Placeholder: expand as needed
+    return []
 
 
 def verify_bank_account(bank_code, account_number):
@@ -415,13 +395,8 @@ def register():
         referrer = User.query.filter_by(referral_code=referral_code).first()
         if referrer and referrer.id != user.id:
             user.referred_by = referrer.id
-            # Create referral record
             ref = Referral(referrer_id=referrer.id, referred_user_id=user.id)
             db.session.add(ref)
-            # Give referrer bonus (will be claimed later)
-            # We'll add a transaction for the bonus as "REFERRAL_BONUS" but not yet claimed? We'll handle in claim endpoint.
-
-    # Give welcome bonus? Not specified.
 
     db.session.commit()
     return jsonify({'success': True, 'message': 'Account created successfully'})
@@ -471,9 +446,8 @@ def profile():
     transactions = Transaction.query.filter_by(user_id=user.id).order_by(Transaction.timestamp.desc()).limit(50).all()
     referrals = Referral.query.filter_by(referrer_id=user.id).count()
     unclaimed_bonus = 0
-    # Calculate unclaimed referral bonus: for each referral where bonus not claimed, amount = 7500
     unclaimed_refs = Referral.query.filter_by(referrer_id=user.id, bonus_claimed=False).count()
-    unclaimed_bonus = unclaimed_refs * 7500  # CONFIG.REFERRAL_BONUS
+    unclaimed_bonus = unclaimed_refs * 7500
 
     data = user.to_dict()
     data['transactions'] = [t.to_dict() for t in transactions]
@@ -565,6 +539,19 @@ def get_config():
     })
 
 
+@app.route('/api/social-links', methods=['GET'])
+def get_social_links():
+    social = SocialSettings.query.first()
+    if social:
+        return jsonify({
+            'success': True,
+            'whatsapp_link': social.whatsapp_link or '',
+            'telegram_link': social.telegram_link or '',
+            'facebook_link': social.facebook_link or '',
+        })
+    return jsonify({'success': False})
+
+
 # -------------------- GAME ROUTES --------------------
 @app.route('/api/games/check-limit-with-logout/<game_type>', methods=['GET'])
 @login_required
@@ -615,31 +602,25 @@ def snake_report():
         user.game_stats = stats
 
     today = get_today_utc()
-    # Check limit
     if not apply_game_limit('snake', user.game_stats):
         return jsonify({'success': False, 'message': 'Daily limit reached'}), 400
     increment_game_play('snake', user.game_stats)
 
-    # Calculate reward: normal 20, golden 40
     reward = apples * 20 + golden * 40
     if reward == 0:
         return jsonify({'success': True, 'message': 'No apples eaten', 'reward': 0, 'new_balance': user.balance})
 
-    # Check daily cap (500)
     total_daily = db.session.query(func.sum(Transaction.amount)).filter(
         Transaction.user_id == user.id,
         Transaction.type == 'SNAKE_REWARD',
         func.date(Transaction.timestamp) == today
     ).scalar() or 0.0
     if total_daily + reward > 500:
-        # Allow only up to cap
         reward = max(0, 500 - total_daily)
 
     if reward > 0:
-        # Add transaction
         tx = create_transaction(user.id, reward, 'SNAKE_REWARD')
         user.balance += reward
-        # Update high score (not really needed)
         if user.game_stats.snake_high_score < apples + golden:
             user.game_stats.snake_high_score = apples + golden
         db.session.commit()
@@ -675,19 +656,12 @@ def coinflip_report():
         return jsonify({'success': False, 'message': 'Daily limit reached'}), 400
     increment_game_play('coinflip', user.game_stats)
 
-    # Calculate outcome
     payout = 0
     net_change = 0
     daily_cap = 5000
     if won:
-        # Win pays 1.8x
         payout = bet * 1.8
-        net_change = payout - bet  # profit
-        # Check daily cap on winnings (only profit counts toward cap?)
-        # The frontend uses daily_won = sum of COINFLIP_WIN transactions (the payout?)
-        # We'll treat daily cap as total winnings (profit) or total payout? Let's follow frontend: daily_won = sum of COINFLIP_WIN (payout)
-        # Actually frontend tracks "daily earned" as sum of COINFLIP_WIN amount (the payout)
-        # So we need to enforce that cumulative payout does not exceed daily cap.
+        net_change = payout - bet
         today = get_today_utc()
         total_daily = db.session.query(func.sum(Transaction.amount)).filter(
             Transaction.user_id == user.id,
@@ -695,18 +669,12 @@ def coinflip_report():
             func.date(Transaction.timestamp) == today
         ).scalar() or 0.0
         if total_daily + payout > daily_cap:
-            # Reduce payout to fit cap
             payout = max(0, daily_cap - total_daily)
             net_change = payout - bet
-            if net_change < 0:
-                # Even with reduced payout, if payout < bet, it's a loss? Actually we should ensure payout >= bet if won? We'll allow loss.
-                pass
-        # Add win transaction
         tx = create_transaction(user.id, payout, 'COINFLIP_WIN')
-        user.balance += net_change  # net_change can be negative if payout < bet (shouldn't happen)
+        user.balance += net_change
         user.game_stats.coinflip_wins += 1
     else:
-        # Loss: deduct bet
         tx = create_transaction(user.id, -bet, 'COINFLIP_LOSS', status='COMPLETED')
         user.balance -= bet
         user.game_stats.coinflip_losses += 1
@@ -750,10 +718,8 @@ def plinko_report():
     payout = 0
     net_change = 0
     if multiplier > 1:
-        # Win
         payout = bet * multiplier
         net_change = payout - bet
-        # Daily cap 3000 (on profit? or payout? We'll follow frontend: daily earned = sum of PLINKO_WIN transactions (amount is payout)
         today = get_today_utc()
         total_daily = db.session.query(func.sum(Transaction.amount)).filter(
             Transaction.user_id == user.id,
@@ -767,7 +733,6 @@ def plinko_report():
         user.balance += net_change
         user.game_stats.plinko_total_wins += 1
     else:
-        # Loss
         tx = create_transaction(user.id, -bet, 'PLINKO_LOSS')
         user.balance -= bet
         net_change = -bet
@@ -800,9 +765,7 @@ def spin_execute():
         return jsonify({'success': False, 'message': 'Daily spin limit reached'}), 400
     increment_game_play('spin', user.game_stats)
 
-    # Prize pool
     prizes = [1000, 500, 200, 100, 50, 0]
-    # Random index 0-5 (with weighted probabilities? We'll use uniform for simplicity)
     idx = random.randint(0, 5)
     reward = prizes[idx]
     if reward > 0:
@@ -822,13 +785,11 @@ def spin_execute():
 @app.route('/api/games/tiktok/daily', methods=['GET'])
 @login_required
 def tiktok_daily():
-    # Get today's task
     today = get_today_utc()
     task = TikTokTask.query.filter_by(date=today).first()
     if not task:
         return jsonify({'success': False, 'message': 'No TikTok task for today'})
 
-    # Check if already claimed
     if not user.game_stats:
         stats = GameStats(user_id=user.id)
         db.session.add(stats)
@@ -865,7 +826,6 @@ def tiktok_follow():
         return jsonify({'success': False, 'message': 'No task today'}), 400
 
     reward = task.reward_amount
-    # Apply daily cap? Not specified, but we can check if needed.
     tx = create_transaction(user.id, reward, 'TIKTOK_REWARD')
     user.balance += reward
     user.game_stats.tiktok_claimed_today = True
@@ -877,7 +837,6 @@ def tiktok_follow():
 # -------------------- BANKING --------------------
 @app.route('/api/banking/banks', methods=['GET'])
 def get_banks():
-    # Return Nigerian banks list (static for simplicity)
     banks = [
         {"code": "057", "name": "Zenith Bank Plc"},
         {"code": "058", "name": "GTBank"},
@@ -894,7 +853,7 @@ def get_banks():
         {"code": "082", "name": "Keystone Bank"},
         {"code": "215", "name": "Unity Bank"},
         {"code": "076", "name": "Polaris Bank"},
-        {"code": "999", "name": "OPay"},
+        {"code": "565", "name": "OPay"},
         {"code": "100", "name": "PalmPay"},
         {"code": "50211", "name": "Kuda Bank"},
         {"code": "566", "name": "VBank"},
@@ -927,11 +886,10 @@ def withdraw():
 
     if not all([amount, bank_code, account_number, account_name, pin]):
         return jsonify({'success': False, 'message': 'Missing required fields'}), 400
-    if amount < 100000:  # min withdrawal from config
-        social = SocialSettings.query.first()
-        min_wd = social.min_withdrawal if social else 100000.0
-        if amount < min_wd:
-            return jsonify({'success': False, 'message': f'Minimum withdrawal is ₦{min_wd}'}), 400
+    social = SocialSettings.query.first()
+    min_wd = social.min_withdrawal if social else 100000.0
+    if amount < min_wd:
+        return jsonify({'success': False, 'message': f'Minimum withdrawal is ₦{min_wd}'}), 400
     if amount > user.balance:
         return jsonify({'success': False, 'message': 'Insufficient balance'}), 400
     if user.withdrawal_restricted:
@@ -941,12 +899,10 @@ def withdraw():
     if user.withdrawal_pin != pin:
         return jsonify({'success': False, 'message': 'Incorrect PIN'}), 400
 
-    # Check withdrawal day
     today_day = get_today_day()
     if not is_withdrawal_day(user, today_day):
         return jsonify({'success': False, 'message': 'Withdrawal not allowed today'}), 400
 
-    # Create withdrawal request
     wd = Withdrawal(
         user_id=user.id,
         amount=amount,
@@ -956,7 +912,6 @@ def withdraw():
         status='PENDING'
     )
     db.session.add(wd)
-    # Deduct balance immediately
     user.balance -= amount
     tx = create_transaction(user.id, -amount, 'WITHDRAWAL', status='PENDING')
     db.session.commit()
@@ -968,12 +923,10 @@ def withdraw():
 @app.route('/api/referral/claim', methods=['POST'])
 @login_required
 def claim_referral():
-    # Claim all unclaimed referral bonuses
     unclaimed_refs = Referral.query.filter_by(referrer_id=user.id, bonus_claimed=False).all()
     if not unclaimed_refs:
         return jsonify({'success': False, 'message': 'No unclaimed bonuses'}), 400
     bonus = len(unclaimed_refs) * 7500
-    # Check daily cap? Not specified.
     tx = create_transaction(user.id, bonus, 'REFERRAL_BONUS')
     user.balance += bonus
     for ref in unclaimed_refs:
@@ -987,8 +940,6 @@ def claim_referral():
 @app.route('/api/achievements', methods=['GET'])
 @login_required
 def get_achievements():
-    # Return list of achievements for user with progress
-    # Predefined achievements
     predefined = [
         {'id': 'first_win', 'title': 'First Win', 'description': 'Win your first game', 'icon': 'fas fa-trophy', 'category': 'gaming', 'points': 10, 'cash_reward': 50, 'target': 1},
         {'id': 'snake_10', 'title': 'Snake Pro', 'description': 'Eat 10 apples in Snake', 'icon': 'fas fa-gamepad', 'category': 'gaming', 'points': 20, 'cash_reward': 100, 'target': 10},
@@ -1017,16 +968,13 @@ def get_achievements():
             )
             db.session.add(existing)
             db.session.flush()
-        # Update progress based on actual data (simplified)
-        # We'll compute progress in real-time for demo.
         progress = 0
         if ach['id'] == 'snake_10':
-            # Count total snake rewards (or apples eaten)
             total_apples = db.session.query(func.sum(Transaction.amount)).filter(
                 Transaction.user_id == user.id,
                 Transaction.type == 'SNAKE_REWARD'
             ).scalar() or 0
-            progress = int(total_apples / 20)  # approximate apples
+            progress = int(total_apples / 20)
         elif ach['id'] == 'coinflip_5':
             progress = user.game_stats.coinflip_wins if user.game_stats else 0
         elif ach['id'] == 'plinko_3':
@@ -1034,10 +982,8 @@ def get_achievements():
         elif ach['id'] == 'refer_1':
             progress = Referral.query.filter_by(referrer_id=user.id, bonus_claimed=True).count()
         elif ach['id'] == 'daily_claim':
-            # Count TikTok claims
             progress = Transaction.query.filter_by(user_id=user.id, type='TIKTOK_REWARD').count()
         elif ach['id'] == 'first_win':
-            # Any win transaction
             progress = 1 if Transaction.query.filter_by(user_id=user.id, type='COINFLIP_WIN').first() or \
                           Transaction.query.filter_by(user_id=user.id, type='PLINKO_WIN').first() or \
                           Transaction.query.filter_by(user_id=user.id, type='SNAKE_REWARD').first() else 0
@@ -1077,7 +1023,6 @@ def get_achievements():
 @app.route('/api/achievements/claim', methods=['POST'])
 @login_required
 def claim_achievement_rewards():
-    # Claim cash rewards for all unlocked but unprocessed achievements
     unlocked = Achievement.query.filter_by(user_id=user.id, unlocked=True, processed=False).all()
     if not unlocked:
         return jsonify({'success': False, 'message': 'No rewards to claim'}), 400
@@ -1098,7 +1043,6 @@ def check_withdrawal_day():
     today_day = today.day
     user = g.user
     can_withdraw = is_withdrawal_day(user, today_day)
-    # Get global days
     global_days = [d.day for d in GlobalWithdrawalDay.query.all()]
     custom_days = [int(d) for d in user.custom_withdrawal_days.split(',')] if user.custom_withdrawal_days else []
     used_days = custom_days if custom_days else global_days
@@ -1132,9 +1076,28 @@ def admin_get_user(user_id):
     return jsonify({'success': True, 'user': user.to_dict()})
 
 
+@app.route('/api/admin/user/<int:user_id>/update-settings', methods=['POST'])
+@admin_required
+def admin_update_user_settings(user_id):
+    data = request.get_json()
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'success': False, 'message': 'User not found'}), 404
+    if 'restricted' in data:
+        user.withdrawal_restricted = data['restricted']
+    if 'limit' in data:
+        user.withdrawal_limit = max(0, float(data['limit']))
+    if 'custom_days' in data:
+        days = [str(d) for d in data['custom_days'] if 1 <= d <= 31]
+        user.custom_withdrawal_days = ','.join(days) if days else None
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 @app.route('/api/admin/user/<int:user_id>/toggle-restrict', methods=['POST'])
 @admin_required
 def admin_toggle_restrict(user_id):
+    # Kept for backward compatibility, but update-settings is preferred
     user = User.query.get(user_id)
     if not user:
         return jsonify({'success': False, 'message': 'User not found'}), 404
@@ -1146,6 +1109,7 @@ def admin_toggle_restrict(user_id):
 @app.route('/api/admin/user/<int:user_id>/set-limit', methods=['POST'])
 @admin_required
 def admin_set_limit(user_id):
+    # Kept for backward compatibility
     data = request.get_json()
     limit = data.get('limit', 0)
     user = User.query.get(user_id)
@@ -1159,11 +1123,11 @@ def admin_set_limit(user_id):
 @app.route('/api/admin/user/<int:user_id>/set-custom-days', methods=['POST'])
 @admin_required
 def admin_set_custom_days(user_id):
+    # Kept for backward compatibility
     data = request.get_json()
     days = data.get('days', [])
     if not isinstance(days, list):
         return jsonify({'success': False, 'message': 'Invalid days format'}), 400
-    # Validate days 1-31
     days = [str(d) for d in days if 1 <= d <= 31]
     user = User.query.get(user_id)
     if not user:
@@ -1215,7 +1179,7 @@ def admin_transactions():
 def admin_approve_withdrawal():
     data = request.get_json()
     tx_id = data.get('transaction_id')
-    action = data.get('action')  # 'approve' or 'reject'
+    action = data.get('action')
     if not tx_id or action not in ['approve', 'reject']:
         return jsonify({'success': False, 'message': 'Invalid request'}), 400
     tx = Transaction.query.get(tx_id)
@@ -1223,7 +1187,6 @@ def admin_approve_withdrawal():
         return jsonify({'success': False, 'message': 'Transaction not found'}), 404
     if tx.type != 'WITHDRAWAL':
         return jsonify({'success': False, 'message': 'Not a withdrawal transaction'}), 400
-    # Find associated withdrawal record
     wd = Withdrawal.query.filter_by(id=tx_id).first()
     if not wd:
         return jsonify({'success': False, 'message': 'Withdrawal record not found'}), 404
@@ -1232,14 +1195,12 @@ def admin_approve_withdrawal():
         tx.status = 'COMPLETED'
         wd.status = 'COMPLETED'
         wd.processed_at = datetime.datetime.utcnow()
-    else:  # reject
+    else:
         tx.status = 'FAILED'
         wd.status = 'FAILED'
-        # Refund balance
         user = User.query.get(tx.user_id)
         if user:
             user.balance += abs(tx.amount)
-            # Create refund transaction
             refund = create_transaction(user.id, abs(tx.amount), 'WITHDRAWAL_REFUND')
     db.session.commit()
     return jsonify({'success': True, 'message': f'Withdrawal {action}d'})
@@ -1256,7 +1217,6 @@ def admin_global_withdrawal_days():
         days = data.get('days', [])
         if not isinstance(days, list):
             return jsonify({'success': False, 'message': 'Invalid format'}), 400
-        # Clear existing
         GlobalWithdrawalDay.query.delete()
         for d in days:
             if 1 <= d <= 31:
@@ -1378,47 +1338,6 @@ def admin_delete_coupons():
     return jsonify({'success': True, 'message': 'All coupons deleted'})
 
 
-@app.route('/api/admin/whatsapp-numbers', methods=['GET', 'POST'])
-@admin_required
-def admin_whatsapp_numbers():
-    if request.method == 'GET':
-        numbers = WhatsAppNumber.query.all()
-        return jsonify({'success': True, 'numbers': [{'id': n.id, 'number': n.number, 'label': n.label, 'is_active': n.is_active} for n in numbers]})
-    else:
-        data = request.get_json()
-        number = data.get('number', '').strip()
-        label = data.get('label', '')
-        if not number:
-            return jsonify({'success': False, 'message': 'Number required'}), 400
-        if WhatsAppNumber.query.filter_by(number=number).first():
-            return jsonify({'success': False, 'message': 'Number already exists'}), 400
-        db.session.add(WhatsAppNumber(number=number, label=label))
-        db.session.commit()
-        return jsonify({'success': True, 'message': 'Number added'})
-
-
-@app.route('/api/admin/whatsapp-numbers/<int:num_id>/toggle', methods=['POST'])
-@admin_required
-def admin_toggle_whatsapp(num_id):
-    num = WhatsAppNumber.query.get(num_id)
-    if not num:
-        return jsonify({'success': False, 'message': 'Number not found'}), 404
-    num.is_active = not num.is_active
-    db.session.commit()
-    return jsonify({'success': True})
-
-
-@app.route('/api/admin/whatsapp-numbers/<int:num_id>', methods=['DELETE'])
-@admin_required
-def admin_delete_whatsapp(num_id):
-    num = WhatsAppNumber.query.get(num_id)
-    if not num:
-        return jsonify({'success': False, 'message': 'Number not found'}), 404
-    db.session.delete(num)
-    db.session.commit()
-    return jsonify({'success': True})
-
-
 @app.route('/api/admin/tiktok/set-daily', methods=['POST'])
 @admin_required
 def admin_set_tiktok_daily():
@@ -1456,9 +1375,7 @@ def admin_tiktok_history():
 @app.route('/api/admin/backup/trigger', methods=['POST'])
 @admin_required
 def admin_trigger_backup():
-    # Simulate backup
     filename = f'backup_{datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")}.flexia'
-    # In real implementation, you'd dump database to file
     log = BackupLog(filename=filename, size=0)
     db.session.add(log)
     db.session.commit()
@@ -1475,27 +1392,22 @@ def admin_backup_list():
 @app.route('/api/admin/database/export-all', methods=['POST'])
 @admin_required
 def admin_export_db():
-    # Not implemented, would return file
     return jsonify({'success': False, 'message': 'Export not implemented'}), 501
 
 
 @app.route('/api/admin/database/import-all', methods=['POST'])
 @admin_required
 def admin_import_db():
-    # Not implemented
     return jsonify({'success': False, 'message': 'Import not implemented'}), 501
 
 
 @app.route('/api/admin/database/clear', methods=['POST'])
 @admin_required
 def admin_clear_db():
-    # Danger: clear all data except admin
     data = request.get_json()
     confirmation = data.get('sudo_confirmation')
     if confirmation != 'DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN':
         return jsonify({'success': False, 'message': 'Invalid confirmation'}), 400
-
-    # Delete all users except admins
     User.query.filter(User.is_admin == False).delete()
     Transaction.query.delete()
     GameStats.query.delete()
@@ -1503,7 +1415,6 @@ def admin_clear_db():
     Coupon.query.update({'status': 'AVAILABLE', 'used_by': None, 'used_at': None})
     Withdrawal.query.delete()
     Referral.query.delete()
-    # Keep WhatsApp numbers, social settings, global days, backup logs
     db.session.commit()
     return jsonify({'success': True, 'message': 'Database cleared (admin kept)', 'stats': {'users_deleted': 0, 'transactions_deleted': 0}})
 
@@ -1511,7 +1422,6 @@ def admin_clear_db():
 @app.route('/api/admin/export-data', methods=['POST'])
 @admin_required
 def admin_export_data():
-    # Not implemented
     return jsonify({'success': False, 'message': 'Export not implemented'}), 501
 
 
@@ -1523,7 +1433,6 @@ def admin_withdrawal_report():
     today_day = get_today_day()
     for u in users:
         can_withdraw = is_withdrawal_day(u, today_day) and not u.withdrawal_restricted
-        # Get custom days
         custom_days = [int(d) for d in u.custom_withdrawal_days.split(',')] if u.custom_withdrawal_days else []
         report_users.append({
             'id': u.id,
@@ -1557,7 +1466,6 @@ def paystack_initialize():
         return jsonify({'success': False, 'message': 'Email and amount required'}), 400
     paystack_secret = os.environ.get('PAYSTACK_SECRET_KEY')
     if not paystack_secret:
-        # Mock payment for testing
         ref = str(uuid.uuid4())
         return jsonify({
             'success': True,
@@ -1571,12 +1479,11 @@ def paystack_initialize():
             },
             'expires_at': (datetime.datetime.utcnow() + datetime.timedelta(hours=1)).isoformat()
         })
-    # Real Paystack integration
     url = 'https://api.paystack.co/transaction/initialize'
     headers = {'Authorization': f'Bearer {paystack_secret}', 'Content-Type': 'application/json'}
     payload = {
         'email': email,
-        'amount': int(amount * 100),  # kobo
+        'amount': int(amount * 100),
         'currency': 'NGN',
         'callback_url': f"{request.host_url}?payment=success",
         'metadata': {'coupon_for': email}
@@ -1602,7 +1509,6 @@ def paystack_initialize():
 def paystack_status(reference):
     paystack_secret = os.environ.get('PAYSTACK_SECRET_KEY')
     if not paystack_secret:
-        # Mock
         return jsonify({'success': True, 'status': 'COMPLETED', 'coupon_code': 'MOCK123'})
     url = f'https://api.paystack.co/transaction/verify/{reference}'
     headers = {'Authorization': f'Bearer {paystack_secret}'}
@@ -1610,7 +1516,6 @@ def paystack_status(reference):
         resp = requests.get(url, headers=headers, timeout=10)
         result = resp.json()
         if result['status'] and result['data']['status'] == 'success':
-            # Generate coupon code and save to database
             coupon_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
             db.session.add(Coupon(code=coupon_code, status='AVAILABLE'))
             db.session.commit()
@@ -1654,22 +1559,15 @@ def session_refresh():
 def init_db():
     with app.app_context():
         db.create_all()
-        # Create admin user if not exists
         if not User.query.filter_by(username='flexiaadmin').first():
             admin = User(username='flexiaadmin', is_admin=True)
-            admin.set_password('admin123')  # change in production
+            admin.set_password('admin123')
             admin.referral_code = generate_referral_code()
             db.session.add(admin)
             db.session.commit()
-        # Create default social settings
         if not SocialSettings.query.first():
             db.session.add(SocialSettings())
             db.session.commit()
-        # Create some default WhatsApp number
-        if not WhatsAppNumber.query.first():
-            db.session.add(WhatsAppNumber(number='2348160881049', label='Support'))
-            db.session.commit()
-        # Add some global withdrawal days (7,14,25,30)
         if GlobalWithdrawalDay.query.count() == 0:
             for d in [7, 14, 25, 30]:
                 db.session.add(GlobalWithdrawalDay(day=d))
