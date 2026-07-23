@@ -1,29 +1,32 @@
-# app.py – FLEXIA Backend (Flask + SQLAlchemy)
+# app.py – FLEXIA Backend (Flask + SQLAlchemy) – Full Production Version
+
 import os
 import json
 import uuid
 import random
 import string
 import datetime
-import hashlib
-import hmac
-import time
 from functools import wraps
-from flask import Flask, request, jsonify, session, g, make_response
+from flask import Flask, request, jsonify, session, g, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import func, and_, or_
+from sqlalchemy import func
 from werkzeug.security import generate_password_hash, check_password_hash
-import pytz
-import requests  # for Paystack and bank verification
+import requests
 
 # -------------------- CONFIGURATION --------------------
 app = Flask(__name__)
+
+# Path to frontend folder (one level up from backend)
+frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend'))
+app.static_folder = frontend_path
+app.static_url_path = ''
+
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-this-in-production')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///flexia.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SECURE'] = False  # set to True if using HTTPS
+app.config['SESSION_COOKIE_SECURE'] = False  # set True if using HTTPS
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=7)
 app.config['JSON_AS_ASCII'] = False
 
@@ -40,14 +43,13 @@ class User(db.Model):
     referred_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     withdrawal_pin = db.Column(db.String(10), nullable=True)
     withdrawal_restricted = db.Column(db.Boolean, default=False)
-    withdrawal_limit = db.Column(db.Float, default=0.0)  # 0 = no limit
-    custom_withdrawal_days = db.Column(db.String(255), nullable=True)  # comma-separated days
+    withdrawal_limit = db.Column(db.Float, default=0.0)
+    custom_withdrawal_days = db.Column(db.String(255), nullable=True)
     is_admin = db.Column(db.Boolean, default=False)
     profile_picture = db.Column(db.String(500), nullable=True)
     ui_theme = db.Column(db.String(10), default='light')
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     contact = db.Column(db.String(100), nullable=True)
-    # relationships
     transactions = db.relationship('Transaction', backref='user', lazy=True)
     game_stats = db.relationship('GameStats', backref='user', uselist=False)
 
@@ -81,9 +83,9 @@ class Transaction(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     amount = db.Column(db.Float, nullable=False)
-    type = db.Column(db.String(50), nullable=False)  # e.g., WITHDRAWAL, SNAKE_REWARD, COINFLIP_WIN, ...
-    status = db.Column(db.String(20), default='PENDING')  # PENDING, COMPLETED, FAILED
-    details = db.Column(db.Text, nullable=True)  # JSON string
+    type = db.Column(db.String(50), nullable=False)
+    status = db.Column(db.String(20), default='PENDING')
+    details = db.Column(db.Text, nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
     def to_dict(self):
@@ -131,9 +133,9 @@ class Achievement(db.Model):
     cash_reward = db.Column(db.Float, default=0.0)
     unlocked = db.Column(db.Boolean, default=False)
     unlocked_at = db.Column(db.DateTime, nullable=True)
-    progress = db.Column(db.Integer, default=0)  # current value
+    progress = db.Column(db.Integer, default=0)
     target = db.Column(db.Integer, default=1)
-    processed = db.Column(db.Boolean, default=False)  # reward claimed
+    processed = db.Column(db.Boolean, default=False)
 
     __table_args__ = (db.UniqueConstraint('user_id', 'achievement_id', name='uix_user_achievement'),)
 
@@ -142,7 +144,7 @@ class Coupon(db.Model):
     __tablename__ = 'coupons'
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(20), unique=True, nullable=False)
-    status = db.Column(db.String(20), default='AVAILABLE')  # AVAILABLE, USED
+    status = db.Column(db.String(20), default='AVAILABLE')
     used_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     used_at = db.Column(db.DateTime, nullable=True)
 
@@ -192,8 +194,7 @@ class SocialSettings(db.Model):
 class GlobalWithdrawalDay(db.Model):
     __tablename__ = 'global_withdrawal_days'
     id = db.Column(db.Integer, primary_key=True)
-    day = db.Column(db.Integer, nullable=False)  # 1-31
-
+    day = db.Column(db.Integer, nullable=False)
     __table_args__ = (db.UniqueConstraint('day', name='uix_global_day'),)
 
 
@@ -245,13 +246,11 @@ def get_today_day():
 
 
 def is_withdrawal_day(user, today_day):
-    # Check custom days first
     if user.custom_withdrawal_days:
         days = [int(d) for d in user.custom_withdrawal_days.split(',') if d.strip()]
-        return today_day in days if days else True  # if empty list, treat as all days? We'll default to global
-    # Global days
+        return today_day in days if days else True
     global_days = [d.day for d in GlobalWithdrawalDay.query.all()]
-    return today_day in global_days if global_days else True  # if no global days, allow all
+    return today_day in global_days if global_days else True
 
 
 def apply_game_limit(game_type, user_stats):
@@ -260,7 +259,7 @@ def apply_game_limit(game_type, user_stats):
         'coinflip': 12,
         'plinko': 12,
         'spin': 1,
-        'tiktok': 3,
+        'tiktok': 3
     }
     today = get_today_utc()
     if game_type == 'snake':
@@ -330,16 +329,9 @@ def create_transaction(user_id, amount, tx_type, status='COMPLETED', details=Non
     return tx
 
 
-def check_achievements(user):
-    # Placeholder: expand as needed
-    return []
-
-
 def verify_bank_account(bank_code, account_number):
-    """Use Paystack API to verify account."""
     paystack_secret = os.environ.get('PAYSTACK_SECRET_KEY')
     if not paystack_secret:
-        # Mock verification for testing
         return {'success': True, 'account_name': 'John Doe'}
     url = f'https://api.paystack.co/bank/resolve?account_number={account_number}&bank_code={bank_code}'
     headers = {'Authorization': f'Bearer {paystack_secret}'}
@@ -373,24 +365,20 @@ def register():
     if User.query.filter_by(username=username).first():
         return jsonify({'success': False, 'message': 'Username already taken'}), 400
 
-    # Validate coupon
     coupon = Coupon.query.filter_by(code=coupon_code, status='AVAILABLE').first()
     if not coupon:
         return jsonify({'success': False, 'message': 'Invalid or used coupon code'}), 400
 
-    # Create user
     user = User(username=username, contact=contact)
     user.set_password(password)
     user.referral_code = generate_referral_code()
     db.session.add(user)
-    db.session.flush()  # get user.id
+    db.session.flush()
 
-    # Mark coupon as used
     coupon.status = 'USED'
     coupon.used_by = user.id
     coupon.used_at = datetime.datetime.utcnow()
 
-    # Handle referral
     if referral_code:
         referrer = User.query.filter_by(referral_code=referral_code).first()
         if referrer and referrer.id != user.id:
@@ -442,10 +430,8 @@ def validate_coupon():
 @login_required
 def profile():
     user = g.user
-    # Include transactions and referrals
     transactions = Transaction.query.filter_by(user_id=user.id).order_by(Transaction.timestamp.desc()).limit(50).all()
     referrals = Referral.query.filter_by(referrer_id=user.id).count()
-    unclaimed_bonus = 0
     unclaimed_refs = Referral.query.filter_by(referrer_id=user.id, bonus_claimed=False).count()
     unclaimed_bonus = unclaimed_refs * 7500
 
@@ -1097,7 +1083,6 @@ def admin_update_user_settings(user_id):
 @app.route('/api/admin/user/<int:user_id>/toggle-restrict', methods=['POST'])
 @admin_required
 def admin_toggle_restrict(user_id):
-    # Kept for backward compatibility, but update-settings is preferred
     user = User.query.get(user_id)
     if not user:
         return jsonify({'success': False, 'message': 'User not found'}), 404
@@ -1109,7 +1094,6 @@ def admin_toggle_restrict(user_id):
 @app.route('/api/admin/user/<int:user_id>/set-limit', methods=['POST'])
 @admin_required
 def admin_set_limit(user_id):
-    # Kept for backward compatibility
     data = request.get_json()
     limit = data.get('limit', 0)
     user = User.query.get(user_id)
@@ -1123,7 +1107,6 @@ def admin_set_limit(user_id):
 @app.route('/api/admin/user/<int:user_id>/set-custom-days', methods=['POST'])
 @admin_required
 def admin_set_custom_days(user_id):
-    # Kept for backward compatibility
     data = request.get_json()
     days = data.get('days', [])
     if not isinstance(days, list):
@@ -1526,7 +1509,7 @@ def paystack_status(reference):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-# -------------------- HEALTH CHECK --------------------
+# -------------------- HEALTH & SESSION --------------------
 @app.route('/api/health', methods=['GET'])
 def health():
     return jsonify({
@@ -1537,8 +1520,6 @@ def health():
         'version': '1.0.0'
     })
 
-
-# -------------------- SESSION MANAGEMENT --------------------
 @app.route('/api/session/status', methods=['GET'])
 def session_status():
     if 'user_id' in session:
@@ -1547,7 +1528,6 @@ def session_status():
             return jsonify({'success': True, 'authenticated': True})
     return jsonify({'success': True, 'authenticated': False})
 
-
 @app.route('/api/session/refresh', methods=['POST'])
 @login_required
 def session_refresh():
@@ -1555,19 +1535,44 @@ def session_refresh():
     return jsonify({'success': True})
 
 
+# -------------------- STATIC FILE SERVING --------------------
+@app.route('/')
+def serve_index():
+    return send_from_directory(app.static_folder, 'index.html')
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(app.static_folder, 'logo/favicon.ico')
+
+@app.route('/<path:path>')
+def serve_static(path):
+    """Serve static files; if not found, fallback to index.html (SPA)."""
+    if path.startswith('api/'):
+        return jsonify({'error': 'Not found'}), 404
+    full_path = os.path.join(app.static_folder, path)
+    if os.path.isfile(full_path):
+        return send_from_directory(app.static_folder, path)
+    return send_from_directory(app.static_folder, 'index.html')
+
+
 # -------------------- DATABASE INIT --------------------
 def init_db():
     with app.app_context():
         db.create_all()
-        if not User.query.filter_by(username='flexiaadmin').first():
-            admin = User(username='flexiaadmin', is_admin=True)
-            admin.set_password('admin123')
+        # Create admin user from environment variables
+        admin_username = os.environ.get('ADMIN_USERNAME', 'flexiaadmin')
+        admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
+        if not User.query.filter_by(username=admin_username).first():
+            admin = User(username=admin_username, is_admin=True)
+            admin.set_password(admin_password)
             admin.referral_code = generate_referral_code()
             db.session.add(admin)
             db.session.commit()
+        # Create default social settings
         if not SocialSettings.query.first():
             db.session.add(SocialSettings())
             db.session.commit()
+        # Add some global withdrawal days
         if GlobalWithdrawalDay.query.count() == 0:
             for d in [7, 14, 25, 30]:
                 db.session.add(GlobalWithdrawalDay(day=d))
