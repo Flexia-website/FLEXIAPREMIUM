@@ -98,7 +98,7 @@
             color: #7b61ff;
         }
         
-        .user-item, .withdrawal-item, .whatsapp-number-item, .tiktok-history-item {
+        .user-item, .withdrawal-item, .tiktok-history-item {
             background: #151528;
             padding: 12px;
             margin: 8px 0;
@@ -569,9 +569,6 @@
             </button>
             <button class="tab-btn" onclick="showTab('coupons')">
                 <i class="fas fa-ticket-alt"></i> Coupons
-            </button>
-            <button class="tab-btn" onclick="showTab('whatsapp')">
-                <i class="fab fa-whatsapp"></i> WhatsApp
             </button>
         </div>
         
@@ -1110,32 +1107,9 @@
                 <div id="coupon-message" class="message hidden"></div>
             </div>
         </div>
-        
-        <!-- WhatsApp Tab -->
-        <div id="whatsapp" class="tab-content">
-            <div class="admin-section">
-                <h3><i class="fab fa-whatsapp"></i> WhatsApp Numbers for Coupons</h3>
-                <div class="mb-3">
-                    <p>Users will contact these numbers for coupons.</p>
-                </div>
-                <div class="row mb-3">
-                    <div class="col-md-8">
-                        <input type="text" id="new-whatsapp-number" placeholder="e.g., 2348123456789" />
-                    </div>
-                    <div class="col-md-4">
-                        <button onclick="addWhatsAppNumber()" class="w-100">
-                            <i class="fas fa-plus"></i> Add Number
-                        </button>
-                    </div>
-                </div>
-                <div id="whatsapp-numbers-list">Loading numbers...</div>
-            </div>
-        </div>
     </div>
     
     <!-- Modals -->
-    
-    <!-- Withdrawal Settings Modal -->
     <div class="modal fade" id="withdrawalSettingsModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -1156,7 +1130,6 @@
         </div>
     </div>
     
-    <!-- Adjust Balance Modal -->
     <div class="modal fade" id="adjustBalanceModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -1184,7 +1157,6 @@
         </div>
     </div>
     
-    <!-- Backup Modal -->
     <div class="modal fade" id="backupModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -1202,7 +1174,6 @@
         </div>
     </div>
     
-    <!-- Preview Database Clear Modal -->
     <div class="modal fade" id="previewClearModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content bg-dark text-light">
@@ -1225,7 +1196,6 @@
         </div>
     </div>
     
-    <!-- Confirmation Database Clear Modal -->
     <div class="modal fade" id="confirmClearModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content bg-dark text-light">
@@ -1239,14 +1209,12 @@
                         <i class="fas fa-radiation"></i>
                         <strong>THIS ACTION IS PERMANENT AND CANNOT BE UNDONE!</strong>
                     </div>
-                    
                     <p>Type the following confirmation phrase to proceed:</p>
                     <div class="mb-3">
                         <code class="bg-black p-2 d-block mb-2">DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN</code>
                         <input type="text" class="form-control" id="sudo-confirmation" 
                                placeholder="Type the phrase exactly as shown above">
                     </div>
-                    
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" id="acknowledge-risk">
                         <label class="form-check-label" for="acknowledge-risk">
@@ -1285,10 +1253,6 @@
             el.className = `message ${type}`;
             el.classList.remove('hidden');
             setTimeout(() => el.classList.add('hidden'), 5000);
-        }
-        
-        function showAlert(message, type = 'info') {
-            alert(`[${type.toUpperCase()}] ${message}`);
         }
         
         function formatCurrency(amount) {
@@ -1344,11 +1308,9 @@
         async function updateTimezoneDisplay() {
             const info = await fetchTimezoneInfo();
             const displayText = `${info.timezone_display} • ${info.today_date} (Day ${info.today})`;
-            
             document.querySelectorAll('.timezone-display').forEach(el => {
                 el.textContent = displayText;
             });
-            
             return info;
         }
         
@@ -1465,10 +1427,8 @@
         function showTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            
             document.getElementById(tabId).classList.add('active');
             document.querySelector(`[onclick="showTab('${tabId}')"]`).classList.add('active');
-            
             switch(tabId) {
                 case 'dashboard': loadDashboard(); break;
                 case 'database': loadDatabaseTab(); break;
@@ -1480,7 +1440,6 @@
                 case 'backup': loadBackupTab(); break;
                 case 'settings': loadSettings(); break;
                 case 'coupons': loadCouponStats(); break;
-                case 'whatsapp': loadWhatsAppNumbers(); break;
             }
         }
         
@@ -1488,12 +1447,10 @@
         async function exportFullDatabase() {
             try {
                 showMessage('Preparing database export...', 'info');
-                
                 const response = await fetch('/api/admin/database/export-all', {
                     method: 'POST',
                     credentials: 'include'
                 });
-                
                 if (response.ok) {
                     const blob = await response.blob();
                     const url = window.URL.createObjectURL(blob);
@@ -1505,7 +1462,6 @@
                     a.click();
                     document.body.removeChild(a);
                     window.URL.revokeObjectURL(url);
-                    
                     showMessage('✅ Full database exported successfully!', 'success');
                 } else {
                     const error = await response.json();
@@ -1537,34 +1493,26 @@
                 showMessage('Please select a .flexia file first', 'error');
                 return;
             }
-            
             if (!confirm('⚠️ WARNING: This will replace ALL current data with the backup data. This action cannot be undone! Proceed?')) {
                 return;
             }
-            
             const formData = new FormData();
             formData.append('file', selectedRestoreFile);
-            
             try {
                 showMessage('Restoring database... This may take a moment.', 'info');
-                
                 const response = await fetch('/api/admin/database/import-all', {
                     method: 'POST',
                     credentials: 'include',
                     body: formData
                 });
-                
                 const data = await response.json();
-                
                 if (data.success) {
                     let importedText = '';
                     if (data.imported_counts) {
                         const counts = data.imported_counts;
                         importedText = `Imported: ${counts.users || 0} users, ${counts.transactions || 0} transactions, ${counts.game_plays || 0} game plays`;
                     }
-                    
                     showMessage(`✅ Database restored successfully! ${importedText}`, 'success');
-                    
                     setTimeout(() => {
                         alert('Database restore complete! Page will refresh in 5 seconds to show updated data.');
                         setTimeout(() => window.location.reload(), 5000);
@@ -1604,18 +1552,15 @@
                 const clearGameplays = document.getElementById('clear-gameplays').checked;
                 const resetCoupons = document.getElementById('reset-coupons').checked;
                 const backupOption = document.getElementById('backup-option').value;
-                
                 const response = await fetchData('/api/admin/stats');
                 if (response.success) {
                     const stats = response.stats;
-                    
                     const previewContent = document.getElementById('previewClearContent');
                     previewContent.innerHTML = `
                         <div class="alert alert-warning">
                             <i class="fas fa-database"></i>
                             <strong>Database Clearance Preview</strong>
                         </div>
-                        
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="card bg-dark mb-3">
@@ -1644,7 +1589,6 @@
                                     </div>
                                 </div>
                             </div>
-                            
                             <div class="col-md-6">
                                 <div class="card bg-dark mb-3">
                                     <div class="card-header bg-success">
@@ -1661,10 +1605,6 @@
                                                 <span class="badge bg-info">${formatCurrency(500000.00)}</span>
                                             </li>
                                             <li class="list-group-item bg-dark d-flex justify-content-between">
-                                                <span>WhatsApp Numbers:</span>
-                                                <span class="badge bg-success">Will be kept</span>
-                                            </li>
-                                            <li class="list-group-item bg-dark d-flex justify-content-between">
                                                 <span>Backup Created:</span>
                                                 <span class="badge bg-info">${backupOption === 'yes' ? 'Yes' : 'No'}</span>
                                             </li>
@@ -1673,23 +1613,19 @@
                                 </div>
                             </div>
                         </div>
-                        
                         <div class="alert alert-danger">
                             <i class="fas fa-exclamation-circle"></i>
                             <strong>Warning: THIS ACTION IS IRREVERSIBLE!</strong>
                             <p>All user data will be permanently deleted. This action cannot be undone.</p>
                         </div>
-                        
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle"></i>
                             <strong>Confirmation Required:</strong> You must type: 
                             <code class="bg-black p-1">DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN</code>
                         </div>
                     `;
-                    
                     const modal = new bootstrap.Modal(document.getElementById('previewClearModal'));
                     modal.show();
-                    
                 } else {
                     showMessage('Failed to generate preview: ' + response.message, 'error');
                 }
@@ -1702,24 +1638,19 @@
         function confirmDatabaseClear() {
             const modal = bootstrap.Modal.getInstance(document.getElementById('previewClearModal'));
             if (modal) modal.hide();
-            
             setTimeout(() => {
                 const confirmModal = new bootstrap.Modal(document.getElementById('confirmClearModal'));
                 confirmModal.show();
-                
                 const confirmationInput = document.getElementById('sudo-confirmation');
                 const acknowledgeCheckbox = document.getElementById('acknowledge-risk');
                 const executeBtn = document.getElementById('execute-clear-btn');
-                
                 function validateConfirmation() {
                     const isConfirmed = confirmationInput.value === 'DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN';
                     const isAcknowledged = acknowledgeCheckbox.checked;
                     executeBtn.disabled = !(isConfirmed && isAcknowledged);
                 }
-                
                 confirmationInput.addEventListener('input', validateConfirmation);
                 acknowledgeCheckbox.addEventListener('change', validateConfirmation);
-                
             }, 300);
         }
         
@@ -1727,7 +1658,6 @@
             try {
                 const backupOption = document.getElementById('backup-option').value;
                 const sudoConfirmation = document.getElementById('sudo-confirmation').value;
-                
                 const response = await fetch('/api/admin/database/clear', {
                     method: 'POST',
                     credentials: 'include',
@@ -1737,16 +1667,12 @@
                         backup_option: backupOption
                     })
                 });
-                
                 const data = await response.json();
-                
                 if (data.success) {
                     showMessage('✅ Database cleared successfully!', 'success');
-                    
                     setTimeout(() => {
                         alert(`
 ✅ DATABASE CLEARANCE COMPLETE
-
 📊 Statistics:
 • Users Deleted: ${data.stats.users_deleted}
 • Transactions Deleted: ${data.stats.transactions_deleted}
@@ -1754,17 +1680,13 @@
 • Coupons Reset: ${data.stats.coupons_reset}
 • Admin Kept: ${data.stats.admin_kept}
 • Backup Created: ${data.stats.backup_created}
-
 ⚠️ ${data.warning}
                         `);
-                        
                         window.location.reload();
                     }, 1000);
-                    
                 } else {
                     showMessage('Failed to clear database: ' + data.message, 'error');
                 }
-                
             } catch (error) {
                 console.error('Clear error:', error);
                 showMessage('Error clearing database', 'error');
@@ -1775,10 +1697,7 @@
         
         function closeClearModal() {
             const modal = bootstrap.Modal.getInstance(document.getElementById('confirmClearModal'));
-            if (modal) {
-                modal.hide();
-            }
-            
+            if (modal) modal.hide();
             document.getElementById('sudo-confirmation').value = '';
             document.getElementById('acknowledge-risk').checked = false;
             document.getElementById('execute-clear-btn').disabled = true;
@@ -1789,12 +1708,10 @@
             const exportUsers = document.getElementById('export-users').checked;
             const exportTransactions = document.getElementById('export-transactions').checked;
             const exportGameplays = document.getElementById('export-gameplays').checked;
-            
             if (!exportUsers && !exportTransactions && !exportGameplays) {
                 showMessage('Select at least one data type to export', 'warning');
                 return;
             }
-            
             try {
                 const response = await fetch('/api/admin/export-data', {
                     method: 'POST',
@@ -1807,7 +1724,6 @@
                         game_plays: exportGameplays
                     })
                 });
-                
                 if (response.ok) {
                     const blob = await response.blob();
                     const url = window.URL.createObjectURL(blob);
@@ -1818,13 +1734,11 @@
                     a.click();
                     document.body.removeChild(a);
                     window.URL.revokeObjectURL(url);
-                    
                     showMessage('✅ Data exported successfully!', 'success');
                 } else {
                     const error = await response.json();
                     showMessage('Failed to export data: ' + (error.message || 'Unknown error'), 'error');
                 }
-                
             } catch (error) {
                 console.error('Export error:', error);
                 showMessage('Error exporting data', 'error');
@@ -1873,7 +1787,6 @@
                 container.innerHTML = '<p>No backups available.</p>';
                 return;
             }
-            
             container.innerHTML = backupListData.map(backup => `
                 <div class="backup-item">
                     <div class="d-flex justify-content-between align-items-center">
@@ -1893,7 +1806,6 @@
         function showBackupDetails(filename) {
             const backup = backupListData.find(b => b.filename === filename);
             if (!backup) return;
-            
             const modal = new bootstrap.Modal(document.getElementById('backupModal'));
             document.getElementById('backup-details').innerHTML = `
                 <div class="mb-3">
@@ -1916,31 +1828,25 @@
             try {
                 await checkHealth();
                 await updateTimezoneDisplay();
-                
                 const [usersRes, txRes, statsRes] = await Promise.all([
                     fetchData('/api/admin/users'),
                     fetchData('/api/admin/transactions'),
                     fetchData('/api/admin/stats')
                 ]);
-                
                 if (usersRes.success) {
                     const totalUsers = usersRes.users.length;
                     const totalBalance = usersRes.users.reduce((sum, user) => sum + (user.balance || 0), 0);
-                    
                     document.getElementById('total-users-count').textContent = formatNumber(totalUsers);
                     document.getElementById('total-balance').textContent = formatCurrency(totalBalance);
                 }
-                
                 if (txRes.success) {
                     const pending = txRes.transactions.filter(tx => tx.status === 'PENDING');
                     document.getElementById('pending-withdrawals-count').textContent = pending.length;
                     renderRecentWithdrawals(txRes.transactions.slice(0, 10));
                 }
-                
                 if (statsRes.success) {
                     loadGlobalWithdrawalDays(true);
                 }
-                
             } catch (err) {
                 console.error('Failed to load dashboard:', err);
             }
@@ -1952,7 +1858,6 @@
                 container.innerHTML = '<p>No recent transactions.</p>';
                 return;
             }
-            
             container.innerHTML = `
                 <div class="table-container">
                     <table>
@@ -1997,9 +1902,7 @@
                 console.error('Failed to load global withdrawal days:', err);
                 globalWithdrawalDays = [7, 14, 25, 30];
             }
-            
             updateGlobalDaysDisplay();
-            
             if (!dashboardOnly && document.getElementById('globalSettings').innerHTML === '') {
                 renderGlobalSettingsTab();
             }
@@ -2008,10 +1911,8 @@
         function updateGlobalDaysDisplay() {
             const sortedDays = [...globalWithdrawalDays].sort((a, b) => a - b);
             const daysText = sortedDays.length > 0 ? sortedDays.join(', ') : 'Default (7, 14, 25, 30)';
-            
             const dashboardEl = document.getElementById('current-global-days');
             if (dashboardEl) dashboardEl.textContent = daysText;
-            
             const settingsEl = document.getElementById('global-days-current');
             if (settingsEl) settingsEl.textContent = daysText;
         }
@@ -2030,7 +1931,6 @@
                         <div class="days-list" id="global-days-current">Loading...</div>
                         <div class="days-note">All users without custom settings can withdraw on these days</div>
                     </div>
-                    
                     <div class="mb-4">
                         <label class="form-label fw-bold" style="color: #00eeff; font-size: 16px; margin-bottom: 10px;">
                             <i class="fas fa-edit"></i> Select Global Withdrawal Days (1-31)
@@ -2053,12 +1953,10 @@
                             </button>
                         </div>
                     </div>
-                    
                     <button onclick="saveGlobalWithdrawalDays()" class="btn btn-primary" style="background: #00c853; padding: 12px 24px; font-size: 16px;">
                         <i class="fas fa-save"></i> Save Global Withdrawal Days
                     </button>
                     <div id="global-settings-message" class="message hidden"></div>
-                    
                     <div class="mt-4" style="background: #151528; padding: 15px; border-radius: 8px; border-left: 3px solid #00eeff;">
                         <h5 style="color: #7b61ff;"><i class="fas fa-info-circle"></i> Important Notes</h5>
                         <ul style="color: #a0a0c0; margin: 10px 0 0 20px; line-height: 1.8;">
@@ -2071,7 +1969,6 @@
                     </div>
                 </div>
             `;
-            
             renderGlobalDaySelector();
             updateTimezoneDisplay();
         }
@@ -2079,7 +1976,6 @@
         function renderGlobalDaySelector() {
             const selector = document.getElementById('global-day-selector');
             if (!selector) return;
-            
             selector.innerHTML = '';
             for (let day = 1; day <= 31; day++) {
                 const isChecked = globalWithdrawalDays.includes(day);
@@ -2091,7 +1987,6 @@
                     </div>
                 `;
             }
-            
             const currentEl = document.getElementById('global-days-current');
             if (currentEl) {
                 currentEl.textContent = globalWithdrawalDays.sort((a, b) => a - b).join(', ') || 'Default (7, 14, 25, 30)';
@@ -2128,7 +2023,6 @@
                 }
                 globalWithdrawalDays = [7, 14, 25, 30];
             }
-            
             try {
                 const result = await postData('/api/admin/global-withdrawal-days', { days: globalWithdrawalDays });
                 if (result.success) {
@@ -2156,12 +2050,10 @@
                 showMessage('Please enter a TikTok link', 'error', 'tiktok-message');
                 return;
             }
-            
             if (!link.startsWith('https://www.tiktok.com/@')) {
                 showMessage('Link must start with https://www.tiktok.com/@', 'error', 'tiktok-message');
                 return;
             }
-            
             try {
                 const res = await postData('/api/admin/tiktok/set-daily', { tiktok_link: link });
                 if (res.success) {
@@ -2180,7 +2072,6 @@
             try {
                 const currentRes = await fetchData('/api/admin/tiktok/get-daily');
                 const historyRes = await fetchData('/api/admin/tiktok/history');
-                
                 if (currentRes.success) {
                     const currentEl = document.getElementById('current-tiktok-display');
                     if (currentRes.task) {
@@ -2193,7 +2084,6 @@
                         currentEl.innerHTML = '<p>No TikTok task set for today.</p>';
                     }
                 }
-                
                 if (historyRes.success) {
                     const historyEl = document.getElementById('tiktok-history-list');
                     if (historyRes.history && historyRes.history.length > 0) {
@@ -2246,7 +2136,6 @@
                     </div>
                 `;
             }
-            
             try {
                 const usersRes = await fetchData('/api/admin/users');
                 if (usersRes.success) {
@@ -2264,23 +2153,19 @@
                 tbody.innerHTML = '<tr><td colspan="7" class="text-center">No users found</td></tr>';
                 return;
             }
-            
             tbody.innerHTML = users.map(user => {
                 const withdrawalStatus = user.withdrawal_restricted ?
                     '<span class="badge badge-danger">Restricted</span>' :
                     '<span class="badge badge-success">Allowed</span>';
-                
                 const withdrawalLimit = user.withdrawal_limit > 0 ?
                     formatCurrency(user.withdrawal_limit) :
                     '<span class="text-muted">No Limit</span>';
-                
                 const isFlexiaAdmin = user.username === 'flexiaadmin';
                 const adminBadge = user.is_admin ?
                     (isFlexiaAdmin ?
                         '<span class="badge badge-primary">Original Admin</span>' :
                         '<span class="badge badge-success">Admin</span>') :
                     '<span class="text-muted">User</span>';
-                
                 return `
                     <tr>
                         <td>${user.id}</td>
@@ -2335,7 +2220,6 @@
             if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
                 return;
             }
-            
             try {
                 const res = await fetch(`/api/admin/user/${userId}`, {
                     method: 'DELETE',
@@ -2360,10 +2244,11 @@
                 if (userRes.success) {
                     selectedUserId = userId;
                     document.getElementById('modal-username').textContent = username;
-                    
                     const user = userRes.user;
-                    const customDays = user.custom_withdrawal_days ? JSON.parse(user.custom_withdrawal_days) : [];
-                    
+                    let customDays = [];
+                    try {
+                        customDays = JSON.parse(user.custom_withdrawal_days) || [];
+                    } catch { customDays = []; }
                     document.getElementById('withdrawal-settings-content').innerHTML = `
                         <div class="mb-3">
                             <label class="form-label">Withdrawal Restriction</label>
@@ -2386,7 +2271,6 @@
                         </div>
                         <small class="text-muted">Enter comma-separated days (1-31). Empty = use global settings.</small>
                     `;
-                    
                     const modal = new bootstrap.Modal(document.getElementById('withdrawalSettingsModal'));
                     modal.show();
                 }
@@ -2398,25 +2282,28 @@
         
         async function saveWithdrawalSettings() {
             if (!selectedUserId) return;
-            
             const restricted = document.getElementById('user-withdrawal-restricted').value === 'true';
             const limit = parseFloat(document.getElementById('user-withdrawal-limit').value) || 0;
             const customDaysInput = document.getElementById('user-custom-days').value;
             const customDays = customDaysInput
                 ? customDaysInput.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d) && d >= 1 && d <= 31)
                 : [];
-            
             try {
-                await postData(`/api/admin/user/${selectedUserId}/toggle-restrict`, {});
-                await postData(`/api/admin/user/${selectedUserId}/set-limit`, { limit: limit });
-                await postData(`/api/admin/user/${selectedUserId}/set-custom-days`, { days: customDays });
-                
-                showMessage('User settings updated!', 'success');
-                const modal = bootstrap.Modal.getInstance(document.getElementById('withdrawalSettingsModal'));
-                modal.hide();
-                loadUsers();
-                if (withdrawalReportData) {
-                    loadWithdrawalReport();
+                const result = await postData(`/api/admin/user/${selectedUserId}/update-settings`, {
+                    restricted: restricted,
+                    limit: limit,
+                    custom_days: customDays
+                });
+                if (result.success) {
+                    showMessage('User settings updated!', 'success');
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('withdrawalSettingsModal'));
+                    modal.hide();
+                    loadUsers();
+                    if (withdrawalReportData) {
+                        loadWithdrawalReport();
+                    }
+                } else {
+                    showMessage('Failed to save settings: ' + (result.message || 'Unknown error'), 'error');
                 }
             } catch (err) {
                 console.error('Save settings error:', err);
@@ -2437,23 +2324,19 @@
         async function saveBalanceAdjustment() {
             const amount = parseFloat(document.getElementById('adjust-amount').value);
             const note = document.getElementById('adjust-note').value.trim();
-            
             if (isNaN(amount)) {
                 showMessage('Please enter a valid amount', 'error');
                 return;
             }
-            
             if (!note) {
                 showMessage('Please add a note for the adjustment', 'error');
                 return;
             }
-            
             try {
                 const result = await postData(`/api/admin/user/${adjustUserId}/adjust-balance`, {
                     amount: amount,
                     note: note
                 });
-                
                 if (result.success) {
                     showMessage(`Balance adjusted by ${formatCurrency(amount)}`, 'success');
                     const modal = bootstrap.Modal.getInstance(document.getElementById('adjustBalanceModal'));
@@ -2472,7 +2355,6 @@
         // ================================ TOGGLE ADMIN STATUS ================================
         async function toggleAdminStatus(userId) {
             if (!confirm('Are you sure you want to change this user\'s admin status?')) return;
-            
             try {
                 const result = await postData(`/api/admin/user/${userId}/toggle-admin`, {});
                 if (result.success) {
@@ -2517,7 +2399,6 @@
                     </div>
                 `;
             }
-            
             try {
                 const txRes = await fetchData('/api/admin/transactions');
                 if (txRes.success) {
@@ -2532,12 +2413,10 @@
         function renderPendingWithdrawals(transactions) {
             const pending = transactions.filter(tx => tx.status === 'PENDING');
             const container = document.getElementById('pending-withdrawals-list');
-            
             if (!pending.length) {
                 container.innerHTML = '<p>No pending withdrawals.</p>';
                 return;
             }
-            
             container.innerHTML = pending.map(tx => {
                 const details = typeof tx.details === 'string' ? JSON.parse(tx.details) : tx.details;
                 return `
@@ -2569,7 +2448,6 @@
                 tbody.innerHTML = '<tr><td colspan="6" class="text-center">No transactions</td></tr>';
                 return;
             }
-            
             tbody.innerHTML = transactions.slice(0, 50).map(tx => {
                 return `
                     <tr>
@@ -2602,13 +2480,11 @@
         
         async function processWithdrawal(txId, action) {
             if (!confirm(`Are you sure you want to ${action} this withdrawal?`)) return;
-            
             try {
                 const data = await postData('/api/admin/approve-withdrawal', {
                     transaction_id: txId,
                     action: action
                 });
-                
                 if (data.success) {
                     showMessage(`Withdrawal ${action}ed`, 'success');
                     loadWithdrawals();
@@ -2682,14 +2558,11 @@
                     </div>
                 `;
             }
-            
             try {
                 const reportRes = await fetchData('/api/admin/withdrawal-status-report');
                 if (reportRes.success) {
                     withdrawalReportData = reportRes;
                     renderWithdrawalReport(reportRes);
-                    
-                    // Fetch timezone info for display
                     try {
                         const checkRes = await fetch('/api/withdrawal/check-day', {
                             credentials: 'include',
@@ -2701,9 +2574,7 @@
                             document.getElementById('report-today').textContent = todayDisplay;
                             document.getElementById('report-timezone').textContent = checkData.timezone_display + ' • Day ' + checkData.today;
                         }
-                    } catch (err) {
-                        console.warn('Could not fetch timezone info:', err);
-                    }
+                    } catch (err) { console.warn('Could not fetch timezone info:', err); }
                 }
             } catch (err) {
                 console.error('Load report error:', err);
@@ -2714,13 +2585,11 @@
             document.getElementById('report-total-users').textContent = formatNumber(report.total_users);
             document.getElementById('report-can-withdraw').textContent = formatNumber(report.users_withdrawal_today);
             document.getElementById('report-restricted').textContent = formatNumber(report.users_restricted);
-            
             const tbody = document.getElementById('withdrawal-report-users');
             if (!report.users || report.users.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="8" class="text-center">No users found</td></tr>';
                 return;
             }
-            
             tbody.innerHTML = report.users.map(user => {
                 let statusBadge, statusText;
                 if (user.withdrawal_restricted) {
@@ -2733,10 +2602,11 @@
                     statusBadge = 'badge-warning';
                     statusText = 'Not Today';
                 }
-                
-                const withdrawalDays = user.custom_withdrawal_days && user.custom_withdrawal_days.length > 0 ?
-                    user.custom_withdrawal_days.sort((a, b) => a - b).join(', ') : 'Default';
-                
+                let days = [];
+                try {
+                    days = JSON.parse(user.custom_withdrawal_days) || [];
+                } catch { days = []; }
+                const withdrawalDays = days.length > 0 ? days.sort((a, b) => a - b).join(', ') : 'Default';
                 return `
                     <tr>
                         <td>${user.id}</td>
@@ -2784,7 +2654,6 @@
                 telegram_link: document.getElementById('telegram-link').value.trim(),
                 facebook_link: document.getElementById('facebook-link').value.trim()
             };
-            
             try {
                 const result = await postData('/api/admin/settings', data);
                 if (result.success) {
@@ -2820,34 +2689,28 @@
             const current = document.getElementById('current-password').value;
             const newPass = document.getElementById('new-password').value;
             const confirmPass = document.getElementById('confirm-password').value;
-            
             if (!current || !newPass || !confirmPass) {
                 showMessage('All fields required', 'error', 'password-message');
                 return;
             }
-            
             if (newPass.length < 8) {
                 showMessage('Password must be at least 8 chars', 'error', 'password-message');
                 return;
             }
-            
             if (newPass !== confirmPass) {
                 showMessage('Passwords do not match', 'error', 'password-message');
                 return;
             }
-            
             try {
                 const profile = await fetchData('/api/user/profile');
                 if (!profile.success) {
                     showMessage('Session expired', 'error', 'password-message');
                     return;
                 }
-                
                 const result = await postData('/api/admin/change-password', {
                     current_password: current,
                     new_password: newPass
                 });
-                
                 if (result.success) {
                     showMessage('Password changed! Please login again.', 'success', 'password-message');
                     document.getElementById('current-password').value = '';
@@ -2905,115 +2768,16 @@
                 .split('\n')
                 .map(c => c.trim().toUpperCase())
                 .filter(c => c.length >= 4);
-            
             if (codes.length === 0) {
                 showMessage('Enter at least one valid coupon code', 'error', 'coupon-message');
                 return;
             }
-            
             try {
                 const data = await postData('/api/admin/coupons/add', { codes });
                 showMessage(data.message, data.success ? 'success' : 'error', 'coupon-message');
                 textarea.value = '';
                 loadCouponStats();
             } catch (err) { showMessage('Failed to add coupons', 'error', 'coupon-message'); }
-        }
-        
-        // ================================ WHATSAPP ================================
-        async function loadWhatsAppNumbers() {
-            if (document.getElementById('whatsapp').innerHTML === '') {
-                document.getElementById('whatsapp').innerHTML = `
-                    <div class="admin-section">
-                        <h3><i class="fab fa-whatsapp"></i> WhatsApp Numbers for Coupons</h3>
-                        <div class="mb-3">
-                            <p>Users will contact these numbers for coupons.</p>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-8">
-                                <input type="text" id="new-whatsapp-number" placeholder="e.g., 2348123456789" />
-                            </div>
-                            <div class="col-md-4">
-                                <button onclick="addWhatsAppNumber()" class="w-100">
-                                    <i class="fas fa-plus"></i> Add Number
-                                </button>
-                            </div>
-                        </div>
-                        <div id="whatsapp-numbers-list">Loading numbers...</div>
-                    </div>
-                `;
-            }
-            
-            try {
-                const res = await fetchData('/api/admin/whatsapp-numbers');
-                if (res.success) {
-                    const list = document.getElementById('whatsapp-numbers-list');
-                    if (res.numbers.length === 0) {
-                        list.innerHTML = '<p>No WhatsApp numbers configured.</p>';
-                        return;
-                    }
-                    list.innerHTML = res.numbers.map(num => `
-                        <div class="whatsapp-number-item">
-                            <span><strong>${num.label || 'Agent'}:</strong> ${num.number}</span>
-                            <div>
-                                <button onclick="toggleWhatsAppNumber(${num.id})" 
-                                    style="background:${num.is_active ? '#ff9800' : '#4CAF50'};">
-                                    <i class="fas ${num.is_active ? 'fa-eye-slash' : 'fa-eye'}"></i> 
-                                    ${num.is_active ? 'Deactivate' : 'Activate'}
-                                </button>
-                                <button onclick="deleteWhatsAppNumber(${num.id})" style="background:#c62828; margin-left: 8px;">
-                                    <i class="fas fa-trash"></i> Remove
-                                </button>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-            } catch (err) { console.error(err); }
-        }
-        
-        async function addWhatsAppNumber() {
-            const input = document.getElementById('new-whatsapp-number');
-            const number = input.value.trim();
-            
-            if (!number || !/^\d+$/.test(number) || !number.startsWith('234')) {
-                showMessage('Enter a valid Nigerian number starting with 234', 'error');
-                return;
-            }
-            
-            try {
-                const data = await postData('/api/admin/whatsapp-numbers', { 
-                    number: number,
-                    label: 'Support Agent'
-                });
-                showMessage(data.message, data.success ? 'success' : 'error');
-                input.value = '';
-                loadWhatsAppNumbers();
-            } catch (err) { showMessage('Failed to add number', 'error'); }
-        }
-        
-        async function toggleWhatsAppNumber(id) {
-            try {
-                const res = await fetch(`/api/admin/whatsapp-numbers/${id}/toggle`, {
-                    method: 'POST',
-                    credentials: 'include'
-                });
-                const data = await res.json();
-                showMessage(data.message, data.success ? 'success' : 'error');
-                loadWhatsAppNumbers();
-            } catch (err) { showMessage('Failed to toggle number', 'error'); }
-        }
-        
-        async function deleteWhatsAppNumber(id) {
-            if (!confirm('Remove this WhatsApp number?')) return;
-            
-            try {
-                const res = await fetch(`/api/admin/whatsapp-numbers/${id}`, {
-                    method: 'DELETE',
-                    credentials: 'include'
-                });
-                const data = await res.json();
-                showMessage(data.message, data.success ? 'success' : 'error');
-                loadWhatsAppNumbers();
-            } catch (err) { showMessage('Failed to delete number', 'error'); }
         }
         
         // ================================ INIT ================================
@@ -3025,7 +2789,6 @@
                     }
                     currentUserData = data.user;
                     loadDashboard();
-                    
                     setInterval(() => {
                         if (document.querySelector('.tab-content.active').id === 'dashboard') {
                             loadDashboard();
