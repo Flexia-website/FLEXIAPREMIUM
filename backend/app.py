@@ -1568,21 +1568,37 @@ def session_refresh():
 # -------------------- DATABASE INIT (at module level) --------------------
 def init_db():
     with app.app_context():
+        # Drop all tables and recreate fresh schema
+        db.drop_all()
         db.create_all()
-        # Create admin user from environment variables
-        admin_username = os.environ.get('ADMIN_USERNAME', 'flexiaadmin')
-        admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
-        if not User.query.filter_by(username=admin_username).first():
+
+        # Read admin credentials from environment – NO defaults!
+        admin_username = os.environ.get('ADMIN_USERNAME')
+        admin_password = os.environ.get('ADMIN_PASSWORD')
+        if not admin_username or not admin_password:
+            raise RuntimeError(
+                "ADMIN_USERNAME and ADMIN_PASSWORD must be set in environment variables. "
+                "The app will not start without them."
+            )
+
+        # Check if admin already exists (should not after fresh drop)
+        admin = User.query.filter_by(username=admin_username).first()
+        if not admin:
             admin = User(username=admin_username, is_admin=True)
             admin.set_password(admin_password)
             admin.referral_code = generate_referral_code()
             db.session.add(admin)
             db.session.commit()
-        # Create default social settings
+            print(f"✅ Admin user '{admin_username}' created.")
+        else:
+            print(f"ℹ️ Admin user '{admin_username}' already exists.")
+
+        # Create default social settings if missing
         if not SocialSettings.query.first():
             db.session.add(SocialSettings())
             db.session.commit()
-        # Add some global withdrawal days
+
+        # Add global withdrawal days (7,14,25,30) if none exist
         if GlobalWithdrawalDay.query.count() == 0:
             for d in [7, 14, 25, 30]:
                 db.session.add(GlobalWithdrawalDay(day=d))
