@@ -1,7 +1,7 @@
 // ============================================================
-// FLEXIA Frontend - COMPLETE PRODUCTION VERSION v17.5
+// FLEXIA Frontend - COMPLETE PRODUCTION VERSION v17.6
 // All features: Auth, Games, Banking, Referrals, Achievements
-// Fixed: Withdrawal day check uses SERVER time, not browser time
+// Fixed: Spin wheel rotation, bank verification, session persistence
 // ============================================================
 
 // ========== EMBEDDED CSS ==========
@@ -966,7 +966,6 @@ async function checkWithdrawalDay() {
     var data = await response.json();
     
     if (data.success) {
-      // Use SERVER data, not browser time
       var today = data.today;
       var days = data.used_days || data.global_withdrawal_days || [];
       var canWithdraw = data.can_withdraw;
@@ -977,12 +976,8 @@ async function checkWithdrawalDay() {
         showWithdrawalDayModal(false, today, days, timezoneDisplay, todayDate);
         return false;
       }
-      // Allowed: don't interrupt the flow with an extra modal, just proceed.
       return true;
     } else {
-      // Fallback: use browser time only if server fails
-      var todayBrowser = new Date().getDate();
-      console.warn('Using browser time for fallback:', todayBrowser);
       return true;
     }
   } catch (error) {
@@ -1401,9 +1396,6 @@ var GameManager = {
       }
       return { success: false, message: lastError ? lastError.message : "Connection error. Please try again." };
     } finally {
-      // CRITICAL FIX: always release the lock, otherwise every claim after
-      // the first one for this gameType is permanently blocked for the
-      // rest of the session (affects withdrawals, achievements, referral claim, etc.)
       this.pendingRequests.delete(gameType);
     }
   },
@@ -2197,51 +2189,77 @@ var Games = {
     setTimeout(function() { initSpinWheel(); }, 150);
   },
 
+  // ========== FIXED SPIN WHEEL ROTATION ==========
   spinWheel: async function() {
     var btn = document.getElementById('spin-button');
     var wheel = document.getElementById('wheel');
     var msgEl = document.getElementById('spin-message');
+    var resultEl = document.getElementById('spin-result');
+
     if (!btn || !wheel || btn.disabled) return;
+
+    // Disable button and show spinner
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SPINNING...';
-    if (msgEl) { msgEl.textContent = ''; msgEl.className = 'message'; }
+    if (msgEl) {
+      msgEl.textContent = '';
+      msgEl.className = 'message';
+    }
+    if (resultEl) resultEl.classList.add('hidden');
+
+    // Reset the wheel to 0° without transition
     wheel.style.transition = 'none';
     wheel.style.transform = 'rotate(0deg)';
-    var svgEl = document.getElementById('wheel-svg');
-    if (svgEl) { svgEl.style.transition = 'none'; svgEl.style.transform = 'rotate(0deg)'; }
-    void wheel.offsetWidth;
+    void wheel.offsetWidth;  // force reflow
+
     try {
+      // Call backend to get spin result
       var result = await this.reportSpin();
+
       if (!result.success) {
+        // Show error and re-enable button
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-sync-alt"></i> TRY AGAIN';
-        if (msgEl) msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> ${result.message || 'Spin failed'}</div>`;
+        if (msgEl) {
+          msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> ${result.message || 'Spin failed'}</div>`;
+        }
         return;
       }
+
+      // Calculate target angle
       var reward = result.reward;
       var prizeIndex = result.prize_index !== undefined ? result.prize_index : 5;
+      // Each slice is 60° (360/6), pointer at top (12 o'clock)
       var angleToPointer = (360 - (prizeIndex * 60 + 30)) % 360;
-      var totalRotation = (6 + Math.floor(Math.random() * 3)) * 360 + angleToPointer;
-      var spinTarget = document.getElementById('wheel-svg') || wheel;
-      spinTarget.style.transition = 'none';
-      spinTarget.style.transform = 'rotate(0deg)';
-      void spinTarget.offsetWidth;
-      spinTarget.style.transition = 'transform 5s cubic-bezier(0.17, 0.67, 0.05, 1.0)';
-      spinTarget.style.transform = 'rotate(' + totalRotation + 'deg)';
-      setTimeout(function() {
+      var extraRotations = 6 + Math.floor(Math.random() * 3); // 6–8 full spins
+      var totalRotation = extraRotations * 360 + angleToPointer;
+
+      // Apply rotation with smooth transition
+      wheel.style.transition = 'transform 5s cubic-bezier(0.17, 0.67, 0.05, 1.0)';
+      wheel.style.transform = `rotate(${totalRotation}deg)`;
+
+      // Update UI after animation ends
+      setTimeout(() => {
         App.updateBalance(result.new_balance);
-        var msgText = reward > 0 ? '🎉 Won ₦' + reward.toLocaleString() + '!' : 'Better luck tomorrow!';
-        if (msgEl) msgEl.innerHTML = `<div class="alert-box ${reward > 0 ? 'success' : 'warning'}"><i class="fas fa-${reward > 0 ? 'check-circle' : 'info-circle'}"></i> ${msgText}</div>`;
-        var resEl = document.getElementById('spin-result');
-        if (resEl) { resEl.innerHTML = '<p style="font-size:1.1rem;font-weight:bold;">' + msgText + '</p>'; resEl.classList.remove('hidden'); }
+        var msgText = reward > 0 ? `🎉 Won ₦${reward.toLocaleString()}!` : 'Better luck tomorrow!';
+        if (msgEl) {
+          msgEl.innerHTML = `<div class="alert-box ${reward > 0 ? 'success' : 'warning'}"><i class="fas fa-${reward > 0 ? 'check-circle' : 'info-circle'}"></i> ${msgText}</div>`;
+        }
+        if (resultEl) {
+          resultEl.innerHTML = `<p style="font-size:1.1rem;font-weight:bold;">${msgText}</p>`;
+          resultEl.classList.remove('hidden');
+        }
         btn.innerHTML = '<i class="fas fa-check"></i> COME BACK TOMORROW';
         btn.disabled = true;
       }, 5200);
+
     } catch (error) {
       console.error('Spin error:', error);
       btn.disabled = false;
-      if (msgEl) msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Network error.</div>`;
       btn.innerHTML = '<i class="fas fa-sync-alt"></i> TRY AGAIN';
+      if (msgEl) {
+        msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Network error. Please try again.</div>`;
+      }
     }
   }
 };
@@ -2503,11 +2521,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   var ref = urlParams.get('ref');
-  // Note: payment status is handled by App.checkPaymentStatus() (called via
-  // App.init() -> checkAuth()), which correctly gates on ?payment=success
-  // before acting. A duplicate check + history.replaceState() used to run
-  // here too, causing PaystackPayment.checkStatus() to fire twice per load
-  // and risking a race that stripped the query string early.
+  // Payment status is handled by App.checkPaymentStatus()
 
   var accountInput = document.getElementById('account-number');
   if (accountInput) {
@@ -2588,4 +2602,4 @@ window.claimPlinkoReward = async function(bet, multiplier) {
   return await GameManager.safeClaim('/api/games/plinko/report', { bet: bet, multiplier: multiplier }, 'plinko');
 };
 
-console.log('FLEXIA Script v17.5 - WITHDRAWAL DAY FIX COMPLETE');
+console.log('FLEXIA Script v17.6 - Spin wheel rotation fixed');
