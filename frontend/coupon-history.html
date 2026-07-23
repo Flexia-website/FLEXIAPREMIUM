@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coupon History – FLEXIA</title>
+  <link rel="icon" type="image/x-icon" href="logo/favicon.ico" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    body {
+      background: radial-gradient(ellipse at 30% 20%, #1b1135, #0a0518);
+      color: #f0f0f0;
+      font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      max-width: 600px;
+      width: 100%;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      font-family: 'Orbitron', sans-serif;
+      background: linear-gradient(90deg, #00eeff, #a855f7);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .back-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #a0a0b5;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .back-btn:hover {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+    }
+    .coupon-item {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .coupon-item .code {
+      font-family: 'Orbitron', monospace;
+      color: #ffd700;
+      font-size: 1.1rem;
+      letter-spacing: 1px;
+    }
+    .coupon-item .date {
+      color: #a0a0b5;
+      font-size: 0.7rem;
+    }
+    .empty {
+      text-align: center;
+      color: #a0a0b5;
+      padding: 40px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1><i class="fas fa-ticket-alt"></i> Coupon History</h1>
+      <button class="back-btn" onclick="window.location.href='index.html'">
+        <i class="fas fa-arrow-left"></i> Back
+      </button>
+    </div>
+    <div id="coupon-list"></div>
+  </div>
+
+  <script>
+    function loadCouponHistory() {
+      const history = JSON.parse(localStorage.getItem('coupon_history') || '[]');
+      const container = document.getElementById('coupon-list');
+      if (history.length === 0) {
+        container.innerHTML = '<div class="empty"><i class="fas fa-ticket-alt" style="font-size:2rem;margin-bottom:10px;display:block;"></i>No coupon purchases yet.</div>';
+        return;
+      }
+      let html = '';
+      history.forEach((item, index) => {
+        html += `
+          <div class="coupon-item">
+            <span class="code">${index + 1}. ${item.code}</span>
+            <span class="date">${item.date || ''}</span>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+    document.addEventListener('DOMContentLoaded', loadCouponHistory);
+  </script>
+</body>
+</html>
