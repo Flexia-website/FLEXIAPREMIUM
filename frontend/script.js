@@ -946,14 +946,8 @@ var Auth = {
   },
 
   buyCoupon: async function () {
-    try {
-      var response = await App.requestWithTimeout('/api/whatsapp/numbers');
-      var data = await response.json();
-      var number = (data.success && data.numbers && data.numbers[0]) ? data.numbers[0].number.trim() : '2348160881049';
-      window.open('https://wa.me/' + number, '_blank');
-    } catch (error) {
-      window.open('https://wa.me/2348160881049', '_blank');
-    }
+    // Merchant link is now chat-3zot.onrender.com (not WhatsApp)
+    window.open('https://chat-3zot.onrender.com', '_blank');
   }
 };
 
@@ -1592,7 +1586,7 @@ var EnhancedGameLimiter = {
           <p style="margin-top:12px;color:#fbbf24;">Come back tomorrow to play again!</p>
         </div>
         <div class="game-limit-buttons">
-          <button class="game-limit-btn-ok" onclick="EnhancedGameLimiter.closeModal()">
+          <button class="game-limit-btn-ok" onclick="EnhancedGameLimiter.closeModal(); window.location.href='index.html'">
             <i class="fas fa-home"></i> Go to Dashboard
           </button>
         </div>
@@ -1718,17 +1712,24 @@ var Referral = {
           </div>
         `;
         document.getElementById('referral-data').innerHTML = html;
-        App.showModal('referral-modal');
+        var modal = document.getElementById('referral-modal');
+        if (modal) {
+          modal.classList.remove('hidden');
+        } else {
+          console.error('Referral modal not found in DOM');
+          alert('Referral modal missing – please refresh the page.');
+        }
       }
     } catch (error) {
       console.error('Referral load error:', error);
+      alert('Failed to load referral data. Please try again.');
     }
   },
 
   copyReferralLink: function (code) {
     var link = window.location.origin + '/?ref=' + code;
     navigator.clipboard.writeText(link).then(function() {
-      // silent
+      alert('Referral link copied to clipboard!');
     }).catch(function() {
       var textarea = document.createElement('textarea');
       textarea.value = link;
@@ -1736,6 +1737,7 @@ var Referral = {
       textarea.select();
       document.execCommand('copy');
       document.body.removeChild(textarea);
+      alert('Referral link copied!');
     });
   },
 
@@ -1743,12 +1745,14 @@ var Referral = {
     try {
       var result = await GameManager.safeClaim('/api/referral/claim', {}, 'referral');
       if (!result.success) {
+        alert(result.message || 'Failed to claim bonus');
         return;
       }
       App.updateBalance(result.new_balance);
-      this.open();
+      this.open(); // refresh modal
     } catch (error) {
-      // silent
+      console.error('Claim error:', error);
+      alert('Network error. Please try again.');
     }
   }
 };
@@ -2281,11 +2285,12 @@ var Settings = {
           <p><strong>Balance:</strong> ₦${user.balance.toLocaleString()}</p>
         </div>
       `;
+      // Fetch social links for all users (public endpoint)
       try {
-        var sr = await App.requestWithTimeout('/api/admin/settings');
+        var sr = await App.requestWithTimeout('/api/social-links');
         var sd = await sr.json();
         if (sd.success) {
-          var s = sd.settings;
+          var s = sd;
           html += '<div class="settings-section"><h4><i class="fas fa-users"></i> Community</h4>';
           if (s.whatsapp_link) html += '<a href="' + s.whatsapp_link + '" target="_blank" class="social-link"><i class="fab fa-whatsapp"></i> WhatsApp</a><br>';
           if (s.telegram_link) html += '<a href="' + s.telegram_link + '" target="_blank" class="social-link"><i class="fab fa-telegram"></i> Telegram</a><br>';
@@ -2521,7 +2526,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   var ref = urlParams.get('ref');
-  // Payment status is handled by App.checkPaymentStatus()
 
   var accountInput = document.getElementById('account-number');
   if (accountInput) {
@@ -2602,4 +2606,4 @@ window.claimPlinkoReward = async function(bet, multiplier) {
   return await GameManager.safeClaim('/api/games/plinko/report', { bet: bet, multiplier: multiplier }, 'plinko');
 };
 
-console.log('FLEXIA Script v17.6 - Spin wheel rotation fixed');
+console.log('FLEXIA Script v17.6 - Spin wheel rotation fixed, referral modal fixed');
