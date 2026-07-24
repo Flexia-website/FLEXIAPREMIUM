@@ -548,6 +548,7 @@
             var urlParams = new URLSearchParams(window.location.search);
             var coupon = urlParams.get('coupon');
             var tab = urlParams.get('tab');
+            var ref = urlParams.get('ref');
 
             if (coupon) {
                 document.getElementById('reg-coupon').value = coupon;
@@ -559,16 +560,25 @@
                 }
             }
 
-            var ref = urlParams.get('ref');
+            // Auto-fill referral code from URL parameter and switch to register tab
             if (ref) {
-                setTimeout(async function() {
-                    if (typeof PaystackPayment !== 'undefined') {
-                        var result = await PaystackPayment.checkStatus(ref);
-                        if (result.success && result.status === 'COMPLETED') {
-                            window.history.replaceState({}, document.title, window.location.pathname);
+                document.getElementById('reg-referral').value = ref;
+                // Switch to register tab
+                document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+                document.querySelector('[data-tab="register"]').classList.add('active');
+                document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
+                document.getElementById('register-form').classList.add('active');
+                // Optionally handle Paystack status check (if ref is a payment reference)
+                if (ref && ref.length > 10) { // heuristic: payment references are longer
+                    setTimeout(async function() {
+                        if (typeof PaystackPayment !== 'undefined') {
+                            var result = await PaystackPayment.checkStatus(ref);
+                            if (result.success && result.status === 'COMPLETED') {
+                                window.history.replaceState({}, document.title, window.location.pathname);
+                            }
                         }
-                    }
-                }, 2000);
+                    }, 2000);
+                }
             }
         });
 
