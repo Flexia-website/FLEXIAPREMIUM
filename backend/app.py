@@ -1590,8 +1590,6 @@ def init_db():
             db.session.commit()
             print(f"✅ Admin user '{admin_username}' created.")
         else:
-            # Optionally update password if changed? (uncomment if needed)
-            # admin.set_password(admin_password)
             print(f"ℹ️ Admin user '{admin_username}' already exists.")
 
         # Create default social settings if missing
