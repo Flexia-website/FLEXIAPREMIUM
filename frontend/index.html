@@ -136,7 +136,6 @@
                 </div>
             </div>
 
-            <!-- TODAY'S EARNINGS CARD – REMOVED per request -->
             <!-- QUICK ACTIONS -->
             <div class="quick-actions">
                 <div class="q-btn" onclick="Referral.claimBonuses()">
@@ -229,6 +228,12 @@
                     <div class="icon history"><i class="fas fa-history"></i></div>
                     <div class="name">History</div>
                     <div class="sub">Past Transactions</div>
+                    <span class="badge new">New</span>
+                </div>
+                <div class="activity-card" onclick="window.location.href='coupon-history.html'">
+                    <div class="icon ticket"><i class="fas fa-ticket-alt"></i></div>
+                    <div class="name">Coupons</div>
+                    <div class="sub">Your purchased codes</div>
                     <span class="badge new">New</span>
                 </div>
             </div>
@@ -495,7 +500,7 @@
             </div>
         </div>
 
-        <!-- ========== PAYMENT STATUS MODAL (ADDED) ========== -->
+        <!-- ========== PAYMENT STATUS MODAL ========== -->
         <div id="payment-status-modal" class="modal hidden">
             <div class="modal-content payment-modal-content">
                 <div class="modal-logo">
@@ -507,6 +512,24 @@
                 <div id="payment-status-message" class="modal-info"></div>
                 <div id="payment-coupon-display" style="display:none; background:#1a1a35; padding:12px; border-radius:8px; font-family:monospace; font-size:1.2rem; letter-spacing:2px; color:#FFD700; margin:12px 0;"></div>
                 <button class="btn-close" onclick="closePaymentModal()">Close</button>
+            </div>
+        </div>
+
+        <!-- ========== PIN MODAL (for withdrawals & PIN changes) ========== -->
+        <div id="pin-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-logo">
+                    <div class="modal-logo-icon"><img src="logo/flexia-logo.png" alt="FLEXIA" /></div>
+                </div>
+                <h3 class="modal-title" id="pin-modal-title">Enter PIN</h3>
+                <div class="input-group">
+                    <input type="password" id="pin-input" class="form-input" placeholder="Enter 4-6 digit PIN" maxlength="6" />
+                </div>
+                <div id="pin-modal-message" class="message"></div>
+                <button class="btn-primary" id="pin-modal-submit" onclick="PinModal.submit()">
+                    <i class="fas fa-check"></i> Submit
+                </button>
+                <button class="btn-close" onclick="PinModal.close()">CANCEL</button>
             </div>
         </div>
     </div>
