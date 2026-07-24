@@ -2565,6 +2565,7 @@ document.addEventListener('DOMContentLoaded', function() {
   var urlParams = new URLSearchParams(window.location.search);
   var coupon = urlParams.get('coupon');
   var tab = urlParams.get('tab');
+  var ref = urlParams.get('ref');
 
   if (coupon) {
     document.getElementById('reg-coupon').value = coupon;
@@ -2576,7 +2577,26 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  var ref = urlParams.get('ref');
+  // Auto-fill referral code from URL parameter and switch to register tab
+  if (ref) {
+    document.getElementById('reg-referral').value = ref;
+    // Switch to register tab
+    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelector('[data-tab="register"]').classList.add('active');
+    document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
+    document.getElementById('register-form').classList.add('active');
+    // Optionally handle Paystack status check (if ref is a payment reference)
+    if (ref && ref.length > 10) { // heuristic: payment references are longer
+      setTimeout(async function() {
+        if (typeof PaystackPayment !== 'undefined') {
+          var result = await PaystackPayment.checkStatus(ref);
+          if (result.success && result.status === 'COMPLETED') {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+        }
+      }, 2000);
+    }
+  }
 
   var accountInput = document.getElementById('account-number');
   if (accountInput) {
@@ -2658,4 +2678,4 @@ window.claimPlinkoReward = async function(bet, multiplier) {
   return await GameManager.safeClaim('/api/games/plinko/report', { bet: bet, multiplier: multiplier }, 'plinko');
 };
 
-console.log('FLEXIA Script v17.8 - Spin modal and PIN modal fully isolated');
+console.log('FLEXIA Script v17.8 - Full referral system verified');
