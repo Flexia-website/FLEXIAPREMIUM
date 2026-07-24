@@ -1,6 +1,6 @@
 // ============================================================
-// FLEXIA Frontend - COMPLETE PRODUCTION VERSION v17.7
-// Fixed: Referral modal error, manual account name, Plinko balance
+// FLEXIA Frontend - COMPLETE PRODUCTION VERSION v17.8
+// Fixed: Spin modal and PIN modal isolation, robust modal handling
 // ============================================================
 
 // ========== EMBEDDED CSS ==========
@@ -525,12 +525,19 @@ var App = {
   },
 
   showModal: function (modalId) {
+    // Hide all modals first
     document.querySelectorAll('.modal').forEach(function(m) { m.classList.add('hidden'); });
-    document.getElementById(modalId).classList.remove('hidden');
+    var modal = document.getElementById(modalId);
+    if (modal) {
+      modal.classList.remove('hidden');
+    } else {
+      console.error('Modal not found:', modalId);
+    }
   },
 
   closeModal: function (modalId) {
-    document.getElementById(modalId).classList.add('hidden');
+    var modal = document.getElementById(modalId);
+    if (modal) modal.classList.add('hidden');
   },
 
   showMessage: function (text, type, duration) {
@@ -2651,4 +2658,4 @@ window.claimPlinkoReward = async function(bet, multiplier) {
   return await GameManager.safeClaim('/api/games/plinko/report', { bet: bet, multiplier: multiplier }, 'plinko');
 };
 
-console.log('FLEXIA Script v17.7 - Referral fixed, manual account name, Plinko balance check improved');
+console.log('FLEXIA Script v17.8 - Spin modal and PIN modal fully isolated');
