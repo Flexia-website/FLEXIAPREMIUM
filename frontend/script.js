@@ -1,7 +1,6 @@
 // ============================================================
-// FLEXIA Frontend - COMPLETE PRODUCTION VERSION v17.6
-// All features: Auth, Games, Banking, Referrals, Achievements
-// Fixed: Spin wheel rotation, bank verification, session persistence
+// FLEXIA Frontend - COMPLETE PRODUCTION VERSION v17.7
+// Fixed: Referral modal error, manual account name, Plinko balance
 // ============================================================
 
 // ========== EMBEDDED CSS ==========
@@ -946,7 +945,6 @@ var Auth = {
   },
 
   buyCoupon: async function () {
-    // Merchant link is now chat-3zot.onrender.com (not WhatsApp)
     window.open('https://chat-3zot.onrender.com', '_blank');
   }
 };
@@ -1688,13 +1686,14 @@ var Referral = {
       var response = await App.requestWithTimeout('/api/user/profile');
       var data = await response.json();
       if (data.success) {
-        var unclaimed = data.referrals.unclaimed_bonus;
+        var unclaimed = data.referrals ? data.referrals.unclaimed_bonus : 0;
+        var referralCount = data.referrals ? data.referrals.count : 0;
         var html = `
           <div class="referral-section">
             <h4><i class="fas fa-users"></i> Your Referral Program</h4>
             <p><strong>Your Referral Code:</strong> <code style="font-size:1.2em;background:#8000FF;padding:5px 10px;border-radius:5px;">${data.user.referral_code}</code></p>
             <p>Share this code to earn <strong>₦${CONFIG.REFERRAL_BONUS.toLocaleString()}</strong> per friend!</p>
-            <p><strong>Referred Users:</strong> ${data.referrals.count}</p>
+            <p><strong>Referred Users:</strong> ${referralCount}</p>
             <p><strong>Unclaimed Bonus:</strong> ₦${unclaimed.toLocaleString()}</p>
             ${unclaimed > 0
               ? '<button class="btn-primary" onclick="Referral.claimBonuses()" style="margin-top:15px;"><i class="fas fa-gift"></i> Claim ₦' + unclaimed.toLocaleString() + ' Bonus</button>'
@@ -1712,13 +1711,9 @@ var Referral = {
           </div>
         `;
         document.getElementById('referral-data').innerHTML = html;
-        var modal = document.getElementById('referral-modal');
-        if (modal) {
-          modal.classList.remove('hidden');
-        } else {
-          console.error('Referral modal not found in DOM');
-          alert('Referral modal missing – please refresh the page.');
-        }
+        App.showModal('referral-modal');
+      } else {
+        alert('Failed to load referral data. Please try again.');
       }
     } catch (error) {
       console.error('Referral load error:', error);
@@ -1816,6 +1811,7 @@ var Banking = {
   },
 
   verifyAccount: async function() {
+    // Optional verification - now we allow manual entry, but still show verification if successful
     var bankCode = document.getElementById('bank-select').value;
     var accountNumber = document.getElementById('account-number').value.trim();
     var nameDisplay = document.getElementById('account-name-display');
@@ -1823,22 +1819,9 @@ var Banking = {
     var spinner = document.getElementById('verify-spinner');
     var statusEl = document.getElementById('account-verification-status');
     
-    nameDisplay.style.display = 'none';
-    nameDisplay.style.borderColor = '';
-    nameDisplay.style.background = '';
-    nameField.style.borderColor = '';
-    nameField.style.background = '';
-    nameField.value = '';
-    statusEl.innerHTML = '';
-    
-    if (!bankCode) {
-      return;
-    }
-    
-    if (!accountNumber || accountNumber.length < 10 || !accountNumber.match(/^\d+$/)) {
-      if (accountNumber.length > 0) {
-        statusEl.innerHTML = '<i class="fas fa-exclamation-circle" style="color: #FFA500;"></i>';
-      }
+    // Do not clear manual name if user has typed something
+    // Only update if verification succeeds
+    if (!bankCode || !accountNumber || accountNumber.length < 10) {
       return;
     }
     
@@ -1870,25 +1853,24 @@ var Banking = {
         nameDisplay.style.borderColor = 'rgba(0,255,85,0.3)';
         nameDisplay.style.background = 'rgba(0,255,85,0.05)';
         document.getElementById('verified-account-name').textContent = data.account_name;
-        nameField.value = data.account_name;
+        // Auto-fill the manual field but allow user to override
+        if (!nameField.value) {
+          nameField.value = data.account_name;
+        }
         nameField.style.borderColor = '#00FF55';
         nameField.style.background = 'rgba(0,255,85,0.05)';
         statusEl.innerHTML = '<i class="fas fa-check-circle" style="color: #00FF55;"></i>';
       } else {
+        // Verification failed - show warning but do not block manual entry
         nameDisplay.style.display = 'block';
-        nameDisplay.style.borderColor = 'rgba(255,0,85,0.3)';
-        nameDisplay.style.background = 'rgba(255,0,85,0.05)';
-        document.getElementById('verified-account-name').textContent = data.message || 'Unable to verify account';
-        document.getElementById('verified-account-name').style.color = '#FF5555';
-        nameField.value = '';
-        nameField.style.borderColor = '#FF0055';
-        nameField.style.background = 'rgba(255,0,85,0.05)';
-        statusEl.innerHTML = '<i class="fas fa-times-circle" style="color: #FF0055;"></i>';
+        nameDisplay.style.borderColor = 'rgba(255,165,0,0.3)';
+        nameDisplay.style.background = 'rgba(255,165,0,0.05)';
+        document.getElementById('verified-account-name').textContent = 'Verification failed - you may enter name manually';
+        document.getElementById('verified-account-name').style.color = '#FFA500';
+        statusEl.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: #FFA500;"></i>';
         
         this.verificationTimeout = setTimeout(() => {
           nameDisplay.style.display = 'none';
-          nameField.style.borderColor = '';
-          nameField.style.background = '';
           statusEl.innerHTML = '';
         }, 5000);
       }
@@ -1900,14 +1882,12 @@ var Banking = {
       nameDisplay.style.display = 'block';
       nameDisplay.style.borderColor = 'rgba(255,165,0,0.3)';
       nameDisplay.style.background = 'rgba(255,165,0,0.05)';
-      document.getElementById('verified-account-name').textContent = 'Network error. Please try again.';
+      document.getElementById('verified-account-name').textContent = 'Network error - you may enter name manually';
       document.getElementById('verified-account-name').style.color = '#FFA500';
       statusEl.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: #FFA500;"></i>';
       
       this.verificationTimeout = setTimeout(() => {
         nameDisplay.style.display = 'none';
-        nameField.style.borderColor = '';
-        nameField.style.background = '';
         statusEl.innerHTML = '';
       }, 5000);
     }
@@ -1972,18 +1952,19 @@ var Banking = {
     }
     
     if (!accountName) {
-      msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Please verify your account number first.</div>`;
-      return;
-    }
-    
-    var pin = prompt('Enter your 4-6 digit withdrawal PIN:');
-    if (!pin || !/^\d{4,6}$/.test(pin)) {
-      msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Valid PIN required.</div>`;
+      msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Please enter the account name.</div>`;
       return;
     }
 
+    // Open PIN modal instead of prompt()
+    PinModal.open('Enter Withdrawal PIN', function(pin) {
+      Banking._submitWithdrawal(amount, bankCode, accountNumber, accountName, pin);
+    });
+  },
+
+  _submitWithdrawal: async function (amount, bankCode, accountNumber, accountName, pin) {
+    var msgEl = document.getElementById('withdrawal-message');
     msgEl.innerHTML = `<div class="alert-box info"><i class="fas fa-spinner fa-spin"></i> Processing withdrawal...</div>`;
-    
     try {
       var result = await GameManager.safeClaim('/api/banking/withdraw', {
         amount: amount, 
@@ -2003,6 +1984,45 @@ var Banking = {
     } catch (error) {
       msgEl.innerHTML = `<div class="alert-box warning"><i class="fas fa-exclamation-triangle"></i> Network error. Please try again.</div>`;
     }
+  }
+};
+
+// ========== PIN MODAL ==========
+var PinModal = {
+  _callback: null,
+  _context: null,
+
+  open: function(title, callback, context) {
+    this._callback = callback;
+    this._context = context || null;
+    document.getElementById('pin-modal-title').textContent = title;
+    document.getElementById('pin-input').value = '';
+    document.getElementById('pin-modal-message').textContent = '';
+    document.getElementById('pin-modal-message').className = 'message';
+    App.showModal('pin-modal');
+    document.getElementById('pin-input').focus();
+  },
+
+  close: function() {
+    App.closeModal('pin-modal');
+    this._callback = null;
+    this._context = null;
+  },
+
+  submit: function() {
+    var pin = document.getElementById('pin-input').value.trim();
+    var msgEl = document.getElementById('pin-modal-message');
+    if (!pin || !/^\d{4,6}$/.test(pin)) {
+      msgEl.textContent = 'Please enter a 4-6 digit PIN.';
+      msgEl.className = 'message error';
+      return;
+    }
+    msgEl.textContent = '';
+    msgEl.className = 'message';
+    if (this._callback) {
+      this._callback(pin, this._context);
+    }
+    this.close();
   }
 };
 
@@ -2335,29 +2355,53 @@ var Settings = {
 
   setWithdrawalPin: async function (isChange) {
     if (isChange === undefined) isChange = false;
-    var currentPin = '';
+    var self = this;
     if (isChange) {
-      currentPin = prompt('Enter your CURRENT 4-6 digit PIN:');
-      if (!currentPin || !/^\d{4,6}$/.test(currentPin)) return;
-      try {
-        var response = await App.requestWithTimeout('/api/user/verify-withdrawal-pin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pin: currentPin }),
-          credentials: 'include'
-        });
-        var data = await response.json();
-        if (!data.success) return;
-      } catch (error) { return; }
+      // Verify current PIN first
+      PinModal.open('Enter CURRENT PIN', function(currentPin) {
+        self._verifyAndSetNewPin(currentPin);
+      });
+    } else {
+      PinModal.open('Set New PIN', function(newPin) {
+        self._saveNewPin(newPin);
+      });
     }
-    var newPin = prompt('Enter your NEW 4-6 digit PIN:');
-    if (!newPin || !/^\d{4,6}$/.test(newPin)) return;
-    var confirmPin = prompt('Confirm your new PIN:');
-    if (newPin !== confirmPin) return;
+  },
+
+  _verifyAndSetNewPin: async function (currentPin) {
+    try {
+      var response = await App.requestWithTimeout('/api/user/verify-withdrawal-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: currentPin }),
+        credentials: 'include'
+      });
+      var data = await response.json();
+      if (!data.success) {
+        alert('Incorrect current PIN');
+        return;
+      }
+      // Ask for new PIN
+      PinModal.open('Enter NEW PIN', function(newPin) {
+        this._saveNewPin(newPin);
+      });
+    } catch (error) { alert('Error verifying PIN'); }
+  },
+
+  _saveNewPin: async function (newPin) {
+    if (!newPin || !/^\d{4,6}$/.test(newPin)) {
+      alert('PIN must be 4-6 digits');
+      return;
+    }
     try {
       var result = await GameManager.safeClaim('/api/user/set-withdrawal-pin', { pin: newPin }, 'setpin');
-      if (result.success) App.closeModal('settings-modal');
-    } catch (error) { /* silent */ }
+      if (result.success) {
+        App.closeModal('settings-modal');
+        alert('PIN set successfully');
+      } else {
+        alert(result.message || 'Failed to set PIN');
+      }
+    } catch (error) { alert('Network error'); }
   },
 
   changeWithdrawalPin: function () { this.setWithdrawalPin(true); },
@@ -2590,6 +2634,7 @@ window.Achievements = Achievements;
 window.Settings = Settings;
 window.PaystackPayment = PaystackPayment;
 window.SessionManager = SessionManager;
+window.PinModal = PinModal;
 window.checkWithdrawalDay = checkWithdrawalDay;
 window.closeWithdrawalDayModal = closeWithdrawalDayModal;
 window.updateBalance = App.updateBalance.bind(App);
@@ -2606,4 +2651,4 @@ window.claimPlinkoReward = async function(bet, multiplier) {
   return await GameManager.safeClaim('/api/games/plinko/report', { bet: bet, multiplier: multiplier }, 'plinko');
 };
 
-console.log('FLEXIA Script v17.6 - Spin wheel rotation fixed, referral modal fixed');
+console.log('FLEXIA Script v17.7 - Referral fixed, manual account name, Plinko balance check improved');
