@@ -1,6 +1,6 @@
 // ============================================================
-// FLEXIA Frontend - COMPLETE PRODUCTION VERSION v17.8
-// Fixed: Spin modal and PIN modal isolation, robust modal handling
+// FLEXIA Frontend - COMPLETE PRODUCTION VERSION v17.9
+// Fixed: Referral count display, claim feedback, spin/PIN isolation, Plinko start
 // ============================================================
 
 // ========== EMBEDDED CSS ==========
@@ -1744,17 +1744,31 @@ var Referral = {
   },
 
   claimBonuses: async function () {
+    var btn = document.querySelector('#referral-data .btn-primary');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Claiming...';
+    }
     try {
       var result = await GameManager.safeClaim('/api/referral/claim', {}, 'referral');
       if (!result.success) {
         alert(result.message || 'Failed to claim bonus');
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-gift"></i> Claim ₦' + (result.claimed_amount || 0).toLocaleString() + ' Bonus';
+        }
         return;
       }
       App.updateBalance(result.new_balance);
+      App.showMessage('✅ Claimed ₦' + result.claimed_amount.toLocaleString() + ' bonus!', 'success', 4000);
       this.open(); // refresh modal
     } catch (error) {
       console.error('Claim error:', error);
       alert('Network error. Please try again.');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-gift"></i> Claim Bonus';
+      }
     }
   }
 };
@@ -2678,4 +2692,4 @@ window.claimPlinkoReward = async function(bet, multiplier) {
   return await GameManager.safeClaim('/api/games/plinko/report', { bet: bet, multiplier: multiplier }, 'plinko');
 };
 
-console.log('FLEXIA Script v17.8 - Full referral system verified');
+console.log('FLEXIA Script v17.9 - All fixes applied');
