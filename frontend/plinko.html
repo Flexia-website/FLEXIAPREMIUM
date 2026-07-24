@@ -409,9 +409,30 @@ function dropBall() {
     alert('Invalid bet amount. Min ₦' + MIN_BET + ', Max ₦' + MAX_BET);
     return;
   }
-  if (betAmount > (window.App?.currentUser?.balance || 0)) {
-    alert('Insufficient balance');
-    return;
+  
+  // Check balance using App.currentUser.balance (ensure it's fresh)
+  if (window.App && window.App.currentUser) {
+    // Refresh balance just in case
+    App.fetchFreshBalance();
+    if (betAmount > App.currentUser.balance) {
+      alert('Insufficient balance. Your balance: ₦' + App.currentUser.balance.toLocaleString());
+      return;
+    }
+  } else {
+    // Fallback: check via API
+    try {
+      const res = await fetch('/api/user/profile', { credentials: 'include' });
+      const data = await res.json();
+      if (data.success && data.user) {
+        if (betAmount > data.user.balance) {
+          alert('Insufficient balance. Your balance: ₦' + data.user.balance.toLocaleString());
+          return;
+        }
+      }
+    } catch (e) {
+      alert('Could not verify balance. Please try again.');
+      return;
+    }
   }
   
   gameRunning = true;
