@@ -1568,11 +1568,10 @@ def session_refresh():
 # -------------------- DATABASE INIT (at module level) --------------------
 def init_db():
     with app.app_context():
-        # Drop all tables and recreate fresh schema
-        db.drop_all()
+        # Create tables if they don't exist (preserves existing data)
         db.create_all()
 
-        # Read admin credentials from environment – NO defaults!
+        # Read admin credentials from environment – no defaults!
         admin_username = os.environ.get('ADMIN_USERNAME')
         admin_password = os.environ.get('ADMIN_PASSWORD')
         if not admin_username or not admin_password:
@@ -1581,7 +1580,7 @@ def init_db():
                 "The app will not start without them."
             )
 
-        # Check if admin already exists (should not after fresh drop)
+        # Check if admin already exists
         admin = User.query.filter_by(username=admin_username).first()
         if not admin:
             admin = User(username=admin_username, is_admin=True)
@@ -1591,6 +1590,8 @@ def init_db():
             db.session.commit()
             print(f"✅ Admin user '{admin_username}' created.")
         else:
+            # Optionally update password if changed? (uncomment if needed)
+            # admin.set_password(admin_password)
             print(f"ℹ️ Admin user '{admin_username}' already exists.")
 
         # Create default social settings if missing
