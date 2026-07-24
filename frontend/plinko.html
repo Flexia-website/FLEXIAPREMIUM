@@ -71,7 +71,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
   <div class="game-row">
     <div class="game-panel">
       <div class="game-board-container">
-        <canvas id="game-board" width="460" height="460"></canvas>
+        <canvas id="game-board" width="500" height="600"></canvas>
       </div>
     </div>
     <div class="scores-panel">
@@ -106,6 +106,12 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
 
 <div class="controls-row">
   <div style="flex:1;">
+    <!-- BET INPUT FIELD -->
+    <div style="margin-bottom:10px;display:flex;gap:10px;align-items:center;">
+      <label for="bet-input" style="font-size:0.8rem;color:#A0A0B5;">Bet:</label>
+      <input type="number" id="bet-input" value="100" min="100" max="50000" step="100"
+             style="flex:1;padding:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(128,0,255,0.3);border-radius:8px;color:#F0F0F0;font-size:1rem;text-align:center;outline:none;">
+    </div>
     <div class="action-buttons">
       <button class="action-btn" onclick="dropBall()" id="drop-btn"><i class="fas fa-bowling-ball"></i> DROP BALL</button>
       <button class="action-btn" onclick="manualClaim()" id="claim-btn"><i class="fas fa-trophy"></i> CLAIM</button>
@@ -162,11 +168,19 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
 <script>
 const canvas = document.getElementById('game-board');
 const ctx = canvas.getContext('2d');
-const gridSize = 20;
-const tileCount = canvas.width / gridSize;
 const PLINKO_CAP = 3000;
 const MIN_BET = 100;
 const MAX_BET = 50000;
+
+// ========== GAME CONFIG ==========
+const ROWS = 12;
+const COLS = 8;
+const PEG_RADIUS = 4;
+const SLOT_WIDTH = canvas.width / COLS;
+const BALL_RADIUS = 6;
+const ROW_HEIGHT = 36;
+const START_Y = 30;
+const MULTIPLIERS = [10.0, 3.0, 1.0, 0.5, 0.5, 1.0, 3.0, 10.0];
 
 let betAmount = 100;
 let multiplier = 0;
@@ -176,6 +190,7 @@ let isClaiming = false;
 let capReached = false;
 let gameRunning = false;
 
+// ========== UI HELPERS ==========
 function updateCapUI(earned) {
   dailyEarned = earned;
   const remaining = Math.max(0, PLINKO_CAP - earned);
@@ -187,6 +202,11 @@ function updateCapUI(earned) {
   }
   document.getElementById('total-earned').textContent = '₦' + earned;
   document.getElementById('remaining-today').textContent = '₦' + remaining;
+  const hdr = document.getElementById('plinko-header-info');
+  if (hdr) {
+    hdr.textContent = remaining <= 0 ? '⚠️ Daily cap reached! Come back tomorrow.' : 'Bet & Multiply · Daily cap ₦3000';
+    hdr.style.color = remaining <= 0 ? '#FF0055' : '#00CCFF';
+  }
   if (earned >= PLINKO_CAP) { capReached = true; lockClaimBtn(); }
 }
 
@@ -209,29 +229,7 @@ function showFunPopup() {
   setTimeout(() => d && d.remove && d.remove(), 3000);
 }
 
-// ═══ BALANCE SYNC - INSTANT UPDATE ═══
-function syncBalanceAfterClaim() {
-  fetch('/api/user/profile', { credentials: 'include', headers: { 'Cache-Control': 'no-cache' } })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.success && data.user) {
-        var balance = parseFloat(data.user.balance) || 0;
-        localStorage.setItem('flexia_balance', balance);
-        document.querySelectorAll('.balance-display, #balance, #user-balance, .balance-amount').forEach(function(el) {
-          el.textContent = '₦' + balance.toFixed(2);
-        });
-        var headerBalance = document.getElementById('header-balance');
-        if (headerBalance) headerBalance.textContent = '₦' + balance.toFixed(2);
-        if (window.App && window.App.currentUser) {
-          window.App.currentUser.balance = balance;
-          if (window.App.updateBalanceDisplay) window.App.updateBalanceDisplay();
-        }
-        console.log('✅ Balance synced instantly: ₦' + balance.toFixed(2));
-      }
-    })
-    .catch(function(e) { console.error('Balance sync error:', e); });
-}
-
+// ========== BACKEND ==========
 async function loadDailyEarnings() {
   try {
     const r = await fetch('/api/user/profile', {credentials:'include'});
@@ -273,7 +271,7 @@ async function autoClaim() {
       showFunPopup();
       sessionEarned = 0;
       updateSessionUI();
-      syncBalanceAfterClaim();
+      if (window.App) App.fetchFreshBalance();
     }
   } catch(e) { console.error('Auto-claim error', e); }
   isClaiming = false;
@@ -328,7 +326,7 @@ async function manualClaim() {
     
     if (result.new_balance !== undefined) {
       localStorage.setItem('flexia_balance', result.new_balance);
-      syncBalanceAfterClaim();
+      if (window.App) App.fetchFreshBalance();
     }
     
     sessionEarned = 0;
@@ -359,58 +357,166 @@ async function manualClaim() {
 
 async function claimAndClose() { await manualClaim(); closeModal(); }
 
+// ========== PLINKO BOARD DRAWING (TRIANGLE PEGS) ==========
+function drawBoard() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // Draw slots
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = 'bold 12px Orbitron';
+  for (let i = 0; i < COLS; i++) {
+    const x = i * SLOT_WIDTH + SLOT_WIDTH / 2;
+    const y = canvas.height - 20;
+    ctx.fillStyle = '#FFD700';
+    ctx.fillText(MULTIPLIERS[i] + 'x', x, y);
+  }
+  
+  // Draw pegs in a triangle pattern
+  for (let row = 0; row < ROWS; row++) {
+    // Calculate number of pegs for this row (triangle: increasing then decreasing)
+    let numPegs = row + 1;
+    if (row >= ROWS / 2) numPegs = ROWS - row - 1;
+    // We'll limit to COLS max
+    if (numPegs > COLS) numPegs = COLS;
+    // Calculate offset to center the row
+    const rowWidth = (numPegs - 1) * SLOT_WIDTH;
+    const offsetX = (canvas.width - rowWidth) / 2;
+    for (let col = 0; col < numPegs; col++) {
+      const x = offsetX + col * SLOT_WIDTH;
+      const y = START_Y + row * ROW_HEIGHT;
+      ctx.beginPath();
+      ctx.arc(x, y, PEG_RADIUS, 0, 2 * Math.PI);
+      ctx.fillStyle = '#00CCFF';
+      ctx.fill();
+      ctx.shadowColor = 'rgba(0,204,255,0.5)';
+      ctx.shadowBlur = 8;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+  }
+}
+
+// ========== BALL DROP SIMULATION ==========
 function dropBall() {
   if (capReached) { alert('🎉 Daily ₦3000 cap reached! Come back tomorrow.'); return; }
-  const multipliers = [0.5, 1.0, 3.0, 10.0];
-  multiplier = multipliers[Math.floor(Math.random() * multipliers.length)];
-  const win = multiplier > 1;
-  let winAmount = betAmount * multiplier;
-  let netChange = winAmount - betAmount;
+  if (gameRunning) return;
   
-  if (dailyEarned + netChange > PLINKO_CAP && netChange > 0) {
-    netChange = PLINKO_CAP - dailyEarned;
-    if (netChange <= 0) { alert('Cap reached!'); return; }
-    winAmount = betAmount + netChange;
+  // Get bet from input field
+  const input = document.getElementById('bet-input');
+  betAmount = parseFloat(input.value);
+  if (isNaN(betAmount) || betAmount < MIN_BET || betAmount > MAX_BET) {
+    alert('Invalid bet amount. Min ₦' + MIN_BET + ', Max ₦' + MAX_BET);
+    return;
+  }
+  if (betAmount > (window.App?.currentUser?.balance || 0)) {
+    alert('Insufficient balance');
+    return;
   }
   
-  sessionEarned += netChange;
-  updateSessionUI();
+  gameRunning = true;
+  document.getElementById('drop-btn').disabled = true;
   
-  document.getElementById('modal-bet').textContent = '₦' + betAmount;
-  document.getElementById('modal-multiplier').textContent = multiplier + 'x';
-  document.getElementById('modal-result').textContent = win ? 'WIN +₦' + netChange : 'LOSS -₦' + Math.abs(netChange);
-  document.getElementById('modal-daily').textContent = '₦' + (dailyEarned + sessionEarned);
+  // Choose random column (0 to COLS-1) for the ball to land
+  const targetCol = Math.floor(Math.random() * COLS);
+  multiplier = MULTIPLIERS[targetCol];
   
-  if (sessionEarned > 0) {
-    document.getElementById('modal-action-area').innerHTML = `
-      <button class="modal-btn primary-btn" onclick="claimAndClose()"><i class="fas fa-coins"></i> CLAIM & CLOSE</button>
-      <button class="modal-btn secondary-btn" onclick="playAgain()">PLAY AGAIN</button>
-    `;
-  } else {
-    document.getElementById('modal-action-area').innerHTML = `
-      <button class="modal-btn primary-btn" onclick="playAgain()">PLAY AGAIN</button>
-      <button class="modal-btn secondary-btn" onclick="closeModal()">CLOSE</button>
-    `;
+  // Animate ball dropping
+  const startX = canvas.width / 2;
+  const startY = 10;
+  let ballX = startX;
+  let ballY = startY;
+  const speed = 5;
+  let direction = 0; // -1 left, 1 right
+  
+  function animate() {
+    if (ballY >= canvas.height - 30) {
+      // Reached bottom
+      gameRunning = false;
+      document.getElementById('drop-btn').disabled = false;
+      
+      // Determine win/loss
+      const win = multiplier > 1;
+      let winAmount = betAmount * multiplier;
+      let netChange = winAmount - betAmount;
+      
+      if (win && dailyEarned + netChange > PLINKO_CAP && netChange > 0) {
+        netChange = PLINKO_CAP - dailyEarned;
+        if (netChange <= 0) { alert('Cap reached!'); return; }
+        winAmount = betAmount + netChange;
+      }
+      
+      sessionEarned += netChange;
+      updateSessionUI();
+      
+      document.getElementById('modal-bet').textContent = '₦' + betAmount;
+      document.getElementById('modal-multiplier').textContent = multiplier + 'x';
+      document.getElementById('modal-result').textContent = win ? 'WIN +₦' + netChange : 'LOSS -₦' + Math.abs(netChange);
+      document.getElementById('modal-daily').textContent = '₦' + (dailyEarned + sessionEarned);
+      
+      if (sessionEarned > 0) {
+        document.getElementById('modal-action-area').innerHTML = `
+          <button class="modal-btn primary-btn" onclick="claimAndClose()"><i class="fas fa-coins"></i> CLAIM & CLOSE</button>
+          <button class="modal-btn secondary-btn" onclick="playAgain()">PLAY AGAIN</button>
+        `;
+      } else {
+        document.getElementById('modal-action-area').innerHTML = `
+          <button class="modal-btn primary-btn" onclick="playAgain()">PLAY AGAIN</button>
+          <button class="modal-btn secondary-btn" onclick="closeModal()">CLOSE</button>
+        `;
+      }
+      
+      document.getElementById('game-over-modal').classList.remove('hidden');
+      
+      if (dailyEarned + sessionEarned >= PLINKO_CAP) {
+        capReached = true;
+        if (sessionEarned > 0) autoClaim();
+      }
+      
+      drawBoard();
+      return;
+    }
+    
+    // Simulate bouncing
+    ballY += speed;
+    // Random horizontal deflection
+    if (Math.random() < 0.03) {
+      direction = (Math.random() < 0.5) ? -1 : 1;
+    }
+    ballX += direction * 1.5;
+    // Keep within canvas bounds
+    if (ballX < BALL_RADIUS) { ballX = BALL_RADIUS; direction = 1; }
+    if (ballX > canvas.width - BALL_RADIUS) { ballX = canvas.width - BALL_RADIUS; direction = -1; }
+    
+    // Draw frame
+    drawBoard();
+    ctx.beginPath();
+    ctx.arc(ballX, ballY, BALL_RADIUS, 0, 2 * Math.PI);
+    ctx.fillStyle = '#FF0055';
+    ctx.fill();
+    ctx.shadowColor = 'rgba(255,0,85,0.5)';
+    ctx.shadowBlur = 12;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    
+    requestAnimationFrame(animate);
   }
   
-  document.getElementById('game-over-modal').classList.remove('hidden');
-  
-  if (dailyEarned + sessionEarned >= PLINKO_CAP) {
-    capReached = true;
-    if (sessionEarned > 0) autoClaim();
-  }
+  animate();
 }
 
 function playAgain() { document.getElementById('game-over-modal').classList.add('hidden'); }
 function closeModal() { document.getElementById('game-over-modal').classList.add('hidden'); }
 function closeInstructions() { document.getElementById('instruction-modal').style.display='none'; localStorage.setItem('flexia_plinko_seen','1'); }
 
+// ========== INIT ==========
 document.addEventListener('DOMContentLoaded',()=>{
   if (!localStorage.getItem('flexia_plinko_seen')) document.getElementById('instruction-modal').style.display='flex';
   else document.getElementById('instruction-modal').style.display='none';
   loadDailyEarnings();
-  betAmount = 100;
+  betAmount = parseInt(document.getElementById('bet-input').value) || 100;
   updateSessionUI();
+  drawBoard();
 });
 </script>
 </body>
