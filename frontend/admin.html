@@ -3,696 +3,493 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Flexia Admin</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Flexia Admin · Glass</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
-        /* ===== RESET & BASE ===== */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background: #07070f;
-            color: #c8c8e0;
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            font-size: 12px;
-            padding: 10px;
-            line-height: 1.4;
+            background: radial-gradient(ellipse at 30% 20%, #1b1135, #0a0618);
+            min-height: 100vh;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: #e8e8f0;
+            padding: 16px;
         }
-        #admin-container { max-width: 1400px; margin: 0 auto; }
-
-        /* ===== HEADER ===== */
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0 12px;
-            border-bottom: 1px solid #2a2a4a;
-            margin-bottom: 16px;
-            flex-wrap: wrap;
-            gap: 8px;
+        .glass {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+            border-radius: 16px;
         }
-        header h1 {
-            font-size: 18px;
-            background: linear-gradient(90deg, #00eeff, #7b61ff);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            font-weight: 700;
-            margin: 0;
-            letter-spacing: 0.5px;
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            transition: all 0.2s ease;
         }
-        header h1 i { margin-right: 6px; }
-        .btn-sm {
-            padding: 4px 10px;
-            font-size: 11px;
-            border-radius: 4px;
-            font-weight: 600;
-        }
-        .btn-secondary {
-            background: #2a2a4a;
-            color: #00eeff;
-            border: 1px solid #00eeff;
-            padding: 4px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s;
-            font-size: 11px;
-        }
-        .btn-secondary:hover { background: #1a1a3a; }
-
-        /* ===== TABS ===== */
-        .admin-tabs {
-            display: flex;
-            gap: 3px;
-            margin-bottom: 12px;
-            border-bottom: 1px solid #252540;
-            padding-bottom: 6px;
-            flex-wrap: wrap;
+        .glass-card:hover {
+            border-color: rgba(168, 85, 247, 0.25);
+            box-shadow: 0 4px 20px rgba(128, 0, 255, 0.1);
         }
         .tab-btn {
             background: transparent;
-            color: #8888aa;
-            border: none;
+            color: #8899bb;
             padding: 6px 14px;
-            border-radius: 6px 6px 0 0;
-            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            font-weight: 600;
+            font-size: 0.8rem;
             transition: all 0.2s;
-            font-weight: 600;
-            font-size: 11px;
-            letter-spacing: 0.3px;
+            border-bottom: 2px solid transparent;
         }
-        .tab-btn:hover { color: #e0e0ff; background: #1a1a3a; }
-        .tab-btn.active { background: #7b61ff; color: white; }
-
-        /* ===== SECTIONS ===== */
-        .admin-section {
-            background: #0d0d1a;
-            border: 1px solid #252540;
-            border-radius: 8px;
-            padding: 12px 14px;
-            margin-bottom: 14px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        .tab-btn:hover {
+            color: #e0e0f0;
+            background: rgba(255,255,255,0.02);
         }
-        .admin-section h3 {
-            font-size: 14px;
-            margin-bottom: 8px;
-            color: #7b61ff;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-weight: 600;
+        .tab-btn.active {
+            color: #c4b5fd;
+            border-bottom-color: #7b61ff;
+            background: rgba(128,0,255,0.06);
         }
-        .admin-section h3 i { font-size: 13px; }
-
-        /* ===== STATS CARDS ===== */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 8px;
-            margin-bottom: 10px;
-        }
-        .stats-card {
-            background: #121225;
-            border-radius: 6px;
-            padding: 8px 10px;
+        .stat-box {
+            background: rgba(255,255,255,0.02);
+            border-radius: 10px;
+            padding: 12px 16px;
             text-align: center;
             border-left: 3px solid #7b61ff;
         }
-        .stats-card h3 {
-            margin: 0;
-            font-size: 18px;
+        .stat-box h3 {
+            font-size: 1.4rem;
+            font-weight: 700;
             color: #00eeff;
-            font-weight: 700;
+            margin: 0;
         }
-        .stats-card p {
-            margin: 2px 0 0 0;
-            color: #8888aa;
-            font-size: 10px;
+        .stat-box p {
+            font-size: 0.7rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            color: #8899bb;
+            margin: 2px 0 0;
         }
-
-        /* ===== TABLES ===== */
-        .table-container {
-            overflow-x: auto;
-            margin-top: 6px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11px;
-        }
-        th, td {
-            padding: 5px 8px;
-            text-align: left;
-            border-bottom: 1px solid #252540;
-        }
-        th {
-            background: #121225;
-            color: #7b61ff;
+        .badge-glass {
+            background: rgba(168,85,247,0.15);
+            color: #c4b5fd;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
             font-weight: 600;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            border: 1px solid rgba(168,85,247,0.1);
         }
-        tr:hover { background: #151528; }
-
-        /* ===== BADGES ===== */
-        .badge {
-            padding: 2px 6px;
-            border-radius: 10px;
-            font-size: 9px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        .badge-success { background: #00c853; color: #fff; }
-        .badge-danger  { background: #ff5252; color: #fff; }
-        .badge-warning { background: #ff9800; color: #fff; }
-        .badge-info    { background: #2196f3; color: #fff; }
-        .badge-primary { background: #7b61ff; color: #fff; }
-
-        /* ===== BUTTONS ===== */
-        button {
-            background: #7b61ff;
-            color: white;
-            border: none;
-            padding: 4px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 10px;
-            transition: background 0.2s;
-            margin: 2px;
-        }
-        button:hover { background: #6a50e0; }
-        button.btn-danger { background: #d32f2f; }
-        button.btn-danger:hover { background: #b71c1c; }
-        button.btn-success { background: #00c853; }
-        button.btn-success:hover { background: #009624; }
-        button.btn-warning { background: #ff9800; color: #000; }
-        button.btn-warning:hover { background: #e68900; }
-        button.btn-info { background: #2196f3; }
-        button.btn-info:hover { background: #1976d2; }
-        button.btn-outline-primary {
-            background: transparent;
-            border: 1px solid #7b61ff;
-            color: #7b61ff;
-        }
-        button.btn-outline-primary:hover { background: #7b61ff; color: #fff; }
-        button.btn-outline-success { background: transparent; border: 1px solid #00c853; color: #00c853; }
-        button.btn-outline-success:hover { background: #00c853; color: #fff; }
-        button.btn-outline-warning { background: transparent; border: 1px solid #ff9800; color: #ff9800; }
-        button.btn-outline-warning:hover { background: #ff9800; color: #000; }
-        button.btn-outline-danger { background: transparent; border: 1px solid #ff5252; color: #ff5252; }
-        button.btn-outline-danger:hover { background: #ff5252; color: #fff; }
-        button.btn-outline-info { background: transparent; border: 1px solid #2196f3; color: #2196f3; }
-        button.btn-outline-info:hover { background: #2196f3; color: #fff; }
-
-        /* ===== INPUTS ===== */
-        input, textarea, select {
-            background: #121225;
-            border: 1px solid #252540;
-            color: #e0e0ff;
-            padding: 4px 8px;
-            border-radius: 4px;
+        .badge-glass.success { background: rgba(0,255,85,0.08); color: #6bcb77; border-color: rgba(0,255,85,0.1); }
+        .badge-glass.warning { background: rgba(255,165,0,0.08); color: #ffb347; border-color: rgba(255,165,0,0.1); }
+        .badge-glass.danger  { background: rgba(255,0,85,0.08); color: #ff6b6b; border-color: rgba(255,0,85,0.1); }
+        input, select, textarea {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            color: #e0e0f0;
+            padding: 6px 12px;
+            font-size: 0.85rem;
             width: 100%;
-            font-size: 11px;
-            margin: 3px 0;
+            transition: border 0.2s;
         }
-        input:focus, textarea:focus, select:focus {
+        input:focus, select:focus, textarea:focus {
             outline: none;
             border-color: #7b61ff;
+            box-shadow: 0 0 0 3px rgba(128,0,255,0.1);
         }
-
-        /* ===== MESSAGES ===== */
-        .message {
-            padding: 6px 10px;
-            margin: 6px 0;
-            border-radius: 4px;
-            text-align: center;
-            font-weight: 500;
-            font-size: 11px;
+        .btn {
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: rgba(168,85,247,0.12);
+            color: #c4b5fd;
         }
-        .message.success { background: rgba(0,200,83,0.15); color: #00c853; }
-        .message.error   { background: rgba(255,82,82,0.15); color: #ff5252; }
-        .message.warning { background: rgba(255,193,7,0.15); color: #ffc107; }
-        .message.hidden  { display: none; }
-
-        /* ===== TAB CONTENT ===== */
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-
-        /* ===== DAY SELECTOR ===== */
+        .btn:hover {
+            background: rgba(168,85,247,0.2);
+            transform: translateY(-1px);
+        }
+        .btn-primary { background: linear-gradient(135deg, #7b61ff, #a855f7); color: #fff; }
+        .btn-primary:hover { box-shadow: 0 4px 20px rgba(128,0,255,0.25); }
+        .btn-success { background: rgba(0,200,83,0.15); color: #6bcb77; }
+        .btn-success:hover { background: rgba(0,200,83,0.25); }
+        .btn-danger { background: rgba(255,0,85,0.12); color: #ff6b6b; }
+        .btn-danger:hover { background: rgba(255,0,85,0.22); }
+        .btn-warning { background: rgba(255,165,0,0.12); color: #ffb347; }
+        .btn-warning:hover { background: rgba(255,165,0,0.22); }
+        .btn-info { background: rgba(0,200,255,0.12); color: #6bcbff; }
+        .btn-info:hover { background: rgba(0,200,255,0.22); }
+        .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.08); }
+        .btn-outline:hover { background: rgba(255,255,255,0.04); }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; font-size: 0.8rem; border-collapse: collapse; }
+        th { text-align: left; padding: 6px 8px; color: #8899bb; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        td { padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.02); }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #c4b5fd;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
         .day-selector {
-            max-height: 140px;
-            overflow-y: auto;
-            border: 1px solid #252540;
-            border-radius: 4px;
-            padding: 6px;
-            background: #121225;
             display: flex;
             flex-wrap: wrap;
             gap: 4px;
+            max-height: 160px;
+            overflow-y: auto;
+            padding: 8px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
         }
         .day-checkbox {
             display: flex;
             align-items: center;
-            gap: 3px;
-            min-width: 44px;
-            font-size: 11px;
+            gap: 4px;
+            background: rgba(255,255,255,0.02);
+            padding: 2px 8px 2px 4px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            border: 1px solid rgba(255,255,255,0.04);
         }
-        .day-checkbox input[type="checkbox"] { width: auto; margin: 0; }
-        .day-checkbox input:checked + label { color: #7b61ff; font-weight: bold; }
-
-        /* ===== GLOBAL DAYS DISPLAY ===== */
-        .global-days-display {
-            background: #121225;
-            border: 2px solid #7b61ff;
-            border-radius: 6px;
-            padding: 10px 12px;
-            margin: 8px 0;
-        }
-        .global-days-display h4 {
-            color: #00eeff;
-            font-size: 12px;
-            margin-bottom: 4px;
-        }
-        .global-days-display .days-list {
-            color: #e0e0ff;
-            font-size: 16px;
-            font-weight: bold;
-        }
-        .global-days-display .days-note {
-            color: #8888aa;
-            font-size: 10px;
-            margin-top: 4px;
-        }
-
-        /* ===== WITHDRAWAL ITEMS ===== */
-        .withdrawal-item {
-            background: #151528;
-            padding: 8px 10px;
-            margin: 4px 0;
-            border-radius: 4px;
-            border-left: 2px solid #00eeff;
-            font-size: 11px;
-        }
-        .withdrawal-item div { margin: 2px 0; }
-
-        /* ===== BACKUP ITEMS ===== */
-        .backup-item {
-            background: #151528;
-            padding: 8px 10px;
-            margin: 4px 0;
-            border-radius: 4px;
-            border-left: 2px solid #00c853;
-            font-size: 11px;
-        }
-
-        /* ===== TIKTOK HISTORY ===== */
-        .tiktok-history-item {
-            background: #151528;
-            padding: 6px 10px;
-            margin: 4px 0;
-            border-radius: 4px;
-            border-left: 2px solid #ff0055;
-            font-size: 11px;
-        }
-
-        /* ===== MODALS (Bootstrap overrides) ===== */
+        .day-checkbox input { width: auto; margin: 0; }
+        .day-checkbox input:checked + label { color: #c4b5fd; font-weight: 600; }
         .modal-content {
-            background: #0d0d1a;
-            color: #e0e0ff;
-            border: 1px solid #252540;
-            border-radius: 8px;
+            background: rgba(20,12,40,0.9);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 20px;
         }
-        .modal-header { border-bottom: 1px solid #252540; padding: 8px 12px; }
-        .modal-header .modal-title { font-size: 14px; }
-        .modal-footer { border-top: 1px solid #252540; padding: 8px 12px; }
-        .modal-body { padding: 12px; font-size: 12px; }
-        .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
-
-        /* ===== HEALTH STATUS ===== */
-        .health-status {
-            padding: 8px 12px;
-            border-radius: 6px;
-            margin: 6px 0;
-            font-size: 11px;
+        .modal-header, .modal-footer {
+            border-color: rgba(255,255,255,0.04);
         }
-        .health-online   { background: rgba(0,200,83,0.08); border-left: 3px solid #00c853; }
-        .health-degraded { background: rgba(255,193,7,0.08); border-left: 3px solid #ffc107; }
-        .health-offline  { background: rgba(244,67,54,0.08); border-left: 3px solid #f44336; }
-        .uptime-display {
-            font-family: 'Courier New', monospace;
-            background: #0d0d1a;
-            padding: 2px 8px;
-            border-radius: 3px;
-            color: #00eeff;
-            font-size: 11px;
-        }
-        .timezone-display {
-            background: rgba(0,238,255,0.05);
-            border: 1px solid rgba(0,238,255,0.1);
-            border-radius: 4px;
-            padding: 2px 8px;
-            font-size: 10px;
-            color: #00eeff;
-            display: inline-block;
-        }
-
-        /* ===== MISC ===== */
-        .form-label { font-size: 11px; margin-bottom: 2px; color: #aaa; }
-        .form-text { font-size: 10px; color: #888; }
-        .text-muted { color: #8888aa; }
-        .text-center { text-align: center; }
-        .mt-2 { margin-top: 6px; }
-        .mb-2 { margin-bottom: 6px; }
-        .me-1 { margin-right: 4px; }
-        .ms-1 { margin-left: 4px; }
-        .mt-3 { margin-top: 10px; }
-        .mb-3 { margin-bottom: 10px; }
-        .d-flex { display: flex; }
-        .justify-content-between { justify-content: space-between; }
-        .align-items-center { align-items: center; }
-        .flex-wrap { flex-wrap: wrap; }
-        .gap-1 { gap: 4px; }
+        .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+        .scrollbar-thin::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(168,85,247,0.2); border-radius: 4px; }
+        .modal-backdrop { background: rgba(0,0,0,0.6); backdrop-filter: blur(6px); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
         .w-100 { width: 100%; }
-
-        /* ===== RESPONSIVE ===== */
-        @media (max-width: 768px) {
-            header { flex-direction: column; align-items: stretch; }
-            .admin-tabs { overflow-x: auto; flex-wrap: nowrap; }
-            .stats-grid { grid-template-columns: 1fr 1fr; }
-            .day-selector { max-height: 120px; }
-        }
-        @media (max-width: 480px) {
-            .stats-grid { grid-template-columns: 1fr; }
-            table { font-size: 10px; }
-            th, td { padding: 3px 5px; }
-        }
+        .flex { display: flex; }
+        .flex-wrap { flex-wrap: wrap; }
+        .gap-2 { gap: 8px; }
+        .gap-1 { gap: 4px; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .text-sm { font-size: 0.8rem; }
+        .text-xs { font-size: 0.7rem; }
+        .mt-2 { margin-top: 8px; }
+        .mb-2 { margin-bottom: 8px; }
+        .mt-4 { margin-top: 16px; }
+        .mb-4 { margin-bottom: 16px; }
+        .p-2 { padding: 8px; }
+        .p-4 { padding: 16px; }
     </style>
 </head>
 <body>
-    <div id="admin-container">
-        <header>
-            <h1><i class="fas fa-crown"></i> Flexia Admin</h1>
-            <div>
-                <button onclick="checkHealth()" class="btn-secondary me-1">
-                    <i class="fas fa-heartbeat"></i> Health
-                </button>
-                <button onclick="adminLogout()" class="btn-secondary">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </button>
-            </div>
-        </header>
+<div id="app" class="max-w-7xl mx-auto">
 
-        <div class="admin-tabs">
-            <button class="tab-btn active" onclick="showTab('dashboard')"><i class="fas fa-tachometer-alt"></i> Dashboard</button>
-            <button class="tab-btn" onclick="showTab('database')"><i class="fas fa-database"></i> Database</button>
-            <button class="tab-btn" onclick="showTab('globalSettings')"><i class="fas fa-globe"></i> Global Days</button>
-            <button class="tab-btn" onclick="showTab('tiktokDaily')"><i class="fab fa-tiktok"></i> TikTok</button>
-            <button class="tab-btn" onclick="showTab('users')"><i class="fas fa-users"></i> Users</button>
-            <button class="tab-btn" onclick="showTab('withdrawals')"><i class="fas fa-money-bill-wave"></i> Withdrawals</button>
-            <button class="tab-btn" onclick="showTab('withdrawalReport')"><i class="fas fa-chart-bar"></i> Report</button>
-            <button class="tab-btn" onclick="showTab('backup')"><i class="fas fa-hdd"></i> Backup</button>
-            <button class="tab-btn" onclick="showTab('settings')"><i class="fas fa-cog"></i> Settings</button>
-            <button class="tab-btn" onclick="showTab('coupons')"><i class="fas fa-ticket-alt"></i> Coupons</button>
+    <!-- HEADER -->
+    <header class="glass p-4 mb-4 flex flex-wrap items-center justify-between">
+        <div class="flex items-center gap-3">
+            <span class="text-xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
+                <i class="fas fa-crown mr-2"></i>Flexia Admin
+            </span>
+            <span class="text-xs text-gray-500 hidden sm:inline">v2.0 · glass</span>
         </div>
+        <div class="flex gap-2">
+            <button onclick="checkHealth()" class="btn btn-outline text-xs"><i class="fas fa-heartbeat"></i> Health</button>
+            <button onclick="adminLogout()" class="btn btn-outline text-xs"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </div>
+    </header>
 
-        <!-- ===== DASHBOARD ===== -->
-        <div id="dashboard" class="tab-content active">
-            <div class="admin-section">
-                <h3><i class="fas fa-chart-line"></i> System Overview</h3>
-                <div id="health-status" class="health-status health-online">
-                    <div class="d-flex justify-content-between align-items-center flex-wrap">
-                        <div>
-                            <strong><i class="fas fa-check-circle"></i> Status</strong>
-                            <div id="uptime-display" class="uptime-display" style="display:inline-block; margin-top:2px;">Loading...</div>
-                        </div>
-                        <div class="text-end">
-                            <small>DB: <span id="db-status" class="badge badge-success">Connected</span></small>
-                            <small class="ms-1">Pool: <span id="pool-status" class="badge badge-success">Active</span></small>
-                            <div><span class="timezone-display" id="timezone-display">Loading...</span></div>
-                        </div>
+    <!-- TABS -->
+    <div class="glass p-2 mb-4 flex flex-wrap gap-1">
+        <button class="tab-btn active" onclick="showTab('dashboard')"><i class="fas fa-tachometer-alt"></i> Dashboard</button>
+        <button class="tab-btn" onclick="showTab('database')"><i class="fas fa-database"></i> Database</button>
+        <button class="tab-btn" onclick="showTab('globalSettings')"><i class="fas fa-globe"></i> Days</button>
+        <button class="tab-btn" onclick="showTab('tiktokDaily')"><i class="fab fa-tiktok"></i> TikTok</button>
+        <button class="tab-btn" onclick="showTab('users')"><i class="fas fa-users"></i> Users</button>
+        <button class="tab-btn" onclick="showTab('withdrawals')"><i class="fas fa-money-bill-wave"></i> Withdrawals</button>
+        <button class="tab-btn" onclick="showTab('withdrawalReport')"><i class="fas fa-chart-bar"></i> Report</button>
+        <button class="tab-btn" onclick="showTab('backup')"><i class="fas fa-hdd"></i> Backup</button>
+        <button class="tab-btn" onclick="showTab('settings')"><i class="fas fa-cog"></i> Settings</button>
+        <button class="tab-btn" onclick="showTab('coupons')"><i class="fas fa-ticket-alt"></i> Coupons</button>
+    </div>
+
+    <!-- ===== DASHBOARD ===== -->
+    <div id="dashboard" class="tab-content active">
+        <div class="glass p-4 mb-4">
+            <div class="section-title"><i class="fas fa-chart-line"></i> System Overview</div>
+            <div id="health-status" class="glass-card p-3 mb-3 border-l-4 border-green-400">
+                <div class="flex flex-wrap items-center justify-between">
+                    <div>
+                        <span class="font-semibold"><i class="fas fa-check-circle text-green-400"></i> Online</span>
+                        <span id="uptime-display" class="text-xs text-gray-400 ml-2">Loading…</span>
+                    </div>
+                    <div class="text-xs text-gray-400 flex gap-3">
+                        <span>DB: <span id="db-status" class="badge-glass success">Connected</span></span>
+                        <span>Pool: <span id="pool-status" class="badge-glass success">Active</span></span>
+                        <span class="hidden sm:inline"><span id="timezone-display" class="badge-glass">UTC</span></span>
                     </div>
                 </div>
-                <div class="stats-grid">
-                    <div class="stats-card"><h3 id="total-users-count">—</h3><p>Total Users</p></div>
-                    <div class="stats-card"><h3 id="pending-withdrawals-count">—</h3><p>Pending Withdrawals</p></div>
-                    <div class="stats-card"><h3 id="total-balance">—</h3><p>Platform Balance</p></div>
-                    <div class="stats-card"><h3 id="today-date">—</h3><p>Today</p></div>
-                </div>
-                <div class="global-days-display" style="border-color:#00eeff;">
-                    <h4><i class="fas fa-calendar-check"></i> Global Withdrawal Days</h4>
-                    <div class="days-list" id="current-global-days">Loading...</div>
-                    <div class="days-note">Default for users without custom settings</div>
-                </div>
             </div>
-            <div class="admin-section">
-                <h3><i class="fas fa-history"></i> Recent Withdrawals</h3>
-                <div id="recent-withdrawals">Loading...</div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="stat-box"><h3 id="total-users-count">—</h3><p>Total Users</p></div>
+                <div class="stat-box"><h3 id="pending-withdrawals-count">—</h3><p>Pending Withdrawals</p></div>
+                <div class="stat-box"><h3 id="total-balance">—</h3><p>Platform Balance</p></div>
+                <div class="stat-box"><h3 id="today-date">—</h3><p>Today</p></div>
+            </div>
+            <div class="glass-card p-3 mt-3">
+                <div class="text-xs text-gray-400">Global Withdrawal Days</div>
+                <div id="current-global-days" class="text-sm font-mono text-purple-300">—</div>
             </div>
         </div>
+        <div class="glass p-4">
+            <div class="section-title"><i class="fas fa-history"></i> Recent Withdrawals</div>
+            <div id="recent-withdrawals" class="text-sm text-gray-400">Loading…</div>
+        </div>
+    </div>
 
-        <!-- ===== DATABASE ===== -->
-        <div id="database" class="tab-content">
-            <div class="admin-section" style="border-left:3px solid #ff4757;">
-                <h3 style="color:#ff4757;"><i class="fas fa-database"></i> Database Management</h3>
-                <div class="row">
-                    <div class="col-md-6 mb-2">
-                        <div class="card bg-dark text-light border-danger" style="background:#0d0d1a!important;">
-                            <div class="card-header bg-danger text-white py-1 px-2"><i class="fas fa-trash"></i> Clear Data</div>
-                            <div class="card-body p-2">
-                                <div class="alert alert-warning py-1 px-2 mb-1" style="font-size:11px;">
-                                    <i class="fas fa-exclamation-triangle"></i> Irreversible!
-                                </div>
-                                <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="clear-users" checked><label class="form-check-label" for="clear-users">Users (except admin)</label></div>
-                                <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="clear-transactions" checked><label class="form-check-label" for="clear-transactions">Transactions</label></div>
-                                <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="clear-gameplays" checked><label class="form-check-label" for="clear-gameplays">Game Plays</label></div>
-                                <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="reset-coupons" checked><label class="form-check-label" for="reset-coupons">Reset Coupons</label></div>
-                                <div class="mb-1"><label class="form-label">Backup:</label>
-                                    <select class="form-select py-0" id="backup-option" style="font-size:11px;">
-                                        <option value="yes">Yes</option><option value="no">No</option>
-                                    </select>
-                                </div>
-                                <button class="btn btn-danger w-100 py-1" onclick="previewDatabaseClear()"><i class="fas fa-eye"></i> Preview Clear</button>
-                            </div>
-                        </div>
+    <!-- ===== DATABASE ===== -->
+    <div id="database" class="tab-content">
+        <div class="glass p-4 mb-4 border-l-4 border-red-400">
+            <div class="section-title text-red-400"><i class="fas fa-database"></i> Management</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="glass-card p-3">
+                    <div class="font-semibold text-red-300"><i class="fas fa-trash"></i> Clear Data</div>
+                    <div class="text-xs text-gray-400 my-2">Irreversible! Keeps admin only.</div>
+                    <div class="flex flex-wrap gap-2 text-xs">
+                        <label class="flex items-center gap-1"><input type="checkbox" id="clear-users" checked> Users</label>
+                        <label class="flex items-center gap-1"><input type="checkbox" id="clear-transactions" checked> Transactions</label>
+                        <label class="flex items-center gap-1"><input type="checkbox" id="clear-gameplays" checked> Game Plays</label>
+                        <label class="flex items-center gap-1"><input type="checkbox" id="reset-coupons" checked> Reset Coupons</label>
                     </div>
-                    <div class="col-md-6 mb-2">
-                        <div class="card bg-dark text-light border-info" style="background:#0d0d1a!important;">
-                            <div class="card-header bg-info text-white py-1 px-2"><i class="fas fa-file-export"></i> Export</div>
-                            <div class="card-body p-2">
-                                <div class="mb-1"><label class="form-label">Format:</label>
-                                    <select class="form-select py-0" id="export-format" style="font-size:11px;">
-                                        <option value="json">JSON</option><option value="csv">CSV</option>
-                                    </select>
-                                </div>
-                                <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="export-users" checked><label class="form-check-label" for="export-users">Users</label></div>
-                                <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="export-transactions" checked><label class="form-check-label" for="export-transactions">Transactions</label></div>
-                                <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="export-gameplays"><label class="form-check-label" for="export-gameplays">Game Plays</label></div>
-                                <button class="btn btn-info w-100 py-1" onclick="exportDatabaseData()"><i class="fas fa-download"></i> Export Selected</button>
-                            </div>
-                        </div>
+                    <div class="mt-2 flex gap-2">
+                        <select id="backup-option" class="w-auto text-xs py-1"><option value="yes">Backup: Yes</option><option value="no">No</option></select>
+                        <button onclick="previewDatabaseClear()" class="btn btn-danger text-xs"><i class="fas fa-eye"></i> Preview</button>
                     </div>
                 </div>
-                <div class="mt-2">
-                    <button onclick="exportFullDatabase()" class="btn btn-success py-1"><i class="fas fa-download"></i> Full Backup (.flexia)</button>
-                    <span class="ms-2">
-                        <input type="file" id="restore-file" accept=".flexia" style="display:inline;width:auto;padding:2px 4px;font-size:11px;">
-                        <button onclick="restoreDatabase()" class="btn btn-danger py-1" id="restore-btn" disabled><i class="fas fa-history"></i> Restore</button>
-                    </span>
-                </div>
-                <div class="mt-2">
-                    <h4 style="font-size:12px;color:#7b61ff;"><i class="fas fa-chart-bar"></i> Statistics</h4>
-                    <div class="stats-grid">
-                        <div class="stats-card"><h3 id="stats-users">—</h3><p>Users</p></div>
-                        <div class="stats-card"><h3 id="stats-transactions">—</h3><p>Transactions</p></div>
-                        <div class="stats-card"><h3 id="stats-gameplays">—</h3><p>Game Plays</p></div>
+                <div class="glass-card p-3">
+                    <div class="font-semibold text-cyan-300"><i class="fas fa-file-export"></i> Export Data</div>
+                    <div class="text-xs text-gray-400 my-2">Select format & data.</div>
+                    <div class="flex flex-wrap gap-2 text-xs">
+                        <select id="export-format" class="w-auto text-xs py-1"><option value="json">JSON</option><option value="csv">CSV</option></select>
+                        <label class="flex items-center gap-1"><input type="checkbox" id="export-users" checked> Users</label>
+                        <label class="flex items-center gap-1"><input type="checkbox" id="export-transactions" checked> Transactions</label>
+                        <label class="flex items-center gap-1"><input type="checkbox" id="export-gameplays"> Game Plays</label>
                     </div>
-                    <button onclick="refreshDatabaseStats()" class="btn btn-primary py-1"><i class="fas fa-sync"></i> Refresh Stats</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== GLOBAL SETTINGS ===== -->
-        <div id="globalSettings" class="tab-content">
-            <div class="admin-section">
-                <h3><i class="fas fa-globe"></i> Global Withdrawal Days</h3>
-                <div class="timezone-display mb-1" id="global-settings-timezone">Loading...</div>
-                <p style="color:#8888aa;font-size:11px;">Default days for all users without custom settings.</p>
-                <div class="global-days-display">
-                    <h4><i class="fas fa-calendar-alt"></i> Current</h4>
-                    <div class="days-list" id="global-days-current">Loading...</div>
-                    <div class="days-note">Users with custom settings are unaffected</div>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label fw-bold" style="color:#00eeff;">Select Days (1-31)</label>
-                    <div class="day-selector" id="global-day-selector"></div>
-                    <div class="mt-1">
-                        <button onclick="selectAllGlobalDays()" class="btn btn-sm" style="background:#00eeff;color:#000;">All</button>
-                        <button onclick="clearAllGlobalDays()" class="btn btn-sm btn-danger">Clear</button>
-                        <button onclick="setDefaultGlobalDays()" class="btn btn-sm btn-warning">Default</button>
+                    <div class="mt-2 flex gap-2">
+                        <button onclick="exportDatabaseData()" class="btn btn-info text-xs"><i class="fas fa-download"></i> Export Selected</button>
+                        <button onclick="exportFullDatabase()" class="btn btn-success text-xs"><i class="fas fa-database"></i> Full .flexia</button>
                     </div>
                 </div>
-                <button onclick="saveGlobalWithdrawalDays()" class="btn btn-success py-1"><i class="fas fa-save"></i> Save</button>
-                <div id="global-settings-message" class="message hidden"></div>
             </div>
-        </div>
-
-        <!-- ===== TIKTOK ===== -->
-        <div id="tiktokDaily" class="tab-content">
-            <div class="admin-section">
-                <h3><i class="fab fa-tiktok"></i> TikTok Daily Task</h3>
-                <p class="text-muted" style="font-size:11px;">Set today's TikTok profile link.</p>
-                <div class="mb-1"><label class="form-label">Profile Link</label>
-                    <input type="url" id="tiktok-link-input" placeholder="https://www.tiktok.com/@..." />
-                </div>
-                <button onclick="setTikTokDaily()" class="btn btn-success py-1"><i class="fas fa-save"></i> Set Today</button>
-                <div id="tiktok-message" class="message hidden"></div>
-            </div>
-            <div class="admin-section">
-                <h3><i class="fas fa-eye"></i> Current Task</h3>
-                <div id="current-tiktok-display">Loading...</div>
-            </div>
-            <div class="admin-section">
-                <h3><i class="fas fa-history"></i> Last 7 Days</h3>
-                <div id="tiktok-history-list">Loading history...</div>
-            </div>
-        </div>
-
-        <!-- ===== USERS ===== -->
-        <div id="users" class="tab-content">
-            <div class="admin-section">
-                <h3><i class="fas fa-users"></i> User Management</h3>
-                <div class="mb-1"><input type="text" id="user-search" placeholder="Search..." onkeyup="searchUsers()" style="max-width:200px;display:inline-block;"></div>
-                <div class="table-container">
-                    <table>
-                        <thead><tr><th>ID</th><th>Username</th><th>Balance</th><th>Withdrawal</th><th>Limit</th><th>Admin</th><th>Actions</th></tr></thead>
-                        <tbody id="user-list"><tr><td colspan="7" class="text-center">Loading...</td></tr></tbody>
-                    </table>
+            <div class="mt-4 glass-card p-3">
+                <div class="font-semibold text-yellow-300"><i class="fas fa-file-import"></i> Restore Database</div>
+                <div class="flex flex-wrap items-center gap-2 mt-2">
+                    <input type="file" id="restore-file" accept=".flexia" class="w-auto text-xs py-1">
+                    <button onclick="restoreDatabase()" class="btn btn-danger text-xs" id="restore-btn" disabled><i class="fas fa-history"></i> Restore .flexia</button>
                 </div>
             </div>
-        </div>
-
-        <!-- ===== WITHDRAWALS ===== -->
-        <div id="withdrawals" class="tab-content">
-            <div class="admin-section">
-                <h3><i class="fas fa-money-bill-wave"></i> Pending Withdrawals</h3>
-                <div id="pending-withdrawals-list">Loading...</div>
-            </div>
-            <div class="admin-section">
-                <h3><i class="fas fa-history"></i> Recent Transactions</h3>
-                <div class="table-container">
-                    <table>
-                        <thead><tr><th>ID</th><th>User</th><th>Amount</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
-                        <tbody id="all-transactions"><tr><td colspan="6" class="text-center">Loading...</td></tr></tbody>
-                    </table>
+            <div class="mt-4 glass-card p-3">
+                <div class="font-semibold text-purple-300"><i class="fas fa-chart-bar"></i> Database Stats</div>
+                <div class="grid grid-cols-3 gap-2 mt-2 text-center">
+                    <div class="stat-box"><h3 id="stats-users">—</h3><p>Users</p></div>
+                    <div class="stat-box"><h3 id="stats-transactions">—</h3><p>Transactions</p></div>
+                    <div class="stat-box"><h3 id="stats-gameplays">—</h3><p>Game Plays</p></div>
                 </div>
-            </div>
-        </div>
-
-        <!-- ===== WITHDRAWAL REPORT ===== -->
-        <div id="withdrawalReport" class="tab-content">
-            <div class="admin-section">
-                <h3><i class="fas fa-chart-bar"></i> Withdrawal Status Report</h3>
-                <div class="stats-grid">
-                    <div class="stats-card"><h3 id="report-total-users">—</h3><p>Total Users</p></div>
-                    <div class="stats-card"><h3 id="report-can-withdraw">—</h3><p>Can Withdraw Today</p></div>
-                    <div class="stats-card"><h3 id="report-restricted">—</h3><p>Restricted</p></div>
-                    <div class="stats-card"><h3 id="report-today">—</h3><p>Today</p></div>
-                </div>
-                <div class="mb-1">
-                    <button onclick="loadWithdrawalReport()" class="btn btn-primary py-1"><i class="fas fa-sync-alt"></i> Refresh</button>
-                    <span class="timezone-display ms-1" id="report-timezone">Loading...</span>
-                </div>
-                <div class="table-container">
-                    <table>
-                        <thead><tr><th>ID</th><th>Username</th><th>Balance</th><th>Status</th><th>Limit</th><th>Days</th><th>PIN</th><th>Actions</th></tr></thead>
-                        <tbody id="withdrawal-report-users"><tr><td colspan="8" class="text-center">Loading...</td></tr></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== BACKUP ===== -->
-        <div id="backup" class="tab-content">
-            <div class="admin-section">
-                <h3><i class="fas fa-database"></i> Backup Management</h3>
-                <div class="backup-stats" style="background:#121225;border-radius:4px;padding:6px 10px;margin-bottom:8px;border:1px solid #252540;">
-                    <div style="font-size:11px;"><strong>Last Backup:</strong> <span id="last-backup-time">Checking...</span></div>
-                    <div style="font-size:10px;color:#888;">Daily at 2 AM UTC · 7‑day retention</div>
-                </div>
-                <button onclick="triggerBackup()" class="btn btn-success py-1"><i class="fas fa-play-circle"></i> Manual Backup</button>
-                <button onclick="listBackups()" class="btn btn-primary py-1"><i class="fas fa-sync"></i> Refresh</button>
-                <div id="backup-message" class="message hidden"></div>
-            </div>
-            <div class="admin-section">
-                <h3><i class="fas fa-list"></i> Available Backups</h3>
-                <div id="backup-list">Loading...</div>
-            </div>
-        </div>
-
-        <!-- ===== SETTINGS ===== -->
-        <div id="settings" class="tab-content">
-            <div class="admin-section">
-                <h3><i class="fas fa-share-alt"></i> Social Links</h3>
-                <div class="mb-1"><label class="form-label">WhatsApp</label><input type="url" id="whatsapp-link" /></div>
-                <div class="mb-1"><label class="form-label">Telegram</label><input type="url" id="telegram-link" /></div>
-                <div class="mb-1"><label class="form-label">Facebook</label><input type="url" id="facebook-link" /></div>
-                <button onclick="saveSocialLinks()" class="btn btn-success py-1"><i class="fas fa-save"></i> Save</button>
-                <div id="social-message" class="message hidden"></div>
-            </div>
-            <div class="admin-section">
-                <h3><i class="fas fa-money-bill-wave"></i> Min Withdrawal</h3>
-                <div class="mb-1"><label class="form-label">Amount (₦)</label>
-                    <input type="number" id="min-withdrawal-input" placeholder="100000" min="0" step="1000" style="max-width:200px;" />
-                </div>
-                <button onclick="saveMinWithdrawal()" class="btn btn-success py-1"><i class="fas fa-save"></i> Save</button>
-                <div id="min-withdrawal-message" class="message hidden"></div>
-            </div>
-            <div class="admin-section">
-                <h3><i class="fas fa-key"></i> Change Admin Password</h3>
-                <div class="mb-1"><label class="form-label">Current</label><input type="password" id="current-password" /></div>
-                <div class="mb-1"><label class="form-label">New</label><input type="password" id="new-password" /></div>
-                <div class="mb-1"><label class="form-label">Confirm</label><input type="password" id="confirm-password" /></div>
-                <button onclick="changeAdminPassword()" class="btn btn-primary py-1"><i class="fas fa-key"></i> Change</button>
-                <div id="password-message" class="message hidden"></div>
-            </div>
-        </div>
-
-        <!-- ===== COUPONS ===== -->
-        <div id="coupons" class="tab-content">
-            <div class="admin-section">
-                <h3><i class="fas fa-ticket-alt"></i> Coupon Management</h3>
-                <div class="mb-1"><span id="coupon-stats">Loading...</span></div>
-                <div class="mb-1">
-                    <button onclick="loadCouponStats()" class="btn btn-primary py-1"><i class="fas fa-sync"></i> Refresh</button>
-                    <button onclick="resetCoupons()" class="btn btn-warning py-1"><i class="fas fa-undo"></i> Reset Used</button>
-                    <button onclick="deleteAllCoupons()" class="btn btn-danger py-1"><i class="fas fa-trash"></i> Delete All</button>
-                </div>
-                <div class="mb-1"><label class="form-label">Add Coupons (one per line)</label>
-                    <textarea id="new-coupons" rows="3" placeholder="FLEX123" style="font-size:11px;"></textarea>
-                </div>
-                <button onclick="addCoupons()" class="btn btn-success py-1"><i class="fas fa-plus"></i> Add</button>
-                <div id="coupon-message" class="message hidden"></div>
+                <button onclick="refreshDatabaseStats()" class="btn btn-primary text-xs mt-2"><i class="fas fa-sync"></i> Refresh</button>
             </div>
         </div>
     </div>
 
+    <!-- ===== GLOBAL WITHDRAWAL DAYS ===== -->
+    <div id="globalSettings" class="tab-content">
+        <div class="glass p-4">
+            <div class="section-title"><i class="fas fa-globe"></i> Global Withdrawal Days</div>
+            <div class="text-xs text-gray-400 mb-2">Default days for all users without custom settings.</div>
+            <div class="glass-card p-3 mb-3">
+                <div class="text-xs text-gray-400">Current</div>
+                <div id="global-days-current" class="text-sm font-mono text-purple-300">—</div>
+            </div>
+            <div class="day-selector" id="global-day-selector"></div>
+            <div class="flex flex-wrap gap-2 mt-3">
+                <button onclick="selectAllGlobalDays()" class="btn btn-primary text-xs">All</button>
+                <button onclick="clearAllGlobalDays()" class="btn btn-danger text-xs">Clear</button>
+                <button onclick="setDefaultGlobalDays()" class="btn btn-warning text-xs">Default</button>
+                <button onclick="saveGlobalWithdrawalDays()" class="btn btn-success text-xs"><i class="fas fa-save"></i> Save</button>
+            </div>
+            <div id="global-settings-message" class="text-xs mt-2"></div>
+        </div>
+    </div>
+
+    <!-- ===== TIKTOK ===== -->
+    <div id="tiktokDaily" class="tab-content">
+        <div class="glass p-4">
+            <div class="section-title"><i class="fab fa-tiktok"></i> TikTok Daily Task</div>
+            <div class="flex flex-wrap gap-2 items-center">
+                <input type="url" id="tiktok-link-input" placeholder="https://www.tiktok.com/@..." class="flex-1 min-w-[200px]">
+                <button onclick="setTikTokDaily()" class="btn btn-success text-xs"><i class="fas fa-save"></i> Set Today</button>
+            </div>
+            <div id="tiktok-message" class="text-xs mt-2"></div>
+            <div class="mt-4 glass-card p-3">
+                <div class="font-semibold text-cyan-300">Current Task</div>
+                <div id="current-tiktok-display" class="text-sm">Loading…</div>
+            </div>
+            <div class="mt-4 glass-card p-3">
+                <div class="font-semibold text-purple-300">Last 7 Days</div>
+                <div id="tiktok-history-list" class="text-sm">Loading…</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== USERS ===== -->
+    <div id="users" class="tab-content">
+        <div class="glass p-4">
+            <div class="section-title"><i class="fas fa-users"></i> Users</div>
+            <div class="flex items-center gap-2 mb-3">
+                <input type="text" id="user-search" placeholder="Search…" class="max-w-xs text-sm">
+                <button onclick="loadUsers()" class="btn btn-primary text-xs"><i class="fas fa-sync"></i> Refresh</button>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>ID</th><th>Username</th><th>Balance</th><th>Withdrawal</th><th>Limit</th><th>Admin</th><th>Actions</th></tr></thead>
+                    <tbody id="user-list"><tr><td colspan="7" class="text-center text-gray-400">Loading…</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== WITHDRAWALS ===== -->
+    <div id="withdrawals" class="tab-content">
+        <div class="glass p-4 mb-4">
+            <div class="section-title"><i class="fas fa-money-bill-wave"></i> Pending Withdrawals</div>
+            <div id="pending-withdrawals-list" class="text-sm">Loading…</div>
+        </div>
+        <div class="glass p-4">
+            <div class="section-title"><i class="fas fa-history"></i> Recent Transactions</div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>ID</th><th>User</th><th>Amount</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+                    <tbody id="all-transactions"><tr><td colspan="6" class="text-center text-gray-400">Loading…</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== WITHDRAWAL REPORT ===== -->
+    <div id="withdrawalReport" class="tab-content">
+        <div class="glass p-4">
+            <div class="section-title"><i class="fas fa-chart-bar"></i> Withdrawal Report</div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+                <div class="stat-box"><h3 id="report-total-users">—</h3><p>Total Users</p></div>
+                <div class="stat-box"><h3 id="report-can-withdraw">—</h3><p>Can Withdraw Today</p></div>
+                <div class="stat-box"><h3 id="report-restricted">—</h3><p>Restricted</p></div>
+                <div class="stat-box"><h3 id="report-today">—</h3><p>Today</p></div>
+            </div>
+            <button onclick="loadWithdrawalReport()" class="btn btn-primary text-xs mb-3"><i class="fas fa-sync-alt"></i> Refresh</button>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>ID</th><th>Username</th><th>Balance</th><th>Status</th><th>Limit</th><th>Days</th><th>PIN</th><th>Actions</th></tr></thead>
+                    <tbody id="withdrawal-report-users"><tr><td colspan="8" class="text-center text-gray-400">Loading…</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== BACKUP ===== -->
+    <div id="backup" class="tab-content">
+        <div class="glass p-4">
+            <div class="section-title"><i class="fas fa-hdd"></i> Backup Management</div>
+            <div class="glass-card p-3 mb-3">
+                <div class="text-xs text-gray-400">Last Backup: <span id="last-backup-time">Checking…</span></div>
+                <div class="text-xs text-gray-500">Daily at 2 AM UTC · 7‑day retention</div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button onclick="triggerBackup()" class="btn btn-success text-xs"><i class="fas fa-play-circle"></i> Manual Backup</button>
+                <button onclick="listBackups()" class="btn btn-primary text-xs"><i class="fas fa-sync"></i> Refresh</button>
+            </div>
+            <div id="backup-message" class="text-xs mt-2"></div>
+            <div class="mt-4">
+                <div class="font-semibold text-purple-300">Available Backups</div>
+                <div id="backup-list" class="text-sm">Loading…</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SETTINGS ===== -->
+    <div id="settings" class="tab-content">
+        <div class="glass p-4 mb-4">
+            <div class="section-title"><i class="fas fa-share-alt"></i> Social Links</div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div><label class="text-xs text-gray-400">WhatsApp</label><input type="url" id="whatsapp-link" /></div>
+                <div><label class="text-xs text-gray-400">Telegram</label><input type="url" id="telegram-link" /></div>
+                <div><label class="text-xs text-gray-400">Facebook</label><input type="url" id="facebook-link" /></div>
+            </div>
+            <button onclick="saveSocialLinks()" class="btn btn-success text-xs mt-2"><i class="fas fa-save"></i> Save</button>
+            <div id="social-message" class="text-xs mt-2"></div>
+        </div>
+        <div class="glass p-4 mb-4">
+            <div class="section-title"><i class="fas fa-money-bill-wave"></i> Min Withdrawal</div>
+            <div class="flex flex-wrap gap-2 items-center">
+                <input type="number" id="min-withdrawal-input" placeholder="100000" class="max-w-xs text-sm" />
+                <button onclick="saveMinWithdrawal()" class="btn btn-success text-xs"><i class="fas fa-save"></i> Save</button>
+            </div>
+            <div id="min-withdrawal-message" class="text-xs mt-2"></div>
+        </div>
+        <div class="glass p-4">
+            <div class="section-title"><i class="fas fa-key"></i> Change Admin Password</div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div><label class="text-xs text-gray-400">Current</label><input type="password" id="current-password" /></div>
+                <div><label class="text-xs text-gray-400">New</label><input type="password" id="new-password" /></div>
+                <div><label class="text-xs text-gray-400">Confirm</label><input type="password" id="confirm-password" /></div>
+            </div>
+            <button onclick="changeAdminPassword()" class="btn btn-primary text-xs mt-2"><i class="fas fa-key"></i> Change</button>
+            <div id="password-message" class="text-xs mt-2"></div>
+        </div>
+    </div>
+
+    <!-- ===== COUPONS ===== -->
+    <div id="coupons" class="tab-content">
+        <div class="glass p-4">
+            <div class="section-title"><i class="fas fa-ticket-alt"></i> Coupon Management</div>
+            <div class="flex flex-wrap gap-2 items-center mb-3">
+                <span class="text-sm" id="coupon-stats">Loading…</span>
+                <button onclick="loadCouponStats()" class="btn btn-primary text-xs"><i class="fas fa-sync"></i></button>
+                <button onclick="resetCoupons()" class="btn btn-warning text-xs"><i class="fas fa-undo"></i> Reset Used</button>
+                <button onclick="deleteAllCoupons()" class="btn btn-danger text-xs"><i class="fas fa-trash"></i> Delete All</button>
+            </div>
+            <div><label class="text-xs text-gray-400">Add Coupons (one per line)</label>
+                <textarea id="new-coupons" rows="3" class="text-sm" placeholder="FLEX123"></textarea>
+            </div>
+            <button onclick="addCoupons()" class="btn btn-success text-xs mt-2"><i class="fas fa-plus"></i> Add</button>
+            <div id="coupon-message" class="text-xs mt-2"></div>
+        </div>
+    </div>
+
     <!-- ===== MODALS ===== -->
-    <!-- Withdrawal Settings Modal -->
+    <!-- User Settings Modal -->
     <div class="modal fade" id="withdrawalSettingsModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header py-1"><h5 class="modal-title">Settings for <span id="modal-username"></span></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header flex justify-between p-3 border-b">
+                    <h5 class="modal-title text-purple-300">Settings for <span id="modal-username"></span></h5>
+                    <button type="button" class="text-gray-400 hover:text-white" data-bs-dismiss="modal">✕</button>
                 </div>
-                <div class="modal-body" id="withdrawal-settings-content"></div>
-                <div class="modal-footer py-1">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button onclick="saveWithdrawalSettings()" class="btn btn-primary" id="save-settings-btn"><i class="fas fa-save"></i> Save</button>
+                <div class="modal-body p-3" id="withdrawal-settings-content"></div>
+                <div class="modal-footer p-3 border-t flex gap-2 justify-end">
+                    <button type="button" class="btn btn-outline" data-bs-dismiss="modal">Cancel</button>
+                    <button onclick="saveWithdrawalSettings()" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
                 </div>
             </div>
         </div>
@@ -702,15 +499,16 @@
     <div class="modal fade" id="adjustBalanceModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header py-1"><h5 class="modal-title">Adjust Balance for <span id="adjust-username"></span></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header flex justify-between p-3 border-b">
+                    <h5 class="modal-title text-purple-300">Adjust Balance for <span id="adjust-username"></span></h5>
+                    <button type="button" class="text-gray-400 hover:text-white" data-bs-dismiss="modal">✕</button>
                 </div>
-                <div class="modal-body">
-                    <div class="mb-1"><label class="form-label">Amount (+/-)</label><input type="number" id="adjust-amount" class="form-control" step="100" /></div>
-                    <div class="mb-1"><label class="form-label">Note</label><textarea id="adjust-note" class="form-control" rows="2"></textarea></div>
+                <div class="modal-body p-3">
+                    <div class="mb-2"><label class="text-xs text-gray-400">Amount (+/-)</label><input type="number" id="adjust-amount" class="form-control" step="100" /></div>
+                    <div><label class="text-xs text-gray-400">Note</label><textarea id="adjust-note" class="form-control" rows="2"></textarea></div>
                 </div>
-                <div class="modal-footer py-1">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <div class="modal-footer p-3 border-t flex gap-2 justify-end">
+                    <button type="button" class="btn btn-outline" data-bs-dismiss="modal">Cancel</button>
                     <button onclick="saveBalanceAdjustment()" class="btn btn-success"><i class="fas fa-save"></i> Apply</button>
                 </div>
             </div>
@@ -721,11 +519,9 @@
     <div class="modal fade" id="backupModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header py-1"><h5 class="modal-title">Backup Details</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="backup-details"></div>
-                <div class="modal-footer py-1"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+                <div class="modal-header flex justify-between p-3 border-b"><h5 class="modal-title text-purple-300">Backup Details</h5><button type="button" class="text-gray-400 hover:text-white" data-bs-dismiss="modal">✕</button></div>
+                <div class="modal-body p-3" id="backup-details"></div>
+                <div class="modal-footer p-3 border-t flex justify-end"><button type="button" class="btn btn-outline" data-bs-dismiss="modal">Close</button></div>
             </div>
         </div>
     </div>
@@ -733,13 +529,14 @@
     <!-- Preview Clear Modal -->
     <div class="modal fade" id="previewClearModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
-            <div class="modal-content bg-dark text-light">
-                <div class="modal-header border-danger py-1"><h5 class="modal-title text-danger"><i class="fas fa-exclamation-triangle"></i> Clear Preview</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-content">
+                <div class="modal-header flex justify-between p-3 border-b border-red-400">
+                    <h5 class="modal-title text-red-400"><i class="fas fa-exclamation-triangle"></i> Clear Preview</h5>
+                    <button type="button" class="text-gray-400 hover:text-white" data-bs-dismiss="modal">✕</button>
                 </div>
-                <div class="modal-body" id="previewClearContent"></div>
-                <div class="modal-footer border-danger py-1">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <div class="modal-body p-3" id="previewClearContent"></div>
+                <div class="modal-footer p-3 border-t border-red-400 flex gap-2 justify-end">
+                    <button type="button" class="btn btn-outline" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-danger" onclick="confirmDatabaseClear()"><i class="fas fa-trash"></i> Confirm Clear</button>
                 </div>
             </div>
@@ -749,748 +546,611 @@
     <!-- Confirm Clear Modal -->
     <div class="modal fade" id="confirmClearModal" tabindex="-1">
         <div class="modal-dialog">
-            <div class="modal-content bg-dark text-light">
-                <div class="modal-header border-danger py-1"><h5 class="modal-title text-danger"><i class="fas fa-skull-crossbones"></i> Final Warning</h5></div>
-                <div class="modal-body">
-                    <div class="alert alert-danger py-1 px-2" style="font-size:12px;">
-                        <i class="fas fa-radiation"></i> <strong>PERMANENT!</strong>
-                    </div>
-                    <p style="font-size:11px;">Type the phrase to proceed:</p>
-                    <code class="bg-black p-1 d-block mb-1" style="font-size:11px;">DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN</code>
-                    <input type="text" class="form-control" id="sudo-confirmation" placeholder="Type phrase..." style="font-size:11px;">
-                    <div class="form-check mt-1">
-                        <input class="form-check-input" type="checkbox" id="acknowledge-risk">
-                        <label class="form-check-label" for="acknowledge-risk" style="font-size:11px;">I understand the risk</label>
+            <div class="modal-content">
+                <div class="modal-header flex justify-between p-3 border-b border-red-400">
+                    <h5 class="modal-title text-red-400"><i class="fas fa-skull-crossbones"></i> Final Warning</h5>
+                    <button type="button" class="text-gray-400 hover:text-white" data-bs-dismiss="modal">✕</button>
+                </div>
+                <div class="modal-body p-3">
+                    <div class="text-red-400 text-sm mb-2"><i class="fas fa-radiation"></i> PERMANENT!</div>
+                    <p class="text-sm">Type the phrase to proceed:</p>
+                    <code class="bg-black p-1 block mb-2 text-xs">DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN</code>
+                    <input type="text" id="sudo-confirmation" class="form-control text-sm" placeholder="Type phrase…">
+                    <div class="form-check mt-2">
+                        <input type="checkbox" id="acknowledge-risk" class="mr-1">
+                        <label class="text-xs text-gray-400" for="acknowledge-risk">I understand</label>
                     </div>
                 </div>
-                <div class="modal-footer border-danger py-1">
-                    <button type="button" class="btn btn-secondary" onclick="closeClearModal()">Cancel</button>
+                <div class="modal-footer p-3 border-t border-red-400 flex gap-2 justify-end">
+                    <button type="button" class="btn btn-outline" onclick="closeClearModal()">Cancel</button>
                     <button type="button" class="btn btn-danger" onclick="executeDatabaseClear()" id="execute-clear-btn" disabled><i class="fas fa-bomb"></i> Execute</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // ============================================================
-        // ADMIN LOGIC – FULL FUNCTIONALITY (same as original, compact)
-        // ============================================================
-        let currentUserData = null;
-        let withdrawalReportData = null;
-        let selectedUserId = null;
-        let globalWithdrawalDays = [];
-        let backupListData = [];
-        let adjustUserId = null;
-        let selectedRestoreFile = null;
+</div>
 
-        function showMessage(text, type='info', elementId='coupon-message') {
-            const el = document.getElementById(elementId);
-            if(!el) return;
-            el.textContent = text;
-            el.className = 'message '+type;
-            el.classList.remove('hidden');
-            setTimeout(() => el.classList.add('hidden'), 5000);
-        }
-        function formatCurrency(amount) {
-            return '₦' + parseFloat(amount||0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
-        }
-        function formatNumber(num) {
-            return parseFloat(num||0).toLocaleString('en-US', {minimumFractionDigits:0});
-        }
-        function formatBytes(bytes, decimals=2) {
-            if(bytes===0) return '0 Bytes';
-            const k=1024, dm=decimals<0?0:decimals, sizes=['Bytes','KB','MB','GB'];
-            const i=Math.floor(Math.log(bytes)/Math.log(k));
-            return parseFloat((bytes/Math.pow(k,i)).toFixed(dm))+' '+sizes[i];
-        }
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // ============================================================
+    // FLEXIA ADMIN – FULL LOGIC (NO PLACEHOLDERS)
+    // ============================================================
 
-        // === Timezone ===
-        async function fetchTimezoneInfo() {
-            try {
-                const resp = await fetch('/api/withdrawal/check-day', {credentials:'include', headers:{'Cache-Control':'no-cache'}});
-                const data = await resp.json();
-                if(data.success) return { today: data.today, today_date: data.today_date, timezone_display: data.timezone_display||'UTC', offset: data.timezone_offset||0 };
-            } catch(e) {}
-            return { today: new Date().getDate(), today_date: new Date().toISOString().split('T')[0], timezone_display:'UTC', offset:0 };
-        }
-        async function updateTimezoneDisplay() {
-            const info = await fetchTimezoneInfo();
-            const display = info.timezone_display+' • '+info.today_date+' (Day '+info.today+')';
-            document.querySelectorAll('.timezone-display').forEach(el => el.textContent = display);
-            return info;
-        }
+    let selectedUserId = null;
+    let adjustUserId = null;
+    let backupListData = [];
+    let globalWithdrawalDays = [];
 
-        // === Auth ===
-        function adminLogout() {
-            fetch('/api/auth/logout', {method:'POST', credentials:'include'}).then(()=> window.location.href='/');
-        }
-        async function fetchData(endpoint) {
-            const res = await fetch(endpoint, {credentials:'include'});
-            if(!res.ok) { if(res.status===401) { adminLogout(); throw new Error('Unauthorized'); } throw new Error('HTTP '+res.status); }
-            return await res.json();
-        }
-        async function postData(endpoint, data) {
-            const res = await fetch(endpoint, {method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
-            if(!res.ok) { if(res.status===401) { adminLogout(); throw new Error('Unauthorized'); } throw new Error('HTTP '+res.status); }
-            return await res.json();
-        }
+    // ===== UTILITY =====
+    function showMessage(msg, type='info', elId='coupon-message') {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        el.textContent = msg;
+        el.className = `text-xs ${type==='success'?'text-green-400':type==='error'?'text-red-400':type==='warning'?'text-yellow-400':'text-cyan-400'}`;
+        setTimeout(() => el.textContent = '', 5000);
+    }
 
-        // === Health ===
-        async function checkHealth() {
-            try {
-                const data = await fetchData('/api/health');
-                updateHealthStatus(data);
-                showMessage('Health check done', 'success');
-            } catch(err) {
-                updateHealthStatus({status:'offline'});
-                showMessage('Health check failed', 'error');
-            }
-        }
-        function updateHealthStatus(healthData) {
-            const statusEl = document.getElementById('health-status');
-            const dbStatusEl = document.getElementById('db-status');
-            const poolStatusEl = document.getElementById('pool-status');
-            const uptimeEl = document.getElementById('uptime-display');
-            if(healthData.status === 'online') {
-                statusEl.className = 'health-status health-online';
-                statusEl.innerHTML = `<div class="d-flex justify-content-between align-items-center flex-wrap">
-                    <div><strong><i class="fas fa-check-circle"></i> ONLINE</strong> <span class="uptime-display">${healthData.uptime||'Unknown'}</span></div>
-                    <div><small>DB: <span class="badge badge-success">${healthData.database||'Connected'}</span></small>
-                    <small class="ms-1">Pool: <span class="badge badge-success">${healthData.connection_pool||'Active'}</span></small>
-                    <small class="ms-1">v${healthData.version||'1.0'}</small></div>
+    async function fetchData(url) {
+        const r = await fetch(url, {credentials:'include'});
+        if (!r.ok) { if (r.status===401) adminLogout(); throw new Error(r.status); }
+        return r.json();
+    }
+    async function postData(url, body) {
+        const r = await fetch(url, {method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+        if (!r.ok) { if (r.status===401) adminLogout(); throw new Error(r.status); }
+        return r.json();
+    }
+
+    // ===== AUTH =====
+    function adminLogout() {
+        fetch('/api/auth/logout', {method:'POST', credentials:'include'}).then(() => window.location.href='/');
+    }
+
+    // ===== HEALTH =====
+    function checkHealth() {
+        fetch('/api/health', {credentials:'include'})
+            .then(r => r.json())
+            .then(d => {
+                document.getElementById('health-status').innerHTML = `<div class="flex flex-wrap items-center justify-between">
+                    <span class="font-semibold"><i class="fas fa-check-circle text-green-400"></i> Online</span>
+                    <span class="text-xs text-gray-400">${d.uptime||'OK'}</span>
+                    <span class="text-xs text-gray-400">DB: <span class="badge-glass success">${d.database||'Connected'}</span></span>
                 </div>`;
-            } else if(healthData.status === 'degraded') {
-                statusEl.className = 'health-status health-degraded';
-                statusEl.innerHTML = `<div><strong><i class="fas fa-exclamation-triangle"></i> DEGRADED</strong> ${healthData.uptime||''}</div>`;
-            } else {
-                statusEl.className = 'health-status health-offline';
-                statusEl.innerHTML = `<div><strong><i class="fas fa-times-circle"></i> OFFLINE</strong></div>`;
+            }).catch(() => {});
+    }
+
+    // ===== TABS =====
+    function showTab(id) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        document.querySelector(`.tab-btn[onclick*="${id}"]`)?.classList.add('active');
+        if (id === 'dashboard') loadDashboard();
+        else if (id === 'database') refreshDatabaseStats();
+        else if (id === 'globalSettings') loadGlobalWithdrawalDays();
+        else if (id === 'tiktokDaily') loadTikTokDailyTab();
+        else if (id === 'users') loadUsers();
+        else if (id === 'withdrawals') loadWithdrawals();
+        else if (id === 'withdrawalReport') loadWithdrawalReport();
+        else if (id === 'backup') listBackups();
+        else if (id === 'settings') loadSettings();
+        else if (id === 'coupons') loadCouponStats();
+    }
+
+    // ===== DASHBOARD =====
+    async function loadDashboard() {
+        try {
+            const [usersRes, txRes, statsRes] = await Promise.all([
+                fetchData('/api/admin/users'),
+                fetchData('/api/admin/transactions'),
+                fetchData('/api/admin/stats')
+            ]);
+            if (usersRes.success) {
+                const total = usersRes.users.length;
+                const bal = usersRes.users.reduce((s,u) => s+(u.balance||0),0);
+                document.getElementById('total-users-count').textContent = total;
+                document.getElementById('total-balance').textContent = '₦' + bal.toLocaleString();
             }
-            if(uptimeEl && healthData.uptime) uptimeEl.textContent = healthData.uptime;
-            if(dbStatusEl) dbStatusEl.textContent = healthData.database||'Unknown';
-            if(poolStatusEl) poolStatusEl.textContent = healthData.connection_pool||'Unknown';
-        }
-
-        // === Tabs ===
-        function showTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            document.querySelector(`[onclick="showTab('${tabId}')"]`).classList.add('active');
-            switch(tabId) {
-                case 'dashboard': loadDashboard(); break;
-                case 'database': loadDatabaseTab(); break;
-                case 'globalSettings': loadGlobalWithdrawalDays(); break;
-                case 'tiktokDaily': loadTikTokDailyTab(); break;
-                case 'users': loadUsers(); break;
-                case 'withdrawals': loadWithdrawals(); break;
-                case 'withdrawalReport': loadWithdrawalReport(); break;
-                case 'backup': loadBackupTab(); break;
-                case 'settings': loadSettings(); break;
-                case 'coupons': loadCouponStats(); break;
+            if (txRes.success) {
+                const pending = txRes.transactions.filter(t => t.status==='PENDING');
+                document.getElementById('pending-withdrawals-count').textContent = pending.length;
+                renderRecentWithdrawals(txRes.transactions.slice(0,8));
             }
-        }
+            if (statsRes.success) loadGlobalWithdrawalDays(true);
+            document.getElementById('today-date').textContent = new Date().toLocaleDateString();
+        } catch(e) {}
+    }
+    function renderRecentWithdrawals(txs) {
+        const c = document.getElementById('recent-withdrawals');
+        if (!txs.length) { c.innerHTML = '<div class="text-gray-400 text-sm">None</div>'; return; }
+        c.innerHTML = `<div class="table-wrap"><table>
+            <thead><tr><th>ID</th><th>User</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody>${txs.map(t => `<tr><td>${t.id?.slice(0,8)}</td><td>${t.user_id}</td><td>₦${parseFloat(t.amount).toFixed(2)}</td><td><span class="badge-glass ${t.status==='COMPLETED'?'success':t.status==='PENDING'?'warning':'danger'}">${t.status}</span></td></tr>`).join('')}</tbody>
+        </table></div>`;
+    }
 
-        // === Dashboard ===
-        async function loadDashboard() {
-            try {
-                await checkHealth();
-                await updateTimezoneDisplay();
-                const [usersRes, txRes, statsRes] = await Promise.all([
-                    fetchData('/api/admin/users'),
-                    fetchData('/api/admin/transactions'),
-                    fetchData('/api/admin/stats')
-                ]);
-                if(usersRes.success) {
-                    const totalUsers = usersRes.users.length;
-                    const totalBalance = usersRes.users.reduce((s,u) => s+(u.balance||0), 0);
-                    document.getElementById('total-users-count').textContent = formatNumber(totalUsers);
-                    document.getElementById('total-balance').textContent = formatCurrency(totalBalance);
-                }
-                if(txRes.success) {
-                    const pending = txRes.transactions.filter(tx => tx.status === 'PENDING');
-                    document.getElementById('pending-withdrawals-count').textContent = pending.length;
-                    renderRecentWithdrawals(txRes.transactions.slice(0,10));
-                }
-                if(statsRes.success) loadGlobalWithdrawalDays(true);
-            } catch(err) {}
+    // ===== GLOBAL WITHDRAWAL DAYS =====
+    async function loadGlobalWithdrawalDays(dashboardOnly=false) {
+        try {
+            const res = await fetchData('/api/admin/global-withdrawal-days');
+            if (res.success) globalWithdrawalDays = res.days || [7,14,25,30];
+        } catch(e) { globalWithdrawalDays = [7,14,25,30]; }
+        updateGlobalDaysDisplay();
+        if (!dashboardOnly) renderGlobalDaySelector();
+    }
+    function updateGlobalDaysDisplay() {
+        const txt = globalWithdrawalDays.sort((a,b)=>a-b).join(', ') || 'Default';
+        document.getElementById('current-global-days').textContent = txt;
+        document.getElementById('global-days-current').textContent = txt;
+    }
+    function renderGlobalDaySelector() {
+        const s = document.getElementById('global-day-selector');
+        if (!s) return;
+        s.innerHTML = '';
+        for (let d=1; d<=31; d++) {
+            const ch = globalWithdrawalDays.includes(d) ? 'checked' : '';
+            s.innerHTML += `<div class="day-checkbox"><input type="checkbox" id="gd-${d}" ${ch} onchange="toggleGlobalDay(${d},this.checked)"><label for="gd-${d}">${d}</label></div>`;
         }
-        function renderRecentWithdrawals(transactions) {
-            const container = document.getElementById('recent-withdrawals');
-            if(!transactions.length) { container.innerHTML = '<p class="text-muted" style="font-size:11px;">No recent transactions.</p>'; return; }
-            container.innerHTML = `<div class="table-container"><table>
-                <thead><tr><th>ID</th><th>User</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
-                <tbody>${transactions.map(tx => `<tr>
-                    <td>${tx.id?.substring(0,8)||'N/A'}...</td>
-                    <td>${tx.user_id||'N/A'}</td>
-                    <td>${formatCurrency(tx.amount)}</td>
-                    <td><span class="badge ${tx.status==='COMPLETED'?'badge-success':tx.status==='PENDING'?'badge-warning':'badge-danger'}">${tx.status||'N/A'}</span></td>
-                    <td>${new Date(tx.timestamp).toLocaleDateString()}</td>
-                </tr>`).join('')}</tbody></table></div>`;
-        }
+    }
+    function toggleGlobalDay(day, checked) {
+        if (checked) { if (!globalWithdrawalDays.includes(day)) globalWithdrawalDays.push(day); }
+        else { globalWithdrawalDays = globalWithdrawalDays.filter(d => d !== day); }
+    }
+    function selectAllGlobalDays() { globalWithdrawalDays = Array.from({length:31},(_,i)=>i+1); renderGlobalDaySelector(); }
+    function clearAllGlobalDays() { globalWithdrawalDays = []; renderGlobalDaySelector(); }
+    function setDefaultGlobalDays() { globalWithdrawalDays = [7,14,25,30]; renderGlobalDaySelector(); }
+    async function saveGlobalWithdrawalDays() {
+        if (!globalWithdrawalDays.length) { if (!confirm('No days. Use defaults?')) return; globalWithdrawalDays=[7,14,25,30]; }
+        try {
+            const res = await postData('/api/admin/global-withdrawal-days', {days:globalWithdrawalDays});
+            if (res.success) { updateGlobalDaysDisplay(); renderGlobalDaySelector(); showMessage('Saved!', 'success', 'global-settings-message'); }
+            else showMessage(res.message||'Failed', 'error', 'global-settings-message');
+        } catch(e) { showMessage('Network error', 'error', 'global-settings-message'); }
+    }
 
-        // === Global Days ===
-        async function loadGlobalWithdrawalDays(dashboardOnly=false) {
-            try {
-                const res = await fetchData('/api/admin/global-withdrawal-days');
-                if(res.success) globalWithdrawalDays = res.days || [7,14,25,30];
-            } catch(err) { globalWithdrawalDays = [7,14,25,30]; }
-            updateGlobalDaysDisplay();
-            if(!dashboardOnly) renderGlobalDaySelector();
-        }
-        function updateGlobalDaysDisplay() {
-            const sorted = [...globalWithdrawalDays].sort((a,b)=>a-b);
-            const txt = sorted.length ? sorted.join(', ') : 'Default (7,14,25,30)';
-            document.getElementById('current-global-days').textContent = txt;
-            document.getElementById('global-days-current').textContent = txt;
-        }
-        function renderGlobalDaySelector() {
-            const selector = document.getElementById('global-day-selector');
-            if(!selector) return;
-            selector.innerHTML = '';
-            for(let d=1; d<=31; d++) {
-                const checked = globalWithdrawalDays.includes(d);
-                selector.innerHTML += `<div class="day-checkbox">
-                    <input type="checkbox" id="global-day-${d}" ${checked?'checked':''} onchange="toggleGlobalDay(${d},this.checked)">
-                    <label for="global-day-${d}">${d}</label>
-                </div>`;
-            }
-        }
-        function toggleGlobalDay(day, isChecked) {
-            if(isChecked) { if(!globalWithdrawalDays.includes(day)) globalWithdrawalDays.push(day); }
-            else { globalWithdrawalDays = globalWithdrawalDays.filter(d => d !== day); }
-        }
-        function selectAllGlobalDays() { globalWithdrawalDays = Array.from({length:31},(_,i)=>i+1); renderGlobalDaySelector(); }
-        function clearAllGlobalDays() { globalWithdrawalDays = []; renderGlobalDaySelector(); }
-        function setDefaultGlobalDays() { globalWithdrawalDays = [7,14,25,30]; renderGlobalDaySelector(); }
-        async function saveGlobalWithdrawalDays() {
-            if(!globalWithdrawalDays.length) { if(!confirm('No days selected. Use defaults?')) return; globalWithdrawalDays=[7,14,25,30]; }
-            try {
-                const res = await postData('/api/admin/global-withdrawal-days', {days:globalWithdrawalDays});
-                if(res.success) { showMessage('Saved!', 'success', 'global-settings-message'); updateGlobalDaysDisplay(); renderGlobalDaySelector(); }
-                else showMessage(res.message||'Failed', 'error', 'global-settings-message');
-            } catch(err) { showMessage('Network error', 'error', 'global-settings-message'); }
-        }
+    // ===== TIKTOK =====
+    async function setTikTokDaily() {
+        const link = document.getElementById('tiktok-link-input').value.trim();
+        if (!link || !link.startsWith('https://www.tiktok.com/@')) { showMessage('Invalid link', 'error', 'tiktok-message'); return; }
+        try {
+            const res = await postData('/api/admin/tiktok/set-daily', {tiktok_link: link});
+            if (res.success) { showMessage('Task set!', 'success', 'tiktok-message'); loadTikTokDailyTab(); document.getElementById('tiktok-link-input').value=''; }
+            else showMessage(res.message||'Failed', 'error', 'tiktok-message');
+        } catch(e) { showMessage('Network error', 'error', 'tiktok-message'); }
+    }
+    async function loadTikTokDailyTab() {
+        try {
+            const cur = await fetchData('/api/admin/tiktok/get-daily');
+            const hist = await fetchData('/api/admin/tiktok/history');
+            document.getElementById('current-tiktok-display').innerHTML = cur.success && cur.task ?
+                `<div class="text-sm">${new Date(cur.task.date).toLocaleDateString()} — <a href="${cur.task.tiktok_link}" target="_blank" class="text-cyan-300">${cur.task.tiktok_link}</a> (₦${cur.task.reward_amount})</div>` :
+                '<div class="text-gray-400 text-sm">No task today.</div>';
+            document.getElementById('tiktok-history-list').innerHTML = hist.success && hist.history?.length ?
+                hist.history.map(h => `<div class="text-xs text-gray-400">${new Date(h.date).toLocaleDateString()} — <a href="${h.tiktok_link}" target="_blank" class="text-cyan-300">${h.tiktok_link}</a></div>`).join('') :
+                '<div class="text-gray-400 text-sm">No history.</div>';
+        } catch(e) {}
+    }
 
-        // === TikTok ===
-        async function setTikTokDaily() {
-            const link = document.getElementById('tiktok-link-input').value.trim();
-            if(!link || !link.startsWith('https://www.tiktok.com/@')) { showMessage('Enter valid TikTok link', 'error', 'tiktok-message'); return; }
-            try {
-                const res = await postData('/api/admin/tiktok/set-daily', {tiktok_link:link});
-                if(res.success) { showMessage('Set!', 'success', 'tiktok-message'); loadTikTokDailyTab(); document.getElementById('tiktok-link-input').value=''; }
-                else showMessage(res.message||'Failed', 'error', 'tiktok-message');
-            } catch(err) { showMessage('Network error', 'error', 'tiktok-message'); }
-        }
-        async function loadTikTokDailyTab() {
-            try {
-                const current = await fetchData('/api/admin/tiktok/get-daily');
-                const history = await fetchData('/api/admin/tiktok/history');
-                const curEl = document.getElementById('current-tiktok-display');
-                if(current.success && current.task) {
-                    curEl.innerHTML = `<p><strong>${new Date(current.task.date).toLocaleDateString()}</strong><br/>
-                        <a href="${current.task.tiktok_link}" target="_blank">${current.task.tiktok_link}</a><br/>
-                        Reward: ₦${current.task.reward_amount}</p>`;
-                } else curEl.innerHTML = '<p class="text-muted">No task today.</p>';
-                const histEl = document.getElementById('tiktok-history-list');
-                if(history.success && history.history && history.history.length) {
-                    histEl.innerHTML = history.history.map(item => `<div class="tiktok-history-item">
-                        <strong>${new Date(item.date).toLocaleDateString()}</strong><br/>
-                        <a href="${item.tiktok_link}" target="_blank">${item.tiktok_link}</a> (₦${item.reward_amount})
-                    </div>`).join('');
-                } else histEl.innerHTML = '<p class="text-muted">No history.</p>';
-            } catch(err) { /* ignore */ }
-        }
-
-        // === Users ===
-        async function loadUsers() {
-            try {
-                const res = await fetchData('/api/admin/users');
-                if(res.success) renderUserList(res.users);
-            } catch(err) { document.getElementById('user-list').innerHTML = '<tr><td colspan="7" class="text-center">Error loading</td></tr>'; }
-        }
-        function renderUserList(users) {
-            const tbody = document.getElementById('user-list');
-            if(!users.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center">No users</td></tr>'; return; }
-            tbody.innerHTML = users.map(user => {
-                const withdrawalStatus = user.withdrawal_restricted ? '<span class="badge badge-danger">Restricted</span>' : '<span class="badge badge-success">Allowed</span>';
-                const limit = user.withdrawal_limit > 0 ? formatCurrency(user.withdrawal_limit) : '<span class="text-muted">No Limit</span>';
-                const isFlexiaAdmin = user.username === 'flexiaadmin';
-                const adminBadge = user.is_admin ? (isFlexiaAdmin ? '<span class="badge badge-primary">Original</span>' : '<span class="badge badge-success">Admin</span>') : '<span class="text-muted">User</span>';
-                return `<tr>
-                    <td>${user.id}</td>
-                    <td>${user.username}</td>
-                    <td>${formatCurrency(user.balance)}</td>
-                    <td>${withdrawalStatus}</td>
-                    <td>${limit}</td>
-                    <td>${adminBadge}</td>
-                    <td>
-                        <button onclick="openUserSettings(${user.id},'${user.username}')" class="btn btn-sm btn-outline-primary py-0 px-1"><i class="fas fa-cog"></i></button>
-                        <button onclick="openAdjustBalance(${user.id},'${user.username}')" class="btn btn-sm btn-outline-success py-0 px-1"><i class="fas fa-coins"></i></button>
-                        ${!isFlexiaAdmin ? `<button onclick="toggleAdminStatus(${user.id})" class="btn btn-sm btn-outline-warning py-0 px-1"><i class="fas fa-user-shield"></i></button>
-                        <button onclick="deleteUser(${user.id})" class="btn btn-sm btn-outline-danger py-0 px-1"><i class="fas fa-trash"></i></button>` : ''}
-                    </td>
-                </tr>`;
-            }).join('');
-        }
-        function searchUsers() {
-            const term = document.getElementById('user-search').value.toLowerCase();
-            const rows = document.getElementById('user-list').getElementsByTagName('tr');
-            for(let row of rows) row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none';
-        }
-        async function deleteUser(userId) {
-            if(!confirm('Delete this user?')) return;
-            try {
-                const res = await fetch(`/api/admin/user/${userId}`, {method:'DELETE', credentials:'include'});
-                const data = await res.json();
-                if(data.success) { showMessage('Deleted', 'success'); loadUsers(); }
-                else showMessage(data.message, 'error');
-            } catch(err) { showMessage('Delete failed', 'error'); }
-        }
-        async function openUserSettings(userId, username) {
-            try {
-                const userRes = await fetchData(`/api/admin/user/${userId}`);
-                if(userRes.success) {
-                    selectedUserId = userId;
-                    document.getElementById('modal-username').textContent = username;
-                    const user = userRes.user;
-                    let customDays = [];
-                    try { customDays = JSON.parse(user.custom_withdrawal_days) || []; } catch {}
-                    document.getElementById('withdrawal-settings-content').innerHTML = `
-                        <div class="mb-1"><label class="form-label">Restriction</label>
-                            <select id="user-withdrawal-restricted" class="form-control py-0">
-                                <option value="false" ${!user.withdrawal_restricted?'selected':''}>Allowed</option>
-                                <option value="true" ${user.withdrawal_restricted?'selected':''}>Restricted</option>
-                            </select>
-                        </div>
-                        <div class="mb-1"><label class="form-label">Limit (₦)</label>
-                            <input type="number" id="user-withdrawal-limit" class="form-control py-0" value="${user.withdrawal_limit||0}" min="0" step="1000">
-                            <small class="text-muted">0 = no limit</small>
-                        </div>
-                        <div class="mb-1"><label class="form-label">Custom Days (comma-separated)</label>
-                            <input type="text" id="user-custom-days" class="form-control py-0" placeholder="7,14,21,28" value="${customDays.join(', ')}">
-                        </div>
-                    `;
-                    new bootstrap.Modal(document.getElementById('withdrawalSettingsModal')).show();
-                }
-            } catch(err) { showMessage('Failed to load user', 'error'); }
-        }
-        async function saveWithdrawalSettings() {
-            if(!selectedUserId) return;
-            const restricted = document.getElementById('user-withdrawal-restricted').value === 'true';
-            const limit = parseFloat(document.getElementById('user-withdrawal-limit').value) || 0;
-            const customDaysInput = document.getElementById('user-custom-days').value;
-            const customDays = customDaysInput.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d) && d>=1 && d<=31);
-            try {
-                const res = await postData(`/api/admin/user/${selectedUserId}/update-settings`, {restricted, limit, custom_days: customDays});
-                if(res.success) { showMessage('Settings saved', 'success'); bootstrap.Modal.getInstance(document.getElementById('withdrawalSettingsModal')).hide(); loadUsers(); if(withdrawalReportData) loadWithdrawalReport(); }
-                else showMessage(res.message||'Failed', 'error');
-            } catch(err) { showMessage('Network error', 'error'); }
-        }
-        async function toggleAdminStatus(userId) {
-            if(!confirm('Toggle admin status?')) return;
-            try {
-                const res = await postData(`/api/admin/user/${userId}/toggle-admin`, {});
-                if(res.success) { showMessage(`User is now ${res.is_admin?'admin':'user'}`, 'success'); loadUsers(); }
-                else showMessage(res.message, 'error');
-            } catch(err) { showMessage('Toggle failed', 'error'); }
-        }
-
-        // === Adjust Balance ===
-        function openAdjustBalance(userId, username) {
-            adjustUserId = userId;
-            document.getElementById('adjust-username').textContent = username;
-            document.getElementById('adjust-amount').value = '';
-            document.getElementById('adjust-note').value = '';
-            new bootstrap.Modal(document.getElementById('adjustBalanceModal')).show();
-        }
-        async function saveBalanceAdjustment() {
-            const amount = parseFloat(document.getElementById('adjust-amount').value);
-            const note = document.getElementById('adjust-note').value.trim();
-            if(isNaN(amount)) { showMessage('Enter valid amount', 'error'); return; }
-            if(!note) { showMessage('Add a note', 'error'); return; }
-            try {
-                const res = await postData(`/api/admin/user/${adjustUserId}/adjust-balance`, {amount, note});
-                if(res.success) { showMessage(`Adjusted ${formatCurrency(amount)}`, 'success'); bootstrap.Modal.getInstance(document.getElementById('adjustBalanceModal')).hide(); loadUsers(); loadDashboard(); }
-                else showMessage(res.message||'Failed', 'error');
-            } catch(err) { showMessage('Network error', 'error'); }
-        }
-
-        // === Withdrawals ===
-        async function loadWithdrawals() {
-            try {
-                const txRes = await fetchData('/api/admin/transactions');
-                if(txRes.success) {
-                    renderPendingWithdrawals(txRes.transactions);
-                    renderAllTransactions(txRes.transactions);
-                }
-            } catch(err) { /* ignore */ }
-        }
-        function renderPendingWithdrawals(transactions) {
-            const pending = transactions.filter(tx => tx.status === 'PENDING');
-            const container = document.getElementById('pending-withdrawals-list');
-            if(!pending.length) { container.innerHTML = '<p class="text-muted">No pending withdrawals.</p>'; return; }
-            container.innerHTML = pending.map(tx => {
-                const details = typeof tx.details === 'string' ? JSON.parse(tx.details) : tx.details;
-                return `<div class="withdrawal-item">
-                    <div><strong>${tx.id}</strong> | User ${tx.user_id} | ${formatCurrency(tx.amount)}</div>
-                    <div>Bank: ${details.bank_code||'N/A'} | Account: ${details.account_number||'N/A'}</div>
-                    <div><small>${new Date(tx.timestamp).toLocaleString()}</small></div>
-                    <div><button onclick="processWithdrawal('${tx.id}','approve')" class="btn btn-success py-0 px-1"><i class="fas fa-check"></i></button>
-                    <button onclick="processWithdrawal('${tx.id}','reject')" class="btn btn-danger py-0 px-1"><i class="fas fa-times"></i></button></div>
-                </div>`;
-            }).join('');
-        }
-        function renderAllTransactions(transactions) {
-            const tbody = document.getElementById('all-transactions');
-            if(!transactions.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center">No transactions</td></tr>'; return; }
-            tbody.innerHTML = transactions.slice(0,50).map(tx => `<tr>
-                <td>${tx.id?.substring(0,8)||'N/A'}...</td>
-                <td>${tx.user_id||'N/A'}</td>
-                <td>${formatCurrency(tx.amount)}</td>
-                <td><span class="badge ${tx.status==='COMPLETED'?'badge-success':tx.status==='PENDING'?'badge-warning':'badge-danger'}">${tx.status||'N/A'}</span></td>
-                <td>${new Date(tx.timestamp).toLocaleDateString()}</td>
-                <td>${tx.status==='PENDING'? `<button onclick="processWithdrawal('${tx.id}','approve')" class="btn btn-success py-0 px-1"><i class="fas fa-check"></i></button>
-                    <button onclick="processWithdrawal('${tx.id}','reject')" class="btn btn-danger py-0 px-1"><i class="fas fa-times"></i></button>` : '—'}
+    // ===== USERS =====
+    async function loadUsers() {
+        try {
+            const res = await fetchData('/api/admin/users');
+            if (res.success) renderUserList(res.users);
+        } catch(e) { document.getElementById('user-list').innerHTML = '<tr><td colspan="7" class="text-center text-gray-400">Error</td></tr>'; }
+    }
+    function renderUserList(users) {
+        const tbody = document.getElementById('user-list');
+        if (!users.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-400">No users</td></tr>'; return; }
+        tbody.innerHTML = users.map(u => `
+            <tr>
+                <td>${u.id}</td>
+                <td>${u.username}</td>
+                <td>₦${u.balance.toFixed(2)}</td>
+                <td><span class="badge-glass ${u.withdrawal_restricted?'danger':'success'}">${u.withdrawal_restricted?'Restricted':'Allowed'}</span></td>
+                <td>${u.withdrawal_limit || 'No Limit'}</td>
+                <td>${u.is_admin ? '<span class="badge-glass">Admin</span>' : '<span class="text-gray-400">User</span>'}</td>
+                <td>
+                    <button onclick="openUserSettings(${u.id},'${u.username}')" class="btn btn-outline text-xs py-0 px-1"><i class="fas fa-cog"></i></button>
+                    <button onclick="openAdjustBalance(${u.id},'${u.username}')" class="btn btn-outline text-xs py-0 px-1"><i class="fas fa-coins"></i></button>
+                    ${!u.is_admin ? `<button onclick="toggleAdminStatus(${u.id})" class="btn btn-outline text-xs py-0 px-1"><i class="fas fa-user-shield"></i></button>` : ''}
+                    ${!u.is_admin ? `<button onclick="deleteUser(${u.id})" class="btn btn-danger text-xs py-0 px-1"><i class="fas fa-trash"></i></button>` : ''}
                 </td>
-            </tr>`).join('');
-        }
-        async function processWithdrawal(txId, action) {
-            if(!confirm(`${action} withdrawal?`)) return;
-            try {
-                const res = await postData('/api/admin/approve-withdrawal', {transaction_id: txId, action});
-                if(res.success) { showMessage(`${action}ed`, 'success'); loadWithdrawals(); loadDashboard(); }
-                else showMessage(res.message, 'error');
-            } catch(err) { showMessage('Failed', 'error'); }
-        }
+            </tr>
+        `).join('');
+    }
+    async function deleteUser(userId) {
+        if (!confirm('Delete this user?')) return;
+        try {
+            const res = await fetch(`/api/admin/user/${userId}`, {method:'DELETE', credentials:'include'});
+            const d = await res.json();
+            if (d.success) { showMessage('User deleted', 'success'); loadUsers(); }
+            else showMessage(d.message, 'error');
+        } catch(e) { showMessage('Delete failed', 'error'); }
+    }
+    async function openUserSettings(userId, username) {
+        const res = await fetchData(`/api/admin/user/${userId}`);
+        if (!res.success) return;
+        selectedUserId = userId;
+        document.getElementById('modal-username').textContent = username;
+        const user = res.user;
+        let customDays = [];
+        try { customDays = JSON.parse(user.custom_withdrawal_days) || []; } catch {}
+        document.getElementById('withdrawal-settings-content').innerHTML = `
+            <div class="mb-2"><label class="text-xs text-gray-400">Restriction</label>
+                <select id="user-withdrawal-restricted" class="text-sm"><option value="false" ${!user.withdrawal_restricted?'selected':''}>Allowed</option><option value="true" ${user.withdrawal_restricted?'selected':''}>Restricted</option></select>
+            </div>
+            <div class="mb-2"><label class="text-xs text-gray-400">Limit (₦)</label>
+                <input type="number" id="user-withdrawal-limit" value="${user.withdrawal_limit||0}" step="1000" class="text-sm">
+            </div>
+            <div><label class="text-xs text-gray-400">Custom Days</label>
+                <input type="text" id="user-custom-days" value="${customDays.join(', ')}" class="text-sm" placeholder="7,14,21,28">
+            </div>
+        `;
+        new bootstrap.Modal(document.getElementById('withdrawalSettingsModal')).show();
+    }
+    async function saveWithdrawalSettings() {
+        if (!selectedUserId) return;
+        const restricted = document.getElementById('user-withdrawal-restricted').value === 'true';
+        const limit = parseFloat(document.getElementById('user-withdrawal-limit').value) || 0;
+        const customDays = document.getElementById('user-custom-days').value.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d) && d>=1 && d<=31);
+        try {
+            const res = await postData(`/api/admin/user/${selectedUserId}/update-settings`, {restricted, limit, custom_days: customDays});
+            if (res.success) { showMessage('Saved', 'success'); bootstrap.Modal.getInstance(document.getElementById('withdrawalSettingsModal')).hide(); loadUsers(); }
+            else showMessage(res.message||'Failed', 'error');
+        } catch(e) { showMessage('Network error', 'error'); }
+    }
+    async function toggleAdminStatus(userId) {
+        if (!confirm('Toggle admin status?')) return;
+        const res = await postData(`/api/admin/user/${userId}/toggle-admin`, {});
+        if (res.success) { showMessage(`User is now ${res.is_admin?'admin':'user'}`, 'success'); loadUsers(); }
+        else showMessage(res.message, 'error');
+    }
+    function openAdjustBalance(userId, username) {
+        adjustUserId = userId;
+        document.getElementById('adjust-username').textContent = username;
+        document.getElementById('adjust-amount').value = '';
+        document.getElementById('adjust-note').value = '';
+        new bootstrap.Modal(document.getElementById('adjustBalanceModal')).show();
+    }
+    async function saveBalanceAdjustment() {
+        const amount = parseFloat(document.getElementById('adjust-amount').value);
+        const note = document.getElementById('adjust-note').value.trim();
+        if (isNaN(amount) || !note) { showMessage('Enter amount and note', 'error'); return; }
+        try {
+            const res = await postData(`/api/admin/user/${adjustUserId}/adjust-balance`, {amount, note});
+            if (res.success) { showMessage(`Adjusted ₦${amount.toFixed(2)}`, 'success'); bootstrap.Modal.getInstance(document.getElementById('adjustBalanceModal')).hide(); loadUsers(); }
+            else showMessage(res.message||'Failed', 'error');
+        } catch(e) { showMessage('Network error', 'error'); }
+    }
 
-        // === Withdrawal Report ===
-        async function loadWithdrawalReport() {
-            try {
-                const report = await fetchData('/api/admin/withdrawal-status-report');
-                if(report.success) {
-                    withdrawalReportData = report;
-                    renderWithdrawalReport(report);
-                    const check = await fetch('/api/withdrawal/check-day', {credentials:'include', headers:{'Cache-Control':'no-cache'}});
-                    const checkData = await check.json();
-                    if(checkData.success) {
-                        document.getElementById('report-today').textContent = checkData.today_date + ' (Day '+checkData.today+')';
-                        document.getElementById('report-timezone').textContent = checkData.timezone_display + ' • Day '+checkData.today;
-                    }
-                }
-            } catch(err) { /* ignore */ }
-        }
-        function renderWithdrawalReport(report) {
-            document.getElementById('report-total-users').textContent = formatNumber(report.total_users);
-            document.getElementById('report-can-withdraw').textContent = formatNumber(report.users_withdrawal_today);
-            document.getElementById('report-restricted').textContent = formatNumber(report.users_restricted);
-            const tbody = document.getElementById('withdrawal-report-users');
-            if(!report.users || !report.users.length) { tbody.innerHTML = '<tr><td colspan="8" class="text-center">No users</td></tr>'; return; }
-            tbody.innerHTML = report.users.map(user => {
-                let status = user.withdrawal_restricted ? 'Restricted' : (user.can_withdraw_today ? 'Allowed Today' : 'Not Today');
-                let badge = user.withdrawal_restricted ? 'badge-danger' : (user.can_withdraw_today ? 'badge-success' : 'badge-warning');
-                let days = [];
-                try { days = JSON.parse(user.custom_withdrawal_days) || []; } catch {}
-                const withdrawalDays = days.length ? days.sort((a,b)=>a-b).join(', ') : 'Default';
-                return `<tr>
-                    <td>${user.id}</td>
-                    <td>${user.username}</td>
-                    <td>${formatCurrency(user.balance)}</td>
-                    <td><span class="badge ${badge}">${status}</span></td>
-                    <td>${user.withdrawal_limit > 0 ? formatCurrency(user.withdrawal_limit) : 'No Limit'}</td>
-                    <td><small>${withdrawalDays}</small></td>
-                    <td><i class="fas ${user.has_withdrawal_pin?'fa-check text-success':'fa-times text-danger'}"></i></td>
-                    <td><button onclick="openUserSettings(${user.id},'${user.username}')" class="btn btn-sm btn-outline-primary py-0 px-1"><i class="fas fa-edit"></i></button></td>
-                </tr>`;
-            }).join('');
-        }
-
-        // === Backup ===
-        function loadBackupTab() { listBackups(); }
-        async function triggerBackup() {
-            if(!confirm('Create backup?')) return;
-            try {
-                const data = await postData('/api/admin/backup/trigger', {});
-                if(data.success) { showMessage('Backup created: '+data.backup_file, 'success', 'backup-message'); listBackups(); }
-                else showMessage(data.message, 'error', 'backup-message');
-            } catch(err) { showMessage('Failed', 'error', 'backup-message'); }
-        }
-        async function listBackups() {
-            try {
-                const data = await fetchData('/api/admin/backup/list');
-                if(data.success) {
-                    backupListData = data.backups || [];
-                    renderBackupList();
-                    if(backupListData.length) {
-                        const latest = backupListData[0];
-                        document.getElementById('last-backup-time').textContent = new Date(latest.created).toLocaleString();
-                    } else document.getElementById('last-backup-time').textContent = 'No backups';
-                }
-            } catch(err) { showMessage('Failed to load backups', 'error', 'backup-message'); }
-        }
-        function renderBackupList() {
-            const container = document.getElementById('backup-list');
-            if(!backupListData.length) { container.innerHTML = '<p class="text-muted">No backups.</p>'; return; }
-            container.innerHTML = backupListData.map(b => `<div class="backup-item d-flex justify-content-between">
-                <div><strong>${b.filename}</strong><br/><small>${new Date(b.created).toLocaleString()} · ${b.size_human||formatBytes(b.size)}</small></div>
-                <button onclick="showBackupDetails('${b.filename}')" class="btn btn-sm btn-outline-info py-0 px-1"><i class="fas fa-info-circle"></i></button>
-            </div>`).join('');
-        }
-        function showBackupDetails(filename) {
-            const backup = backupListData.find(b => b.filename === filename);
-            if(!backup) return;
-            document.getElementById('backup-details').innerHTML = `
-                <div><strong>Filename:</strong> ${backup.filename}</div>
-                <div><strong>Created:</strong> ${new Date(backup.created).toLocaleString()}</div>
-                <div><strong>Size:</strong> ${backup.size_human||formatBytes(backup.size)}</div>
-                <div class="text-muted">Location: backups/</div>
-            `;
-            new bootstrap.Modal(document.getElementById('backupModal')).show();
-        }
-
-        // === Database Tab ===
-        function loadDatabaseTab() { refreshDatabaseStats(); }
-        async function refreshDatabaseStats() {
-            try {
-                const stats = await fetchData('/api/admin/stats');
-                if(stats.success) {
-                    document.getElementById('stats-users').textContent = formatNumber(stats.stats.users.total);
-                    document.getElementById('stats-transactions').textContent = formatNumber(stats.stats.transactions.total);
-                    document.getElementById('stats-gameplays').textContent = formatNumber(stats.stats.games.today);
-                }
-            } catch(err) { showMessage('Stats load failed', 'error'); }
-        }
-        async function previewDatabaseClear() {
-            try {
-                const stats = await fetchData('/api/admin/stats');
-                if(!stats.success) return;
-                const content = document.getElementById('previewClearContent');
-                content.innerHTML = `
-                    <div class="alert alert-warning py-1 px-2"><i class="fas fa-database"></i> Clear Preview</div>
-                    <div class="row">
-                        <div class="col-6"><ul class="list-group bg-dark">
-                            <li class="list-group-item bg-dark d-flex justify-content-between">Users to delete <span class="badge bg-danger">${stats.stats.users.total-1}</span></li>
-                            <li class="list-group-item bg-dark d-flex justify-content-between">Transactions <span class="badge bg-danger">${stats.stats.transactions.total}</span></li>
-                            <li class="list-group-item bg-dark d-flex justify-content-between">Game Plays <span class="badge bg-danger">${stats.stats.games.today*30}</span></li>
-                            <li class="list-group-item bg-dark d-flex justify-content-between">Coupons reset <span class="badge bg-warning">${document.getElementById('reset-coupons').checked?stats.stats.coupons.total:0}</span></li>
-                        </ul></div>
-                        <div class="col-6"><ul class="list-group bg-dark">
-                            <li class="list-group-item bg-dark d-flex justify-content-between">Admin Kept <span class="badge bg-success">flexiaadmin</span></li>
-                            <li class="list-group-item bg-dark d-flex justify-content-between">Backup <span class="badge bg-info">${document.getElementById('backup-option').value==='yes'?'Yes':'No'}</span></li>
-                        </ul></div>
-                    </div>
-                    <div class="alert alert-danger mt-1 py-1 px-2">This cannot be undone!</div>
-                `;
-                new bootstrap.Modal(document.getElementById('previewClearModal')).show();
-            } catch(err) { showMessage('Preview failed', 'error'); }
-        }
-        function confirmDatabaseClear() {
-            bootstrap.Modal.getInstance(document.getElementById('previewClearModal')).hide();
-            setTimeout(() => {
-                const modal = new bootstrap.Modal(document.getElementById('confirmClearModal'));
-                modal.show();
-                const input = document.getElementById('sudo-confirmation');
-                const ack = document.getElementById('acknowledge-risk');
-                const exec = document.getElementById('execute-clear-btn');
-                function validate() { exec.disabled = !(input.value === 'DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN' && ack.checked); }
-                input.addEventListener('input', validate);
-                ack.addEventListener('change', validate);
-            }, 300);
-        }
-        function closeClearModal() {
-            bootstrap.Modal.getInstance(document.getElementById('confirmClearModal')).hide();
-            document.getElementById('sudo-confirmation').value='';
-            document.getElementById('acknowledge-risk').checked=false;
-            document.getElementById('execute-clear-btn').disabled=true;
-        }
-        async function executeDatabaseClear() {
-            try {
-                const sudo = document.getElementById('sudo-confirmation').value;
-                const backup = document.getElementById('backup-option').value;
-                const res = await fetch('/api/admin/database/clear', {
-                    method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
-                    body: JSON.stringify({sudo_confirmation: sudo, backup_option: backup})
-                });
-                const data = await res.json();
-                if(data.success) {
-                    showMessage('Database cleared!', 'success');
-                    setTimeout(() => { alert('Clear complete. Page will reload.'); window.location.reload(); }, 1000);
-                } else showMessage(data.message, 'error');
-            } catch(err) { showMessage('Clear failed', 'error'); } finally { closeClearModal(); }
-        }
-        async function exportDatabaseData() {
-            const format = document.getElementById('export-format').value;
-            const users = document.getElementById('export-users').checked;
-            const txs = document.getElementById('export-transactions').checked;
-            const gp = document.getElementById('export-gameplays').checked;
-            if(!users && !txs && !gp) { showMessage('Select at least one', 'warning'); return; }
-            try {
-                const res = await fetch('/api/admin/export-data', {
-                    method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
-                    body: JSON.stringify({format, users, transactions:txs, game_plays:gp})
-                });
-                if(res.ok) {
-                    const blob = await res.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `flexia_export_${new Date().toISOString().split('T')[0]}.${format}`;
-                    document.body.appendChild(a); a.click(); a.remove();
-                    window.URL.revokeObjectURL(url);
-                    showMessage('Export successful', 'success');
-                } else showMessage('Export failed', 'error');
-            } catch(err) { showMessage('Network error', 'error'); }
-        }
-        async function exportFullDatabase() {
-            try {
-                const res = await fetch('/api/admin/database/export-all', {method:'POST', credentials:'include'});
-                if(res.ok) {
-                    const blob = await res.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `flexia_full_backup_${new Date().toISOString().split('T')[0]}.flexia`;
-                    document.body.appendChild(a); a.click(); a.remove();
-                    window.URL.revokeObjectURL(url);
-                    showMessage('Full backup downloaded', 'success');
-                } else { const err = await res.json(); showMessage(err.message||'Export failed', 'error'); }
-            } catch(err) { showMessage('Network error', 'error'); }
-        }
-
-        // Restore function updated to work with file input
-        document.getElementById('restore-file').addEventListener('change', function(e) {
-            selectedRestoreFile = e.target.files[0];
-            const restoreBtn = document.getElementById('restore-btn');
-            if(selectedRestoreFile && selectedRestoreFile.name.endsWith('.flexia')) {
-                restoreBtn.disabled = false;
-                restoreBtn.innerHTML = `<i class="fas fa-history"></i> Restore ${selectedRestoreFile.name}`;
-            } else {
-                restoreBtn.disabled = true;
-                restoreBtn.innerHTML = `<i class="fas fa-history"></i> Restore`;
-                if(selectedRestoreFile) showMessage('Select .flexia file', 'error');
+    // ===== WITHDRAWALS =====
+    async function loadWithdrawals() {
+        try {
+            const txRes = await fetchData('/api/admin/transactions');
+            if (txRes.success) {
+                renderPendingWithdrawals(txRes.transactions);
+                renderAllTransactions(txRes.transactions);
             }
-        });
-        async function restoreDatabase() {
-            if(!selectedRestoreFile) { showMessage('Select a .flexia file', 'error'); return; }
-            if(!confirm('WARNING: This will replace ALL data. Proceed?')) return;
-            const formData = new FormData();
-            formData.append('file', selectedRestoreFile);
-            try {
-                const res = await fetch('/api/admin/database/import-all', {method:'POST', credentials:'include', body:formData});
-                const data = await res.json();
-                if(data.success) {
-                    showMessage('Restore successful! Page will reload.', 'success');
-                    setTimeout(() => window.location.reload(), 2000);
-                } else showMessage(data.message||'Restore failed', 'error');
-            } catch(err) { showMessage('Network error', 'error'); }
-        }
+        } catch(e) {}
+    }
+    function renderPendingWithdrawals(txs) {
+        const c = document.getElementById('pending-withdrawals-list');
+        const pend = txs.filter(t => t.status==='PENDING');
+        if (!pend.length) { c.innerHTML = '<div class="text-gray-400 text-sm">None pending.</div>'; return; }
+        c.innerHTML = pend.map(t => `
+            <div class="glass-card p-2 mb-2 text-sm flex flex-wrap items-center justify-between">
+                <div><span class="font-mono">${t.id.slice(0,8)}</span> | User ${t.user_id} | ₦${t.amount.toFixed(2)}</div>
+                <div class="flex gap-1">
+                    <button onclick="processWithdrawal('${t.id}','approve')" class="btn btn-success text-xs py-0 px-1"><i class="fas fa-check"></i></button>
+                    <button onclick="processWithdrawal('${t.id}','reject')" class="btn btn-danger text-xs py-0 px-1"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+        `).join('');
+    }
+    function renderAllTransactions(txs) {
+        const tbody = document.getElementById('all-transactions');
+        if (!txs.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-400">No transactions</td></tr>'; return; }
+        tbody.innerHTML = txs.slice(0,30).map(t => `
+            <tr>
+                <td>${t.id.slice(0,8)}…</td>
+                <td>${t.user_id}</td>
+                <td>₦${t.amount.toFixed(2)}</td>
+                <td><span class="badge-glass ${t.status==='COMPLETED'?'success':t.status==='PENDING'?'warning':'danger'}">${t.status}</span></td>
+                <td>${new Date(t.timestamp).toLocaleDateString()}</td>
+                <td>${t.status==='PENDING'? `<button onclick="processWithdrawal('${t.id}','approve')" class="btn btn-success text-xs py-0 px-1"><i class="fas fa-check"></i></button><button onclick="processWithdrawal('${t.id}','reject')" class="btn btn-danger text-xs py-0 px-1"><i class="fas fa-times"></i></button>` : '—'}</td>
+            </tr>
+        `).join('');
+    }
+    async function processWithdrawal(txId, action) {
+        if (!confirm(`${action} withdrawal?`)) return;
+        try {
+            const res = await postData('/api/admin/approve-withdrawal', {transaction_id: txId, action});
+            if (res.success) { showMessage(`${action}ed`, 'success'); loadWithdrawals(); }
+            else showMessage(res.message, 'error');
+        } catch(e) { showMessage('Failed', 'error'); }
+    }
 
-        // === Settings ===
-        async function loadSettings() {
-            try {
-                const res = await fetchData('/api/admin/settings');
-                if(res.success) {
-                    const s = res.settings;
-                    document.getElementById('whatsapp-link').value = s.whatsapp_link || '';
-                    document.getElementById('telegram-link').value = s.telegram_link || '';
-                    document.getElementById('facebook-link').value = s.facebook_link || '';
-                    document.getElementById('min-withdrawal-input').value = s.min_withdrawal || 100000;
+    // ===== WITHDRAWAL REPORT =====
+    async function loadWithdrawalReport() {
+        try {
+            const rep = await fetchData('/api/admin/withdrawal-status-report');
+            if (rep.success) {
+                document.getElementById('report-total-users').textContent = rep.total_users;
+                document.getElementById('report-can-withdraw').textContent = rep.users_withdrawal_today;
+                document.getElementById('report-restricted').textContent = rep.users_restricted;
+                const tbody = document.getElementById('withdrawal-report-users');
+                tbody.innerHTML = rep.users.map(u => `
+                    <tr>
+                        <td>${u.id}</td>
+                        <td>${u.username}</td>
+                        <td>₦${u.balance.toFixed(2)}</td>
+                        <td><span class="badge-glass ${u.withdrawal_restricted?'danger':u.can_withdraw_today?'success':'warning'}">${u.withdrawal_restricted?'Restricted':u.can_withdraw_today?'Allowed':'Not Today'}</span></td>
+                        <td>${u.withdrawal_limit || 'No Limit'}</td>
+                        <td>${u.custom_withdrawal_days.sort((a,b)=>a-b).join(', ') || 'Default'}</td>
+                        <td><i class="fas ${u.has_withdrawal_pin?'fa-check text-green-400':'fa-times text-red-400'}"></i></td>
+                        <td><button onclick="openUserSettings(${u.id},'${u.username}')" class="btn btn-outline text-xs py-0 px-1"><i class="fas fa-edit"></i></button></td>
+                    </tr>
+                `).join('');
+                document.getElementById('report-today').textContent = new Date().toLocaleDateString();
+            }
+        } catch(e) {}
+    }
+
+    // ===== BACKUP =====
+    async function triggerBackup() {
+        if (!confirm('Create backup?')) return;
+        try {
+            const res = await postData('/api/admin/backup/trigger', {});
+            if (res.success) { showMessage('Backup created: '+res.backup_file, 'success', 'backup-message'); listBackups(); }
+            else showMessage(res.message, 'error', 'backup-message');
+        } catch(e) { showMessage('Failed', 'error', 'backup-message'); }
+    }
+    async function listBackups() {
+        try {
+            const res = await fetchData('/api/admin/backup/list');
+            if (res.success) {
+                backupListData = res.backups || [];
+                const c = document.getElementById('backup-list');
+                if (!backupListData.length) { c.innerHTML = '<div class="text-gray-400 text-sm">No backups.</div>'; return; }
+                c.innerHTML = backupListData.map(b => `
+                    <div class="glass-card p-2 mb-1 text-sm flex justify-between items-center">
+                        <div><span class="font-mono">${b.filename}</span> <span class="text-xs text-gray-400">${new Date(b.created).toLocaleString()} · ${(b.size/1024).toFixed(1)} KB</span></div>
+                        <button onclick="showBackupDetails('${b.filename}')" class="btn btn-outline text-xs py-0 px-1"><i class="fas fa-info-circle"></i></button>
+                    </div>
+                `).join('');
+                if (backupListData.length) {
+                    const latest = backupListData[0];
+                    document.getElementById('last-backup-time').textContent = new Date(latest.created).toLocaleString();
                 }
-            } catch(err) { /* ignore */ }
-        }
-        async function saveSocialLinks() {
-            const data = {
-                whatsapp_link: document.getElementById('whatsapp-link').value.trim(),
-                telegram_link: document.getElementById('telegram-link').value.trim(),
-                facebook_link: document.getElementById('facebook-link').value.trim()
-            };
-            try {
-                const res = await postData('/api/admin/settings', data);
-                if(res.success) showMessage('Social links saved', 'success', 'social-message');
-                else showMessage(res.message||'Failed', 'error', 'social-message');
-            } catch(err) { showMessage('Network error', 'error', 'social-message'); }
-        }
-        async function saveMinWithdrawal() {
-            const val = parseFloat(document.getElementById('min-withdrawal-input').value);
-            if(isNaN(val) || val < 0) { showMessage('Enter valid amount', 'error', 'min-withdrawal-message'); return; }
-            try {
-                const res = await postData('/api/admin/settings', {min_withdrawal: val});
-                if(res.success) showMessage('Min withdrawal updated', 'success', 'min-withdrawal-message');
-                else showMessage(res.message||'Failed', 'error', 'min-withdrawal-message');
-            } catch(err) { showMessage('Network error', 'error', 'min-withdrawal-message'); }
-        }
-        async function changeAdminPassword() {
-            const current = document.getElementById('current-password').value;
-            const newPass = document.getElementById('new-password').value;
-            const confirm = document.getElementById('confirm-password').value;
-            if(!current || !newPass || !confirm) { showMessage('All fields required', 'error', 'password-message'); return; }
-            if(newPass.length < 8) { showMessage('Min 8 chars', 'error', 'password-message'); return; }
-            if(newPass !== confirm) { showMessage('Passwords do not match', 'error', 'password-message'); return; }
-            try {
-                const res = await postData('/api/admin/change-password', {current_password: current, new_password: newPass});
-                if(res.success) {
-                    showMessage('Password changed! Please login again.', 'success', 'password-message');
-                    document.getElementById('current-password').value='';
-                    document.getElementById('new-password').value='';
-                    document.getElementById('confirm-password').value='';
-                    setTimeout(() => { if(confirm('Logout and login again?')) adminLogout(); }, 2000);
-                } else showMessage(res.message, 'error', 'password-message');
-            } catch(err) { showMessage('Network error', 'error', 'password-message'); }
-        }
+            }
+        } catch(e) {}
+    }
+    function showBackupDetails(filename) {
+        const b = backupListData.find(x => x.filename === filename);
+        if (!b) return;
+        document.getElementById('backup-details').innerHTML = `
+            <div class="text-sm"><strong>${b.filename}</strong></div>
+            <div class="text-xs text-gray-400">Created: ${new Date(b.created).toLocaleString()}</div>
+            <div class="text-xs text-gray-400">Size: ${(b.size/1024).toFixed(1)} KB</div>
+        `;
+        new bootstrap.Modal(document.getElementById('backupModal')).show();
+    }
 
-        // === Coupons ===
-        async function loadCouponStats() {
-            try {
-                const res = await fetchData('/api/admin/coupons');
-                if(res.success) {
-                    const total = res.coupons.length;
-                    const avail = res.coupons.filter(c => c.status === 'AVAILABLE').length;
-                    const used = total - avail;
-                    document.getElementById('coupon-stats').textContent = `${total} total (${avail} avail, ${used} used)`;
+    // ===== DATABASE STATS =====
+    async function refreshDatabaseStats() {
+        try {
+            const res = await fetchData('/api/admin/stats');
+            if (res.success) {
+                document.getElementById('stats-users').textContent = res.stats.users.total;
+                document.getElementById('stats-transactions').textContent = res.stats.transactions.total;
+                document.getElementById('stats-gameplays').textContent = res.stats.games.today;
+            }
+        } catch(e) {}
+    }
+    async function previewDatabaseClear() {
+        const stats = await fetchData('/api/admin/stats');
+        if (!stats.success) return;
+        document.getElementById('previewClearContent').innerHTML = `
+            <div class="text-sm text-gray-300">Users to delete: <span class="text-red-400">${stats.stats.users.total-1}</span></div>
+            <div class="text-sm text-gray-300">Transactions: <span class="text-red-400">${stats.stats.transactions.total}</span></div>
+            <div class="text-sm text-gray-300">Game plays: <span class="text-red-400">${stats.stats.games.today*30}</span></div>
+            <div class="text-sm text-gray-300">Coupons reset: ${document.getElementById('reset-coupons').checked? '<span class="text-yellow-400">Yes</span>' : 'No'}</div>
+            <div class="text-sm text-red-400 mt-2">⚠️ This action is permanent!</div>
+        `;
+        new bootstrap.Modal(document.getElementById('previewClearModal')).show();
+    }
+    function confirmDatabaseClear() {
+        bootstrap.Modal.getInstance(document.getElementById('previewClearModal')).hide();
+        setTimeout(() => {
+            const modal = new bootstrap.Modal(document.getElementById('confirmClearModal'));
+            modal.show();
+            const input = document.getElementById('sudo-confirmation');
+            const ack = document.getElementById('acknowledge-risk');
+            const exec = document.getElementById('execute-clear-btn');
+            function validate() { exec.disabled = !(input.value === 'DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN' && ack.checked); }
+            input.addEventListener('input', validate);
+            ack.addEventListener('change', validate);
+        }, 300);
+    }
+    function closeClearModal() {
+        bootstrap.Modal.getInstance(document.getElementById('confirmClearModal')).hide();
+        document.getElementById('sudo-confirmation').value = '';
+        document.getElementById('acknowledge-risk').checked = false;
+        document.getElementById('execute-clear-btn').disabled = true;
+    }
+    async function executeDatabaseClear() {
+        const sudo = document.getElementById('sudo-confirmation').value;
+        const backup = document.getElementById('backup-option').value;
+        try {
+            const res = await postData('/api/admin/database/clear', {sudo_confirmation: sudo, backup_option: backup});
+            if (res.success) { showMessage('Database cleared!', 'success'); setTimeout(() => window.location.reload(), 1000); }
+            else showMessage(res.message, 'error');
+        } catch(e) { showMessage('Clear failed', 'error'); } finally { closeClearModal(); }
+    }
+    async function exportDatabaseData() {
+        const format = document.getElementById('export-format').value;
+        const users = document.getElementById('export-users').checked;
+        const txs = document.getElementById('export-transactions').checked;
+        const gp = document.getElementById('export-gameplays').checked;
+        if (!users && !txs && !gp) { showMessage('Select at least one', 'warning'); return; }
+        try {
+            const res = await postData('/api/admin/export-data', {format, users, transactions:txs, game_plays:gp});
+            if (res.success) {
+                let blob, filename;
+                if (format === 'csv') {
+                    blob = new Blob([res.data], {type:'text/csv'});
+                    filename = `flexia_export_${new Date().toISOString().slice(0,10)}.csv`;
+                } else {
+                    blob = new Blob([JSON.stringify(res.data, null, 2)], {type:'application/json'});
+                    filename = `flexia_export_${new Date().toISOString().slice(0,10)}.json`;
                 }
-            } catch(err) { /* ignore */ }
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+                window.URL.revokeObjectURL(url);
+                showMessage('Exported successfully', 'success');
+            } else showMessage(res.message, 'error');
+        } catch(e) { showMessage('Export failed', 'error'); }
+    }
+    async function exportFullDatabase() {
+        try {
+            const res = await postData('/api/admin/database/export-all', {});
+            if (res.success) {
+                const blob = new Blob([JSON.stringify(res.data, null, 2)], {type:'application/json'});
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = `flexia_full_${new Date().toISOString().slice(0,10)}.flexia`;
+                document.body.appendChild(a); a.click(); a.remove();
+                window.URL.revokeObjectURL(url);
+                showMessage('Full backup downloaded', 'success');
+            } else showMessage(res.message, 'error');
+        } catch(e) { showMessage('Export failed', 'error'); }
+    }
+    document.getElementById('restore-file').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        const restoreBtn = document.getElementById('restore-btn');
+        if (file && file.name.endsWith('.flexia')) {
+            restoreBtn.disabled = false;
+            restoreBtn.innerHTML = `<i class="fas fa-history"></i> Restore ${file.name}`;
+        } else {
+            restoreBtn.disabled = true;
+            restoreBtn.innerHTML = `<i class="fas fa-history"></i> Restore .flexia`;
         }
-        async function resetCoupons() {
-            if(!confirm('Reset all used coupons to available?')) return;
-            try {
-                const res = await postData('/api/admin/coupons/reset-used', {});
-                if(res.success) { showMessage(res.message, 'success', 'coupon-message'); loadCouponStats(); }
-                else showMessage(res.message, 'error', 'coupon-message');
-            } catch(err) { showMessage('Network error', 'error', 'coupon-message'); }
-        }
-        async function deleteAllCoupons() {
-            if(!confirm('Delete ALL coupons?')) return;
-            try {
-                const res = await postData('/api/admin/coupons/delete', {});
-                if(res.success) { showMessage(res.message, 'success', 'coupon-message'); loadCouponStats(); }
-                else showMessage(res.message, 'error', 'coupon-message');
-            } catch(err) { showMessage('Network error', 'error', 'coupon-message'); }
-        }
-        async function addCoupons() {
-            const text = document.getElementById('new-coupons').value;
-            const codes = text.split('\n').map(c => c.trim().toUpperCase()).filter(c => c.length >= 4);
-            if(!codes.length) { showMessage('Enter at least one coupon', 'error', 'coupon-message'); return; }
-            try {
-                const res = await postData('/api/admin/coupons/add', {codes});
-                if(res.success) { showMessage(res.message, 'success', 'coupon-message'); document.getElementById('new-coupons').value=''; loadCouponStats(); }
-                else showMessage(res.message, 'error', 'coupon-message');
-            } catch(err) { showMessage('Network error', 'error', 'coupon-message'); }
-        }
+    });
+    async function restoreDatabase() {
+        const fileInput = document.getElementById('restore-file');
+        if (!fileInput.files || !fileInput.files[0]) { showMessage('Select a .flexia file', 'error'); return; }
+        if (!confirm('WARNING: This will replace ALL data. Proceed?')) return;
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        try {
+            const res = await fetch('/api/admin/database/import-all', {method:'POST', credentials:'include', body:formData});
+            const data = await res.json();
+            if (data.success) { showMessage('Restore successful! Reloading…', 'success'); setTimeout(() => window.location.reload(), 1500); }
+            else showMessage(data.message, 'error');
+        } catch(e) { showMessage('Restore failed', 'error'); }
+    }
 
-        // === INIT ===
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchData('/api/user/profile')
-                .then(data => {
-                    if(!data.success || !data.user.is_admin) { window.location.href='/'; return; }
-                    currentUserData = data.user;
+    // ===== SETTINGS =====
+    async function loadSettings() {
+        try {
+            const res = await fetchData('/api/admin/settings');
+            if (res.success) {
+                document.getElementById('whatsapp-link').value = res.settings.whatsapp_link || '';
+                document.getElementById('telegram-link').value = res.settings.telegram_link || '';
+                document.getElementById('facebook-link').value = res.settings.facebook_link || '';
+                document.getElementById('min-withdrawal-input').value = res.settings.min_withdrawal || 100000;
+            }
+        } catch(e) {}
+    }
+    async function saveSocialLinks() {
+        const data = {
+            whatsapp_link: document.getElementById('whatsapp-link').value.trim(),
+            telegram_link: document.getElementById('telegram-link').value.trim(),
+            facebook_link: document.getElementById('facebook-link').value.trim()
+        };
+        try {
+            const res = await postData('/api/admin/settings', data);
+            if (res.success) showMessage('Saved', 'success', 'social-message');
+            else showMessage(res.message, 'error', 'social-message');
+        } catch(e) { showMessage('Network error', 'error', 'social-message'); }
+    }
+    async function saveMinWithdrawal() {
+        const val = parseFloat(document.getElementById('min-withdrawal-input').value);
+        if (isNaN(val) || val < 0) { showMessage('Invalid amount', 'error', 'min-withdrawal-message'); return; }
+        try {
+            const res = await postData('/api/admin/settings', {min_withdrawal: val});
+            if (res.success) showMessage('Updated', 'success', 'min-withdrawal-message');
+            else showMessage(res.message, 'error', 'min-withdrawal-message');
+        } catch(e) { showMessage('Network error', 'error', 'min-withdrawal-message'); }
+    }
+    async function changeAdminPassword() {
+        const current = document.getElementById('current-password').value;
+        const newPass = document.getElementById('new-password').value;
+        const confirm = document.getElementById('confirm-password').value;
+        if (!current || !newPass || !confirm) { showMessage('All fields required', 'error', 'password-message'); return; }
+        if (newPass.length < 8) { showMessage('Min 8 chars', 'error', 'password-message'); return; }
+        if (newPass !== confirm) { showMessage('Passwords do not match', 'error', 'password-message'); return; }
+        try {
+            const res = await postData('/api/admin/change-password', {current_password: current, new_password: newPass});
+            if (res.success) { showMessage('Changed! Please login again.', 'success', 'password-message'); document.getElementById('current-password').value = ''; document.getElementById('new-password').value = ''; document.getElementById('confirm-password').value = ''; setTimeout(() => { if (confirm('Logout and login again?')) adminLogout(); }, 2000); }
+            else showMessage(res.message, 'error', 'password-message');
+        } catch(e) { showMessage('Network error', 'error', 'password-message'); }
+    }
+
+    // ===== COUPONS =====
+    async function loadCouponStats() {
+        try {
+            const res = await fetchData('/api/admin/coupons');
+            if (res.success) {
+                const total = res.coupons.length;
+                const avail = res.coupons.filter(c => c.status === 'AVAILABLE').length;
+                document.getElementById('coupon-stats').textContent = `${total} total (${avail} avail, ${total-avail} used)`;
+            }
+        } catch(e) {}
+    }
+    async function resetCoupons() {
+        if (!confirm('Reset all used coupons?')) return;
+        try {
+            const res = await postData('/api/admin/coupons/reset-used', {});
+            if (res.success) { showMessage(res.message, 'success', 'coupon-message'); loadCouponStats(); }
+            else showMessage(res.message, 'error', 'coupon-message');
+        } catch(e) { showMessage('Network error', 'error', 'coupon-message'); }
+    }
+    async function deleteAllCoupons() {
+        if (!confirm('Delete ALL coupons?')) return;
+        try {
+            const res = await postData('/api/admin/coupons/delete', {});
+            if (res.success) { showMessage(res.message, 'success', 'coupon-message'); loadCouponStats(); }
+            else showMessage(res.message, 'error', 'coupon-message');
+        } catch(e) { showMessage('Network error', 'error', 'coupon-message'); }
+    }
+    async function addCoupons() {
+        const text = document.getElementById('new-coupons').value;
+        const codes = text.split('\n').map(c => c.trim().toUpperCase()).filter(c => c.length >= 4);
+        if (!codes.length) { showMessage('Enter at least one', 'error', 'coupon-message'); return; }
+        try {
+            const res = await postData('/api/admin/coupons/add', {codes});
+            if (res.success) { showMessage(res.message, 'success', 'coupon-message'); document.getElementById('new-coupons').value=''; loadCouponStats(); }
+            else showMessage(res.message, 'error', 'coupon-message');
+        } catch(e) { showMessage('Network error', 'error', 'coupon-message'); }
+    }
+
+    // ===== INIT =====
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchData('/api/user/profile')
+            .then(data => {
+                if (!data.success || !data.user.is_admin) window.location.href='/';
+                else {
                     loadDashboard();
                     setInterval(() => {
-                        if(document.querySelector('.tab-content.active').id === 'dashboard') loadDashboard();
+                        if (document.querySelector('.tab-content.active')?.id === 'dashboard') loadDashboard();
                     }, 30000);
-                })
-                .catch(() => window.location.href='/');
-        });
-    </script>
+                }
+            })
+            .catch(() => window.location.href='/');
+    });
+</script>
 </body>
 </html>
