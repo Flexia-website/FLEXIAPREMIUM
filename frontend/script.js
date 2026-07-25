@@ -216,8 +216,8 @@ var CONFIG = {
   CLAIM_COOLDOWN: 2000,
   GAME_DAILY_LIMITS: window.APP_CONFIG?.GAME_DAILY_LIMITS || {
     'snake': 17,
-    'coinflip': 12,
-    'plinko': 12,
+    'coinflip': 5,
+    'plinko': 5,
     'spin': 1,
     'tiktok': 3
   },
@@ -525,7 +525,6 @@ var App = {
   },
 
   showModal: function (modalId) {
-    // Hide all modals first
     document.querySelectorAll('.modal').forEach(function(m) { m.classList.add('hidden'); });
     var modal = document.getElementById(modalId);
     if (modal) {
@@ -1424,8 +1423,8 @@ var GameLimiter = {
   },
   gameMessages: {
     'snake': { icon: '🐍', title: 'Snake Game Limit Reached', message: 'You have played Snake 17 times today. Come back tomorrow for more fun!' },
-    'coinflip': { icon: '🪙', title: 'Coin Flip Limit Reached', message: 'You have played Coin Flip 12 times today. Daily limit reached!' },
-    'plinko': { icon: '🎯', title: 'Plinko Limit Reached', message: 'You have played Plinko 12 times today. Try again tomorrow!' },
+    'coinflip': { icon: '🪙', title: 'Coin Flip Limit Reached', message: 'You have played Coin Flip 5 times today. Daily limit reached!' },
+    'plinko': { icon: '🎯', title: 'Plinko Limit Reached', message: 'You have played Plinko 5 times today. Try again tomorrow!' },
     'spin': { icon: '🎡', title: 'Daily Spin Limit Reached', message: 'You have already used your daily spin today! Come back tomorrow.' },
     'tiktok': { icon: '📱', title: 'TikTok Daily Limit Reached', message: 'You have already claimed TikTok reward today! Come back tomorrow.' }
   },
@@ -2720,4 +2719,4 @@ window.claimPlinkoReward = async function(bet, multiplier) {
   return await GameManager.safeClaim('/api/games/plinko/report', { bet: bet, multiplier: multiplier }, 'plinko');
 };
 
-console.log('FLEXIA Script v17.9 - All fixes applied');
+console.log('FLEXIA Script v17.9 - 5-play limit applied');
