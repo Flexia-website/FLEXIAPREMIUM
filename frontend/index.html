@@ -115,7 +115,7 @@
                         <button onclick="App.fetchFreshBalance()" class="btn-secondary" style="font-size:0.7rem;padding:4px 10px;border-radius:20px;margin-right:6px;">
                             <i class="fas fa-sync-alt"></i>
                         </button>
-                        <div class="avatar" id="dashboard-avatar" onclick="Settings.logout()">U</div>
+                        <div class="avatar" id="dashboard-avatar" onclick="Settings.open()">U</div>
                     </div>
                 </div>
                 <div class="scroll-progress-container">
@@ -542,7 +542,7 @@
     <script>
         // Additional init
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('FLEXIA Production Frontend v17.0 Loaded');
+            console.log('FLEXIA Production Frontend v17.9 Loaded');
 
             // Auto-fill coupon from URL parameter
             var urlParams = new URLSearchParams(window.location.search);
@@ -563,13 +563,11 @@
             // Auto-fill referral code from URL parameter and switch to register tab
             if (ref) {
                 document.getElementById('reg-referral').value = ref;
-                // Switch to register tab
                 document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
                 document.querySelector('[data-tab="register"]').classList.add('active');
                 document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
                 document.getElementById('register-form').classList.add('active');
-                // Optionally handle Paystack status check (if ref is a payment reference)
-                if (ref && ref.length > 10) { // heuristic: payment references are longer
+                if (ref && ref.length > 10) {
                     setTimeout(async function() {
                         if (typeof PaystackPayment !== 'undefined') {
                             var result = await PaystackPayment.checkStatus(ref);
