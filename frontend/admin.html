@@ -7,6 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
+        /* ---- Clean Modern Style ---- */
         body {
             background: #f4f6f9;
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -32,10 +33,16 @@
             font-size: 0.85rem;
             transition: all 0.15s;
             border-bottom: 2px solid transparent;
-            cursor: pointer;
         }
-        .tab-btn:hover { background: #f1f5f9; color: #0f172a; }
-        .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; background: #eff6ff; }
+        .tab-btn:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+        .tab-btn.active {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+            background: #eff6ff;
+        }
         .stat-box {
             background: #f8fafc;
             border-radius: 12px;
@@ -43,30 +50,59 @@
             text-align: center;
             border-left: 4px solid #2563eb;
         }
-        .stat-box h3 { font-size: 1.8rem; font-weight: 700; color: #0f172a; margin: 0; }
-        .stat-box p { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin: 4px 0 0; }
+        .stat-box h3 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0;
+        }
+        .stat-box p {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            margin: 4px 0 0;
+        }
         .badge {
-            background: #e2e8f0; color: #1e293b; padding: 2px 10px; border-radius: 20px;
-            font-size: 0.7rem; font-weight: 600;
+            background: #e2e8f0;
+            color: #1e293b;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
         }
         .badge-success { background: #dcfce7; color: #166534; }
         .badge-danger  { background: #fee2e2; color: #991b1b; }
         .badge-warning { background: #fef9c3; color: #854d0e; }
         .badge-info    { background: #dbeafe; color: #1e40af; }
         input, select, textarea {
-            background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px;
-            padding: 8px 12px; font-size: 0.85rem; width: 100%;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            width: 100%;
             transition: border 0.2s, box-shadow 0.2s;
         }
         input:focus, select:focus, textarea:focus {
-            outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
         }
         .btn {
-            padding: 6px 14px; border-radius: 8px; font-weight: 600; font-size: 0.8rem;
-            cursor: pointer; transition: all 0.15s; border: none;
-            background: #e2e8f0; color: #1e293b;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: none;
+            background: #e2e8f0;
+            color: #1e293b;
         }
-        .btn:hover { background: #cbd5e1; }
+        .btn:hover {
+            background: #cbd5e1;
+        }
         .btn-primary { background: #2563eb; color: #fff; }
         .btn-primary:hover { background: #1d4ed8; }
         .btn-success { background: #16a34a; color: #fff; }
@@ -82,18 +118,44 @@
         th { text-align: left; padding: 8px 12px; color: #475569; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
         td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; }
         tr:hover td { background: #f8fafc; }
-        .section-title { font-size: 1.1rem; font-weight: 600; color: #0f172a; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
         .day-selector {
-            display: flex; flex-wrap: wrap; gap: 6px; max-height: 200px; overflow-y: auto;
-            padding: 12px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
         }
         .day-checkbox {
-            display: flex; align-items: center; gap: 4px; background: #ffffff;
-            padding: 4px 12px 4px 6px; border-radius: 30px; font-size: 0.8rem; border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: #ffffff;
+            padding: 4px 12px 4px 6px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            border: 1px solid #e2e8f0;
         }
         .day-checkbox input { width: auto; margin: 0; }
         .day-checkbox input:checked + label { color: #2563eb; font-weight: 600; }
-        .modal-content { background: #ffffff; border-radius: 20px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+        .modal-content {
+            background: #ffffff;
+            border-radius: 20px;
+            border: none;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        }
         .modal-header, .modal-footer { border-color: #e2e8f0; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -123,28 +185,22 @@
         .border-l-4 { border-left-width: 4px; }
         .border-green-400 { border-color: #4ade80; }
         .border-red-400 { border-color: #f87171; }
-        .border-yellow-300 { border-color: #fcd34d; }
         .bg-white { background: #ffffff; }
         .bg-gray-50 { background: #f8fafc; }
         .text-gray-500 { color: #64748b; }
         .text-gray-600 { color: #475569; }
-        .text-gray-700 { color: #334155; }
         .text-blue-600 { color: #2563eb; }
         .text-red-600 { color: #dc2626; }
         .text-green-600 { color: #16a34a; }
         .text-yellow-600 { color: #ca8a04; }
         .font-semibold { font-weight: 600; }
         .font-bold { font-weight: 700; }
-        .inline-block { display: inline-block; }
         .hidden { display: none; }
         .ml-2 { margin-left: 8px; }
-        .mr-2 { margin-right: 8px; }
         .p-2 { padding: 8px; }
         .p-3 { padding: 12px; }
-        .p-4 { padding: 16px; }
         .rounded { border-radius: 8px; }
         .rounded-lg { border-radius: 12px; }
-        .rounded-full { border-radius: 9999px; }
         @media (max-width: 768px) {
             .grid-cols-2, .grid-cols-3, .grid-cols-4 { grid-template-columns: 1fr; }
             .flex-wrap { flex-direction: column; }
@@ -185,10 +241,8 @@
         <div class="card mb-4">
             <div class="section-title"><i class="fas fa-chart-line"></i> System Overview</div>
             <div id="health-status" class="bg-gray-50 p-4 rounded-lg border-l-4 border-green-400 mb-4 flex flex-wrap items-center justify-between">
-                <div>
-                    <span class="font-semibold"><i class="fas fa-check-circle text-green-600"></i> Online</span>
-                    <span id="uptime-display" class="text-sm text-gray-500 ml-2">Loading…</span>
-                </div>
+                <div><span class="font-semibold"><i class="fas fa-check-circle text-green-600"></i> Online</span>
+                <span id="uptime-display" class="text-sm text-gray-500 ml-2">Loading…</span></div>
                 <div class="text-sm text-gray-500 flex gap-4">
                     <span>DB: <span class="badge badge-success">Connected</span></span>
                     <span>Pool: <span class="badge badge-success">Active</span></span>
@@ -302,7 +356,6 @@
                 <div class="font-semibold text-gray-700">Last 7 Days</div>
                 <div id="tiktok-history-list" class="text-sm">Loading…</div>
             </div>
-            <!-- TikTok Seed Accounts -->
             <div class="bg-gray-50 p-4 rounded-lg mt-4 border-t-2 border-blue-200">
                 <div class="font-semibold text-blue-600"><i class="fas fa-user-plus"></i> Seed Accounts (Auto-Random)</div>
                 <div class="text-sm text-gray-500 mb-3">Add usernames – each day a random active one will be used.</div>
@@ -311,9 +364,7 @@
                     <button onclick="addTikTokAccount()" class="btn btn-success text-sm"><i class="fas fa-plus"></i> Add</button>
                     <button onclick="loadTikTokAccounts()" class="btn btn-primary text-sm"><i class="fas fa-sync"></i> Refresh</button>
                 </div>
-                <div id="tiktok-account-list" class="mt-3 text-sm">
-                    Loading accounts…
-                </div>
+                <div id="tiktok-account-list" class="mt-3 text-sm">Loading accounts…</div>
             </div>
         </div>
     </div>
@@ -442,9 +493,9 @@
         </div>
     </div>
 
-    <!-- ===== MODALS (All isolated) ===== -->
+    <!-- ===== MODALS ===== -->
     <!-- User Settings Modal -->
-    <div class="modal fade" id="withdrawalSettingsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="withdrawalSettingsModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header flex justify-between p-4 border-b">
@@ -461,7 +512,7 @@
     </div>
 
     <!-- Adjust Balance Modal -->
-    <div class="modal fade" id="adjustBalanceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="adjustBalanceModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header flex justify-between p-4 border-b">
@@ -481,7 +532,7 @@
     </div>
 
     <!-- Backup Details Modal -->
-    <div class="modal fade" id="backupModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="backupModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header flex justify-between p-4 border-b"><h5 class="modal-title text-blue-600">Backup Details</h5><button type="button" class="text-gray-400 hover:text-gray-600" data-bs-dismiss="modal">✕</button></div>
@@ -492,7 +543,7 @@
     </div>
 
     <!-- Preview Clear Modal -->
-    <div class="modal fade" id="previewClearModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="previewClearModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header flex justify-between p-4 border-b border-red-400">
@@ -509,7 +560,7 @@
     </div>
 
     <!-- Confirm Clear Modal -->
-    <div class="modal fade" id="confirmClearModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="confirmClearModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header flex justify-between p-4 border-b border-red-400">
@@ -538,666 +589,647 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// ============================================================
-// FLEXIA ADMIN – FULL LOGIC (All functions, no placeholders)
-// ============================================================
+    // ============================================================
+    // FLEXIA ADMIN – COMPLETE LOGIC (all features working)
+    // ============================================================
 
-let selectedUserId = null;
-let adjustUserId = null;
-let backupListData = [];
-let globalWithdrawalDays = [];
+    let selectedUserId = null;
+    let adjustUserId = null;
+    let backupListData = [];
+    let globalWithdrawalDays = [];
 
-function showMessage(msg, type='info', elId='coupon-message') {
-    const el = document.getElementById(elId);
-    if (!el) return;
-    el.textContent = msg;
-    el.className = `text-sm ${type==='success'?'text-green-600':type==='error'?'text-red-600':type==='warning'?'text-yellow-600':'text-blue-600'}`;
-    setTimeout(() => el.textContent = '', 6000);
-}
-
-async function fetchData(url) {
-    const r = await fetch(url, {credentials:'include'});
-    if (!r.ok) {
-        if (r.status===401) { adminLogout(); throw new Error('Unauthorized'); }
-        const text = await r.text();
-        throw new Error(`HTTP ${r.status}: ${text}`);
+    function showMessage(msg, type='info', elId='coupon-message') {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        el.textContent = msg;
+        el.className = `text-sm ${type==='success'?'text-green-600':type==='error'?'text-red-600':type==='warning'?'text-yellow-600':'text-blue-600'}`;
+        setTimeout(() => el.textContent = '', 6000);
     }
-    return r.json();
-}
-async function postData(url, body) {
-    const r = await fetch(url, {method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
-    if (!r.ok) {
-        if (r.status===401) { adminLogout(); throw new Error('Unauthorized'); }
-        const text = await r.text();
-        throw new Error(`HTTP ${r.status}: ${text}`);
+
+    async function fetchData(url) {
+        const r = await fetch(url, {credentials:'include'});
+        if (!r.ok) {
+            if (r.status===401) { adminLogout(); throw new Error('Unauthorized'); }
+            const text = await r.text();
+            throw new Error(`HTTP ${r.status}: ${text}`);
+        }
+        return r.json();
     }
-    return r.json();
-}
+    async function postData(url, body) {
+        const r = await fetch(url, {method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+        if (!r.ok) {
+            if (r.status===401) { adminLogout(); throw new Error('Unauthorized'); }
+            const text = await r.text();
+            throw new Error(`HTTP ${r.status}: ${text}`);
+        }
+        return r.json();
+    }
 
-function adminLogout() {
-    fetch('/api/auth/logout', {method:'POST', credentials:'include'}).then(() => window.location.href='/');
-}
+    function adminLogout() {
+        fetch('/api/auth/logout', {method:'POST', credentials:'include'}).then(() => window.location.href='/');
+    }
 
-function checkHealth() {
-    fetch('/api/health', {credentials:'include'})
-        .then(r => r.json())
-        .then(d => {
-            document.getElementById('health-status').innerHTML = `
-                <div class="flex flex-wrap items-center justify-between">
+    function checkHealth() {
+        fetch('/api/health', {credentials:'include'})
+            .then(r => r.json())
+            .then(d => {
+                document.getElementById('health-status').innerHTML = `<div class="flex flex-wrap items-center justify-between">
                     <span class="font-semibold"><i class="fas fa-check-circle text-green-600"></i> Online</span>
                     <span class="text-sm text-gray-500">${d.uptime||'OK'}</span>
                     <span class="text-sm text-gray-500">DB: <span class="badge badge-success">${d.database||'Connected'}</span></span>
+                </div>`;
+            }).catch(() => {});
+    }
+
+    function showTab(id) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        document.querySelector(`.tab-btn[onclick*="${id}"]`)?.classList.add('active');
+        if (id === 'dashboard') loadDashboard();
+        else if (id === 'database') refreshDatabaseStats();
+        else if (id === 'globalSettings') loadGlobalWithdrawalDays();
+        else if (id === 'tiktokDaily') { loadTikTokDailyTab(); loadTikTokAccounts(); }
+        else if (id === 'users') loadUsers();
+        else if (id === 'withdrawals') loadWithdrawals();
+        else if (id === 'withdrawalReport') loadWithdrawalReport();
+        else if (id === 'backup') listBackups();
+        else if (id === 'settings') loadSettings();
+        else if (id === 'coupons') loadCouponStats();
+    }
+
+    // ----- DASHBOARD -----
+    async function loadDashboard() {
+        try {
+            const [usersRes, txRes, statsRes] = await Promise.all([
+                fetchData('/api/admin/users'),
+                fetchData('/api/admin/transactions'),
+                fetchData('/api/admin/stats')
+            ]);
+            if (usersRes.success) {
+                const total = usersRes.users.length;
+                const bal = usersRes.users.reduce((s,u) => s+(u.balance||0),0);
+                document.getElementById('total-users-count').textContent = total;
+                document.getElementById('total-balance').textContent = '₦' + bal.toLocaleString();
+            }
+            if (txRes.success) {
+                const pending = txRes.transactions.filter(t => t.status==='PENDING');
+                document.getElementById('pending-withdrawals-count').textContent = pending.length;
+                renderRecentWithdrawals(txRes.transactions.slice(0,8));
+            }
+            if (statsRes.success) loadGlobalWithdrawalDays(true);
+            document.getElementById('today-date').textContent = new Date().toLocaleDateString();
+        } catch(e) {}
+    }
+    function renderRecentWithdrawals(txs) {
+        const c = document.getElementById('recent-withdrawals');
+        if (!txs.length) { c.innerHTML = '<div class="text-gray-500 text-sm">None</div>'; return; }
+        c.innerHTML = `<div class="table-wrap"><table>
+            <thead><tr><th>ID</th><th>User</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody>${txs.map(t => `<tr><td>${t.id?.slice(0,8)}</td><td>${t.user_id}</td><td>₦${parseFloat(t.amount).toFixed(2)}</td><td><span class="badge ${t.status==='COMPLETED'?'badge-success':t.status==='PENDING'?'badge-warning':'badge-danger'}">${t.status}</span></td></tr>`).join('')}</tbody>
+        </table></div>`;
+    }
+
+    // ----- GLOBAL WITHDRAWAL DAYS -----
+    async function loadGlobalWithdrawalDays(dashboardOnly=false) {
+        try {
+            const res = await fetchData('/api/admin/global-withdrawal-days');
+            if (res.success) globalWithdrawalDays = res.days || [7,14,25,30];
+        } catch(e) { globalWithdrawalDays = [7,14,25,30]; }
+        updateGlobalDaysDisplay();
+        if (!dashboardOnly) renderGlobalDaySelector();
+    }
+    function updateGlobalDaysDisplay() {
+        const txt = globalWithdrawalDays.sort((a,b)=>a-b).join(', ') || 'Default';
+        document.getElementById('current-global-days').textContent = txt;
+        document.getElementById('global-days-current').textContent = txt;
+    }
+    function renderGlobalDaySelector() {
+        const s = document.getElementById('global-day-selector');
+        if (!s) return;
+        s.innerHTML = '';
+        for (let d=1; d<=31; d++) {
+            const ch = globalWithdrawalDays.includes(d) ? 'checked' : '';
+            s.innerHTML += `<div class="day-checkbox"><input type="checkbox" id="gd-${d}" ${ch} onchange="toggleGlobalDay(${d},this.checked)"><label for="gd-${d}">${d}</label></div>`;
+        }
+    }
+    function toggleGlobalDay(day, checked) {
+        if (checked) { if (!globalWithdrawalDays.includes(day)) globalWithdrawalDays.push(day); }
+        else { globalWithdrawalDays = globalWithdrawalDays.filter(d => d !== day); }
+    }
+    function selectAllGlobalDays() { globalWithdrawalDays = Array.from({length:31},(_,i)=>i+1); renderGlobalDaySelector(); }
+    function clearAllGlobalDays() { globalWithdrawalDays = []; renderGlobalDaySelector(); }
+    function setDefaultGlobalDays() { globalWithdrawalDays = [7,14,25,30]; renderGlobalDaySelector(); }
+    async function saveGlobalWithdrawalDays() {
+        if (!globalWithdrawalDays.length) { if (!confirm('No days. Use defaults?')) return; globalWithdrawalDays=[7,14,25,30]; }
+        try {
+            const res = await postData('/api/admin/global-withdrawal-days', {days:globalWithdrawalDays});
+            if (res.success) { updateGlobalDaysDisplay(); renderGlobalDaySelector(); showMessage('Saved!', 'success', 'global-settings-message'); }
+            else showMessage(res.message||'Failed', 'error', 'global-settings-message');
+        } catch(e) { showMessage('Network error', 'error', 'global-settings-message'); }
+    }
+
+    // ----- TIKTOK -----
+    async function setTikTokDaily() {
+        const link = document.getElementById('tiktok-link-input').value.trim();
+        if (!link || !link.startsWith('https://www.tiktok.com/@')) { showMessage('Invalid link', 'error', 'tiktok-message'); return; }
+        try {
+            const res = await postData('/api/admin/tiktok/set-daily', {tiktok_link: link});
+            if (res.success) { showMessage('Manual task set (overrides seeds)', 'success', 'tiktok-message'); loadTikTokDailyTab(); document.getElementById('tiktok-link-input').value=''; }
+            else showMessage(res.message||'Failed', 'error', 'tiktok-message');
+        } catch(e) { showMessage('Network error', 'error', 'tiktok-message'); }
+    }
+    async function loadTikTokDailyTab() {
+        try {
+            const cur = await fetchData('/api/admin/tiktok/get-daily');
+            const hist = await fetchData('/api/admin/tiktok/history');
+            document.getElementById('current-tiktok-display').innerHTML = cur.success && cur.task ?
+                `<div class="text-sm">${new Date(cur.task.date).toLocaleDateString()} — <a href="${cur.task.tiktok_link}" target="_blank" class="text-blue-600">${cur.task.tiktok_link}</a> (₦${cur.task.reward_amount})</div>` :
+                '<div class="text-gray-500 text-sm">No manual task. Seeds will be used.</div>';
+            document.getElementById('tiktok-history-list').innerHTML = hist.success && hist.history?.length ?
+                hist.history.map(h => `<div class="text-xs text-gray-500">${new Date(h.date).toLocaleDateString()} — <a href="${h.tiktok_link}" target="_blank" class="text-blue-600">${h.tiktok_link}</a></div>`).join('') :
+                '<div class="text-gray-500 text-sm">No history.</div>';
+        } catch(e) {}
+    }
+
+    // ----- TIKTOK ACCOUNTS -----
+    async function loadTikTokAccounts() {
+        try {
+            const res = await fetchData('/api/admin/tiktok/accounts');
+            if (res.success) {
+                const container = document.getElementById('tiktok-account-list');
+                if (!res.accounts || res.accounts.length === 0) {
+                    container.innerHTML = '<div class="text-gray-500 text-xs">No seed accounts. Add some to enable auto-seeding.</div>';
+                    return;
+                }
+                container.innerHTML = res.accounts.map(a => `
+                    <div class="flex items-center justify-between py-2 border-b border-gray-200">
+                        <span>${a.username} <span class="badge ${a.active ? 'badge-success' : 'badge-danger'}">${a.active ? 'Active' : 'Inactive'}</span></span>
+                        <div>
+                            <button onclick="toggleTikTokAccount(${a.id})" class="btn btn-outline text-sm py-0 px-2">${a.active ? 'Deactivate' : 'Activate'}</button>
+                            <button onclick="deleteTikTokAccount(${a.id})" class="btn btn-danger text-sm py-0 px-2"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        } catch(e) { console.error(e); }
+    }
+    async function addTikTokAccount() {
+        const input = document.getElementById('new-tiktok-account');
+        const username = input.value.trim();
+        if (!username) { showMessage('Enter a username', 'error', 'tiktok-message'); return; }
+        try {
+            const res = await postData('/api/admin/tiktok/accounts', { username });
+            if (res.success) { showMessage('Account added', 'success', 'tiktok-message'); input.value=''; loadTikTokAccounts(); }
+            else showMessage(res.message, 'error', 'tiktok-message');
+        } catch(e) { showMessage('Network error', 'error', 'tiktok-message'); }
+    }
+    async function toggleTikTokAccount(id) {
+        try {
+            const res = await postData(`/api/admin/tiktok/accounts/${id}/toggle`, {});
+            if (res.success) loadTikTokAccounts();
+        } catch(e) { showMessage('Failed', 'error', 'tiktok-message'); }
+    }
+    async function deleteTikTokAccount(id) {
+        if (!confirm('Delete this account?')) return;
+        try {
+            const res = await fetch(`/api/admin/tiktok/accounts/${id}`, {method:'DELETE', credentials:'include'});
+            const data = await res.json();
+            if (data.success) { showMessage('Deleted', 'success', 'tiktok-message'); loadTikTokAccounts(); }
+            else showMessage(data.message, 'error', 'tiktok-message');
+        } catch(e) { showMessage('Delete failed', 'error', 'tiktok-message'); }
+    }
+
+    // ----- USERS -----
+    async function loadUsers() {
+        try {
+            const res = await fetchData('/api/admin/users');
+            if (res.success) renderUserList(res.users);
+        } catch(e) { document.getElementById('user-list').innerHTML = '<tr><td colspan="7" class="text-center text-gray-500">Error</td></tr>'; }
+    }
+    function renderUserList(users) {
+        const tbody = document.getElementById('user-list');
+        if (!users.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-500">No users</td></tr>'; return; }
+        tbody.innerHTML = users.map(u => `
+            <tr>
+                <td>${u.id}</td>
+                <td>${u.username}</td>
+                <td>₦${u.balance.toFixed(2)}</td>
+                <td><span class="badge ${u.withdrawal_restricted?'badge-danger':'badge-success'}">${u.withdrawal_restricted?'Restricted':'Allowed'}</span></td>
+                <td>${u.withdrawal_limit || 'No Limit'}</td>
+                <td>${u.is_admin ? '<span class="badge badge-info">Admin</span>' : '<span class="text-gray-500">User</span>'}</td>
+                <td>
+                    <button onclick="openUserSettings(${u.id},'${u.username}')" class="btn btn-outline text-sm py-0 px-2"><i class="fas fa-cog"></i></button>
+                    <button onclick="openAdjustBalance(${u.id},'${u.username}')" class="btn btn-outline text-sm py-0 px-2"><i class="fas fa-coins"></i></button>
+                    ${!u.is_admin ? `<button onclick="toggleAdminStatus(${u.id})" class="btn btn-outline text-sm py-0 px-2"><i class="fas fa-user-shield"></i></button>` : ''}
+                    ${!u.is_admin ? `<button onclick="deleteUser(${u.id})" class="btn btn-danger text-sm py-0 px-2"><i class="fas fa-trash"></i></button>` : ''}
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // ----- USER DELETE (FIXED) -----
+    async function deleteUser(userId) {
+        if (!confirm('⚠️ Delete this user permanently? All their data will be removed.')) return;
+        try {
+            const res = await fetch(`/api/admin/user/${userId}`, {method:'DELETE', credentials:'include'});
+            const data = await res.json();
+            if (data.success) { showMessage('✅ User deleted', 'success'); loadUsers(); }
+            else { showMessage('❌ ' + (data.message || 'Delete failed'), 'error'); }
+        } catch(e) { showMessage('❌ Network error: ' + e.message, 'error'); }
+    }
+
+    async function openUserSettings(userId, username) {
+        try {
+            const res = await fetchData(`/api/admin/user/${userId}`);
+            if (!res.success) return;
+            selectedUserId = userId;
+            document.getElementById('modal-username').textContent = username;
+            const user = res.user;
+            let customDays = [];
+            try { customDays = JSON.parse(user.custom_withdrawal_days) || []; } catch {}
+            document.getElementById('withdrawal-settings-content').innerHTML = `
+                <div class="mb-3"><label class="text-sm text-gray-600">Restriction</label>
+                    <select id="user-withdrawal-restricted" class="text-sm"><option value="false" ${!user.withdrawal_restricted?'selected':''}>Allowed</option><option value="true" ${user.withdrawal_restricted?'selected':''}>Restricted</option></select>
+                </div>
+                <div class="mb-3"><label class="text-sm text-gray-600">Limit (₦)</label>
+                    <input type="number" id="user-withdrawal-limit" value="${user.withdrawal_limit||0}" step="1000" class="text-sm">
+                </div>
+                <div><label class="text-sm text-gray-600">Custom Days</label>
+                    <input type="text" id="user-custom-days" value="${customDays.join(', ')}" class="text-sm" placeholder="7,14,21,28">
                 </div>
             `;
-        }).catch(() => {});
-}
-
-function showTab(id) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    document.querySelector(`.tab-btn[onclick*="${id}"]`)?.classList.add('active');
-    if (id === 'dashboard') loadDashboard();
-    else if (id === 'database') refreshDatabaseStats();
-    else if (id === 'globalSettings') loadGlobalWithdrawalDays();
-    else if (id === 'tiktokDaily') { loadTikTokDailyTab(); loadTikTokAccounts(); }
-    else if (id === 'users') loadUsers();
-    else if (id === 'withdrawals') loadWithdrawals();
-    else if (id === 'withdrawalReport') loadWithdrawalReport();
-    else if (id === 'backup') listBackups();
-    else if (id === 'settings') loadSettings();
-    else if (id === 'coupons') loadCouponStats();
-}
-
-// ===== DASHBOARD =====
-async function loadDashboard() {
-    try {
-        const [usersRes, txRes, statsRes] = await Promise.all([
-            fetchData('/api/admin/users'),
-            fetchData('/api/admin/transactions'),
-            fetchData('/api/admin/stats')
-        ]);
-        if (usersRes.success) {
-            const total = usersRes.users.length;
-            const bal = usersRes.users.reduce((s,u) => s+(u.balance||0),0);
-            document.getElementById('total-users-count').textContent = total;
-            document.getElementById('total-balance').textContent = '₦' + bal.toLocaleString();
-        }
-        if (txRes.success) {
-            const pending = txRes.transactions.filter(t => t.status==='PENDING');
-            document.getElementById('pending-withdrawals-count').textContent = pending.length;
-            renderRecentWithdrawals(txRes.transactions.slice(0,8));
-        }
-        if (statsRes.success) loadGlobalWithdrawalDays(true);
-        document.getElementById('today-date').textContent = new Date().toLocaleDateString();
-    } catch(e) {}
-}
-function renderRecentWithdrawals(txs) {
-    const c = document.getElementById('recent-withdrawals');
-    if (!txs.length) { c.innerHTML = '<div class="text-gray-500 text-sm">None</div>'; return; }
-    c.innerHTML = `<div class="table-wrap"><table>
-        <thead><tr><th>ID</th><th>User</th><th>Amount</th><th>Status</th></tr></thead>
-        <tbody>${txs.map(t => `<tr><td>${t.id?.slice(0,8)}</td><td>${t.user_id}</td><td>₦${parseFloat(t.amount).toFixed(2)}</td><td><span class="badge ${t.status==='COMPLETED'?'badge-success':t.status==='PENDING'?'badge-warning':'badge-danger'}">${t.status}</span></td></tr>`).join('')}</tbody>
-    </table></div>`;
-}
-
-// ===== GLOBAL WITHDRAWAL DAYS =====
-async function loadGlobalWithdrawalDays(dashboardOnly=false) {
-    try {
-        const res = await fetchData('/api/admin/global-withdrawal-days');
-        if (res.success) globalWithdrawalDays = res.days || [7,14,25,30];
-    } catch(e) { globalWithdrawalDays = [7,14,25,30]; }
-    updateGlobalDaysDisplay();
-    if (!dashboardOnly) renderGlobalDaySelector();
-}
-function updateGlobalDaysDisplay() {
-    const txt = globalWithdrawalDays.sort((a,b)=>a-b).join(', ') || 'Default';
-    document.getElementById('current-global-days').textContent = txt;
-    document.getElementById('global-days-current').textContent = txt;
-}
-function renderGlobalDaySelector() {
-    const s = document.getElementById('global-day-selector');
-    if (!s) return;
-    s.innerHTML = '';
-    for (let d=1; d<=31; d++) {
-        const ch = globalWithdrawalDays.includes(d) ? 'checked' : '';
-        s.innerHTML += `<div class="day-checkbox"><input type="checkbox" id="gd-${d}" ${ch} onchange="toggleGlobalDay(${d},this.checked)"><label for="gd-${d}">${d}</label></div>`;
+            new bootstrap.Modal(document.getElementById('withdrawalSettingsModal')).show();
+        } catch(e) { showMessage('Failed to load user', 'error'); }
     }
-}
-function toggleGlobalDay(day, checked) {
-    if (checked) { if (!globalWithdrawalDays.includes(day)) globalWithdrawalDays.push(day); }
-    else { globalWithdrawalDays = globalWithdrawalDays.filter(d => d !== day); }
-}
-function selectAllGlobalDays() { globalWithdrawalDays = Array.from({length:31},(_,i)=>i+1); renderGlobalDaySelector(); }
-function clearAllGlobalDays() { globalWithdrawalDays = []; renderGlobalDaySelector(); }
-function setDefaultGlobalDays() { globalWithdrawalDays = [7,14,25,30]; renderGlobalDaySelector(); }
-async function saveGlobalWithdrawalDays() {
-    if (!globalWithdrawalDays.length) { if (!confirm('No days. Use defaults?')) return; globalWithdrawalDays=[7,14,25,30]; }
-    try {
-        const res = await postData('/api/admin/global-withdrawal-days', {days:globalWithdrawalDays});
-        if (res.success) { updateGlobalDaysDisplay(); renderGlobalDaySelector(); showMessage('Saved!', 'success', 'global-settings-message'); }
-        else showMessage(res.message||'Failed', 'error', 'global-settings-message');
-    } catch(e) { showMessage('Network error', 'error', 'global-settings-message'); }
-}
+    async function saveWithdrawalSettings() {
+        if (!selectedUserId) return;
+        const restricted = document.getElementById('user-withdrawal-restricted').value === 'true';
+        const limit = parseFloat(document.getElementById('user-withdrawal-limit').value) || 0;
+        const customDays = document.getElementById('user-custom-days').value.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d) && d>=1 && d<=31);
+        try {
+            const res = await postData(`/api/admin/user/${selectedUserId}/update-settings`, {restricted, limit, custom_days: customDays});
+            if (res.success) { showMessage('Saved', 'success'); bootstrap.Modal.getInstance(document.getElementById('withdrawalSettingsModal')).hide(); loadUsers(); }
+            else showMessage(res.message||'Failed', 'error');
+        } catch(e) { showMessage('Network error', 'error'); }
+    }
+    async function toggleAdminStatus(userId) {
+        if (!confirm('Toggle admin status?')) return;
+        try {
+            const res = await postData(`/api/admin/user/${userId}/toggle-admin`, {});
+            if (res.success) { showMessage(`User is now ${res.is_admin?'admin':'user'}`, 'success'); loadUsers(); }
+            else showMessage(res.message, 'error');
+        } catch(e) { showMessage('Toggle failed', 'error'); }
+    }
+    function openAdjustBalance(userId, username) {
+        adjustUserId = userId;
+        document.getElementById('adjust-username').textContent = username;
+        document.getElementById('adjust-amount').value = '';
+        document.getElementById('adjust-note').value = '';
+        new bootstrap.Modal(document.getElementById('adjustBalanceModal')).show();
+    }
+    async function saveBalanceAdjustment() {
+        const amount = parseFloat(document.getElementById('adjust-amount').value);
+        const note = document.getElementById('adjust-note').value.trim();
+        if (isNaN(amount) || !note) { showMessage('Enter amount and note', 'error'); return; }
+        try {
+            const res = await postData(`/api/admin/user/${adjustUserId}/adjust-balance`, {amount, note});
+            if (res.success) { showMessage(`Adjusted ₦${amount.toFixed(2)}`, 'success'); bootstrap.Modal.getInstance(document.getElementById('adjustBalanceModal')).hide(); loadUsers(); }
+            else showMessage(res.message||'Failed', 'error');
+        } catch(e) { showMessage('Network error', 'error'); }
+    }
 
-// ===== TIKTOK =====
-async function setTikTokDaily() {
-    const link = document.getElementById('tiktok-link-input').value.trim();
-    if (!link || !link.startsWith('https://www.tiktok.com/@')) { showMessage('Invalid link', 'error', 'tiktok-message'); return; }
-    try {
-        const res = await postData('/api/admin/tiktok/set-daily', {tiktok_link: link});
-        if (res.success) { showMessage('Manual task set for today (overrides seeds)', 'success', 'tiktok-message'); loadTikTokDailyTab(); document.getElementById('tiktok-link-input').value=''; }
-        else showMessage(res.message||'Failed', 'error', 'tiktok-message');
-    } catch(e) { showMessage('Network error', 'error', 'tiktok-message'); }
-}
-async function loadTikTokDailyTab() {
-    try {
-        const cur = await fetchData('/api/admin/tiktok/get-daily');
-        const hist = await fetchData('/api/admin/tiktok/history');
-        document.getElementById('current-tiktok-display').innerHTML = cur.success && cur.task ?
-            `<div class="text-sm">${new Date(cur.task.date).toLocaleDateString()} — <a href="${cur.task.tiktok_link}" target="_blank" class="text-blue-600">${cur.task.tiktok_link}</a> (₦${cur.task.reward_amount})</div>` :
-            '<div class="text-gray-500 text-sm">No manual task today. Seeds will be used.</div>';
-        document.getElementById('tiktok-history-list').innerHTML = hist.success && hist.history?.length ?
-            hist.history.map(h => `<div class="text-xs text-gray-500">${new Date(h.date).toLocaleDateString()} — <a href="${h.tiktok_link}" target="_blank" class="text-blue-600">${h.tiktok_link}</a></div>`).join('') :
-            '<div class="text-gray-500 text-sm">No history.</div>';
-    } catch(e) {}
-}
-
-// ===== TIKTOK ACCOUNT MANAGEMENT =====
-async function loadTikTokAccounts() {
-    try {
-        const res = await fetchData('/api/admin/tiktok/accounts');
-        if (res.success) {
-            const container = document.getElementById('tiktok-account-list');
-            if (!res.accounts || res.accounts.length === 0) {
-                container.innerHTML = '<div class="text-gray-500 text-xs">No seed accounts. Add some to enable auto-seeding.</div>';
-                return;
+    // ----- WITHDRAWALS -----
+    async function loadWithdrawals() {
+        try {
+            const txRes = await fetchData('/api/admin/transactions');
+            if (txRes.success) {
+                renderPendingWithdrawals(txRes.transactions);
+                renderAllTransactions(txRes.transactions);
             }
-            container.innerHTML = res.accounts.map(a => `
-                <div class="flex items-center justify-between py-2 border-b border-gray-200">
-                    <span>${a.username} <span class="badge ${a.active ? 'badge-success' : 'badge-danger'}">${a.active ? 'Active' : 'Inactive'}</span></span>
-                    <div>
-                        <button onclick="toggleTikTokAccount(${a.id})" class="btn btn-outline text-sm py-0 px-2">${a.active ? 'Deactivate' : 'Activate'}</button>
-                        <button onclick="deleteTikTokAccount(${a.id})" class="btn btn-danger text-sm py-0 px-2"><i class="fas fa-trash"></i></button>
-                    </div>
-                </div>
-            `).join('');
-        }
-    } catch(e) { console.error(e); }
-}
-
-async function addTikTokAccount() {
-    const input = document.getElementById('new-tiktok-account');
-    const username = input.value.trim();
-    if (!username) { showMessage('Enter a username', 'error', 'tiktok-message'); return; }
-    try {
-        const res = await postData('/api/admin/tiktok/accounts', { username });
-        if (res.success) {
-            showMessage('Account added', 'success', 'tiktok-message');
-            input.value = '';
-            loadTikTokAccounts();
-        } else showMessage(res.message, 'error', 'tiktok-message');
-    } catch(e) { showMessage('Network error', 'error', 'tiktok-message'); }
-}
-
-async function toggleTikTokAccount(id) {
-    try {
-        const res = await postData(`/api/admin/tiktok/accounts/${id}/toggle`, {});
-        if (res.success) loadTikTokAccounts();
-    } catch(e) { showMessage('Failed', 'error', 'tiktok-message'); }
-}
-
-async function deleteTikTokAccount(id) {
-    if (!confirm('Delete this account?')) return;
-    try {
-        const res = await fetch(`/api/admin/tiktok/accounts/${id}`, {method:'DELETE', credentials:'include'});
-        const data = await res.json();
-        if (data.success) { showMessage('Deleted', 'success', 'tiktok-message'); loadTikTokAccounts(); }
-        else showMessage(data.message, 'error', 'tiktok-message');
-    } catch(e) { showMessage('Delete failed', 'error', 'tiktok-message'); }
-}
-
-// ===== USERS =====
-async function loadUsers() {
-    try {
-        const res = await fetchData('/api/admin/users');
-        if (res.success) renderUserList(res.users);
-    } catch(e) { document.getElementById('user-list').innerHTML = '<tr><td colspan="7" class="text-center text-gray-500">Error</td></tr>'; }
-}
-function renderUserList(users) {
-    const tbody = document.getElementById('user-list');
-    if (!users.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-500">No users</td></tr>'; return; }
-    tbody.innerHTML = users.map(u => `
-        <tr>
-            <td>${u.id}</td>
-            <td>${u.username}</td>
-            <td>₦${u.balance.toFixed(2)}</td>
-            <td><span class="badge ${u.withdrawal_restricted?'badge-danger':'badge-success'}">${u.withdrawal_restricted?'Restricted':'Allowed'}</span></td>
-            <td>${u.withdrawal_limit || 'No Limit'}</td>
-            <td>${u.is_admin ? '<span class="badge badge-info">Admin</span>' : '<span class="text-gray-500">User</span>'}</td>
-            <td>
-                <button onclick="openUserSettings(${u.id},'${u.username}')" class="btn btn-outline text-sm py-0 px-2"><i class="fas fa-cog"></i></button>
-                <button onclick="openAdjustBalance(${u.id},'${u.username}')" class="btn btn-outline text-sm py-0 px-2"><i class="fas fa-coins"></i></button>
-                ${!u.is_admin ? `<button onclick="toggleAdminStatus(${u.id})" class="btn btn-outline text-sm py-0 px-2"><i class="fas fa-user-shield"></i></button>` : ''}
-                ${!u.is_admin ? `<button onclick="deleteUser(${u.id})" class="btn btn-danger text-sm py-0 px-2"><i class="fas fa-trash"></i></button>` : ''}
-            </td>
-        </tr>
-    `).join('');
-}
-async function deleteUser(userId) {
-    if (!confirm('⚠️ Delete this user permanently? All their data (transactions, game stats, referrals) will be removed.')) return;
-    try {
-        const res = await fetch(`/api/admin/user/${userId}`, {method:'DELETE', credentials:'include'});
-        const data = await res.json();
-        if (data.success) {
-            showMessage('✅ User deleted', 'success');
-            loadUsers();
-        } else {
-            showMessage('❌ ' + (data.message || 'Delete failed'), 'error');
-        }
-    } catch(e) {
-        showMessage('❌ Network error: ' + e.message, 'error');
+        } catch(e) {}
     }
-}
-async function openUserSettings(userId, username) {
-    const res = await fetchData(`/api/admin/user/${userId}`);
-    if (!res.success) return;
-    selectedUserId = userId;
-    document.getElementById('modal-username').textContent = username;
-    const user = res.user;
-    let customDays = [];
-    try { customDays = JSON.parse(user.custom_withdrawal_days) || []; } catch {}
-    document.getElementById('withdrawal-settings-content').innerHTML = `
-        <div class="mb-3"><label class="text-sm text-gray-600">Restriction</label>
-            <select id="user-withdrawal-restricted" class="text-sm"><option value="false" ${!user.withdrawal_restricted?'selected':''}>Allowed</option><option value="true" ${user.withdrawal_restricted?'selected':''}>Restricted</option></select>
-        </div>
-        <div class="mb-3"><label class="text-sm text-gray-600">Limit (₦)</label>
-            <input type="number" id="user-withdrawal-limit" value="${user.withdrawal_limit||0}" step="1000" class="text-sm">
-        </div>
-        <div><label class="text-sm text-gray-600">Custom Days</label>
-            <input type="text" id="user-custom-days" value="${customDays.join(', ')}" class="text-sm" placeholder="7,14,21,28">
-        </div>
-    `;
-    new bootstrap.Modal(document.getElementById('withdrawalSettingsModal')).show();
-}
-async function saveWithdrawalSettings() {
-    if (!selectedUserId) return;
-    const restricted = document.getElementById('user-withdrawal-restricted').value === 'true';
-    const limit = parseFloat(document.getElementById('user-withdrawal-limit').value) || 0;
-    const customDays = document.getElementById('user-custom-days').value.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d) && d>=1 && d<=31);
-    try {
-        const res = await postData(`/api/admin/user/${selectedUserId}/update-settings`, {restricted, limit, custom_days: customDays});
-        if (res.success) { showMessage('Saved', 'success'); bootstrap.Modal.getInstance(document.getElementById('withdrawalSettingsModal')).hide(); loadUsers(); }
-        else showMessage(res.message||'Failed', 'error');
-    } catch(e) { showMessage('Network error', 'error'); }
-}
-async function toggleAdminStatus(userId) {
-    if (!confirm('Toggle admin status?')) return;
-    const res = await postData(`/api/admin/user/${userId}/toggle-admin`, {});
-    if (res.success) { showMessage(`User is now ${res.is_admin?'admin':'user'}`, 'success'); loadUsers(); }
-    else showMessage(res.message, 'error');
-}
-function openAdjustBalance(userId, username) {
-    adjustUserId = userId;
-    document.getElementById('adjust-username').textContent = username;
-    document.getElementById('adjust-amount').value = '';
-    document.getElementById('adjust-note').value = '';
-    new bootstrap.Modal(document.getElementById('adjustBalanceModal')).show();
-}
-async function saveBalanceAdjustment() {
-    const amount = parseFloat(document.getElementById('adjust-amount').value);
-    const note = document.getElementById('adjust-note').value.trim();
-    if (isNaN(amount) || !note) { showMessage('Enter amount and note', 'error'); return; }
-    try {
-        const res = await postData(`/api/admin/user/${adjustUserId}/adjust-balance`, {amount, note});
-        if (res.success) { showMessage(`Adjusted ₦${amount.toFixed(2)}`, 'success'); bootstrap.Modal.getInstance(document.getElementById('adjustBalanceModal')).hide(); loadUsers(); }
-        else showMessage(res.message||'Failed', 'error');
-    } catch(e) { showMessage('Network error', 'error'); }
-}
-
-// ===== WITHDRAWALS =====
-async function loadWithdrawals() {
-    try {
-        const txRes = await fetchData('/api/admin/transactions');
-        if (txRes.success) {
-            renderPendingWithdrawals(txRes.transactions);
-            renderAllTransactions(txRes.transactions);
-        }
-    } catch(e) {}
-}
-function renderPendingWithdrawals(txs) {
-    const c = document.getElementById('pending-withdrawals-list');
-    const pend = txs.filter(t => t.status==='PENDING');
-    if (!pend.length) { c.innerHTML = '<div class="text-gray-500 text-sm">None pending.</div>'; return; }
-    c.innerHTML = pend.map(t => `
-        <div class="bg-gray-50 p-3 rounded-lg mb-2 text-sm flex flex-wrap items-center justify-between">
-            <div><span class="font-mono">${t.id.slice(0,8)}</span> | User ${t.user_id} | ₦${t.amount.toFixed(2)}</div>
-            <div class="flex gap-2">
-                <button onclick="processWithdrawal('${t.id}','approve')" class="btn btn-success text-sm py-0 px-2"><i class="fas fa-check"></i></button>
-                <button onclick="processWithdrawal('${t.id}','reject')" class="btn btn-danger text-sm py-0 px-2"><i class="fas fa-times"></i></button>
+    function renderPendingWithdrawals(txs) {
+        const c = document.getElementById('pending-withdrawals-list');
+        const pend = txs.filter(t => t.status==='PENDING');
+        if (!pend.length) { c.innerHTML = '<div class="text-gray-500 text-sm">None pending.</div>'; return; }
+        c.innerHTML = pend.map(t => `
+            <div class="bg-gray-50 p-3 rounded-lg mb-2 text-sm flex flex-wrap items-center justify-between">
+                <div><span class="font-mono">${t.id.slice(0,8)}</span> | User ${t.user_id} | ₦${t.amount.toFixed(2)}</div>
+                <div class="flex gap-2">
+                    <button onclick="processWithdrawal('${t.id}','approve')" class="btn btn-success text-sm py-0 px-2"><i class="fas fa-check"></i></button>
+                    <button onclick="processWithdrawal('${t.id}','reject')" class="btn btn-danger text-sm py-0 px-2"><i class="fas fa-times"></i></button>
+                </div>
             </div>
-        </div>
-    `).join('');
-}
-function renderAllTransactions(txs) {
-    const tbody = document.getElementById('all-transactions');
-    if (!txs.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-500">No transactions</td></tr>'; return; }
-    tbody.innerHTML = txs.slice(0,30).map(t => `
-        <tr>
-            <td>${t.id.slice(0,8)}…</td>
-            <td>${t.user_id}</td>
-            <td>₦${t.amount.toFixed(2)}</td>
-            <td><span class="badge ${t.status==='COMPLETED'?'badge-success':t.status==='PENDING'?'badge-warning':'badge-danger'}">${t.status}</span></td>
-            <td>${new Date(t.timestamp).toLocaleDateString()}</td>
-            <td>${t.status==='PENDING'? `<button onclick="processWithdrawal('${t.id}','approve')" class="btn btn-success text-sm py-0 px-2"><i class="fas fa-check"></i></button><button onclick="processWithdrawal('${t.id}','reject')" class="btn btn-danger text-sm py-0 px-2"><i class="fas fa-times"></i></button>` : '—'}</td>
-        </tr>
-    `).join('');
-}
-async function processWithdrawal(txId, action) {
-    if (!confirm(`${action} withdrawal?`)) return;
-    try {
-        const res = await postData('/api/admin/approve-withdrawal', {transaction_id: txId, action});
-        if (res.success) { showMessage(`${action}ed`, 'success'); loadWithdrawals(); }
-        else showMessage(res.message, 'error');
-    } catch(e) { showMessage('Failed', 'error'); }
-}
-
-// ===== WITHDRAWAL REPORT =====
-async function loadWithdrawalReport() {
-    try {
-        const rep = await fetchData('/api/admin/withdrawal-status-report');
-        if (rep.success) {
-            document.getElementById('report-total-users').textContent = rep.total_users;
-            document.getElementById('report-can-withdraw').textContent = rep.users_withdrawal_today;
-            document.getElementById('report-restricted').textContent = rep.users_restricted;
-            const tbody = document.getElementById('withdrawal-report-users');
-            tbody.innerHTML = rep.users.map(u => `
-                <tr>
-                    <td>${u.id}</td>
-                    <td>${u.username}</td>
-                    <td>₦${u.balance.toFixed(2)}</td>
-                    <td><span class="badge ${u.withdrawal_restricted?'badge-danger':u.can_withdraw_today?'badge-success':'badge-warning'}">${u.withdrawal_restricted?'Restricted':u.can_withdraw_today?'Allowed':'Not Today'}</span></td>
-                    <td>${u.withdrawal_limit || 'No Limit'}</td>
-                    <td>${u.custom_withdrawal_days.sort((a,b)=>a-b).join(', ') || 'Default'}</td>
-                    <td><i class="fas ${u.has_withdrawal_pin?'fa-check text-green-600':'fa-times text-red-600'}"></i></td>
-                    <td><button onclick="openUserSettings(${u.id},'${u.username}')" class="btn btn-outline text-sm py-0 px-2"><i class="fas fa-edit"></i></button></td>
-                </tr>
-            `).join('');
-            document.getElementById('report-today').textContent = new Date().toLocaleDateString();
-        }
-    } catch(e) {}
-}
-
-// ===== BACKUP =====
-async function triggerBackup() {
-    if (!confirm('Create backup?')) return;
-    try {
-        const res = await postData('/api/admin/backup/trigger', {});
-        if (res.success) { showMessage('Backup created: '+res.backup_file, 'success', 'backup-message'); listBackups(); }
-        else showMessage(res.message, 'error', 'backup-message');
-    } catch(e) { showMessage('Failed', 'error', 'backup-message'); }
-}
-async function listBackups() {
-    try {
-        const res = await fetchData('/api/admin/backup/list');
-        if (res.success) {
-            backupListData = res.backups || [];
-            const c = document.getElementById('backup-list');
-            if (!backupListData.length) { c.innerHTML = '<div class="text-gray-500 text-sm">No backups.</div>'; return; }
-            c.innerHTML = backupListData.map(b => `
-                <div class="bg-gray-50 p-3 rounded-lg mb-2 text-sm flex justify-between items-center">
-                    <div><span class="font-mono">${b.filename}</span> <span class="text-xs text-gray-500">${new Date(b.created).toLocaleString()} · ${(b.size/1024).toFixed(1)} KB</span></div>
-                    <button onclick="showBackupDetails('${b.filename}')" class="btn btn-outline text-sm py-0 px-2"><i class="fas fa-info-circle"></i></button>
-                </div>
-            `).join('');
-            if (backupListData.length) {
-                const latest = backupListData[0];
-                document.getElementById('last-backup-time').textContent = new Date(latest.created).toLocaleString();
-            }
-        }
-    } catch(e) {}
-}
-function showBackupDetails(filename) {
-    const b = backupListData.find(x => x.filename === filename);
-    if (!b) return;
-    document.getElementById('backup-details').innerHTML = `
-        <div class="text-sm"><strong>${b.filename}</strong></div>
-        <div class="text-xs text-gray-500">Created: ${new Date(b.created).toLocaleString()}</div>
-        <div class="text-xs text-gray-500">Size: ${(b.size/1024).toFixed(1)} KB</div>
-    `;
-    new bootstrap.Modal(document.getElementById('backupModal')).show();
-}
-
-// ===== DATABASE STATS =====
-async function refreshDatabaseStats() {
-    try {
-        const res = await fetchData('/api/admin/stats');
-        if (res.success) {
-            document.getElementById('stats-users').textContent = res.stats.users.total;
-            document.getElementById('stats-transactions').textContent = res.stats.transactions.total;
-            document.getElementById('stats-gameplays').textContent = res.stats.games.today;
-        }
-    } catch(e) {}
-}
-async function previewDatabaseClear() {
-    const stats = await fetchData('/api/admin/stats');
-    if (!stats.success) return;
-    document.getElementById('previewClearContent').innerHTML = `
-        <div class="text-sm text-gray-600">Users to delete: <span class="text-red-600 font-semibold">${stats.stats.users.total-1}</span></div>
-        <div class="text-sm text-gray-600">Transactions: <span class="text-red-600 font-semibold">${stats.stats.transactions.total}</span></div>
-        <div class="text-sm text-gray-600">Game plays: <span class="text-red-600 font-semibold">${stats.stats.games.today*30}</span></div>
-        <div class="text-sm text-gray-600">Coupons reset: ${document.getElementById('reset-coupons').checked? '<span class="text-yellow-600 font-semibold">Yes</span>' : 'No'}</div>
-        <div class="text-sm text-red-600 mt-3">⚠️ This action is permanent!</div>
-    `;
-    new bootstrap.Modal(document.getElementById('previewClearModal')).show();
-}
-function confirmDatabaseClear() {
-    bootstrap.Modal.getInstance(document.getElementById('previewClearModal')).hide();
-    setTimeout(() => {
-        const modal = new bootstrap.Modal(document.getElementById('confirmClearModal'));
-        modal.show();
-        const input = document.getElementById('sudo-confirmation');
-        const ack = document.getElementById('acknowledge-risk');
-        const exec = document.getElementById('execute-clear-btn');
-        function validate() { exec.disabled = !(input.value === 'DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN' && ack.checked); }
-        input.addEventListener('input', validate);
-        ack.addEventListener('change', validate);
-    }, 300);
-}
-function closeClearModal() {
-    bootstrap.Modal.getInstance(document.getElementById('confirmClearModal')).hide();
-    document.getElementById('sudo-confirmation').value = '';
-    document.getElementById('acknowledge-risk').checked = false;
-    document.getElementById('execute-clear-btn').disabled = true;
-}
-async function executeDatabaseClear() {
-    const sudo = document.getElementById('sudo-confirmation').value.trim();
-    const backup = document.getElementById('backup-option').value;
-    if (sudo !== 'DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN') {
-        showMessage('❌ Confirmation phrase is incorrect', 'error');
-        return;
+        `).join('');
     }
-    try {
-        const res = await postData('/api/admin/database/clear', {sudo_confirmation: sudo, backup_option: backup});
-        if (res.success) {
-            showMessage('✅ Database cleared successfully! Reloading…', 'success');
-            setTimeout(() => window.location.reload(), 1500);
+    function renderAllTransactions(txs) {
+        const tbody = document.getElementById('all-transactions');
+        if (!txs.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-500">No transactions</td></tr>'; return; }
+        tbody.innerHTML = txs.slice(0,30).map(t => `
+            <tr>
+                <td>${t.id.slice(0,8)}…</td>
+                <td>${t.user_id}</td>
+                <td>₦${t.amount.toFixed(2)}</td>
+                <td><span class="badge ${t.status==='COMPLETED'?'badge-success':t.status==='PENDING'?'badge-warning':'badge-danger'}">${t.status}</span></td>
+                <td>${new Date(t.timestamp).toLocaleDateString()}</td>
+                <td>${t.status==='PENDING'? `<button onclick="processWithdrawal('${t.id}','approve')" class="btn btn-success text-sm py-0 px-2"><i class="fas fa-check"></i></button><button onclick="processWithdrawal('${t.id}','reject')" class="btn btn-danger text-sm py-0 px-2"><i class="fas fa-times"></i></button>` : '—'}</td>
+            </tr>
+        `).join('');
+    }
+    async function processWithdrawal(txId, action) {
+        if (!confirm(`${action} withdrawal?`)) return;
+        try {
+            const res = await postData('/api/admin/approve-withdrawal', {transaction_id: txId, action});
+            if (res.success) { showMessage(`${action}ed`, 'success'); loadWithdrawals(); }
+            else showMessage(res.message, 'error');
+        } catch(e) { showMessage('Failed', 'error'); }
+    }
+
+    // ----- WITHDRAWAL REPORT -----
+    async function loadWithdrawalReport() {
+        try {
+            const rep = await fetchData('/api/admin/withdrawal-status-report');
+            if (rep.success) {
+                document.getElementById('report-total-users').textContent = rep.total_users;
+                document.getElementById('report-can-withdraw').textContent = rep.users_withdrawal_today;
+                document.getElementById('report-restricted').textContent = rep.users_restricted;
+                const tbody = document.getElementById('withdrawal-report-users');
+                tbody.innerHTML = rep.users.map(u => `
+                    <tr>
+                        <td>${u.id}</td>
+                        <td>${u.username}</td>
+                        <td>₦${u.balance.toFixed(2)}</td>
+                        <td><span class="badge ${u.withdrawal_restricted?'badge-danger':u.can_withdraw_today?'badge-success':'badge-warning'}">${u.withdrawal_restricted?'Restricted':u.can_withdraw_today?'Allowed':'Not Today'}</span></td>
+                        <td>${u.withdrawal_limit || 'No Limit'}</td>
+                        <td>${u.custom_withdrawal_days.sort((a,b)=>a-b).join(', ') || 'Default'}</td>
+                        <td><i class="fas ${u.has_withdrawal_pin?'fa-check text-green-600':'fa-times text-red-600'}"></i></td>
+                        <td><button onclick="openUserSettings(${u.id},'${u.username}')" class="btn btn-outline text-sm py-0 px-2"><i class="fas fa-edit"></i></button></td>
+                    </tr>
+                `).join('');
+                document.getElementById('report-today').textContent = new Date().toLocaleDateString();
+            }
+        } catch(e) {}
+    }
+
+    // ----- BACKUP -----
+    async function triggerBackup() {
+        if (!confirm('Create backup?')) return;
+        try {
+            const res = await postData('/api/admin/backup/trigger', {});
+            if (res.success) { showMessage('Backup created: '+res.backup_file, 'success', 'backup-message'); listBackups(); }
+            else showMessage(res.message, 'error', 'backup-message');
+        } catch(e) { showMessage('Failed', 'error', 'backup-message'); }
+    }
+    async function listBackups() {
+        try {
+            const res = await fetchData('/api/admin/backup/list');
+            if (res.success) {
+                backupListData = res.backups || [];
+                const c = document.getElementById('backup-list');
+                if (!backupListData.length) { c.innerHTML = '<div class="text-gray-500 text-sm">No backups.</div>'; return; }
+                c.innerHTML = backupListData.map(b => `
+                    <div class="bg-gray-50 p-3 rounded-lg mb-2 text-sm flex justify-between items-center">
+                        <div><span class="font-mono">${b.filename}</span> <span class="text-xs text-gray-500">${new Date(b.created).toLocaleString()} · ${(b.size/1024).toFixed(1)} KB</span></div>
+                        <button onclick="showBackupDetails('${b.filename}')" class="btn btn-outline text-sm py-0 px-2"><i class="fas fa-info-circle"></i></button>
+                    </div>
+                `).join('');
+                if (backupListData.length) {
+                    const latest = backupListData[0];
+                    document.getElementById('last-backup-time').textContent = new Date(latest.created).toLocaleString();
+                }
+            }
+        } catch(e) {}
+    }
+    function showBackupDetails(filename) {
+        const b = backupListData.find(x => x.filename === filename);
+        if (!b) return;
+        document.getElementById('backup-details').innerHTML = `
+            <div class="text-sm"><strong>${b.filename}</strong></div>
+            <div class="text-xs text-gray-500">Created: ${new Date(b.created).toLocaleString()}</div>
+            <div class="text-xs text-gray-500">Size: ${(b.size/1024).toFixed(1)} KB</div>
+        `;
+        new bootstrap.Modal(document.getElementById('backupModal')).show();
+    }
+
+    // ----- DATABASE STATS, EXPORT/IMPORT -----
+    async function refreshDatabaseStats() {
+        try {
+            const res = await fetchData('/api/admin/stats');
+            if (res.success) {
+                document.getElementById('stats-users').textContent = res.stats.users.total;
+                document.getElementById('stats-transactions').textContent = res.stats.transactions.total;
+                document.getElementById('stats-gameplays').textContent = res.stats.games.today;
+            }
+        } catch(e) {}
+    }
+    async function previewDatabaseClear() {
+        const stats = await fetchData('/api/admin/stats');
+        if (!stats.success) return;
+        document.getElementById('previewClearContent').innerHTML = `
+            <div class="text-sm text-gray-600">Users to delete: <span class="text-red-600 font-semibold">${stats.stats.users.total-1}</span></div>
+            <div class="text-sm text-gray-600">Transactions: <span class="text-red-600 font-semibold">${stats.stats.transactions.total}</span></div>
+            <div class="text-sm text-gray-600">Game plays: <span class="text-red-600 font-semibold">${stats.stats.games.today*30}</span></div>
+            <div class="text-sm text-gray-600">Coupons reset: ${document.getElementById('reset-coupons').checked? '<span class="text-yellow-600 font-semibold">Yes</span>' : 'No'}</div>
+            <div class="text-sm text-red-600 mt-3">⚠️ This action is permanent!</div>
+        `;
+        new bootstrap.Modal(document.getElementById('previewClearModal')).show();
+    }
+    function confirmDatabaseClear() {
+        bootstrap.Modal.getInstance(document.getElementById('previewClearModal')).hide();
+        setTimeout(() => {
+            const modal = new bootstrap.Modal(document.getElementById('confirmClearModal'));
+            modal.show();
+            const input = document.getElementById('sudo-confirmation');
+            const ack = document.getElementById('acknowledge-risk');
+            const exec = document.getElementById('execute-clear-btn');
+            function validate() { exec.disabled = !(input.value === 'DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN' && ack.checked); }
+            input.addEventListener('input', validate);
+            ack.addEventListener('change', validate);
+        }, 300);
+    }
+    function closeClearModal() {
+        bootstrap.Modal.getInstance(document.getElementById('confirmClearModal')).hide();
+        document.getElementById('sudo-confirmation').value = '';
+        document.getElementById('acknowledge-risk').checked = false;
+        document.getElementById('execute-clear-btn').disabled = true;
+    }
+    async function executeDatabaseClear() {
+        const sudo = document.getElementById('sudo-confirmation').value.trim();
+        const backup = document.getElementById('backup-option').value;
+        if (sudo !== 'DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN') {
+            showMessage('❌ Confirmation phrase is incorrect', 'error');
+            return;
+        }
+        try {
+            const res = await postData('/api/admin/database/clear', {sudo_confirmation: sudo, backup_option: backup});
+            if (res.success) { showMessage('✅ Database cleared! Reloading…', 'success'); setTimeout(() => window.location.reload(), 1500); }
+            else { showMessage('❌ ' + (res.message || 'Clear failed'), 'error'); }
+        } catch(e) { showMessage('❌ Network error: ' + e.message, 'error'); } finally { closeClearModal(); }
+    }
+    async function exportDatabaseData() {
+        const format = document.getElementById('export-format').value;
+        const users = document.getElementById('export-users').checked;
+        const txs = document.getElementById('export-transactions').checked;
+        const gp = document.getElementById('export-gameplays').checked;
+        if (!users && !txs && !gp) { showMessage('Select at least one', 'warning'); return; }
+        try {
+            const res = await postData('/api/admin/export-data', {format, users, transactions:txs, game_plays:gp});
+            if (res.success) {
+                let blob, filename;
+                if (format === 'csv') {
+                    blob = new Blob([res.data], {type:'text/csv'});
+                    filename = `flexia_export_${new Date().toISOString().slice(0,10)}.csv`;
+                } else {
+                    blob = new Blob([JSON.stringify(res.data, null, 2)], {type:'application/json'});
+                    filename = `flexia_export_${new Date().toISOString().slice(0,10)}.json`;
+                }
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+                window.URL.revokeObjectURL(url);
+                showMessage('✅ Exported successfully', 'success');
+            } else showMessage(res.message, 'error');
+        } catch(e) { showMessage('Export failed', 'error'); }
+    }
+    async function exportFullDatabase() {
+        try {
+            const res = await postData('/api/admin/database/export-all', {});
+            if (res.success) {
+                const blob = new Blob([JSON.stringify(res.data, null, 2)], {type:'application/json'});
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = `flexia_full_${new Date().toISOString().slice(0,10)}.flexia`;
+                document.body.appendChild(a); a.click(); a.remove();
+                window.URL.revokeObjectURL(url);
+                showMessage('✅ Full backup downloaded', 'success');
+            } else showMessage(res.message, 'error');
+        } catch(e) { showMessage('Export failed', 'error'); }
+    }
+    document.getElementById('restore-file').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        const restoreBtn = document.getElementById('restore-btn');
+        if (file && file.name.endsWith('.flexia')) {
+            restoreBtn.disabled = false;
+            restoreBtn.innerHTML = `<i class="fas fa-history"></i> Restore ${file.name}`;
         } else {
-            showMessage('❌ ' + (res.message || 'Clear failed'), 'error');
+            restoreBtn.disabled = true;
+            restoreBtn.innerHTML = `<i class="fas fa-history"></i> Restore .flexia`;
         }
-    } catch(e) {
-        showMessage('❌ Network error: ' + e.message, 'error');
-    } finally {
-        closeClearModal();
+    });
+    async function restoreDatabase() {
+        const fileInput = document.getElementById('restore-file');
+        if (!fileInput.files || !fileInput.files[0]) { showMessage('Select a .flexia file', 'error'); return; }
+        if (!confirm('WARNING: This will replace ALL data. Proceed?')) return;
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        try {
+            const res = await fetch('/api/admin/database/import-all', {method:'POST', credentials:'include', body:formData});
+            const data = await res.json();
+            if (data.success) { showMessage('✅ Restore successful! Reloading…', 'success'); setTimeout(() => window.location.reload(), 1500); }
+            else { showMessage('❌ ' + (data.message || 'Restore failed'), 'error'); }
+        } catch(e) { showMessage('Restore failed', 'error'); }
     }
-}
 
-// ===== DATA EXPORT =====
-async function exportDatabaseData() {
-    const format = document.getElementById('export-format').value;
-    const users = document.getElementById('export-users').checked;
-    const txs = document.getElementById('export-transactions').checked;
-    const gp = document.getElementById('export-gameplays').checked;
-    if (!users && !txs && !gp) { showMessage('Select at least one', 'warning'); return; }
-    try {
-        const res = await postData('/api/admin/export-data', {format, users, transactions:txs, game_plays:gp});
-        if (res.success) {
-            let blob, filename;
-            if (format === 'csv') {
-                blob = new Blob([res.data], {type:'text/csv'});
-                filename = `flexia_export_${new Date().toISOString().slice(0,10)}.csv`;
-            } else {
-                blob = new Blob([JSON.stringify(res.data, null, 2)], {type:'application/json'});
-                filename = `flexia_export_${new Date().toISOString().slice(0,10)}.json`;
+    // ----- SETTINGS -----
+    async function loadSettings() {
+        try {
+            const res = await fetchData('/api/admin/settings');
+            if (res.success) {
+                document.getElementById('whatsapp-link').value = res.settings.whatsapp_link || '';
+                document.getElementById('telegram-link').value = res.settings.telegram_link || '';
+                document.getElementById('facebook-link').value = res.settings.facebook_link || '';
+                document.getElementById('min-withdrawal-input').value = res.settings.min_withdrawal || 100000;
             }
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
-            window.URL.revokeObjectURL(url);
-            showMessage('Exported successfully', 'success');
-        } else showMessage(res.message, 'error');
-    } catch(e) { showMessage('Export failed', 'error'); }
-}
-async function exportFullDatabase() {
-    try {
-        const res = await postData('/api/admin/database/export-all', {});
-        if (res.success) {
-            const blob = new Blob([JSON.stringify(res.data, null, 2)], {type:'application/json'});
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = `flexia_full_${new Date().toISOString().slice(0,10)}.flexia`;
-            document.body.appendChild(a); a.click(); a.remove();
-            window.URL.revokeObjectURL(url);
-            showMessage('Full backup downloaded', 'success');
-        } else showMessage(res.message, 'error');
-    } catch(e) { showMessage('Export failed', 'error'); }
-}
-
-// ===== RESTORE DATABASE =====
-document.getElementById('restore-file').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    const restoreBtn = document.getElementById('restore-btn');
-    if (file && file.name.endsWith('.flexia')) {
-        restoreBtn.disabled = false;
-        restoreBtn.innerHTML = `<i class="fas fa-history"></i> Restore ${file.name}`;
-    } else {
-        restoreBtn.disabled = true;
-        restoreBtn.innerHTML = `<i class="fas fa-history"></i> Restore .flexia`;
+        } catch(e) {}
     }
-});
-async function restoreDatabase() {
-    const fileInput = document.getElementById('restore-file');
-    if (!fileInput.files || !fileInput.files[0]) { showMessage('Select a .flexia file', 'error'); return; }
-    if (!confirm('WARNING: This will replace ALL data. Proceed?')) return;
-    const formData = new FormData();
-    formData.append('file', fileInput.files[0]);
-    try {
-        const res = await fetch('/api/admin/database/import-all', {method:'POST', credentials:'include', body:formData});
-        const data = await res.json();
-        if (data.success) { showMessage('Restore successful! Reloading…', 'success'); setTimeout(() => window.location.reload(), 1500); }
-        else showMessage(data.message, 'error');
-    } catch(e) { showMessage('Restore failed', 'error'); }
-}
+    async function saveSocialLinks() {
+        const data = {
+            whatsapp_link: document.getElementById('whatsapp-link').value.trim(),
+            telegram_link: document.getElementById('telegram-link').value.trim(),
+            facebook_link: document.getElementById('facebook-link').value.trim()
+        };
+        try {
+            const res = await postData('/api/admin/settings', data);
+            if (res.success) showMessage('Saved', 'success', 'social-message');
+            else showMessage(res.message, 'error', 'social-message');
+        } catch(e) { showMessage('Network error', 'error', 'social-message'); }
+    }
+    async function saveMinWithdrawal() {
+        const val = parseFloat(document.getElementById('min-withdrawal-input').value);
+        if (isNaN(val) || val < 0) { showMessage('Invalid amount', 'error', 'min-withdrawal-message'); return; }
+        try {
+            const res = await postData('/api/admin/settings', {min_withdrawal: val});
+            if (res.success) showMessage('Updated', 'success', 'min-withdrawal-message');
+            else showMessage(res.message, 'error', 'min-withdrawal-message');
+        } catch(e) { showMessage('Network error', 'error', 'min-withdrawal-message'); }
+    }
+    async function changeAdminPassword() {
+        const current = document.getElementById('current-password').value;
+        const newPass = document.getElementById('new-password').value;
+        const confirm = document.getElementById('confirm-password').value;
+        if (!current || !newPass || !confirm) { showMessage('All fields required', 'error', 'password-message'); return; }
+        if (newPass.length < 8) { showMessage('Min 8 chars', 'error', 'password-message'); return; }
+        if (newPass !== confirm) { showMessage('Passwords do not match', 'error', 'password-message'); return; }
+        try {
+            const res = await postData('/api/admin/change-password', {current_password: current, new_password: newPass});
+            if (res.success) { showMessage('Changed! Please login again.', 'success', 'password-message'); document.getElementById('current-password').value = ''; document.getElementById('new-password').value = ''; document.getElementById('confirm-password').value = ''; setTimeout(() => { if (confirm('Logout and login again?')) adminLogout(); }, 2000); }
+            else showMessage(res.message, 'error', 'password-message');
+        } catch(e) { showMessage('Network error', 'error', 'password-message'); }
+    }
 
-// ===== SETTINGS =====
-async function loadSettings() {
-    try {
-        const res = await fetchData('/api/admin/settings');
-        if (res.success) {
-            document.getElementById('whatsapp-link').value = res.settings.whatsapp_link || '';
-            document.getElementById('telegram-link').value = res.settings.telegram_link || '';
-            document.getElementById('facebook-link').value = res.settings.facebook_link || '';
-            document.getElementById('min-withdrawal-input').value = res.settings.min_withdrawal || 100000;
-        }
-    } catch(e) {}
-}
-async function saveSocialLinks() {
-    const data = {
-        whatsapp_link: document.getElementById('whatsapp-link').value.trim(),
-        telegram_link: document.getElementById('telegram-link').value.trim(),
-        facebook_link: document.getElementById('facebook-link').value.trim()
-    };
-    try {
-        const res = await postData('/api/admin/settings', data);
-        if (res.success) showMessage('Saved', 'success', 'social-message');
-        else showMessage(res.message, 'error', 'social-message');
-    } catch(e) { showMessage('Network error', 'error', 'social-message'); }
-}
-async function saveMinWithdrawal() {
-    const val = parseFloat(document.getElementById('min-withdrawal-input').value);
-    if (isNaN(val) || val < 0) { showMessage('Invalid amount', 'error', 'min-withdrawal-message'); return; }
-    try {
-        const res = await postData('/api/admin/settings', {min_withdrawal: val});
-        if (res.success) showMessage('Updated', 'success', 'min-withdrawal-message');
-        else showMessage(res.message, 'error', 'min-withdrawal-message');
-    } catch(e) { showMessage('Network error', 'error', 'min-withdrawal-message'); }
-}
-async function changeAdminPassword() {
-    const current = document.getElementById('current-password').value;
-    const newPass = document.getElementById('new-password').value;
-    const confirm = document.getElementById('confirm-password').value;
-    if (!current || !newPass || !confirm) { showMessage('All fields required', 'error', 'password-message'); return; }
-    if (newPass.length < 8) { showMessage('Min 8 chars', 'error', 'password-message'); return; }
-    if (newPass !== confirm) { showMessage('Passwords do not match', 'error', 'password-message'); return; }
-    try {
-        const res = await postData('/api/admin/change-password', {current_password: current, new_password: newPass});
-        if (res.success) { showMessage('Changed! Please login again.', 'success', 'password-message'); document.getElementById('current-password').value = ''; document.getElementById('new-password').value = ''; document.getElementById('confirm-password').value = ''; setTimeout(() => { if (confirm('Logout and login again?')) adminLogout(); }, 2000); }
-        else showMessage(res.message, 'error', 'password-message');
-    } catch(e) { showMessage('Network error', 'error', 'password-message'); }
-}
-
-// ===== COUPONS =====
-async function loadCouponStats() {
-    try {
-        const res = await fetchData('/api/admin/coupons');
-        if (res.success) {
-            const total = res.coupons.length;
-            const avail = res.coupons.filter(c => c.status === 'AVAILABLE').length;
-            document.getElementById('coupon-stats').textContent = `${total} total (${avail} avail, ${total-avail} used)`;
-        }
-    } catch(e) {}
-}
-async function resetCoupons() {
-    if (!confirm('Reset all used coupons?')) return;
-    try {
-        const res = await postData('/api/admin/coupons/reset-used', {});
-        if (res.success) { showMessage(res.message, 'success', 'coupon-message'); loadCouponStats(); }
-        else showMessage(res.message, 'error', 'coupon-message');
-    } catch(e) { showMessage('Network error', 'error', 'coupon-message'); }
-}
-async function deleteAllCoupons() {
-    if (!confirm('Delete ALL coupons?')) return;
-    try {
-        const res = await postData('/api/admin/coupons/delete', {});
-        if (res.success) { showMessage(res.message, 'success', 'coupon-message'); loadCouponStats(); }
-        else showMessage(res.message, 'error', 'coupon-message');
-    } catch(e) { showMessage('Network error', 'error', 'coupon-message'); }
-}
-async function addCoupons() {
-    const text = document.getElementById('new-coupons').value;
-    const codes = text.split('\n').map(c => c.trim().toUpperCase()).filter(c => c.length >= 4);
-    if (!codes.length) { showMessage('Enter at least one', 'error', 'coupon-message'); return; }
-    try {
-        const res = await postData('/api/admin/coupons/add', {codes});
-        if (res.success) { showMessage(res.message, 'success', 'coupon-message'); document.getElementById('new-coupons').value=''; loadCouponStats(); }
-        else showMessage(res.message, 'error', 'coupon-message');
-    } catch(e) { showMessage('Network error', 'error', 'coupon-message'); }
-}
-
-// ===== INIT =====
-document.addEventListener('DOMContentLoaded', () => {
-    fetchData('/api/user/profile')
-        .then(data => {
-            if (!data.success || !data.user.is_admin) window.location.href='/';
-            else {
-                loadDashboard();
-                setInterval(() => {
-                    if (document.querySelector('.tab-content.active')?.id === 'dashboard') loadDashboard();
-                }, 30000);
+    // ----- COUPONS -----
+    async function loadCouponStats() {
+        try {
+            const res = await fetchData('/api/admin/coupons');
+            if (res.success) {
+                const total = res.coupons.length;
+                const avail = res.coupons.filter(c => c.status === 'AVAILABLE').length;
+                document.getElementById('coupon-stats').textContent = `${total} total (${avail} avail, ${total-avail} used)`;
             }
-        })
-        .catch(() => window.location.href='/');
-});
+        } catch(e) {}
+    }
+    async function resetCoupons() {
+        if (!confirm('Reset all used coupons?')) return;
+        try {
+            const res = await postData('/api/admin/coupons/reset-used', {});
+            if (res.success) { showMessage(res.message, 'success', 'coupon-message'); loadCouponStats(); }
+            else showMessage(res.message, 'error', 'coupon-message');
+        } catch(e) { showMessage('Network error', 'error', 'coupon-message'); }
+    }
+    async function deleteAllCoupons() {
+        if (!confirm('Delete ALL coupons?')) return;
+        try {
+            const res = await postData('/api/admin/coupons/delete', {});
+            if (res.success) { showMessage(res.message, 'success', 'coupon-message'); loadCouponStats(); }
+            else showMessage(res.message, 'error', 'coupon-message');
+        } catch(e) { showMessage('Network error', 'error', 'coupon-message'); }
+    }
+    async function addCoupons() {
+        const text = document.getElementById('new-coupons').value;
+        const codes = text.split('\n').map(c => c.trim().toUpperCase()).filter(c => c.length >= 4);
+        if (!codes.length) { showMessage('Enter at least one', 'error', 'coupon-message'); return; }
+        try {
+            const res = await postData('/api/admin/coupons/add', {codes});
+            if (res.success) { showMessage(res.message, 'success', 'coupon-message'); document.getElementById('new-coupons').value=''; loadCouponStats(); }
+            else showMessage(res.message, 'error', 'coupon-message');
+        } catch(e) { showMessage('Network error', 'error', 'coupon-message'); }
+    }
+
+    // ===== INIT =====
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchData('/api/user/profile')
+            .then(data => {
+                if (!data.success || !data.user.is_admin) window.location.href='/';
+                else {
+                    loadDashboard();
+                    setInterval(() => {
+                        if (document.querySelector('.tab-content.active')?.id === 'dashboard') loadDashboard();
+                    }, 30000);
+                }
+            })
+            .catch(() => window.location.href='/');
+    });
 </script>
 </body>
 </html>
