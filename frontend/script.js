@@ -1,10 +1,10 @@
 // ============================================================
 // FLEXIA Frontend - COMPLETE PRODUCTION VERSION v17.9
-// Fixed: Referral count display, claim feedback, spin/PIN isolation, Plinko start
+// Fixed: Receipt bank details, Referral list + claim history, No emojis
 // ============================================================
 
 // ========== EMBEDDED CSS ==========
-const embeddedCSS = `
+var embeddedCSS = `
   .password-container {
     position: relative;
     width: 100%;
@@ -327,7 +327,7 @@ var App = {
       }, 1000);
     } else if (status === 'failed') {
       window.history.replaceState({}, document.title, window.location.pathname);
-      App.showMessage('❌ Payment failed: ' + (error || 'Please try again.'), 'error', 8000);
+      App.showMessage('Payment failed: ' + (error || 'Please try again.'), 'error', 8000);
     }
   },
 
@@ -373,7 +373,7 @@ var App = {
     `;
     
     content.innerHTML = `
-      <div style="font-size: 3rem; margin-bottom: 10px;">✅</div>
+      <div style="font-size: 3rem; margin-bottom: 10px;">✔️</div>
       <h2 style="color: #00FF55; font-family: 'Orbitron', sans-serif; font-size: 1.4rem; margin-bottom: 8px;">Payment Successful!</h2>
       ${couponHTML}
       <div style="display: flex; gap: 10px; margin-top: 20px;">
@@ -1685,7 +1685,7 @@ var Profile = {
   }
 };
 
-// ========== REFERRALS ==========
+// ========== REFERRALS (UPDATED) ==========
 var Referral = {
   open: async function () {
     if (!App.currentUser) return;
@@ -1693,8 +1693,49 @@ var Referral = {
       var response = await App.requestWithTimeout('/api/user/profile');
       var data = await response.json();
       if (data.success) {
-        var unclaimed = data.referrals ? data.referrals.unclaimed_bonus : 0;
-        var referralCount = data.referrals ? data.referrals.count : 0;
+        var referrals = data.referrals || {};
+        var referredUsers = referrals.referred_users || [];
+        var claimHistory = referrals.claim_history || [];
+        var unclaimed = referrals.unclaimed_bonus || 0;
+        var referralCount = referrals.count || 0;
+
+        // Build referred users list
+        var usersHtml = '';
+        if (referredUsers.length === 0) {
+          usersHtml = '<p style="color:#A0A0B5;font-size:0.85rem;">No referred users yet.</p>';
+        } else {
+          usersHtml = '<div style="max-height:160px;overflow-y:auto;margin:8px 0;">';
+          referredUsers.forEach(function(u) {
+            var statusLabel = u.bonus_claimed ? 'Claimed' : 'Unclaimed';
+            var statusColor = u.bonus_claimed ? '#00FF55' : '#FFA500';
+            usersHtml += `
+              <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:0.85rem;">
+                <span>${u.username}</span>
+                <span style="color:${statusColor};font-weight:600;">${statusLabel}</span>
+              </div>
+            `;
+          });
+          usersHtml += '</div>';
+        }
+
+        // Build claim history
+        var historyHtml = '';
+        if (claimHistory.length === 0) {
+          historyHtml = '<p style="color:#A0A0B5;font-size:0.85rem;">No referral bonuses claimed yet.</p>';
+        } else {
+          historyHtml = '<div style="max-height:120px;overflow-y:auto;margin:8px 0;">';
+          claimHistory.forEach(function(tx) {
+            var amt = parseFloat(tx.amount) || 0;
+            historyHtml += `
+              <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:0.8rem;">
+                <span>${new Date(tx.timestamp).toLocaleDateString()}</span>
+                <span style="color:#00FF55;font-weight:600;">+₦${amt.toLocaleString()}</span>
+              </div>
+            `;
+          });
+          historyHtml += '</div>';
+        }
+
         var html = `
           <div class="referral-section">
             <h4><i class="fas fa-users"></i> Your Referral Program</h4>
@@ -1707,9 +1748,17 @@ var Referral = {
               : '<p style="color:#00FF55;margin-top:15px;">All bonuses claimed!</p>'
             }
           </div>
+          <div class="referral-section">
+            <h4><i class="fas fa-user-friends"></i> Referred Users</h4>
+            ${usersHtml}
+          </div>
+          <div class="referral-section">
+            <h4><i class="fas fa-history"></i> Claim History</h4>
+            ${historyHtml}
+          </div>
           <div class="referral-section" style="margin-top:20px;">
             <h4><i class="fas fa-share-alt"></i> Share Your Link</h4>
-            <div style="background:#151535;padding:10px;border-radius:5px;border:1px solid #8000FF;margin:10px 0;">
+            <div style="background:#151535;padding:10px;border-radius:5px;border:1px solid #8000FF;margin:10px 0;word-break:break-all;">
               ${window.location.origin}/?ref=${data.user.referral_code}
             </div>
             <button class="btn-secondary" onclick="Referral.copyReferralLink('${data.user.referral_code}')" style="margin-top:10px;">
@@ -1760,7 +1809,7 @@ var Referral = {
         return;
       }
       App.updateBalance(result.new_balance);
-      App.showMessage('✅ Claimed ₦' + result.claimed_amount.toLocaleString() + ' bonus!', 'success', 4000);
+      App.showMessage('Claimed ₦' + result.claimed_amount.toLocaleString() + ' bonus!', 'success', 4000);
       this.open(); // refresh modal
     } catch (error) {
       console.error('Claim error:', error);
@@ -1832,7 +1881,6 @@ var Banking = {
   },
 
   verifyAccount: async function() {
-    // Optional verification - now we allow manual entry, but still show verification if successful
     var bankCode = document.getElementById('bank-select').value;
     var accountNumber = document.getElementById('account-number').value.trim();
     var nameDisplay = document.getElementById('account-name-display');
@@ -1840,8 +1888,6 @@ var Banking = {
     var spinner = document.getElementById('verify-spinner');
     var statusEl = document.getElementById('account-verification-status');
     
-    // Do not clear manual name if user has typed something
-    // Only update if verification succeeds
     if (!bankCode || !accountNumber || accountNumber.length < 10) {
       return;
     }
@@ -1874,7 +1920,6 @@ var Banking = {
         nameDisplay.style.borderColor = 'rgba(0,255,85,0.3)';
         nameDisplay.style.background = 'rgba(0,255,85,0.05)';
         document.getElementById('verified-account-name').textContent = data.account_name;
-        // Auto-fill the manual field but allow user to override
         if (!nameField.value) {
           nameField.value = data.account_name;
         }
@@ -1882,7 +1927,6 @@ var Banking = {
         nameField.style.background = 'rgba(0,255,85,0.05)';
         statusEl.innerHTML = '<i class="fas fa-check-circle" style="color: #00FF55;"></i>';
       } else {
-        // Verification failed - show warning but do not block manual entry
         nameDisplay.style.display = 'block';
         nameDisplay.style.borderColor = 'rgba(255,165,0,0.3)';
         nameDisplay.style.background = 'rgba(255,165,0,0.05)';
@@ -1977,7 +2021,6 @@ var Banking = {
       return;
     }
 
-    // Open PIN modal instead of prompt()
     PinModal.open('Enter Withdrawal PIN', function(pin) {
       Banking._submitWithdrawal(amount, bankCode, accountNumber, accountName, pin);
     });
@@ -2234,7 +2277,6 @@ var Games = {
     setTimeout(function() { initSpinWheel(); }, 150);
   },
 
-  // ========== FIXED SPIN WHEEL ROTATION ==========
   spinWheel: async function() {
     var btn = document.getElementById('spin-button');
     var wheel = document.getElementById('wheel');
@@ -2243,7 +2285,6 @@ var Games = {
 
     if (!btn || !wheel || btn.disabled) return;
 
-    // Disable button and show spinner
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SPINNING...';
     if (msgEl) {
@@ -2252,17 +2293,14 @@ var Games = {
     }
     if (resultEl) resultEl.classList.add('hidden');
 
-    // Reset the wheel to 0° without transition
     wheel.style.transition = 'none';
     wheel.style.transform = 'rotate(0deg)';
-    void wheel.offsetWidth;  // force reflow
+    void wheel.offsetWidth;
 
     try {
-      // Call backend to get spin result
       var result = await this.reportSpin();
 
       if (!result.success) {
-        // Show error and re-enable button
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-sync-alt"></i> TRY AGAIN';
         if (msgEl) {
@@ -2271,22 +2309,18 @@ var Games = {
         return;
       }
 
-      // Calculate target angle
       var reward = result.reward;
       var prizeIndex = result.prize_index !== undefined ? result.prize_index : 5;
-      // Each slice is 60° (360/6), pointer at top (12 o'clock)
       var angleToPointer = (360 - (prizeIndex * 60 + 30)) % 360;
-      var extraRotations = 6 + Math.floor(Math.random() * 3); // 6–8 full spins
+      var extraRotations = 6 + Math.floor(Math.random() * 3);
       var totalRotation = extraRotations * 360 + angleToPointer;
 
-      // Apply rotation with smooth transition
       wheel.style.transition = 'transform 5s cubic-bezier(0.17, 0.67, 0.05, 1.0)';
       wheel.style.transform = `rotate(${totalRotation}deg)`;
 
-      // Update UI after animation ends
       setTimeout(() => {
         App.updateBalance(result.new_balance);
-        var msgText = reward > 0 ? `🎉 Won ₦${reward.toLocaleString()}!` : 'Better luck tomorrow!';
+        var msgText = reward > 0 ? `Won ₦${reward.toLocaleString()}!` : 'Better luck tomorrow!';
         if (msgEl) {
           msgEl.innerHTML = `<div class="alert-box ${reward > 0 ? 'success' : 'warning'}"><i class="fas fa-${reward > 0 ? 'check-circle' : 'info-circle'}"></i> ${msgText}</div>`;
         }
@@ -2326,7 +2360,6 @@ var Settings = {
           <p><strong>Balance:</strong> ₦${user.balance.toLocaleString()}</p>
         </div>
       `;
-      // Fetch social links for all users (public endpoint)
       try {
         var sr = await App.requestWithTimeout('/api/social-links');
         var sd = await sr.json();
@@ -2378,7 +2411,6 @@ var Settings = {
     if (isChange === undefined) isChange = false;
     var self = this;
     if (isChange) {
-      // Verify current PIN first
       PinModal.open('Enter CURRENT PIN', function(currentPin) {
         self._verifyAndSetNewPin(currentPin);
       });
@@ -2402,7 +2434,6 @@ var Settings = {
         alert('Incorrect current PIN');
         return;
       }
-      // Ask for new PIN
       PinModal.open('Enter NEW PIN', function(newPin) {
         this._saveNewPin(newPin);
       });
@@ -2591,16 +2622,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Auto-fill referral code from URL parameter and switch to register tab
   if (ref) {
     document.getElementById('reg-referral').value = ref;
-    // Switch to register tab
     document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
     document.querySelector('[data-tab="register"]').classList.add('active');
     document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
     document.getElementById('register-form').classList.add('active');
-    // Optionally handle Paystack status check (if ref is a payment reference)
-    if (ref && ref.length > 10) { // heuristic: payment references are longer
+    if (ref && ref.length > 10) {
       setTimeout(async function() {
         if (typeof PaystackPayment !== 'undefined') {
           var result = await PaystackPayment.checkStatus(ref);
