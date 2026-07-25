@@ -271,11 +271,12 @@
                     <div class="font-semibold text-red-600"><i class="fas fa-trash"></i> Clear Data</div>
                     <div class="text-sm text-gray-500 my-2">Irreversible! Keeps admin only.</div>
                     <div class="flex flex-wrap gap-3 text-sm">
-                        <label class="flex items-center gap-1"><input type="checkbox" id="clear-users" checked> Users</label>
+                        <label class="flex items-center gap-1"><input type="checkbox" id="clear-users" checked onchange="syncClearCheckboxes()"> Users</label>
                         <label class="flex items-center gap-1"><input type="checkbox" id="clear-transactions" checked> Transactions</label>
                         <label class="flex items-center gap-1"><input type="checkbox" id="clear-gameplays" checked> Game Plays</label>
                         <label class="flex items-center gap-1"><input type="checkbox" id="reset-coupons" checked> Reset Coupons</label>
                     </div>
+                    <div class="text-xs text-gray-500 mt-1" id="clear-users-note"></div>
                     <div class="mt-3 flex gap-2">
                         <select id="backup-option" class="text-sm py-1"><option value="yes">Backup: Yes</option><option value="no">No</option></select>
                         <button onclick="previewDatabaseClear()" class="btn btn-danger text-sm"><i class="fas fa-eye"></i> Preview</button>
@@ -1023,14 +1024,29 @@
             }
         } catch(e) {}
     }
+    function syncClearCheckboxes() {
+        const usersChecked = document.getElementById('clear-users').checked;
+        const txCb = document.getElementById('clear-transactions');
+        const gpCb = document.getElementById('clear-gameplays');
+        const note = document.getElementById('clear-users-note');
+        txCb.disabled = usersChecked;
+        gpCb.disabled = usersChecked;
+        if (usersChecked) { txCb.checked = true; gpCb.checked = true; }
+        note.textContent = usersChecked ? 'Deleting users always removes their transactions & game stats too (required by the database).' : '';
+    }
+    document.addEventListener('DOMContentLoaded', syncClearCheckboxes);
     async function previewDatabaseClear() {
         const stats = await fetchData('/api/admin/stats');
         if (!stats.success) return;
+        const clearUsers = document.getElementById('clear-users').checked;
+        const clearTx = document.getElementById('clear-transactions').checked;
+        const clearGp = document.getElementById('clear-gameplays').checked;
+        const resetCoupons = document.getElementById('reset-coupons').checked;
         document.getElementById('previewClearContent').innerHTML = `
-            <div class="text-sm text-gray-600">Users to delete: <span class="text-red-600 font-semibold">${stats.stats.users.total-1}</span></div>
-            <div class="text-sm text-gray-600">Transactions: <span class="text-red-600 font-semibold">${stats.stats.transactions.total}</span></div>
-            <div class="text-sm text-gray-600">Game plays: <span class="text-red-600 font-semibold">${stats.stats.games.today*30}</span></div>
-            <div class="text-sm text-gray-600">Coupons reset: ${document.getElementById('reset-coupons').checked? '<span class="text-yellow-600 font-semibold">Yes</span>' : 'No'}</div>
+            <div class="text-sm text-gray-600">Users to delete: <span class="${clearUsers?'text-red-600 font-semibold':''}">${clearUsers ? (stats.stats.users.total-1) : 0}</span></div>
+            <div class="text-sm text-gray-600">Transactions to delete: <span class="${(clearUsers||clearTx)?'text-red-600 font-semibold':''}">${(clearUsers||clearTx) ? stats.stats.transactions.total : 0}</span></div>
+            <div class="text-sm text-gray-600">Game stat rows reset: ${(clearUsers||clearGp) ? '<span class="text-red-600 font-semibold">Yes</span>' : 'No'}</div>
+            <div class="text-sm text-gray-600">Coupons reset: ${resetCoupons ? '<span class="text-yellow-600 font-semibold">Yes</span>' : 'No'}</div>
             <div class="text-sm text-red-600 mt-3">⚠️ This action is permanent!</div>
         `;
         new bootstrap.Modal(document.getElementById('previewClearModal')).show();
@@ -1057,13 +1073,28 @@
     async function executeDatabaseClear() {
         const sudo = document.getElementById('sudo-confirmation').value.trim();
         const backup = document.getElementById('backup-option').value;
+        const clearUsers = document.getElementById('clear-users').checked;
+        const clearTransactions = document.getElementById('clear-transactions').checked;
+        const clearGameplays = document.getElementById('clear-gameplays').checked;
+        const resetCoupons = document.getElementById('reset-coupons').checked;
         if (sudo !== 'DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN') {
             showMessage('❌ Confirmation phrase is incorrect', 'error');
             return;
         }
         try {
-            const res = await postData('/api/admin/database/clear', {sudo_confirmation: sudo, backup_option: backup});
-            if (res.success) { showMessage('✅ Database cleared! Reloading…', 'success'); setTimeout(() => window.location.reload(), 1500); }
+            const res = await postData('/api/admin/database/clear', {
+                sudo_confirmation: sudo,
+                backup_option: backup,
+                clear_users: clearUsers,
+                clear_transactions: clearTransactions,
+                clear_gameplays: clearGameplays,
+                reset_coupons: resetCoupons
+            });
+            if (res.success) {
+                const s = res.stats || {};
+                showMessage(`✅ Cleared — ${s.users_deleted||0} users, ${s.transactions_deleted||0} transactions, ${s.gameplays_deleted||0} game stats, ${s.coupons_reset||0} coupons reset${res.backup_file ? ' · backup: '+res.backup_file : ''}. Reloading…`, 'success');
+                setTimeout(() => window.location.reload(), 2000);
+            }
             else { showMessage('❌ ' + (res.message || 'Clear failed'), 'error'); }
         } catch(e) { showMessage('❌ Network error: ' + e.message, 'error'); } finally { closeClearModal(); }
     }
