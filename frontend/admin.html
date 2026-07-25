@@ -7,6 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
+        /* same as before, keep all styles */
         body {
             background: radial-gradient(ellipse at 30% 20%, #1b1135, #0a0618);
             min-height: 100vh;
@@ -339,7 +340,7 @@
             <div class="section-title"><i class="fab fa-tiktok"></i> TikTok Daily Task</div>
             <div class="flex flex-wrap gap-2 items-center">
                 <input type="url" id="tiktok-link-input" placeholder="https://www.tiktok.com/@..." class="flex-1 min-w-[200px]">
-                <button onclick="setTikTokDaily()" class="btn btn-success text-xs"><i class="fas fa-save"></i> Set Today</button>
+                <button onclick="setTikTokDaily()" class="btn btn-success text-xs"><i class="fas fa-save"></i> Set Today (Override)</button>
             </div>
             <div id="tiktok-message" class="text-xs mt-2"></div>
             <div class="mt-4 glass-card p-3">
@@ -349,6 +350,20 @@
             <div class="mt-4 glass-card p-3">
                 <div class="font-semibold text-purple-300">Last 7 Days</div>
                 <div id="tiktok-history-list" class="text-sm">Loading…</div>
+            </div>
+
+            <!-- ===== NEW: TIKTOK ACCOUNT SEED POOL ===== -->
+            <div class="mt-4 glass-card p-3 border-t-2 border-pink-500/30">
+                <div class="font-semibold text-pink-300"><i class="fas fa-user-plus"></i> Seed Accounts (Auto-Random)</div>
+                <div class="text-xs text-gray-400 mb-2">Add usernames – each day a random active one will be used.</div>
+                <div class="flex flex-wrap gap-2 items-center">
+                    <input type="text" id="new-tiktok-account" placeholder="@username" class="flex-1 min-w-[150px] text-sm">
+                    <button onclick="addTikTokAccount()" class="btn btn-success text-xs"><i class="fas fa-plus"></i> Add</button>
+                    <button onclick="loadTikTokAccounts()" class="btn btn-primary text-xs"><i class="fas fa-sync"></i> Refresh</button>
+                </div>
+                <div id="tiktok-account-list" class="mt-2 text-sm">
+                    Loading accounts…
+                </div>
             </div>
         </div>
     </div>
@@ -477,7 +492,7 @@
         </div>
     </div>
 
-    <!-- ===== MODALS ===== -->
+    <!-- ===== MODALS (same as before) ===== -->
     <!-- User Settings Modal -->
     <div class="modal fade" id="withdrawalSettingsModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
@@ -629,7 +644,7 @@
         if (id === 'dashboard') loadDashboard();
         else if (id === 'database') refreshDatabaseStats();
         else if (id === 'globalSettings') loadGlobalWithdrawalDays();
-        else if (id === 'tiktokDaily') loadTikTokDailyTab();
+        else if (id === 'tiktokDaily') { loadTikTokDailyTab(); loadTikTokAccounts(); }
         else if (id === 'users') loadUsers();
         else if (id === 'withdrawals') loadWithdrawals();
         else if (id === 'withdrawalReport') loadWithdrawalReport();
@@ -715,7 +730,7 @@
         if (!link || !link.startsWith('https://www.tiktok.com/@')) { showMessage('Invalid link', 'error', 'tiktok-message'); return; }
         try {
             const res = await postData('/api/admin/tiktok/set-daily', {tiktok_link: link});
-            if (res.success) { showMessage('Task set!', 'success', 'tiktok-message'); loadTikTokDailyTab(); document.getElementById('tiktok-link-input').value=''; }
+            if (res.success) { showMessage('Manual task set for today (overrides seeds)', 'success', 'tiktok-message'); loadTikTokDailyTab(); document.getElementById('tiktok-link-input').value=''; }
             else showMessage(res.message||'Failed', 'error', 'tiktok-message');
         } catch(e) { showMessage('Network error', 'error', 'tiktok-message'); }
     }
@@ -725,11 +740,65 @@
             const hist = await fetchData('/api/admin/tiktok/history');
             document.getElementById('current-tiktok-display').innerHTML = cur.success && cur.task ?
                 `<div class="text-sm">${new Date(cur.task.date).toLocaleDateString()} — <a href="${cur.task.tiktok_link}" target="_blank" class="text-cyan-300">${cur.task.tiktok_link}</a> (₦${cur.task.reward_amount})</div>` :
-                '<div class="text-gray-400 text-sm">No task today.</div>';
+                '<div class="text-gray-400 text-sm">No manual task today. Seeds will be used.</div>';
             document.getElementById('tiktok-history-list').innerHTML = hist.success && hist.history?.length ?
                 hist.history.map(h => `<div class="text-xs text-gray-400">${new Date(h.date).toLocaleDateString()} — <a href="${h.tiktok_link}" target="_blank" class="text-cyan-300">${h.tiktok_link}</a></div>`).join('') :
                 '<div class="text-gray-400 text-sm">No history.</div>';
         } catch(e) {}
+    }
+
+    // ===== TIKTOK ACCOUNT MANAGEMENT =====
+    async function loadTikTokAccounts() {
+        try {
+            const res = await fetchData('/api/admin/tiktok/accounts');
+            if (res.success) {
+                const container = document.getElementById('tiktok-account-list');
+                if (!res.accounts || res.accounts.length === 0) {
+                    container.innerHTML = '<div class="text-gray-400 text-xs">No seed accounts. Add some to enable auto-seeding.</div>';
+                    return;
+                }
+                container.innerHTML = res.accounts.map(a => `
+                    <div class="flex items-center justify-between py-1 border-b border-gray-700">
+                        <span>${a.username} <span class="badge-glass ${a.active ? 'success' : 'danger'}">${a.active ? 'Active' : 'Inactive'}</span></span>
+                        <div>
+                            <button onclick="toggleTikTokAccount(${a.id})" class="btn btn-outline text-xs py-0 px-1">${a.active ? 'Deactivate' : 'Activate'}</button>
+                            <button onclick="deleteTikTokAccount(${a.id})" class="btn btn-danger text-xs py-0 px-1"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        } catch(e) { console.error(e); }
+    }
+
+    async function addTikTokAccount() {
+        const input = document.getElementById('new-tiktok-account');
+        const username = input.value.trim();
+        if (!username) { showMessage('Enter a username', 'error', 'tiktok-message'); return; }
+        try {
+            const res = await postData('/api/admin/tiktok/accounts', { username });
+            if (res.success) {
+                showMessage('Account added', 'success', 'tiktok-message');
+                input.value = '';
+                loadTikTokAccounts();
+            } else showMessage(res.message, 'error', 'tiktok-message');
+        } catch(e) { showMessage('Network error', 'error', 'tiktok-message'); }
+    }
+
+    async function toggleTikTokAccount(id) {
+        try {
+            const res = await postData(`/api/admin/tiktok/accounts/${id}/toggle`, {});
+            if (res.success) loadTikTokAccounts();
+        } catch(e) { showMessage('Failed', 'error', 'tiktok-message'); }
+    }
+
+    async function deleteTikTokAccount(id) {
+        if (!confirm('Delete this account?')) return;
+        try {
+            const res = await fetch(`/api/admin/tiktok/accounts/${id}`, {method:'DELETE', credentials:'include'});
+            const data = await res.json();
+            if (data.success) { showMessage('Deleted', 'success', 'tiktok-message'); loadTikTokAccounts(); }
+            else showMessage(data.message, 'error', 'tiktok-message');
+        } catch(e) { showMessage('Delete failed', 'error', 'tiktok-message'); }
     }
 
     // ===== USERS =====
@@ -1144,6 +1213,7 @@
                 if (!data.success || !data.user.is_admin) window.location.href='/';
                 else {
                     loadDashboard();
+                    // load account list if TikTok tab is active by default (not)
                     setInterval(() => {
                         if (document.querySelector('.tab-content.active')?.id === 'dashboard') loadDashboard();
                     }, 30000);
