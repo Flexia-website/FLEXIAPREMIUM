@@ -1,4 +1,5 @@
 # app.py – FLEXIA Backend (Flask + SQLAlchemy) – Full Production Version
+# All admin features fully implemented
 
 import os
 import json
@@ -29,6 +30,7 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = False  # set True if using HTTPS
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=7)
 app.config['JSON_AS_ASCII'] = False
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max for import
 
 db = SQLAlchemy(app)
 
@@ -50,8 +52,12 @@ class User(db.Model):
     ui_theme = db.Column(db.String(10), default='light')
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     contact = db.Column(db.String(100), nullable=True)
-    transactions = db.relationship('Transaction', backref='user', lazy=True)
-    game_stats = db.relationship('GameStats', backref='user', uselist=False)
+    transactions = db.relationship('Transaction', backref='user', lazy=True, cascade='all, delete-orphan')
+    game_stats = db.relationship('GameStats', backref='user', uselist=False, cascade='all, delete-orphan')
+    achievements = db.relationship('Achievement', backref='user', lazy=True, cascade='all, delete-orphan')
+    referrals = db.relationship('Referral', backref='referrer', lazy=True, cascade='all, delete-orphan',
+                                foreign_keys='Referral.referrer_id')
+    withdrawals = db.relationship('Withdrawal', backref='user', lazy=True, cascade='all, delete-orphan')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -426,14 +432,13 @@ def validate_coupon():
     return jsonify({'success': False, 'message': 'Invalid or used coupon'})
 
 
-# -------------------- USER PROFILE (ENHANCED) --------------------
+# -------------------- USER PROFILE --------------------
 @app.route('/api/user/profile', methods=['GET'])
 @login_required
 def profile():
     user = g.user
     transactions = Transaction.query.filter_by(user_id=user.id).order_by(Transaction.timestamp.desc()).limit(50).all()
     
-    # Referral data with list of referred users
     referrals = Referral.query.filter_by(referrer_id=user.id).all()
     referred_users = []
     for ref in referrals:
@@ -448,7 +453,6 @@ def profile():
     unclaimed_refs = [r for r in referrals if not r.bonus_claimed]
     unclaimed_bonus = len(unclaimed_refs) * 7500
 
-    # Referral bonus transactions
     referral_txs = Transaction.query.filter_by(user_id=user.id, type='REFERRAL_BONUS').order_by(Transaction.timestamp.desc()).all()
 
     data = user.to_dict()
@@ -928,7 +932,6 @@ def withdraw():
     db.session.add(wd)
     user.balance -= amount
     
-    # Store bank details in transaction details so receipt can show them
     banks_list = get_banks().json['banks']
     bank_name = next((b['name'] for b in banks_list if b['code'] == bank_code), 'Unknown Bank')
     tx = create_transaction(
@@ -1088,7 +1091,7 @@ def check_withdrawal_day():
     })
 
 
-# -------------------- ADMIN ROUTES --------------------
+# -------------------- ADMIN ROUTES (FULLY IMPLEMENTED) --------------------
 @app.route('/api/admin/users', methods=['GET'])
 @admin_required
 def admin_users():
@@ -1103,6 +1106,21 @@ def admin_get_user(user_id):
     if not user:
         return jsonify({'success': False, 'message': 'User not found'}), 404
     return jsonify({'success': True, 'user': user.to_dict()})
+
+
+@app.route('/api/admin/user/<int:user_id>', methods=['DELETE'])
+@admin_required
+def admin_delete_user(user_id):
+    """Delete a user and all associated data."""
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'success': False, 'message': 'User not found'}), 404
+    if user.is_admin:
+        return jsonify({'success': False, 'message': 'Cannot delete admin user'}), 400
+    # Cascade delete handled by relationship cascade
+    db.session.delete(user)
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'User deleted successfully'})
 
 
 @app.route('/api/admin/user/<int:user_id>/update-settings', methods=['POST'])
@@ -1415,40 +1433,353 @@ def admin_backup_list():
     return jsonify({'success': True, 'backups': [{'filename': b.filename, 'created': b.created_at.isoformat(), 'size': b.size} for b in backups]})
 
 
+# ==================== NEW: EXPORT / IMPORT ====================
+@app.route('/api/admin/export-data', methods=['POST'])
+@admin_required
+def admin_export_data():
+    """Export selected data (users, transactions, game plays) in JSON or CSV."""
+    data = request.get_json()
+    format_type = data.get('format', 'json')
+    export_users = data.get('users', False)
+    export_transactions = data.get('transactions', False)
+    export_gameplays = data.get('game_plays', False)
+
+    if not any([export_users, export_transactions, export_gameplays]):
+        return jsonify({'success': False, 'message': 'Select at least one data type'}), 400
+
+    export_data = {}
+    if export_users:
+        users = User.query.all()
+        export_data['users'] = [u.to_dict() for u in users]
+    if export_transactions:
+        transactions = Transaction.query.all()
+        export_data['transactions'] = [t.to_dict() for t in transactions]
+    if export_gameplays:
+        stats = GameStats.query.all()
+        export_data['game_plays'] = [{
+            'user_id': s.user_id,
+            'snake_high_score': s.snake_high_score,
+            'coinflip_wins': s.coinflip_wins,
+            'coinflip_losses': s.coinflip_losses,
+            'plinko_total_wins': s.plinko_total_wins,
+            'spin_plays_today': s.spin_plays_today,
+            'tiktok_claimed_today': s.tiktok_claimed_today,
+        } for s in stats]
+
+    if format_type == 'csv':
+        import csv, io
+        output = io.StringIO()
+        # Flatten the data for CSV (simplified)
+        writer = csv.writer(output)
+        if export_users:
+            writer.writerow(['=== USERS ==='])
+            writer.writerow(['id', 'username', 'balance', 'is_admin', 'created_at'])
+            for u in export_data.get('users', []):
+                writer.writerow([u['id'], u['username'], u['balance'], u['is_admin'], u['created_at']])
+        if export_transactions:
+            writer.writerow(['=== TRANSACTIONS ==='])
+            writer.writerow(['id', 'user_id', 'amount', 'type', 'status', 'timestamp'])
+            for t in export_data.get('transactions', []):
+                writer.writerow([t['id'], t['user_id'], t['amount'], t['type'], t['status'], t['timestamp']])
+        if export_gameplays:
+            writer.writerow(['=== GAME PLAYS ==='])
+            writer.writerow(['user_id', 'snake_high_score', 'coinflip_wins', 'coinflip_losses', 'plinko_total_wins'])
+            for g in export_data.get('game_plays', []):
+                writer.writerow([g['user_id'], g['snake_high_score'], g['coinflip_wins'], g['coinflip_losses'], g['plinko_total_wins']])
+        csv_content = output.getvalue()
+        output.close()
+        return jsonify({'success': True, 'data': csv_content, 'format': 'csv'})
+    else:
+        return jsonify({'success': True, 'data': export_data, 'format': 'json'})
+
+
 @app.route('/api/admin/database/export-all', methods=['POST'])
 @admin_required
-def admin_export_db():
-    return jsonify({'success': False, 'message': 'Export not implemented'}), 501
+def admin_export_full_db():
+    """Export the entire database as a .flexia file (JSON)."""
+    try:
+        data = {
+            'version': '1.0',
+            'exported_at': datetime.datetime.utcnow().isoformat(),
+            'tables': {
+                'users': [u.to_dict() for u in User.query.all()],
+                'transactions': [t.to_dict() for t in Transaction.query.all()],
+                'game_stats': [{
+                    'user_id': s.user_id,
+                    'snake_high_score': s.snake_high_score,
+                    'snake_plays_today': s.snake_plays_today,
+                    'snake_last_play_date': s.snake_last_play_date.isoformat() if s.snake_last_play_date else None,
+                    'coinflip_wins': s.coinflip_wins,
+                    'coinflip_losses': s.coinflip_losses,
+                    'coinflip_plays_today': s.coinflip_plays_today,
+                    'coinflip_last_play_date': s.coinflip_last_play_date.isoformat() if s.coinflip_last_play_date else None,
+                    'plinko_total_wins': s.plinko_total_wins,
+                    'plinko_plays_today': s.plinko_plays_today,
+                    'plinko_last_play_date': s.plinko_last_play_date.isoformat() if s.plinko_last_play_date else None,
+                    'spin_plays_today': s.spin_plays_today,
+                    'spin_last_play_date': s.spin_last_play_date.isoformat() if s.spin_last_play_date else None,
+                    'tiktok_claimed_today': s.tiktok_claimed_today,
+                    'tiktok_last_claim_date': s.tiktok_last_claim_date.isoformat() if s.tiktok_last_claim_date else None,
+                } for s in GameStats.query.all()],
+                'achievements': [{
+                    'user_id': a.user_id,
+                    'achievement_id': a.achievement_id,
+                    'title': a.title,
+                    'unlocked': a.unlocked,
+                    'unlocked_at': a.unlocked_at.isoformat() if a.unlocked_at else None,
+                    'progress': a.progress,
+                    'target': a.target,
+                    'processed': a.processed,
+                } for a in Achievement.query.all()],
+                'coupons': [{'code': c.code, 'status': c.status, 'used_by': c.used_by, 'used_at': c.used_at.isoformat() if c.used_at else None} for c in Coupon.query.all()],
+                'withdrawals': [{
+                    'id': w.id,
+                    'user_id': w.user_id,
+                    'amount': w.amount,
+                    'bank_code': w.bank_code,
+                    'account_number': w.account_number,
+                    'account_name': w.account_name,
+                    'status': w.status,
+                    'timestamp': w.timestamp.isoformat(),
+                    'processed_at': w.processed_at.isoformat() if w.processed_at else None,
+                } for w in Withdrawal.query.all()],
+                'referrals': [{
+                    'referrer_id': r.referrer_id,
+                    'referred_user_id': r.referred_user_id,
+                    'bonus_claimed': r.bonus_claimed,
+                    'claimed_at': r.claimed_at.isoformat() if r.claimed_at else None,
+                    'created_at': r.created_at.isoformat(),
+                } for r in Referral.query.all()],
+                'tiktok_tasks': [{
+                    'date': t.date.isoformat(),
+                    'tiktok_link': t.tiktok_link,
+                    'reward_amount': t.reward_amount,
+                } for t in TikTokTask.query.all()],
+                'social_settings': [{
+                    'whatsapp_link': s.whatsapp_link,
+                    'telegram_link': s.telegram_link,
+                    'facebook_link': s.facebook_link,
+                    'min_withdrawal': s.min_withdrawal,
+                } for s in SocialSettings.query.all()],
+                'global_withdrawal_days': [d.day for d in GlobalWithdrawalDay.query.all()],
+                'backup_logs': [{
+                    'filename': b.filename,
+                    'size': b.size,
+                    'created_at': b.created_at.isoformat(),
+                } for b in BackupLog.query.all()],
+            }
+        }
+        # Return as JSON response – the frontend will handle download
+        return jsonify({'success': True, 'data': data})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @app.route('/api/admin/database/import-all', methods=['POST'])
 @admin_required
-def admin_import_db():
-    return jsonify({'success': False, 'message': 'Import not implemented'}), 501
+def admin_import_full_db():
+    """Import a full database from a .flexia file (JSON)."""
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'message': 'No file uploaded'}), 400
+    file = request.files['file']
+    if not file.filename.endswith('.flexia'):
+        return jsonify({'success': False, 'message': 'Invalid file format. Must be .flexia'}), 400
+
+    try:
+        content = file.read().decode('utf-8')
+        data = json.loads(content)
+        if 'tables' not in data:
+            return jsonify({'success': False, 'message': 'Invalid .flexia file'}), 400
+
+        # Begin transaction
+        db.session.execute('PRAGMA foreign_keys=OFF;')
+        try:
+            # Clear existing data
+            User.query.delete()
+            Transaction.query.delete()
+            GameStats.query.delete()
+            Achievement.query.delete()
+            Coupon.query.delete()
+            Withdrawal.query.delete()
+            Referral.query.delete()
+            TikTokTask.query.delete()
+            SocialSettings.query.delete()
+            GlobalWithdrawalDay.query.delete()
+            BackupLog.query.delete()
+            db.session.commit()
+
+            # Import data
+            tables = data['tables']
+
+            # Users (need to preserve IDs)
+            for u in tables.get('users', []):
+                user = User(
+                    id=u['id'],
+                    username=u['username'],
+                    password_hash=u['password_hash'],  # Keep hashed password
+                    balance=u['balance'],
+                    referral_code=u['referral_code'],
+                    referred_by=u['referred_by'],
+                    withdrawal_pin=u['withdrawal_pin'],
+                    withdrawal_restricted=u['withdrawal_restricted'],
+                    withdrawal_limit=u['withdrawal_limit'],
+                    custom_withdrawal_days=u['custom_withdrawal_days'],
+                    is_admin=u['is_admin'],
+                    profile_picture=u['profile_picture'],
+                    ui_theme=u['ui_theme'],
+                    created_at=datetime.datetime.fromisoformat(u['created_at']),
+                    contact=u['contact'],
+                )
+                db.session.add(user)
+
+            # Transactions
+            for t in tables.get('transactions', []):
+                tx = Transaction(
+                    id=t['id'],
+                    user_id=t['user_id'],
+                    amount=t['amount'],
+                    type=t['type'],
+                    status=t['status'],
+                    details=json.dumps(t['details']) if t['details'] else None,
+                    timestamp=datetime.datetime.fromisoformat(t['timestamp']),
+                )
+                db.session.add(tx)
+
+            # GameStats
+            for s in tables.get('game_stats', []):
+                stats = GameStats(
+                    user_id=s['user_id'],
+                    snake_high_score=s['snake_high_score'],
+                    snake_plays_today=s['snake_plays_today'],
+                    snake_last_play_date=datetime.date.fromisoformat(s['snake_last_play_date']) if s['snake_last_play_date'] else None,
+                    coinflip_wins=s['coinflip_wins'],
+                    coinflip_losses=s['coinflip_losses'],
+                    coinflip_plays_today=s['coinflip_plays_today'],
+                    coinflip_last_play_date=datetime.date.fromisoformat(s['coinflip_last_play_date']) if s['coinflip_last_play_date'] else None,
+                    plinko_total_wins=s['plinko_total_wins'],
+                    plinko_plays_today=s['plinko_plays_today'],
+                    plinko_last_play_date=datetime.date.fromisoformat(s['plinko_last_play_date']) if s['plinko_last_play_date'] else None,
+                    spin_plays_today=s['spin_plays_today'],
+                    spin_last_play_date=datetime.date.fromisoformat(s['spin_last_play_date']) if s['spin_last_play_date'] else None,
+                    tiktok_claimed_today=s['tiktok_claimed_today'],
+                    tiktok_last_claim_date=datetime.date.fromisoformat(s['tiktok_last_claim_date']) if s['tiktok_last_claim_date'] else None,
+                )
+                db.session.add(stats)
+
+            # Achievements
+            for a in tables.get('achievements', []):
+                ach = Achievement(
+                    user_id=a['user_id'],
+                    achievement_id=a['achievement_id'],
+                    title=a['title'],
+                    unlocked=a['unlocked'],
+                    unlocked_at=datetime.datetime.fromisoformat(a['unlocked_at']) if a['unlocked_at'] else None,
+                    progress=a['progress'],
+                    target=a['target'],
+                    processed=a['processed'],
+                )
+                db.session.add(ach)
+
+            # Coupons
+            for c in tables.get('coupons', []):
+                coupon = Coupon(
+                    code=c['code'],
+                    status=c['status'],
+                    used_by=c['used_by'],
+                    used_at=datetime.datetime.fromisoformat(c['used_at']) if c['used_at'] else None,
+                )
+                db.session.add(coupon)
+
+            # Withdrawals
+            for w in tables.get('withdrawals', []):
+                wd = Withdrawal(
+                    id=w['id'],
+                    user_id=w['user_id'],
+                    amount=w['amount'],
+                    bank_code=w['bank_code'],
+                    account_number=w['account_number'],
+                    account_name=w['account_name'],
+                    status=w['status'],
+                    timestamp=datetime.datetime.fromisoformat(w['timestamp']),
+                    processed_at=datetime.datetime.fromisoformat(w['processed_at']) if w['processed_at'] else None,
+                )
+                db.session.add(wd)
+
+            # Referrals
+            for r in tables.get('referrals', []):
+                ref = Referral(
+                    referrer_id=r['referrer_id'],
+                    referred_user_id=r['referred_user_id'],
+                    bonus_claimed=r['bonus_claimed'],
+                    claimed_at=datetime.datetime.fromisoformat(r['claimed_at']) if r['claimed_at'] else None,
+                    created_at=datetime.datetime.fromisoformat(r['created_at']),
+                )
+                db.session.add(ref)
+
+            # TikTokTasks
+            for t in tables.get('tiktok_tasks', []):
+                task = TikTokTask(
+                    date=datetime.date.fromisoformat(t['date']),
+                    tiktok_link=t['tiktok_link'],
+                    reward_amount=t['reward_amount'],
+                )
+                db.session.add(task)
+
+            # SocialSettings
+            for s in tables.get('social_settings', []):
+                social = SocialSettings(
+                    whatsapp_link=s['whatsapp_link'],
+                    telegram_link=s['telegram_link'],
+                    facebook_link=s['facebook_link'],
+                    min_withdrawal=s['min_withdrawal'],
+                )
+                db.session.add(social)
+
+            # GlobalWithdrawalDays
+            for day in tables.get('global_withdrawal_days', []):
+                gwd = GlobalWithdrawalDay(day=day)
+                db.session.add(gwd)
+
+            # BackupLogs
+            for b in tables.get('backup_logs', []):
+                log = BackupLog(
+                    filename=b['filename'],
+                    size=b['size'],
+                    created_at=datetime.datetime.fromisoformat(b['created_at']),
+                )
+                db.session.add(log)
+
+            db.session.commit()
+            db.session.execute('PRAGMA foreign_keys=ON;')
+            return jsonify({'success': True, 'message': 'Database restored successfully'})
+        except Exception as e:
+            db.session.rollback()
+            db.session.execute('PRAGMA foreign_keys=ON;')
+            raise e
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Import failed: {str(e)}'}), 500
 
 
 @app.route('/api/admin/database/clear', methods=['POST'])
 @admin_required
 def admin_clear_db():
+    """Clear the database (keep admin only)."""
     data = request.get_json()
     confirmation = data.get('sudo_confirmation')
     if confirmation != 'DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN':
         return jsonify({'success': False, 'message': 'Invalid confirmation'}), 400
+    # Delete all non-admin users (cascade deletes related data)
     User.query.filter(User.is_admin == False).delete()
-    Transaction.query.delete()
-    GameStats.query.delete()
-    Achievement.query.delete()
+    # Also explicitly delete orphaned data (if any)
+    Transaction.query.filter(~Transaction.user.has()).delete()
+    GameStats.query.filter(~GameStats.user.has()).delete()
+    Achievement.query.filter(~Achievement.user.has()).delete()
+    Withdrawal.query.filter(~Withdrawal.user.has()).delete()
+    Referral.query.filter(~Referral.referrer.has()).delete()
+    # Reset coupons
     Coupon.query.update({'status': 'AVAILABLE', 'used_by': None, 'used_at': None})
-    Withdrawal.query.delete()
-    Referral.query.delete()
     db.session.commit()
     return jsonify({'success': True, 'message': 'Database cleared (admin kept)', 'stats': {'users_deleted': 0, 'transactions_deleted': 0}})
-
-
-@app.route('/api/admin/export-data', methods=['POST'])
-@admin_required
-def admin_export_data():
-    return jsonify({'success': False, 'message': 'Export not implemented'}), 501
 
 
 @app.route('/api/admin/withdrawal-status-report', methods=['GET'])
@@ -1563,7 +1894,6 @@ def favicon():
 
 @app.route('/<path:path>')
 def serve_static(path):
-    """Serve static files; if not found, fallback to index.html (SPA)."""
     if path.startswith('api/'):
         return jsonify({'error': 'Not found'}), 404
     full_path = os.path.join(app.static_folder, path)
@@ -1572,7 +1902,6 @@ def serve_static(path):
     return send_from_directory(app.static_folder, 'index.html')
 
 
-# -------------------- HEALTH & SESSION --------------------
 @app.route('/api/health', methods=['GET'])
 def health():
     return jsonify({
@@ -1580,7 +1909,7 @@ def health():
         'uptime': 'OK',
         'database': 'Connected',
         'connection_pool': 'Active',
-        'version': '1.0.0'
+        'version': '2.0.0'
     })
 
 @app.route('/api/session/status', methods=['GET'])
@@ -1598,22 +1927,13 @@ def session_refresh():
     return jsonify({'success': True})
 
 
-# -------------------- DATABASE INIT (at module level) --------------------
 def init_db():
     with app.app_context():
-        # Create tables if they don't exist (preserves existing data)
         db.create_all()
-
-        # Read admin credentials from environment – no defaults!
         admin_username = os.environ.get('ADMIN_USERNAME')
         admin_password = os.environ.get('ADMIN_PASSWORD')
         if not admin_username or not admin_password:
-            raise RuntimeError(
-                "ADMIN_USERNAME and ADMIN_PASSWORD must be set in environment variables. "
-                "The app will not start without them."
-            )
-
-        # Check if admin already exists
+            raise RuntimeError("ADMIN_USERNAME and ADMIN_PASSWORD must be set.")
         admin = User.query.filter_by(username=admin_username).first()
         if not admin:
             admin = User(username=admin_username, is_admin=True)
@@ -1621,25 +1941,19 @@ def init_db():
             admin.referral_code = generate_referral_code()
             db.session.add(admin)
             db.session.commit()
-            print(f"✅ Admin user '{admin_username}' created.")
+            print(f"✅ Admin '{admin_username}' created.")
         else:
-            print(f"ℹ️ Admin user '{admin_username}' already exists.")
-
-        # Create default social settings if missing
+            print(f"ℹ️ Admin '{admin_username}' already exists.")
         if not SocialSettings.query.first():
             db.session.add(SocialSettings())
             db.session.commit()
-
-        # Add global withdrawal days (7,14,25,30) if none exist
         if GlobalWithdrawalDay.query.count() == 0:
             for d in [7, 14, 25, 30]:
                 db.session.add(GlobalWithdrawalDay(day=d))
             db.session.commit()
 
-# Initialize database on startup
 init_db()
 
-# -------------------- MAIN --------------------
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
