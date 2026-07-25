@@ -236,9 +236,7 @@ async function downloadReceipt() {
   } catch(err) { console.error('Download failed:', err); alert('Failed to download receipt.'); }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// ═══ WITHDRAWAL CHECK - ADDED ═══
-// ═══════════════════════════════════════════════════════════════
+// ═══ WITHDRAWAL CHECK ═══
 function checkWithdrawalStatus() {
   const statusEl = document.getElementById('withdrawal-status-message');
   const daysInfoEl = document.getElementById('withdrawal-days-info');
