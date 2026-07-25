@@ -156,6 +156,7 @@ class Coupon(db.Model):
 class Withdrawal(db.Model):
     __tablename__ = 'withdrawals'
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    transaction_id = db.Column(db.String(36), db.ForeignKey('transactions.id'), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     amount = db.Column(db.Float, nullable=False)
     bank_code = db.Column(db.String(10))
@@ -887,15 +888,6 @@ def withdraw():
     today_day = get_today_day()
     if not is_withdrawal_day(user, today_day):
         return jsonify({'success': False, 'message': 'Withdrawal not allowed today'}), 400
-    wd = Withdrawal(
-        user_id=user.id,
-        amount=amount,
-        bank_code=bank_code,
-        account_number=account_number,
-        account_name=account_name,
-        status='PENDING'
-    )
-    db.session.add(wd)
     user.balance -= amount
     banks_list = get_banks().json['banks']
     bank_name = next((b['name'] for b in banks_list if b['code'] == bank_code), 'Unknown Bank')
@@ -908,6 +900,17 @@ def withdraw():
             'bank_name': bank_name
         }
     )
+    db.session.flush()  # ensures tx.id is populated before we link it below
+    wd = Withdrawal(
+        user_id=user.id,
+        amount=amount,
+        bank_code=bank_code,
+        account_number=account_number,
+        account_name=account_name,
+        status='PENDING',
+        transaction_id=tx.id
+    )
+    db.session.add(wd)
     db.session.commit()
     return jsonify({'success': True, 'message': 'Withdrawal request submitted', 'new_balance': user.balance})
 
@@ -1066,6 +1069,13 @@ def admin_delete_user(user_id):
         return jsonify({'success': False, 'message': 'User not found'}), 404
     if user.is_admin:
         return jsonify({'success': False, 'message': 'Cannot delete admin user'}), 400
+    # Referral.referrer_id is covered by the User.referrals cascade below, but
+    # Referral.referred_user_id is not (it's the *other* side of the relationship),
+    # so rows where this user was the one being referred would otherwise be left
+    # dangling. Both columns are NOT NULL, so these rows must be deleted, not nulled.
+    Referral.query.filter_by(referred_user_id=user_id).delete()
+    # Any user this account referred should no longer point at a deleted referrer.
+    User.query.filter_by(referred_by=user_id).update({'referred_by': None})
     db.session.delete(user)
     db.session.commit()
     return jsonify({'success': True, 'message': 'User deleted successfully'})
@@ -1188,7 +1198,7 @@ def admin_approve_withdrawal():
         return jsonify({'success': False, 'message': 'Transaction not found'}), 404
     if tx.type != 'WITHDRAWAL':
         return jsonify({'success': False, 'message': 'Not a withdrawal transaction'}), 400
-    wd = Withdrawal.query.filter_by(id=tx_id).first()
+    wd = Withdrawal.query.filter_by(transaction_id=tx_id).first()
     if not wd:
         return jsonify({'success': False, 'message': 'Withdrawal record not found'}), 404
     if action == 'approve':
@@ -1426,11 +1436,14 @@ def admin_tiktok_history():
 @app.route('/api/admin/backup/trigger', methods=['POST'])
 @admin_required
 def admin_trigger_backup():
-    filename = f'backup_{datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")}.flexia'
-    log = BackupLog(filename=filename, size=0)
-    db.session.add(log)
-    db.session.commit()
-    return jsonify({'success': True, 'backup_file': filename})
+    try:
+        data = build_full_export_data()
+        filename, size = write_backup_file(data)
+        db.session.commit()
+        return jsonify({'success': True, 'backup_file': filename, 'size': size})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @app.route('/api/admin/backup/list', methods=['GET'])
@@ -1495,87 +1508,109 @@ def admin_export_data():
         return jsonify({'success': True, 'data': export_data, 'format': 'json'})
 
 
+def build_full_export_data():
+    return {
+        'version': '1.0',
+        'exported_at': datetime.datetime.utcnow().isoformat(),
+        'tables': {
+            'users': [u.to_dict() for u in User.query.all()],
+            'transactions': [t.to_dict() for t in Transaction.query.all()],
+            'game_stats': [{
+                'user_id': s.user_id,
+                'snake_high_score': s.snake_high_score,
+                'snake_plays_today': s.snake_plays_today,
+                'snake_last_play_date': s.snake_last_play_date.isoformat() if s.snake_last_play_date else None,
+                'coinflip_wins': s.coinflip_wins,
+                'coinflip_losses': s.coinflip_losses,
+                'coinflip_plays_today': s.coinflip_plays_today,
+                'coinflip_last_play_date': s.coinflip_last_play_date.isoformat() if s.coinflip_last_play_date else None,
+                'plinko_total_wins': s.plinko_total_wins,
+                'plinko_plays_today': s.plinko_plays_today,
+                'plinko_last_play_date': s.plinko_last_play_date.isoformat() if s.plinko_last_play_date else None,
+                'spin_plays_today': s.spin_plays_today,
+                'spin_last_play_date': s.spin_last_play_date.isoformat() if s.spin_last_play_date else None,
+                'tiktok_claimed_today': s.tiktok_claimed_today,
+                'tiktok_last_claim_date': s.tiktok_last_claim_date.isoformat() if s.tiktok_last_claim_date else None,
+            } for s in GameStats.query.all()],
+            'achievements': [{
+                'user_id': a.user_id,
+                'achievement_id': a.achievement_id,
+                'title': a.title,
+                'unlocked': a.unlocked,
+                'unlocked_at': a.unlocked_at.isoformat() if a.unlocked_at else None,
+                'progress': a.progress,
+                'target': a.target,
+                'processed': a.processed,
+            } for a in Achievement.query.all()],
+            'coupons': [{'code': c.code, 'status': c.status, 'used_by': c.used_by, 'used_at': c.used_at.isoformat() if c.used_at else None} for c in Coupon.query.all()],
+            'withdrawals': [{
+                'id': w.id,
+                'transaction_id': w.transaction_id,
+                'user_id': w.user_id,
+                'amount': w.amount,
+                'bank_code': w.bank_code,
+                'account_number': w.account_number,
+                'account_name': w.account_name,
+                'status': w.status,
+                'timestamp': w.timestamp.isoformat(),
+                'processed_at': w.processed_at.isoformat() if w.processed_at else None,
+            } for w in Withdrawal.query.all()],
+            'referrals': [{
+                'referrer_id': r.referrer_id,
+                'referred_user_id': r.referred_user_id,
+                'bonus_claimed': r.bonus_claimed,
+                'claimed_at': r.claimed_at.isoformat() if r.claimed_at else None,
+                'created_at': r.created_at.isoformat(),
+            } for r in Referral.query.all()],
+            'tiktok_tasks': [{
+                'date': t.date.isoformat(),
+                'tiktok_link': t.tiktok_link,
+                'reward_amount': t.reward_amount,
+            } for t in TikTokTask.query.all()],
+            'tiktok_accounts': [{
+                'id': a.id,
+                'username': a.username,
+                'active': a.active,
+                'created_at': a.created_at.isoformat(),
+            } for a in TikTokAccount.query.all()],
+            'social_settings': [{
+                'whatsapp_link': s.whatsapp_link,
+                'telegram_link': s.telegram_link,
+                'facebook_link': s.facebook_link,
+                'min_withdrawal': s.min_withdrawal,
+            } for s in SocialSettings.query.all()],
+            'global_withdrawal_days': [d.day for d in GlobalWithdrawalDay.query.all()],
+            'backup_logs': [{
+                'filename': b.filename,
+                'size': b.size,
+                'created_at': b.created_at.isoformat(),
+            } for b in BackupLog.query.all()],
+        }
+    }
+
+
+BACKUP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backups')
+
+
+def write_backup_file(data):
+    """Writes a full export to disk and logs it. Returns (filename, size_bytes)."""
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    filename = f'backup_{datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")}.flexia'
+    filepath = os.path.join(BACKUP_DIR, filename)
+    payload = json.dumps(data, indent=2)
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write(payload)
+    size = len(payload.encode('utf-8'))
+    log = BackupLog(filename=filename, size=size)
+    db.session.add(log)
+    return filename, size
+
+
 @app.route('/api/admin/database/export-all', methods=['POST'])
 @admin_required
 def admin_export_full_db():
     try:
-        data = {
-            'version': '1.0',
-            'exported_at': datetime.datetime.utcnow().isoformat(),
-            'tables': {
-                'users': [u.to_dict() for u in User.query.all()],
-                'transactions': [t.to_dict() for t in Transaction.query.all()],
-                'game_stats': [{
-                    'user_id': s.user_id,
-                    'snake_high_score': s.snake_high_score,
-                    'snake_plays_today': s.snake_plays_today,
-                    'snake_last_play_date': s.snake_last_play_date.isoformat() if s.snake_last_play_date else None,
-                    'coinflip_wins': s.coinflip_wins,
-                    'coinflip_losses': s.coinflip_losses,
-                    'coinflip_plays_today': s.coinflip_plays_today,
-                    'coinflip_last_play_date': s.coinflip_last_play_date.isoformat() if s.coinflip_last_play_date else None,
-                    'plinko_total_wins': s.plinko_total_wins,
-                    'plinko_plays_today': s.plinko_plays_today,
-                    'plinko_last_play_date': s.plinko_last_play_date.isoformat() if s.plinko_last_play_date else None,
-                    'spin_plays_today': s.spin_plays_today,
-                    'spin_last_play_date': s.spin_last_play_date.isoformat() if s.spin_last_play_date else None,
-                    'tiktok_claimed_today': s.tiktok_claimed_today,
-                    'tiktok_last_claim_date': s.tiktok_last_claim_date.isoformat() if s.tiktok_last_claim_date else None,
-                } for s in GameStats.query.all()],
-                'achievements': [{
-                    'user_id': a.user_id,
-                    'achievement_id': a.achievement_id,
-                    'title': a.title,
-                    'unlocked': a.unlocked,
-                    'unlocked_at': a.unlocked_at.isoformat() if a.unlocked_at else None,
-                    'progress': a.progress,
-                    'target': a.target,
-                    'processed': a.processed,
-                } for a in Achievement.query.all()],
-                'coupons': [{'code': c.code, 'status': c.status, 'used_by': c.used_by, 'used_at': c.used_at.isoformat() if c.used_at else None} for c in Coupon.query.all()],
-                'withdrawals': [{
-                    'id': w.id,
-                    'user_id': w.user_id,
-                    'amount': w.amount,
-                    'bank_code': w.bank_code,
-                    'account_number': w.account_number,
-                    'account_name': w.account_name,
-                    'status': w.status,
-                    'timestamp': w.timestamp.isoformat(),
-                    'processed_at': w.processed_at.isoformat() if w.processed_at else None,
-                } for w in Withdrawal.query.all()],
-                'referrals': [{
-                    'referrer_id': r.referrer_id,
-                    'referred_user_id': r.referred_user_id,
-                    'bonus_claimed': r.bonus_claimed,
-                    'claimed_at': r.claimed_at.isoformat() if r.claimed_at else None,
-                    'created_at': r.created_at.isoformat(),
-                } for r in Referral.query.all()],
-                'tiktok_tasks': [{
-                    'date': t.date.isoformat(),
-                    'tiktok_link': t.tiktok_link,
-                    'reward_amount': t.reward_amount,
-                } for t in TikTokTask.query.all()],
-                'tiktok_accounts': [{
-                    'id': a.id,
-                    'username': a.username,
-                    'active': a.active,
-                    'created_at': a.created_at.isoformat(),
-                } for a in TikTokAccount.query.all()],
-                'social_settings': [{
-                    'whatsapp_link': s.whatsapp_link,
-                    'telegram_link': s.telegram_link,
-                    'facebook_link': s.facebook_link,
-                    'min_withdrawal': s.min_withdrawal,
-                } for s in SocialSettings.query.all()],
-                'global_withdrawal_days': [d.day for d in GlobalWithdrawalDay.query.all()],
-                'backup_logs': [{
-                    'filename': b.filename,
-                    'size': b.size,
-                    'created_at': b.created_at.isoformat(),
-                } for b in BackupLog.query.all()],
-            }
-        }
+        data = build_full_export_data()
         return jsonify({'success': True, 'data': data})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -1682,6 +1717,7 @@ def admin_import_full_db():
             for w in tables.get('withdrawals', []):
                 wd = Withdrawal(
                     id=w['id'],
+                    transaction_id=w.get('transaction_id'),
                     user_id=w['user_id'],
                     amount=w['amount'],
                     bank_code=w['bank_code'],
@@ -1752,15 +1788,66 @@ def admin_clear_db():
     confirmation = data.get('sudo_confirmation')
     if confirmation != 'DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN':
         return jsonify({'success': False, 'message': 'Invalid confirmation'}), 400
-    User.query.filter(User.is_admin == False).delete()
-    Transaction.query.filter(~Transaction.user.has()).delete()
-    GameStats.query.filter(~GameStats.user.has()).delete()
-    Achievement.query.filter(~Achievement.user.has()).delete()
-    Withdrawal.query.filter(~Withdrawal.user.has()).delete()
-    Referral.query.filter(~Referral.referrer.has()).delete()
-    Coupon.query.update({'status': 'AVAILABLE', 'used_by': None, 'used_at': None})
+
+    clear_users = bool(data.get('clear_users', True))
+    clear_transactions = bool(data.get('clear_transactions', True))
+    clear_gameplays = bool(data.get('clear_gameplays', True))
+    reset_coupons = bool(data.get('reset_coupons', True))
+    backup_option = data.get('backup_option', 'yes')
+
+    backup_filename = None
+    if backup_option == 'yes':
+        try:
+            backup_data = build_full_export_data()
+            backup_filename, _ = write_backup_file(backup_data)
+        except Exception as e:
+            return jsonify({'success': False, 'message': f'Backup failed, nothing was deleted: {e}'}), 500
+
+    non_admin_ids = [u.id for u in User.query.filter_by(is_admin=False).with_entities(User.id).all()]
+
+    users_deleted = 0
+    transactions_deleted = 0
+    gameplays_deleted = 0
+    coupons_reset = 0
+
+    if non_admin_ids:
+        if clear_users:
+            # Deleting the users implies deleting everything that has a NOT NULL
+            # foreign key to them (transactions, game stats, achievements,
+            # withdrawals, referrals) — that's a DB constraint, not a choice,
+            # so clear_transactions/clear_gameplays are moot in this branch.
+            transactions_deleted = Transaction.query.filter(Transaction.user_id.in_(non_admin_ids)).delete(synchronize_session=False)
+            gameplays_deleted = GameStats.query.filter(GameStats.user_id.in_(non_admin_ids)).delete(synchronize_session=False)
+            Achievement.query.filter(Achievement.user_id.in_(non_admin_ids)).delete(synchronize_session=False)
+            Withdrawal.query.filter(Withdrawal.user_id.in_(non_admin_ids)).delete(synchronize_session=False)
+            Referral.query.filter(
+                Referral.referrer_id.in_(non_admin_ids) | Referral.referred_user_id.in_(non_admin_ids)
+            ).delete(synchronize_session=False)
+            User.query.filter(User.referred_by.in_(non_admin_ids)).update({'referred_by': None}, synchronize_session=False)
+            users_deleted = User.query.filter(User.id.in_(non_admin_ids)).delete(synchronize_session=False)
+        else:
+            if clear_transactions:
+                transactions_deleted = Transaction.query.filter(Transaction.user_id.in_(non_admin_ids)).delete(synchronize_session=False)
+                Withdrawal.query.filter(Withdrawal.user_id.in_(non_admin_ids)).delete(synchronize_session=False)
+            if clear_gameplays:
+                gameplays_deleted = GameStats.query.filter(GameStats.user_id.in_(non_admin_ids)).delete(synchronize_session=False)
+
+    if reset_coupons:
+        coupons_reset = Coupon.query.filter(Coupon.status != 'AVAILABLE').count()
+        Coupon.query.update({'status': 'AVAILABLE', 'used_by': None, 'used_at': None})
+
     db.session.commit()
-    return jsonify({'success': True, 'message': 'Database cleared (admin kept)', 'stats': {'users_deleted': 0, 'transactions_deleted': 0}})
+    return jsonify({
+        'success': True,
+        'message': 'Database cleared (admin kept)' + (f' — backup saved as {backup_filename}' if backup_filename else ''),
+        'backup_file': backup_filename,
+        'stats': {
+            'users_deleted': users_deleted,
+            'transactions_deleted': transactions_deleted,
+            'gameplays_deleted': gameplays_deleted,
+            'coupons_reset': coupons_reset,
+        }
+    })
 
 
 @app.route('/api/admin/withdrawal-status-report', methods=['GET'])
