@@ -3,103 +3,91 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Flexia Admin · Glass</title>
+    <title>Flexia Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
-        /* same as before, keep all styles */
+        /* Clean, modern admin style */
         body {
-            background: radial-gradient(ellipse at 30% 20%, #1b1135, #0a0618);
-            min-height: 100vh;
+            background: #f4f6f9;
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            color: #e8e8f0;
-            padding: 16px;
+            color: #1e293b;
+            padding: 20px;
         }
-        .glass {
-            background: rgba(255, 255, 255, 0.04);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+        .card {
+            background: #ffffff;
             border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+            padding: 20px;
+            transition: box-shadow 0.2s;
         }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            transition: all 0.2s ease;
-        }
-        .glass-card:hover {
-            border-color: rgba(168, 85, 247, 0.25);
-            box-shadow: 0 4px 20px rgba(128, 0, 255, 0.1);
+        .card:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06);
         }
         .tab-btn {
             background: transparent;
-            color: #8899bb;
-            padding: 6px 14px;
-            border-radius: 8px 8px 0 0;
-            font-weight: 600;
-            font-size: 0.8rem;
-            transition: all 0.2s;
+            color: #64748b;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            transition: all 0.15s;
             border-bottom: 2px solid transparent;
         }
         .tab-btn:hover {
-            color: #e0e0f0;
-            background: rgba(255,255,255,0.02);
+            background: #f1f5f9;
+            color: #0f172a;
         }
         .tab-btn.active {
-            color: #c4b5fd;
-            border-bottom-color: #7b61ff;
-            background: rgba(128,0,255,0.06);
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+            background: #eff6ff;
         }
         .stat-box {
-            background: rgba(255,255,255,0.02);
-            border-radius: 10px;
-            padding: 12px 16px;
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 16px 20px;
             text-align: center;
-            border-left: 3px solid #7b61ff;
+            border-left: 4px solid #2563eb;
         }
         .stat-box h3 {
-            font-size: 1.4rem;
+            font-size: 1.8rem;
             font-weight: 700;
-            color: #00eeff;
+            color: #0f172a;
             margin: 0;
         }
         .stat-box p {
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            color: #8899bb;
-            margin: 2px 0 0;
+            color: #64748b;
+            margin: 4px 0 0;
         }
-        .badge-glass {
-            background: rgba(168,85,247,0.15);
-            color: #c4b5fd;
+        .badge {
+            background: #e2e8f0;
+            color: #1e293b;
             padding: 2px 10px;
             border-radius: 20px;
             font-size: 0.7rem;
             font-weight: 600;
-            border: 1px solid rgba(168,85,247,0.1);
         }
-        .badge-glass.success { background: rgba(0,255,85,0.08); color: #6bcb77; border-color: rgba(0,255,85,0.1); }
-        .badge-glass.warning { background: rgba(255,165,0,0.08); color: #ffb347; border-color: rgba(255,165,0,0.1); }
-        .badge-glass.danger  { background: rgba(255,0,85,0.08); color: #ff6b6b; border-color: rgba(255,0,85,0.1); }
+        .badge-success { background: #dcfce7; color: #166534; }
+        .badge-danger  { background: #fee2e2; color: #991b1b; }
+        .badge-warning { background: #fef9c3; color: #854d0e; }
+        .badge-info    { background: #dbeafe; color: #1e40af; }
         input, select, textarea {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.08);
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 8px;
-            color: #e0e0f0;
-            padding: 6px 12px;
+            padding: 8px 12px;
             font-size: 0.85rem;
             width: 100%;
-            transition: border 0.2s;
+            transition: border 0.2s, box-shadow 0.2s;
         }
         input:focus, select:focus, textarea:focus {
             outline: none;
-            border-color: #7b61ff;
-            box-shadow: 0 0 0 3px rgba(128,0,255,0.1);
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
         }
         .btn {
             padding: 6px 14px;
@@ -107,37 +95,34 @@
             font-weight: 600;
             font-size: 0.8rem;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.15s;
             border: none;
-            background: rgba(168,85,247,0.12);
-            color: #c4b5fd;
+            background: #e2e8f0;
+            color: #1e293b;
         }
         .btn:hover {
-            background: rgba(168,85,247,0.2);
-            transform: translateY(-1px);
+            background: #cbd5e1;
         }
-        .btn-primary { background: linear-gradient(135deg, #7b61ff, #a855f7); color: #fff; }
-        .btn-primary:hover { box-shadow: 0 4px 20px rgba(128,0,255,0.25); }
-        .btn-success { background: rgba(0,200,83,0.15); color: #6bcb77; }
-        .btn-success:hover { background: rgba(0,200,83,0.25); }
-        .btn-danger { background: rgba(255,0,85,0.12); color: #ff6b6b; }
-        .btn-danger:hover { background: rgba(255,0,85,0.22); }
-        .btn-warning { background: rgba(255,165,0,0.12); color: #ffb347; }
-        .btn-warning:hover { background: rgba(255,165,0,0.22); }
-        .btn-info { background: rgba(0,200,255,0.12); color: #6bcbff; }
-        .btn-info:hover { background: rgba(0,200,255,0.22); }
-        .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.08); }
-        .btn-outline:hover { background: rgba(255,255,255,0.04); }
+        .btn-primary { background: #2563eb; color: #fff; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-success { background: #16a34a; color: #fff; }
+        .btn-success:hover { background: #15803d; }
+        .btn-danger { background: #dc2626; color: #fff; }
+        .btn-danger:hover { background: #b91c1c; }
+        .btn-warning { background: #eab308; color: #0f172a; }
+        .btn-warning:hover { background: #ca8a04; }
+        .btn-outline { background: transparent; border: 1px solid #e2e8f0; }
+        .btn-outline:hover { background: #f1f5f9; }
         .table-wrap { overflow-x: auto; }
-        table { width: 100%; font-size: 0.8rem; border-collapse: collapse; }
-        th { text-align: left; padding: 6px 8px; color: #8899bb; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.04); }
-        td { padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.02); }
-        tr:hover td { background: rgba(255,255,255,0.02); }
+        table { width: 100%; font-size: 0.85rem; border-collapse: collapse; }
+        th { text-align: left; padding: 8px 12px; color: #475569; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; }
+        tr:hover td { background: #f8fafc; }
         .section-title {
-            font-size: 0.9rem;
+            font-size: 1.1rem;
             font-weight: 600;
-            color: #c4b5fd;
-            margin-bottom: 12px;
+            color: #0f172a;
+            margin-bottom: 16px;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -145,76 +130,109 @@
         .day-selector {
             display: flex;
             flex-wrap: wrap;
-            gap: 4px;
-            max-height: 160px;
+            gap: 6px;
+            max-height: 200px;
             overflow-y: auto;
-            padding: 8px;
-            background: rgba(0,0,0,0.2);
-            border-radius: 8px;
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
         }
         .day-checkbox {
             display: flex;
             align-items: center;
             gap: 4px;
-            background: rgba(255,255,255,0.02);
-            padding: 2px 8px 2px 4px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            border: 1px solid rgba(255,255,255,0.04);
+            background: #ffffff;
+            padding: 4px 12px 4px 6px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            border: 1px solid #e2e8f0;
         }
         .day-checkbox input { width: auto; margin: 0; }
-        .day-checkbox input:checked + label { color: #c4b5fd; font-weight: 600; }
+        .day-checkbox input:checked + label { color: #2563eb; font-weight: 600; }
         .modal-content {
-            background: rgba(20,12,40,0.9);
-            backdrop-filter: blur(24px);
-            border: 1px solid rgba(255,255,255,0.06);
+            background: #ffffff;
             border-radius: 20px;
+            border: none;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
         }
         .modal-header, .modal-footer {
-            border-color: rgba(255,255,255,0.04);
+            border-color: #e2e8f0;
         }
-        .scrollbar-thin::-webkit-scrollbar { width: 4px; }
-        .scrollbar-thin::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
-        .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(168,85,247,0.2); border-radius: 4px; }
-        .modal-backdrop { background: rgba(0,0,0,0.6); backdrop-filter: blur(6px); }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .w-100 { width: 100%; }
-        .flex { display: flex; }
-        .flex-wrap { flex-wrap: wrap; }
-        .gap-2 { gap: 8px; }
-        .gap-1 { gap: 4px; }
-        .items-center { align-items: center; }
-        .justify-between { justify-content: space-between; }
-        .text-sm { font-size: 0.8rem; }
-        .text-xs { font-size: 0.7rem; }
+        .text-sm { font-size: 0.85rem; }
+        .text-xs { font-size: 0.75rem; }
         .mt-2 { margin-top: 8px; }
         .mb-2 { margin-bottom: 8px; }
         .mt-4 { margin-top: 16px; }
         .mb-4 { margin-bottom: 16px; }
-        .p-2 { padding: 8px; }
         .p-4 { padding: 16px; }
+        .gap-2 { gap: 8px; }
+        .flex { display: flex; }
+        .flex-wrap { flex-wrap: wrap; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .grid { display: grid; }
+        .grid-cols-2 { grid-template-columns: 1fr 1fr; }
+        .grid-cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .grid-cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+        .gap-3 { gap: 12px; }
+        .gap-4 { gap: 16px; }
+        .w-full { width: 100%; }
+        .max-w-7xl { max-width: 1280px; }
+        .mx-auto { margin-left: auto; margin-right: auto; }
+        .shadow { box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04); }
+        .border { border: 1px solid #e2e8f0; }
+        .border-l-4 { border-left-width: 4px; }
+        .border-green-400 { border-color: #4ade80; }
+        .border-red-400 { border-color: #f87171; }
+        .border-yellow-300 { border-color: #fcd34d; }
+        .bg-white { background: #ffffff; }
+        .bg-gray-50 { background: #f8fafc; }
+        .text-gray-500 { color: #64748b; }
+        .text-gray-600 { color: #475569; }
+        .text-gray-700 { color: #334155; }
+        .text-blue-600 { color: #2563eb; }
+        .text-red-600 { color: #dc2626; }
+        .text-green-600 { color: #16a34a; }
+        .text-yellow-600 { color: #ca8a04; }
+        .font-semibold { font-weight: 600; }
+        .font-bold { font-weight: 700; }
+        .inline-block { display: inline-block; }
+        .hidden { display: none; }
+        .ml-2 { margin-left: 8px; }
+        .mr-2 { margin-right: 8px; }
+        .p-2 { padding: 8px; }
+        .p-3 { padding: 12px; }
+        .p-4 { padding: 16px; }
+        .rounded { border-radius: 8px; }
+        .rounded-lg { border-radius: 12px; }
+        .rounded-full { border-radius: 9999px; }
+        /* Responsive tweaks */
+        @media (max-width: 768px) {
+            .grid-cols-2, .grid-cols-3, .grid-cols-4 { grid-template-columns: 1fr; }
+            .flex-wrap { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
-<div id="app" class="max-w-7xl mx-auto">
+<div class="max-w-7xl mx-auto">
 
-    <!-- HEADER -->
-    <header class="glass p-4 mb-4 flex flex-wrap items-center justify-between">
+    <!-- Header -->
+    <header class="flex flex-wrap items-center justify-between mb-6">
         <div class="flex items-center gap-3">
-            <span class="text-xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                <i class="fas fa-crown mr-2"></i>Flexia Admin
-            </span>
-            <span class="text-xs text-gray-500 hidden sm:inline">v2.0 · glass</span>
+            <span class="text-2xl font-bold text-blue-600"><i class="fas fa-crown mr-2"></i>Flexia Admin</span>
+            <span class="text-sm text-gray-500 hidden sm:inline">v2.0</span>
         </div>
         <div class="flex gap-2">
-            <button onclick="checkHealth()" class="btn btn-outline text-xs"><i class="fas fa-heartbeat"></i> Health</button>
-            <button onclick="adminLogout()" class="btn btn-outline text-xs"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            <button onclick="checkHealth()" class="btn btn-outline text-sm"><i class="fas fa-heartbeat"></i> Health</button>
+            <button onclick="adminLogout()" class="btn btn-outline text-sm"><i class="fas fa-sign-out-alt"></i> Logout</button>
         </div>
     </header>
 
-    <!-- TABS -->
-    <div class="glass p-2 mb-4 flex flex-wrap gap-1">
+    <!-- Tabs -->
+    <div class="flex flex-wrap gap-1 border-b border-gray-200 mb-6">
         <button class="tab-btn active" onclick="showTab('dashboard')"><i class="fas fa-tachometer-alt"></i> Dashboard</button>
         <button class="tab-btn" onclick="showTab('database')"><i class="fas fa-database"></i> Database</button>
         <button class="tab-btn" onclick="showTab('globalSettings')"><i class="fas fa-globe"></i> Days</button>
@@ -229,139 +247,136 @@
 
     <!-- ===== DASHBOARD ===== -->
     <div id="dashboard" class="tab-content active">
-        <div class="glass p-4 mb-4">
+        <div class="card mb-4">
             <div class="section-title"><i class="fas fa-chart-line"></i> System Overview</div>
-            <div id="health-status" class="glass-card p-3 mb-3 border-l-4 border-green-400">
-                <div class="flex flex-wrap items-center justify-between">
-                    <div>
-                        <span class="font-semibold"><i class="fas fa-check-circle text-green-400"></i> Online</span>
-                        <span id="uptime-display" class="text-xs text-gray-400 ml-2">Loading…</span>
-                    </div>
-                    <div class="text-xs text-gray-400 flex gap-3">
-                        <span>DB: <span id="db-status" class="badge-glass success">Connected</span></span>
-                        <span>Pool: <span id="pool-status" class="badge-glass success">Active</span></span>
-                        <span class="hidden sm:inline"><span id="timezone-display" class="badge-glass">UTC</span></span>
-                    </div>
+            <div id="health-status" class="bg-gray-50 p-4 rounded-lg border-l-4 border-green-400 mb-4 flex flex-wrap items-center justify-between">
+                <div>
+                    <span class="font-semibold"><i class="fas fa-check-circle text-green-600"></i> Online</span>
+                    <span id="uptime-display" class="text-sm text-gray-500 ml-2">Loading…</span>
+                </div>
+                <div class="text-sm text-gray-500 flex gap-4">
+                    <span>DB: <span class="badge badge-success">Connected</span></span>
+                    <span>Pool: <span class="badge badge-success">Active</span></span>
+                    <span class="hidden sm:inline"><span id="timezone-display" class="badge">UTC</span></span>
                 </div>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="stat-box"><h3 id="total-users-count">—</h3><p>Total Users</p></div>
                 <div class="stat-box"><h3 id="pending-withdrawals-count">—</h3><p>Pending Withdrawals</p></div>
                 <div class="stat-box"><h3 id="total-balance">—</h3><p>Platform Balance</p></div>
                 <div class="stat-box"><h3 id="today-date">—</h3><p>Today</p></div>
             </div>
-            <div class="glass-card p-3 mt-3">
-                <div class="text-xs text-gray-400">Global Withdrawal Days</div>
-                <div id="current-global-days" class="text-sm font-mono text-purple-300">—</div>
+            <div class="bg-gray-50 p-3 rounded-lg mt-4">
+                <div class="text-sm text-gray-500">Global Withdrawal Days</div>
+                <div id="current-global-days" class="text-lg font-mono text-blue-600">—</div>
             </div>
         </div>
-        <div class="glass p-4">
+        <div class="card">
             <div class="section-title"><i class="fas fa-history"></i> Recent Withdrawals</div>
-            <div id="recent-withdrawals" class="text-sm text-gray-400">Loading…</div>
+            <div id="recent-withdrawals" class="text-sm text-gray-500">Loading…</div>
         </div>
     </div>
 
     <!-- ===== DATABASE ===== -->
     <div id="database" class="tab-content">
-        <div class="glass p-4 mb-4 border-l-4 border-red-400">
-            <div class="section-title text-red-400"><i class="fas fa-database"></i> Management</div>
+        <div class="card mb-4 border-l-4 border-red-400">
+            <div class="section-title text-red-600"><i class="fas fa-database"></i> Management</div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="glass-card p-3">
-                    <div class="font-semibold text-red-300"><i class="fas fa-trash"></i> Clear Data</div>
-                    <div class="text-xs text-gray-400 my-2">Irreversible! Keeps admin only.</div>
-                    <div class="flex flex-wrap gap-2 text-xs">
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <div class="font-semibold text-red-600"><i class="fas fa-trash"></i> Clear Data</div>
+                    <div class="text-sm text-gray-500 my-2">Irreversible! Keeps admin only.</div>
+                    <div class="flex flex-wrap gap-3 text-sm">
                         <label class="flex items-center gap-1"><input type="checkbox" id="clear-users" checked> Users</label>
                         <label class="flex items-center gap-1"><input type="checkbox" id="clear-transactions" checked> Transactions</label>
                         <label class="flex items-center gap-1"><input type="checkbox" id="clear-gameplays" checked> Game Plays</label>
                         <label class="flex items-center gap-1"><input type="checkbox" id="reset-coupons" checked> Reset Coupons</label>
                     </div>
-                    <div class="mt-2 flex gap-2">
-                        <select id="backup-option" class="w-auto text-xs py-1"><option value="yes">Backup: Yes</option><option value="no">No</option></select>
-                        <button onclick="previewDatabaseClear()" class="btn btn-danger text-xs"><i class="fas fa-eye"></i> Preview</button>
+                    <div class="mt-3 flex gap-2">
+                        <select id="backup-option" class="text-sm py-1"><option value="yes">Backup: Yes</option><option value="no">No</option></select>
+                        <button onclick="previewDatabaseClear()" class="btn btn-danger text-sm"><i class="fas fa-eye"></i> Preview</button>
                     </div>
                 </div>
-                <div class="glass-card p-3">
-                    <div class="font-semibold text-cyan-300"><i class="fas fa-file-export"></i> Export Data</div>
-                    <div class="text-xs text-gray-400 my-2">Select format & data.</div>
-                    <div class="flex flex-wrap gap-2 text-xs">
-                        <select id="export-format" class="w-auto text-xs py-1"><option value="json">JSON</option><option value="csv">CSV</option></select>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <div class="font-semibold text-blue-600"><i class="fas fa-file-export"></i> Export Data</div>
+                    <div class="text-sm text-gray-500 my-2">Select format & data.</div>
+                    <div class="flex flex-wrap gap-3 text-sm">
+                        <select id="export-format" class="text-sm py-1"><option value="json">JSON</option><option value="csv">CSV</option></select>
                         <label class="flex items-center gap-1"><input type="checkbox" id="export-users" checked> Users</label>
                         <label class="flex items-center gap-1"><input type="checkbox" id="export-transactions" checked> Transactions</label>
                         <label class="flex items-center gap-1"><input type="checkbox" id="export-gameplays"> Game Plays</label>
                     </div>
-                    <div class="mt-2 flex gap-2">
-                        <button onclick="exportDatabaseData()" class="btn btn-info text-xs"><i class="fas fa-download"></i> Export Selected</button>
-                        <button onclick="exportFullDatabase()" class="btn btn-success text-xs"><i class="fas fa-database"></i> Full .flexia</button>
+                    <div class="mt-3 flex gap-2">
+                        <button onclick="exportDatabaseData()" class="btn btn-info text-sm"><i class="fas fa-download"></i> Export Selected</button>
+                        <button onclick="exportFullDatabase()" class="btn btn-success text-sm"><i class="fas fa-database"></i> Full .flexia</button>
                     </div>
                 </div>
             </div>
-            <div class="mt-4 glass-card p-3">
-                <div class="font-semibold text-yellow-300"><i class="fas fa-file-import"></i> Restore Database</div>
+            <div class="bg-gray-50 p-3 rounded-lg mt-4">
+                <div class="font-semibold text-yellow-600"><i class="fas fa-file-import"></i> Restore Database</div>
                 <div class="flex flex-wrap items-center gap-2 mt-2">
-                    <input type="file" id="restore-file" accept=".flexia" class="w-auto text-xs py-1">
-                    <button onclick="restoreDatabase()" class="btn btn-danger text-xs" id="restore-btn" disabled><i class="fas fa-history"></i> Restore .flexia</button>
+                    <input type="file" id="restore-file" accept=".flexia" class="text-sm py-1">
+                    <button onclick="restoreDatabase()" class="btn btn-danger text-sm" id="restore-btn" disabled><i class="fas fa-history"></i> Restore .flexia</button>
                 </div>
             </div>
-            <div class="mt-4 glass-card p-3">
-                <div class="font-semibold text-purple-300"><i class="fas fa-chart-bar"></i> Database Stats</div>
-                <div class="grid grid-cols-3 gap-2 mt-2 text-center">
+            <div class="bg-gray-50 p-3 rounded-lg mt-4">
+                <div class="font-semibold text-gray-700"><i class="fas fa-chart-bar"></i> Database Stats</div>
+                <div class="grid grid-cols-3 gap-3 mt-2 text-center">
                     <div class="stat-box"><h3 id="stats-users">—</h3><p>Users</p></div>
                     <div class="stat-box"><h3 id="stats-transactions">—</h3><p>Transactions</p></div>
                     <div class="stat-box"><h3 id="stats-gameplays">—</h3><p>Game Plays</p></div>
                 </div>
-                <button onclick="refreshDatabaseStats()" class="btn btn-primary text-xs mt-2"><i class="fas fa-sync"></i> Refresh</button>
+                <button onclick="refreshDatabaseStats()" class="btn btn-primary text-sm mt-2"><i class="fas fa-sync"></i> Refresh</button>
             </div>
         </div>
     </div>
 
     <!-- ===== GLOBAL WITHDRAWAL DAYS ===== -->
     <div id="globalSettings" class="tab-content">
-        <div class="glass p-4">
+        <div class="card">
             <div class="section-title"><i class="fas fa-globe"></i> Global Withdrawal Days</div>
-            <div class="text-xs text-gray-400 mb-2">Default days for all users without custom settings.</div>
-            <div class="glass-card p-3 mb-3">
-                <div class="text-xs text-gray-400">Current</div>
-                <div id="global-days-current" class="text-sm font-mono text-purple-300">—</div>
+            <div class="text-sm text-gray-500 mb-4">Default days for all users without custom settings.</div>
+            <div class="bg-gray-50 p-3 rounded-lg mb-4">
+                <div class="text-sm text-gray-500">Current</div>
+                <div id="global-days-current" class="text-lg font-mono text-blue-600">—</div>
             </div>
             <div class="day-selector" id="global-day-selector"></div>
-            <div class="flex flex-wrap gap-2 mt-3">
-                <button onclick="selectAllGlobalDays()" class="btn btn-primary text-xs">All</button>
-                <button onclick="clearAllGlobalDays()" class="btn btn-danger text-xs">Clear</button>
-                <button onclick="setDefaultGlobalDays()" class="btn btn-warning text-xs">Default</button>
-                <button onclick="saveGlobalWithdrawalDays()" class="btn btn-success text-xs"><i class="fas fa-save"></i> Save</button>
+            <div class="flex flex-wrap gap-2 mt-4">
+                <button onclick="selectAllGlobalDays()" class="btn btn-primary text-sm">All</button>
+                <button onclick="clearAllGlobalDays()" class="btn btn-danger text-sm">Clear</button>
+                <button onclick="setDefaultGlobalDays()" class="btn btn-warning text-sm">Default</button>
+                <button onclick="saveGlobalWithdrawalDays()" class="btn btn-success text-sm"><i class="fas fa-save"></i> Save</button>
             </div>
-            <div id="global-settings-message" class="text-xs mt-2"></div>
+            <div id="global-settings-message" class="text-sm mt-2"></div>
         </div>
     </div>
 
     <!-- ===== TIKTOK ===== -->
     <div id="tiktokDaily" class="tab-content">
-        <div class="glass p-4">
+        <div class="card">
             <div class="section-title"><i class="fab fa-tiktok"></i> TikTok Daily Task</div>
             <div class="flex flex-wrap gap-2 items-center">
                 <input type="url" id="tiktok-link-input" placeholder="https://www.tiktok.com/@..." class="flex-1 min-w-[200px]">
-                <button onclick="setTikTokDaily()" class="btn btn-success text-xs"><i class="fas fa-save"></i> Set Today (Override)</button>
+                <button onclick="setTikTokDaily()" class="btn btn-success text-sm"><i class="fas fa-save"></i> Set Today (Override)</button>
             </div>
-            <div id="tiktok-message" class="text-xs mt-2"></div>
-            <div class="mt-4 glass-card p-3">
-                <div class="font-semibold text-cyan-300">Current Task</div>
+            <div id="tiktok-message" class="text-sm mt-2"></div>
+            <div class="bg-gray-50 p-3 rounded-lg mt-4">
+                <div class="font-semibold text-blue-600">Current Task</div>
                 <div id="current-tiktok-display" class="text-sm">Loading…</div>
             </div>
-            <div class="mt-4 glass-card p-3">
-                <div class="font-semibold text-purple-300">Last 7 Days</div>
+            <div class="bg-gray-50 p-3 rounded-lg mt-4">
+                <div class="font-semibold text-gray-700">Last 7 Days</div>
                 <div id="tiktok-history-list" class="text-sm">Loading…</div>
             </div>
-
-            <!-- ===== NEW: TIKTOK ACCOUNT SEED POOL ===== -->
-            <div class="mt-4 glass-card p-3 border-t-2 border-pink-500/30">
-                <div class="font-semibold text-pink-300"><i class="fas fa-user-plus"></i> Seed Accounts (Auto-Random)</div>
-                <div class="text-xs text-gray-400 mb-2">Add usernames – each day a random active one will be used.</div>
+            <!-- TikTok Seed Accounts -->
+            <div class="bg-gray-50 p-4 rounded-lg mt-4 border-t-2 border-blue-200">
+                <div class="font-semibold text-blue-600"><i class="fas fa-user-plus"></i> Seed Accounts (Auto-Random)</div>
+                <div class="text-sm text-gray-500 mb-3">Add usernames – each day a random active one will be used.</div>
                 <div class="flex flex-wrap gap-2 items-center">
                     <input type="text" id="new-tiktok-account" placeholder="@username" class="flex-1 min-w-[150px] text-sm">
-                    <button onclick="addTikTokAccount()" class="btn btn-success text-xs"><i class="fas fa-plus"></i> Add</button>
-                    <button onclick="loadTikTokAccounts()" class="btn btn-primary text-xs"><i class="fas fa-sync"></i> Refresh</button>
+                    <button onclick="addTikTokAccount()" class="btn btn-success text-sm"><i class="fas fa-plus"></i> Add</button>
+                    <button onclick="loadTikTokAccounts()" class="btn btn-primary text-sm"><i class="fas fa-sync"></i> Refresh</button>
                 </div>
-                <div id="tiktok-account-list" class="mt-2 text-sm">
+                <div id="tiktok-account-list" class="mt-3 text-sm">
                     Loading accounts…
                 </div>
             </div>
@@ -370,16 +385,16 @@
 
     <!-- ===== USERS ===== -->
     <div id="users" class="tab-content">
-        <div class="glass p-4">
+        <div class="card">
             <div class="section-title"><i class="fas fa-users"></i> Users</div>
-            <div class="flex items-center gap-2 mb-3">
+            <div class="flex items-center gap-2 mb-4">
                 <input type="text" id="user-search" placeholder="Search…" class="max-w-xs text-sm">
-                <button onclick="loadUsers()" class="btn btn-primary text-xs"><i class="fas fa-sync"></i> Refresh</button>
+                <button onclick="loadUsers()" class="btn btn-primary text-sm"><i class="fas fa-sync"></i> Refresh</button>
             </div>
             <div class="table-wrap">
                 <table>
                     <thead><tr><th>ID</th><th>Username</th><th>Balance</th><th>Withdrawal</th><th>Limit</th><th>Admin</th><th>Actions</th></tr></thead>
-                    <tbody id="user-list"><tr><td colspan="7" class="text-center text-gray-400">Loading…</td></tr></tbody>
+                    <tbody id="user-list"><tr><td colspan="7" class="text-center text-gray-500">Loading…</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -387,16 +402,16 @@
 
     <!-- ===== WITHDRAWALS ===== -->
     <div id="withdrawals" class="tab-content">
-        <div class="glass p-4 mb-4">
+        <div class="card mb-4">
             <div class="section-title"><i class="fas fa-money-bill-wave"></i> Pending Withdrawals</div>
             <div id="pending-withdrawals-list" class="text-sm">Loading…</div>
         </div>
-        <div class="glass p-4">
+        <div class="card">
             <div class="section-title"><i class="fas fa-history"></i> Recent Transactions</div>
             <div class="table-wrap">
                 <table>
                     <thead><tr><th>ID</th><th>User</th><th>Amount</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
-                    <tbody id="all-transactions"><tr><td colspan="6" class="text-center text-gray-400">Loading…</td></tr></tbody>
+                    <tbody id="all-transactions"><tr><td colspan="6" class="text-center text-gray-500">Loading…</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -404,19 +419,19 @@
 
     <!-- ===== WITHDRAWAL REPORT ===== -->
     <div id="withdrawalReport" class="tab-content">
-        <div class="glass p-4">
+        <div class="card">
             <div class="section-title"><i class="fas fa-chart-bar"></i> Withdrawal Report</div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                 <div class="stat-box"><h3 id="report-total-users">—</h3><p>Total Users</p></div>
                 <div class="stat-box"><h3 id="report-can-withdraw">—</h3><p>Can Withdraw Today</p></div>
                 <div class="stat-box"><h3 id="report-restricted">—</h3><p>Restricted</p></div>
                 <div class="stat-box"><h3 id="report-today">—</h3><p>Today</p></div>
             </div>
-            <button onclick="loadWithdrawalReport()" class="btn btn-primary text-xs mb-3"><i class="fas fa-sync-alt"></i> Refresh</button>
+            <button onclick="loadWithdrawalReport()" class="btn btn-primary text-sm mb-4"><i class="fas fa-sync-alt"></i> Refresh</button>
             <div class="table-wrap">
                 <table>
                     <thead><tr><th>ID</th><th>Username</th><th>Balance</th><th>Status</th><th>Limit</th><th>Days</th><th>PIN</th><th>Actions</th></tr></thead>
-                    <tbody id="withdrawal-report-users"><tr><td colspan="8" class="text-center text-gray-400">Loading…</td></tr></tbody>
+                    <tbody id="withdrawal-report-users"><tr><td colspan="8" class="text-center text-gray-500">Loading…</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -424,19 +439,19 @@
 
     <!-- ===== BACKUP ===== -->
     <div id="backup" class="tab-content">
-        <div class="glass p-4">
+        <div class="card">
             <div class="section-title"><i class="fas fa-hdd"></i> Backup Management</div>
-            <div class="glass-card p-3 mb-3">
-                <div class="text-xs text-gray-400">Last Backup: <span id="last-backup-time">Checking…</span></div>
+            <div class="bg-gray-50 p-3 rounded-lg mb-4">
+                <div class="text-sm text-gray-500">Last Backup: <span id="last-backup-time">Checking…</span></div>
                 <div class="text-xs text-gray-500">Daily at 2 AM UTC · 7‑day retention</div>
             </div>
             <div class="flex flex-wrap gap-2">
-                <button onclick="triggerBackup()" class="btn btn-success text-xs"><i class="fas fa-play-circle"></i> Manual Backup</button>
-                <button onclick="listBackups()" class="btn btn-primary text-xs"><i class="fas fa-sync"></i> Refresh</button>
+                <button onclick="triggerBackup()" class="btn btn-success text-sm"><i class="fas fa-play-circle"></i> Manual Backup</button>
+                <button onclick="listBackups()" class="btn btn-primary text-sm"><i class="fas fa-sync"></i> Refresh</button>
             </div>
-            <div id="backup-message" class="text-xs mt-2"></div>
+            <div id="backup-message" class="text-sm mt-2"></div>
             <div class="mt-4">
-                <div class="font-semibold text-purple-300">Available Backups</div>
+                <div class="font-semibold text-gray-700">Available Backups</div>
                 <div id="backup-list" class="text-sm">Loading…</div>
             </div>
         </div>
@@ -444,65 +459,65 @@
 
     <!-- ===== SETTINGS ===== -->
     <div id="settings" class="tab-content">
-        <div class="glass p-4 mb-4">
+        <div class="card mb-4">
             <div class="section-title"><i class="fas fa-share-alt"></i> Social Links</div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                <div><label class="text-xs text-gray-400">WhatsApp</label><input type="url" id="whatsapp-link" /></div>
-                <div><label class="text-xs text-gray-400">Telegram</label><input type="url" id="telegram-link" /></div>
-                <div><label class="text-xs text-gray-400">Facebook</label><input type="url" id="facebook-link" /></div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div><label class="text-sm text-gray-600">WhatsApp</label><input type="url" id="whatsapp-link" /></div>
+                <div><label class="text-sm text-gray-600">Telegram</label><input type="url" id="telegram-link" /></div>
+                <div><label class="text-sm text-gray-600">Facebook</label><input type="url" id="facebook-link" /></div>
             </div>
-            <button onclick="saveSocialLinks()" class="btn btn-success text-xs mt-2"><i class="fas fa-save"></i> Save</button>
-            <div id="social-message" class="text-xs mt-2"></div>
+            <button onclick="saveSocialLinks()" class="btn btn-success text-sm mt-3"><i class="fas fa-save"></i> Save</button>
+            <div id="social-message" class="text-sm mt-2"></div>
         </div>
-        <div class="glass p-4 mb-4">
+        <div class="card mb-4">
             <div class="section-title"><i class="fas fa-money-bill-wave"></i> Min Withdrawal</div>
             <div class="flex flex-wrap gap-2 items-center">
                 <input type="number" id="min-withdrawal-input" placeholder="100000" class="max-w-xs text-sm" />
-                <button onclick="saveMinWithdrawal()" class="btn btn-success text-xs"><i class="fas fa-save"></i> Save</button>
+                <button onclick="saveMinWithdrawal()" class="btn btn-success text-sm"><i class="fas fa-save"></i> Save</button>
             </div>
-            <div id="min-withdrawal-message" class="text-xs mt-2"></div>
+            <div id="min-withdrawal-message" class="text-sm mt-2"></div>
         </div>
-        <div class="glass p-4">
+        <div class="card">
             <div class="section-title"><i class="fas fa-key"></i> Change Admin Password</div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                <div><label class="text-xs text-gray-400">Current</label><input type="password" id="current-password" /></div>
-                <div><label class="text-xs text-gray-400">New</label><input type="password" id="new-password" /></div>
-                <div><label class="text-xs text-gray-400">Confirm</label><input type="password" id="confirm-password" /></div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div><label class="text-sm text-gray-600">Current</label><input type="password" id="current-password" /></div>
+                <div><label class="text-sm text-gray-600">New</label><input type="password" id="new-password" /></div>
+                <div><label class="text-sm text-gray-600">Confirm</label><input type="password" id="confirm-password" /></div>
             </div>
-            <button onclick="changeAdminPassword()" class="btn btn-primary text-xs mt-2"><i class="fas fa-key"></i> Change</button>
-            <div id="password-message" class="text-xs mt-2"></div>
+            <button onclick="changeAdminPassword()" class="btn btn-primary text-sm mt-3"><i class="fas fa-key"></i> Change</button>
+            <div id="password-message" class="text-sm mt-2"></div>
         </div>
     </div>
 
     <!-- ===== COUPONS ===== -->
     <div id="coupons" class="tab-content">
-        <div class="glass p-4">
+        <div class="card">
             <div class="section-title"><i class="fas fa-ticket-alt"></i> Coupon Management</div>
             <div class="flex flex-wrap gap-2 items-center mb-3">
                 <span class="text-sm" id="coupon-stats">Loading…</span>
-                <button onclick="loadCouponStats()" class="btn btn-primary text-xs"><i class="fas fa-sync"></i></button>
-                <button onclick="resetCoupons()" class="btn btn-warning text-xs"><i class="fas fa-undo"></i> Reset Used</button>
-                <button onclick="deleteAllCoupons()" class="btn btn-danger text-xs"><i class="fas fa-trash"></i> Delete All</button>
+                <button onclick="loadCouponStats()" class="btn btn-primary text-sm"><i class="fas fa-sync"></i></button>
+                <button onclick="resetCoupons()" class="btn btn-warning text-sm"><i class="fas fa-undo"></i> Reset Used</button>
+                <button onclick="deleteAllCoupons()" class="btn btn-danger text-sm"><i class="fas fa-trash"></i> Delete All</button>
             </div>
-            <div><label class="text-xs text-gray-400">Add Coupons (one per line)</label>
+            <div><label class="text-sm text-gray-600">Add Coupons (one per line)</label>
                 <textarea id="new-coupons" rows="3" class="text-sm" placeholder="FLEX123"></textarea>
             </div>
-            <button onclick="addCoupons()" class="btn btn-success text-xs mt-2"><i class="fas fa-plus"></i> Add</button>
-            <div id="coupon-message" class="text-xs mt-2"></div>
+            <button onclick="addCoupons()" class="btn btn-success text-sm mt-2"><i class="fas fa-plus"></i> Add</button>
+            <div id="coupon-message" class="text-sm mt-2"></div>
         </div>
     </div>
 
-    <!-- ===== MODALS (same as before) ===== -->
+    <!-- ===== MODALS ===== -->
     <!-- User Settings Modal -->
     <div class="modal fade" id="withdrawalSettingsModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header flex justify-between p-3 border-b">
-                    <h5 class="modal-title text-purple-300">Settings for <span id="modal-username"></span></h5>
-                    <button type="button" class="text-gray-400 hover:text-white" data-bs-dismiss="modal">✕</button>
+                <div class="modal-header flex justify-between p-4 border-b">
+                    <h5 class="modal-title text-blue-600">Settings for <span id="modal-username"></span></h5>
+                    <button type="button" class="text-gray-400 hover:text-gray-600" data-bs-dismiss="modal">✕</button>
                 </div>
-                <div class="modal-body p-3" id="withdrawal-settings-content"></div>
-                <div class="modal-footer p-3 border-t flex gap-2 justify-end">
+                <div class="modal-body p-4" id="withdrawal-settings-content"></div>
+                <div class="modal-footer p-4 border-t flex gap-2 justify-end">
                     <button type="button" class="btn btn-outline" data-bs-dismiss="modal">Cancel</button>
                     <button onclick="saveWithdrawalSettings()" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
                 </div>
@@ -514,15 +529,15 @@
     <div class="modal fade" id="adjustBalanceModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header flex justify-between p-3 border-b">
-                    <h5 class="modal-title text-purple-300">Adjust Balance for <span id="adjust-username"></span></h5>
-                    <button type="button" class="text-gray-400 hover:text-white" data-bs-dismiss="modal">✕</button>
+                <div class="modal-header flex justify-between p-4 border-b">
+                    <h5 class="modal-title text-blue-600">Adjust Balance for <span id="adjust-username"></span></h5>
+                    <button type="button" class="text-gray-400 hover:text-gray-600" data-bs-dismiss="modal">✕</button>
                 </div>
-                <div class="modal-body p-3">
-                    <div class="mb-2"><label class="text-xs text-gray-400">Amount (+/-)</label><input type="number" id="adjust-amount" class="form-control" step="100" /></div>
-                    <div><label class="text-xs text-gray-400">Note</label><textarea id="adjust-note" class="form-control" rows="2"></textarea></div>
+                <div class="modal-body p-4">
+                    <div class="mb-3"><label class="text-sm text-gray-600">Amount (+/-)</label><input type="number" id="adjust-amount" class="form-control" step="100" /></div>
+                    <div><label class="text-sm text-gray-600">Note</label><textarea id="adjust-note" class="form-control" rows="2"></textarea></div>
                 </div>
-                <div class="modal-footer p-3 border-t flex gap-2 justify-end">
+                <div class="modal-footer p-4 border-t flex gap-2 justify-end">
                     <button type="button" class="btn btn-outline" data-bs-dismiss="modal">Cancel</button>
                     <button onclick="saveBalanceAdjustment()" class="btn btn-success"><i class="fas fa-save"></i> Apply</button>
                 </div>
@@ -534,9 +549,9 @@
     <div class="modal fade" id="backupModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header flex justify-between p-3 border-b"><h5 class="modal-title text-purple-300">Backup Details</h5><button type="button" class="text-gray-400 hover:text-white" data-bs-dismiss="modal">✕</button></div>
-                <div class="modal-body p-3" id="backup-details"></div>
-                <div class="modal-footer p-3 border-t flex justify-end"><button type="button" class="btn btn-outline" data-bs-dismiss="modal">Close</button></div>
+                <div class="modal-header flex justify-between p-4 border-b"><h5 class="modal-title text-blue-600">Backup Details</h5><button type="button" class="text-gray-400 hover:text-gray-600" data-bs-dismiss="modal">✕</button></div>
+                <div class="modal-body p-4" id="backup-details"></div>
+                <div class="modal-footer p-4 border-t flex justify-end"><button type="button" class="btn btn-outline" data-bs-dismiss="modal">Close</button></div>
             </div>
         </div>
     </div>
@@ -545,12 +560,12 @@
     <div class="modal fade" id="previewClearModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header flex justify-between p-3 border-b border-red-400">
-                    <h5 class="modal-title text-red-400"><i class="fas fa-exclamation-triangle"></i> Clear Preview</h5>
-                    <button type="button" class="text-gray-400 hover:text-white" data-bs-dismiss="modal">✕</button>
+                <div class="modal-header flex justify-between p-4 border-b border-red-400">
+                    <h5 class="modal-title text-red-600"><i class="fas fa-exclamation-triangle"></i> Clear Preview</h5>
+                    <button type="button" class="text-gray-400 hover:text-gray-600" data-bs-dismiss="modal">✕</button>
                 </div>
-                <div class="modal-body p-3" id="previewClearContent"></div>
-                <div class="modal-footer p-3 border-t border-red-400 flex gap-2 justify-end">
+                <div class="modal-body p-4" id="previewClearContent"></div>
+                <div class="modal-footer p-4 border-t border-red-400 flex gap-2 justify-end">
                     <button type="button" class="btn btn-outline" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-danger" onclick="confirmDatabaseClear()"><i class="fas fa-trash"></i> Confirm Clear</button>
                 </div>
@@ -562,21 +577,21 @@
     <div class="modal fade" id="confirmClearModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header flex justify-between p-3 border-b border-red-400">
-                    <h5 class="modal-title text-red-400"><i class="fas fa-skull-crossbones"></i> Final Warning</h5>
-                    <button type="button" class="text-gray-400 hover:text-white" data-bs-dismiss="modal">✕</button>
+                <div class="modal-header flex justify-between p-4 border-b border-red-400">
+                    <h5 class="modal-title text-red-600"><i class="fas fa-skull-crossbones"></i> Final Warning</h5>
+                    <button type="button" class="text-gray-400 hover:text-gray-600" data-bs-dismiss="modal">✕</button>
                 </div>
-                <div class="modal-body p-3">
-                    <div class="text-red-400 text-sm mb-2"><i class="fas fa-radiation"></i> PERMANENT!</div>
+                <div class="modal-body p-4">
+                    <div class="text-red-600 text-sm mb-2"><i class="fas fa-radiation"></i> PERMANENT!</div>
                     <p class="text-sm">Type the phrase to proceed:</p>
-                    <code class="bg-black p-1 block mb-2 text-xs">DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN</code>
+                    <code class="bg-gray-100 p-1 block mb-2 text-sm font-mono">DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN</code>
                     <input type="text" id="sudo-confirmation" class="form-control text-sm" placeholder="Type phrase…">
                     <div class="form-check mt-2">
                         <input type="checkbox" id="acknowledge-risk" class="mr-1">
-                        <label class="text-xs text-gray-400" for="acknowledge-risk">I understand</label>
+                        <label class="text-sm text-gray-600" for="acknowledge-risk">I understand</label>
                     </div>
                 </div>
-                <div class="modal-footer p-3 border-t border-red-400 flex gap-2 justify-end">
+                <div class="modal-footer p-4 border-t border-red-400 flex gap-2 justify-end">
                     <button type="button" class="btn btn-outline" onclick="closeClearModal()">Cancel</button>
                     <button type="button" class="btn btn-danger" onclick="executeDatabaseClear()" id="execute-clear-btn" disabled><i class="fas fa-bomb"></i> Execute</button>
                 </div>
@@ -589,7 +604,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     // ============================================================
-    // FLEXIA ADMIN – FULL LOGIC (NO PLACEHOLDERS)
+    // FLEXIA ADMIN – FULL LOGIC (same as before, all functions intact)
     // ============================================================
 
     let selectedUserId = null;
@@ -597,12 +612,11 @@
     let backupListData = [];
     let globalWithdrawalDays = [];
 
-    // ===== UTILITY =====
     function showMessage(msg, type='info', elId='coupon-message') {
         const el = document.getElementById(elId);
         if (!el) return;
         el.textContent = msg;
-        el.className = `text-xs ${type==='success'?'text-green-400':type==='error'?'text-red-400':type==='warning'?'text-yellow-400':'text-cyan-400'}`;
+        el.className = `text-sm ${type==='success'?'text-green-600':type==='error'?'text-red-600':type==='warning'?'text-yellow-600':'text-blue-600'}`;
         setTimeout(() => el.textContent = '', 5000);
     }
 
@@ -617,25 +631,22 @@
         return r.json();
     }
 
-    // ===== AUTH =====
     function adminLogout() {
         fetch('/api/auth/logout', {method:'POST', credentials:'include'}).then(() => window.location.href='/');
     }
 
-    // ===== HEALTH =====
     function checkHealth() {
         fetch('/api/health', {credentials:'include'})
             .then(r => r.json())
             .then(d => {
                 document.getElementById('health-status').innerHTML = `<div class="flex flex-wrap items-center justify-between">
-                    <span class="font-semibold"><i class="fas fa-check-circle text-green-400"></i> Online</span>
-                    <span class="text-xs text-gray-400">${d.uptime||'OK'}</span>
-                    <span class="text-xs text-gray-400">DB: <span class="badge-glass success">${d.database||'Connected'}</span></span>
+                    <span class="font-semibold"><i class="fas fa-check-circle text-green-600"></i> Online</span>
+                    <span class="text-sm text-gray-500">${d.uptime||'OK'}</span>
+                    <span class="text-sm text-gray-500">DB: <span class="badge badge-success">${d.database||'Connected'}</span></span>
                 </div>`;
             }).catch(() => {});
     }
 
-    // ===== TABS =====
     function showTab(id) {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -678,10 +689,10 @@
     }
     function renderRecentWithdrawals(txs) {
         const c = document.getElementById('recent-withdrawals');
-        if (!txs.length) { c.innerHTML = '<div class="text-gray-400 text-sm">None</div>'; return; }
+        if (!txs.length) { c.innerHTML = '<div class="text-gray-500 text-sm">None</div>'; return; }
         c.innerHTML = `<div class="table-wrap"><table>
             <thead><tr><th>ID</th><th>User</th><th>Amount</th><th>Status</th></tr></thead>
-            <tbody>${txs.map(t => `<tr><td>${t.id?.slice(0,8)}</td><td>${t.user_id}</td><td>₦${parseFloat(t.amount).toFixed(2)}</td><td><span class="badge-glass ${t.status==='COMPLETED'?'success':t.status==='PENDING'?'warning':'danger'}">${t.status}</span></td></tr>`).join('')}</tbody>
+            <tbody>${txs.map(t => `<tr><td>${t.id?.slice(0,8)}</td><td>${t.user_id}</td><td>₦${parseFloat(t.amount).toFixed(2)}</td><td><span class="badge ${t.status==='COMPLETED'?'badge-success':t.status==='PENDING'?'badge-warning':'badge-danger'}">${t.status}</span></td></tr>`).join('')}</tbody>
         </table></div>`;
     }
 
@@ -739,11 +750,11 @@
             const cur = await fetchData('/api/admin/tiktok/get-daily');
             const hist = await fetchData('/api/admin/tiktok/history');
             document.getElementById('current-tiktok-display').innerHTML = cur.success && cur.task ?
-                `<div class="text-sm">${new Date(cur.task.date).toLocaleDateString()} — <a href="${cur.task.tiktok_link}" target="_blank" class="text-cyan-300">${cur.task.tiktok_link}</a> (₦${cur.task.reward_amount})</div>` :
-                '<div class="text-gray-400 text-sm">No manual task today. Seeds will be used.</div>';
+                `<div class="text-sm">${new Date(cur.task.date).toLocaleDateString()} — <a href="${cur.task.tiktok_link}" target="_blank" class="text-blue-600">${cur.task.tiktok_link}</a> (₦${cur.task.reward_amount})</div>` :
+                '<div class="text-gray-500 text-sm">No manual task today. Seeds will be used.</div>';
             document.getElementById('tiktok-history-list').innerHTML = hist.success && hist.history?.length ?
-                hist.history.map(h => `<div class="text-xs text-gray-400">${new Date(h.date).toLocaleDateString()} — <a href="${h.tiktok_link}" target="_blank" class="text-cyan-300">${h.tiktok_link}</a></div>`).join('') :
-                '<div class="text-gray-400 text-sm">No history.</div>';
+                hist.history.map(h => `<div class="text-xs text-gray-500">${new Date(h.date).toLocaleDateString()} — <a href="${h.tiktok_link}" target="_blank" class="text-blue-600">${h.tiktok_link}</a></div>`).join('') :
+                '<div class="text-gray-500 text-sm">No history.</div>';
         } catch(e) {}
     }
 
@@ -754,15 +765,15 @@
             if (res.success) {
                 const container = document.getElementById('tiktok-account-list');
                 if (!res.accounts || res.accounts.length === 0) {
-                    container.innerHTML = '<div class="text-gray-400 text-xs">No seed accounts. Add some to enable auto-seeding.</div>';
+                    container.innerHTML = '<div class="text-gray-500 text-xs">No seed accounts. Add some to enable auto-seeding.</div>';
                     return;
                 }
                 container.innerHTML = res.accounts.map(a => `
-                    <div class="flex items-center justify-between py-1 border-b border-gray-700">
-                        <span>${a.username} <span class="badge-glass ${a.active ? 'success' : 'danger'}">${a.active ? 'Active' : 'Inactive'}</span></span>
+                    <div class="flex items-center justify-between py-2 border-b border-gray-200">
+                        <span>${a.username} <span class="badge ${a.active ? 'badge-success' : 'badge-danger'}">${a.active ? 'Active' : 'Inactive'}</span></span>
                         <div>
-                            <button onclick="toggleTikTokAccount(${a.id})" class="btn btn-outline text-xs py-0 px-1">${a.active ? 'Deactivate' : 'Activate'}</button>
-                            <button onclick="deleteTikTokAccount(${a.id})" class="btn btn-danger text-xs py-0 px-1"><i class="fas fa-trash"></i></button>
+                            <button onclick="toggleTikTokAccount(${a.id})" class="btn btn-outline text-sm py-0 px-2">${a.active ? 'Deactivate' : 'Activate'}</button>
+                            <button onclick="deleteTikTokAccount(${a.id})" class="btn btn-danger text-sm py-0 px-2"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                 `).join('');
@@ -806,24 +817,24 @@
         try {
             const res = await fetchData('/api/admin/users');
             if (res.success) renderUserList(res.users);
-        } catch(e) { document.getElementById('user-list').innerHTML = '<tr><td colspan="7" class="text-center text-gray-400">Error</td></tr>'; }
+        } catch(e) { document.getElementById('user-list').innerHTML = '<tr><td colspan="7" class="text-center text-gray-500">Error</td></tr>'; }
     }
     function renderUserList(users) {
         const tbody = document.getElementById('user-list');
-        if (!users.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-400">No users</td></tr>'; return; }
+        if (!users.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-500">No users</td></tr>'; return; }
         tbody.innerHTML = users.map(u => `
             <tr>
                 <td>${u.id}</td>
                 <td>${u.username}</td>
                 <td>₦${u.balance.toFixed(2)}</td>
-                <td><span class="badge-glass ${u.withdrawal_restricted?'danger':'success'}">${u.withdrawal_restricted?'Restricted':'Allowed'}</span></td>
+                <td><span class="badge ${u.withdrawal_restricted?'badge-danger':'badge-success'}">${u.withdrawal_restricted?'Restricted':'Allowed'}</span></td>
                 <td>${u.withdrawal_limit || 'No Limit'}</td>
-                <td>${u.is_admin ? '<span class="badge-glass">Admin</span>' : '<span class="text-gray-400">User</span>'}</td>
+                <td>${u.is_admin ? '<span class="badge badge-info">Admin</span>' : '<span class="text-gray-500">User</span>'}</td>
                 <td>
-                    <button onclick="openUserSettings(${u.id},'${u.username}')" class="btn btn-outline text-xs py-0 px-1"><i class="fas fa-cog"></i></button>
-                    <button onclick="openAdjustBalance(${u.id},'${u.username}')" class="btn btn-outline text-xs py-0 px-1"><i class="fas fa-coins"></i></button>
-                    ${!u.is_admin ? `<button onclick="toggleAdminStatus(${u.id})" class="btn btn-outline text-xs py-0 px-1"><i class="fas fa-user-shield"></i></button>` : ''}
-                    ${!u.is_admin ? `<button onclick="deleteUser(${u.id})" class="btn btn-danger text-xs py-0 px-1"><i class="fas fa-trash"></i></button>` : ''}
+                    <button onclick="openUserSettings(${u.id},'${u.username}')" class="btn btn-outline text-sm py-0 px-2"><i class="fas fa-cog"></i></button>
+                    <button onclick="openAdjustBalance(${u.id},'${u.username}')" class="btn btn-outline text-sm py-0 px-2"><i class="fas fa-coins"></i></button>
+                    ${!u.is_admin ? `<button onclick="toggleAdminStatus(${u.id})" class="btn btn-outline text-sm py-0 px-2"><i class="fas fa-user-shield"></i></button>` : ''}
+                    ${!u.is_admin ? `<button onclick="deleteUser(${u.id})" class="btn btn-danger text-sm py-0 px-2"><i class="fas fa-trash"></i></button>` : ''}
                 </td>
             </tr>
         `).join('');
@@ -846,13 +857,13 @@
         let customDays = [];
         try { customDays = JSON.parse(user.custom_withdrawal_days) || []; } catch {}
         document.getElementById('withdrawal-settings-content').innerHTML = `
-            <div class="mb-2"><label class="text-xs text-gray-400">Restriction</label>
+            <div class="mb-3"><label class="text-sm text-gray-600">Restriction</label>
                 <select id="user-withdrawal-restricted" class="text-sm"><option value="false" ${!user.withdrawal_restricted?'selected':''}>Allowed</option><option value="true" ${user.withdrawal_restricted?'selected':''}>Restricted</option></select>
             </div>
-            <div class="mb-2"><label class="text-xs text-gray-400">Limit (₦)</label>
+            <div class="mb-3"><label class="text-sm text-gray-600">Limit (₦)</label>
                 <input type="number" id="user-withdrawal-limit" value="${user.withdrawal_limit||0}" step="1000" class="text-sm">
             </div>
-            <div><label class="text-xs text-gray-400">Custom Days</label>
+            <div><label class="text-sm text-gray-600">Custom Days</label>
                 <input type="text" id="user-custom-days" value="${customDays.join(', ')}" class="text-sm" placeholder="7,14,21,28">
             </div>
         `;
@@ -906,28 +917,28 @@
     function renderPendingWithdrawals(txs) {
         const c = document.getElementById('pending-withdrawals-list');
         const pend = txs.filter(t => t.status==='PENDING');
-        if (!pend.length) { c.innerHTML = '<div class="text-gray-400 text-sm">None pending.</div>'; return; }
+        if (!pend.length) { c.innerHTML = '<div class="text-gray-500 text-sm">None pending.</div>'; return; }
         c.innerHTML = pend.map(t => `
-            <div class="glass-card p-2 mb-2 text-sm flex flex-wrap items-center justify-between">
+            <div class="bg-gray-50 p-3 rounded-lg mb-2 text-sm flex flex-wrap items-center justify-between">
                 <div><span class="font-mono">${t.id.slice(0,8)}</span> | User ${t.user_id} | ₦${t.amount.toFixed(2)}</div>
-                <div class="flex gap-1">
-                    <button onclick="processWithdrawal('${t.id}','approve')" class="btn btn-success text-xs py-0 px-1"><i class="fas fa-check"></i></button>
-                    <button onclick="processWithdrawal('${t.id}','reject')" class="btn btn-danger text-xs py-0 px-1"><i class="fas fa-times"></i></button>
+                <div class="flex gap-2">
+                    <button onclick="processWithdrawal('${t.id}','approve')" class="btn btn-success text-sm py-0 px-2"><i class="fas fa-check"></i></button>
+                    <button onclick="processWithdrawal('${t.id}','reject')" class="btn btn-danger text-sm py-0 px-2"><i class="fas fa-times"></i></button>
                 </div>
             </div>
         `).join('');
     }
     function renderAllTransactions(txs) {
         const tbody = document.getElementById('all-transactions');
-        if (!txs.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-400">No transactions</td></tr>'; return; }
+        if (!txs.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-500">No transactions</td></tr>'; return; }
         tbody.innerHTML = txs.slice(0,30).map(t => `
             <tr>
                 <td>${t.id.slice(0,8)}…</td>
                 <td>${t.user_id}</td>
                 <td>₦${t.amount.toFixed(2)}</td>
-                <td><span class="badge-glass ${t.status==='COMPLETED'?'success':t.status==='PENDING'?'warning':'danger'}">${t.status}</span></td>
+                <td><span class="badge ${t.status==='COMPLETED'?'badge-success':t.status==='PENDING'?'badge-warning':'badge-danger'}">${t.status}</span></td>
                 <td>${new Date(t.timestamp).toLocaleDateString()}</td>
-                <td>${t.status==='PENDING'? `<button onclick="processWithdrawal('${t.id}','approve')" class="btn btn-success text-xs py-0 px-1"><i class="fas fa-check"></i></button><button onclick="processWithdrawal('${t.id}','reject')" class="btn btn-danger text-xs py-0 px-1"><i class="fas fa-times"></i></button>` : '—'}</td>
+                <td>${t.status==='PENDING'? `<button onclick="processWithdrawal('${t.id}','approve')" class="btn btn-success text-sm py-0 px-2"><i class="fas fa-check"></i></button><button onclick="processWithdrawal('${t.id}','reject')" class="btn btn-danger text-sm py-0 px-2"><i class="fas fa-times"></i></button>` : '—'}</td>
             </tr>
         `).join('');
     }
@@ -954,11 +965,11 @@
                         <td>${u.id}</td>
                         <td>${u.username}</td>
                         <td>₦${u.balance.toFixed(2)}</td>
-                        <td><span class="badge-glass ${u.withdrawal_restricted?'danger':u.can_withdraw_today?'success':'warning'}">${u.withdrawal_restricted?'Restricted':u.can_withdraw_today?'Allowed':'Not Today'}</span></td>
+                        <td><span class="badge ${u.withdrawal_restricted?'badge-danger':u.can_withdraw_today?'badge-success':'badge-warning'}">${u.withdrawal_restricted?'Restricted':u.can_withdraw_today?'Allowed':'Not Today'}</span></td>
                         <td>${u.withdrawal_limit || 'No Limit'}</td>
                         <td>${u.custom_withdrawal_days.sort((a,b)=>a-b).join(', ') || 'Default'}</td>
-                        <td><i class="fas ${u.has_withdrawal_pin?'fa-check text-green-400':'fa-times text-red-400'}"></i></td>
-                        <td><button onclick="openUserSettings(${u.id},'${u.username}')" class="btn btn-outline text-xs py-0 px-1"><i class="fas fa-edit"></i></button></td>
+                        <td><i class="fas ${u.has_withdrawal_pin?'fa-check text-green-600':'fa-times text-red-600'}"></i></td>
+                        <td><button onclick="openUserSettings(${u.id},'${u.username}')" class="btn btn-outline text-sm py-0 px-2"><i class="fas fa-edit"></i></button></td>
                     </tr>
                 `).join('');
                 document.getElementById('report-today').textContent = new Date().toLocaleDateString();
@@ -981,11 +992,11 @@
             if (res.success) {
                 backupListData = res.backups || [];
                 const c = document.getElementById('backup-list');
-                if (!backupListData.length) { c.innerHTML = '<div class="text-gray-400 text-sm">No backups.</div>'; return; }
+                if (!backupListData.length) { c.innerHTML = '<div class="text-gray-500 text-sm">No backups.</div>'; return; }
                 c.innerHTML = backupListData.map(b => `
-                    <div class="glass-card p-2 mb-1 text-sm flex justify-between items-center">
-                        <div><span class="font-mono">${b.filename}</span> <span class="text-xs text-gray-400">${new Date(b.created).toLocaleString()} · ${(b.size/1024).toFixed(1)} KB</span></div>
-                        <button onclick="showBackupDetails('${b.filename}')" class="btn btn-outline text-xs py-0 px-1"><i class="fas fa-info-circle"></i></button>
+                    <div class="bg-gray-50 p-3 rounded-lg mb-2 text-sm flex justify-between items-center">
+                        <div><span class="font-mono">${b.filename}</span> <span class="text-xs text-gray-500">${new Date(b.created).toLocaleString()} · ${(b.size/1024).toFixed(1)} KB</span></div>
+                        <button onclick="showBackupDetails('${b.filename}')" class="btn btn-outline text-sm py-0 px-2"><i class="fas fa-info-circle"></i></button>
                     </div>
                 `).join('');
                 if (backupListData.length) {
@@ -1000,8 +1011,8 @@
         if (!b) return;
         document.getElementById('backup-details').innerHTML = `
             <div class="text-sm"><strong>${b.filename}</strong></div>
-            <div class="text-xs text-gray-400">Created: ${new Date(b.created).toLocaleString()}</div>
-            <div class="text-xs text-gray-400">Size: ${(b.size/1024).toFixed(1)} KB</div>
+            <div class="text-xs text-gray-500">Created: ${new Date(b.created).toLocaleString()}</div>
+            <div class="text-xs text-gray-500">Size: ${(b.size/1024).toFixed(1)} KB</div>
         `;
         new bootstrap.Modal(document.getElementById('backupModal')).show();
     }
@@ -1021,11 +1032,11 @@
         const stats = await fetchData('/api/admin/stats');
         if (!stats.success) return;
         document.getElementById('previewClearContent').innerHTML = `
-            <div class="text-sm text-gray-300">Users to delete: <span class="text-red-400">${stats.stats.users.total-1}</span></div>
-            <div class="text-sm text-gray-300">Transactions: <span class="text-red-400">${stats.stats.transactions.total}</span></div>
-            <div class="text-sm text-gray-300">Game plays: <span class="text-red-400">${stats.stats.games.today*30}</span></div>
-            <div class="text-sm text-gray-300">Coupons reset: ${document.getElementById('reset-coupons').checked? '<span class="text-yellow-400">Yes</span>' : 'No'}</div>
-            <div class="text-sm text-red-400 mt-2">⚠️ This action is permanent!</div>
+            <div class="text-sm text-gray-600">Users to delete: <span class="text-red-600 font-semibold">${stats.stats.users.total-1}</span></div>
+            <div class="text-sm text-gray-600">Transactions: <span class="text-red-600 font-semibold">${stats.stats.transactions.total}</span></div>
+            <div class="text-sm text-gray-600">Game plays: <span class="text-red-600 font-semibold">${stats.stats.games.today*30}</span></div>
+            <div class="text-sm text-gray-600">Coupons reset: ${document.getElementById('reset-coupons').checked? '<span class="text-yellow-600 font-semibold">Yes</span>' : 'No'}</div>
+            <div class="text-sm text-red-600 mt-3">⚠️ This action is permanent!</div>
         `;
         new bootstrap.Modal(document.getElementById('previewClearModal')).show();
     }
@@ -1213,7 +1224,6 @@
                 if (!data.success || !data.user.is_admin) window.location.href='/';
                 else {
                     loadDashboard();
-                    // load account list if TikTok tab is active by default (not)
                     setInterval(() => {
                         if (document.querySelector('.tab-content.active')?.id === 'dashboard') loadDashboard();
                     }, 30000);
