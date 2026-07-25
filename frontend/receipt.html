@@ -30,7 +30,7 @@ body{background:radial-gradient(ellipse at 30% 20%, #1b1135, #0a0518);color:#F0F
 .detail-label{color:#A0A0B5;font-weight:500;}
 .detail-value{color:#00EEFF;font-weight:600;text-align:right;}
 .amount-value{font-size:1.5rem;font-weight:700;color:#00FF55;text-align:right;font-family:'Orbitron',sans-serif;}
-.status-badge{padding:3px 12px;border-radius:12px;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
+.status-badge{padding:3px 12px;border-radius:12px;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;display:inline-block;}
 .status-pending{background:rgba(255,165,0,0.15);color:#FFA500;border:1px solid rgba(255,165,0,0.2);}
 .status-completed{background:rgba(0,255,85,0.1);color:#00FF55;border:1px solid rgba(0,255,85,0.2);}
 .status-failed{background:rgba(255,0,85,0.1);color:#FF0055;border:1px solid rgba(255,0,85,0.2);}
@@ -92,39 +92,52 @@ body{background:radial-gradient(ellipse at 30% 20%, #1b1135, #0a0518);color:#F0F
 </div>
 
 <script>
-let bankMap = {};
-
-async function loadBanks() {
-  try {
-    const res = await fetch('/api/banking/banks');
-    const data = await res.json();
-    if (data.success) { data.banks.forEach(b => { bankMap[b.code] = b.name; }); }
-    else { loadFallbackBanks(); }
-  } catch(err) { loadFallbackBanks(); }
+// ----- Bank name mapping (fallback if API fails) -----
+var bankMap = {};
+function loadBanks() {
+  fetch('/api/banking/banks')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) { data.banks.forEach(function(b) { bankMap[b.code] = b.name; }); }
+      else { loadFallbackBanks(); }
+    })
+    .catch(function() { loadFallbackBanks(); });
 }
-
 function loadFallbackBanks() {
-  const fb = [{code:"057",name:"Zenith Bank"},{code:"058",name:"GTBank"},{code:"044",name:"Access Bank"},{code:"033",name:"UBA"},{code:"011",name:"First Bank"},{code:"070",name:"Fidelity Bank"},{code:"050",name:"Ecobank"},{code:"039",name:"Stanbic IBTC"},{code:"214",name:"FCMB"},{code:"232",name:"Sterling Bank"},{code:"032",name:"Union Bank"},{code:"035",name:"Wema Bank"},{code:"082",name:"Keystone Bank"},{code:"215",name:"Unity Bank"},{code:"076",name:"Polaris Bank"},{code:"565",name:"OPay"},{code:"100",name:"PalmPay"},{code:"50211",name:"Kuda Bank"}];
-  fb.forEach(b => { bankMap[b.code] = b.name; });
+  var fb = [{code:"057",name:"Zenith Bank"},{code:"058",name:"GTBank"},{code:"044",name:"Access Bank"},{code:"033",name:"UBA"},{code:"011",name:"First Bank"},{code:"070",name:"Fidelity Bank"},{code:"050",name:"Ecobank"},{code:"039",name:"Stanbic IBTC"},{code:"214",name:"FCMB"},{code:"232",name:"Sterling Bank"},{code:"032",name:"Union Bank"},{code:"035",name:"Wema Bank"},{code:"082",name:"Keystone Bank"},{code:"215",name:"Unity Bank"},{code:"076",name:"Polaris Bank"},{code:"565",name:"OPay"},{code:"100",name:"PalmPay"},{code:"50211",name:"Kuda Bank"}];
+  fb.forEach(function(b) { bankMap[b.code] = b.name; });
 }
-
-function getBankName(code) { return bankMap[code] || `Bank (${code})`; }
+function getBankName(code) { return bankMap[code] || code || 'Unknown Bank'; }
 
 function formatDate(iso) {
-  const d = new Date(iso);
+  if (!iso) return 'N/A';
+  var d = new Date(iso);
   return d.toLocaleDateString('en-NG', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
 }
 
+// ----- Build receipt from transaction data -----
 function createReceiptHTML(tx) {
-  let details = {};
-  try { details = typeof tx.details === 'string' ? JSON.parse(tx.details) : (tx.details || {}); } catch(e) {}
-  const amount = parseFloat(tx.amount);
-  const status = tx.status ? tx.status.toUpperCase() : 'PENDING';
-  const statusClass = status.toLowerCase();
-  const bankCode = details.bc || details.bank_code || details.bank;
-  const bankName = getBankName(bankCode);
-  const accountNumber = details.an || details.account_number || 'N/A';
-  const accountName = details.nm || details.account_name || 'N/A';
+  var details = tx.details || {};
+  if (typeof details === 'string') { try { details = JSON.parse(details); } catch(e) { details = {}; } }
+  
+  var amount = parseFloat(tx.amount) || 0;
+  var status = tx.status ? tx.status.toUpperCase() : 'PENDING';
+  var statusClass = status.toLowerCase();
+  
+  // Extract bank info from details (now stored on withdrawal creation)
+  var bankCode = details.bank_code || details.bc || details.bank || '';
+  var bankName = getBankName(bankCode);
+  var accountNumber = details.account_number || details.an || 'N/A';
+  var accountName = details.account_name || details.nm || 'N/A';
+  
+  // If account name is still N/A and we have a transaction detail with bank_name, use that
+  if (accountName === 'N/A' && details.bank_name) {
+    accountName = details.bank_name;
+  }
+  
+  var amountDisplay = Math.abs(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  var sign = amount < 0 ? '-' : '';
+  
   return `
     <div class="receipt" id="receipt-${tx.id}">
       <div class="receipt-header">
@@ -132,8 +145,8 @@ function createReceiptHTML(tx) {
         <div class="receipt-subtitle">ID: ${tx.id}</div>
       </div>
       <div class="receipt-details">
-        <div class="detail-row"><span class="detail-label">Amount</span><span class="amount-value">₦${amount.toLocaleString(undefined,{minimumFractionDigits:2})}</span></div>
-        <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value status-badge status-${statusClass}">${status}</span></div>
+        <div class="detail-row"><span class="detail-label">Amount</span><span class="amount-value">${sign}₦${amountDisplay}</span></div>
+        <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value"><span class="status-badge status-${statusClass}">${status}</span></span></div>
         <div class="detail-row"><span class="detail-label">Date & Time</span><span class="detail-value">${formatDate(tx.timestamp)}</span></div>
         <div class="detail-row"><span class="detail-label">Bank</span><span class="detail-value">${bankName}</span></div>
         <div class="detail-row"><span class="detail-label">Account Number</span><span class="detail-value">${accountNumber}</span></div>
@@ -146,18 +159,18 @@ function createReceiptHTML(tx) {
 
 function createHistoryHTML(transactions) {
   if (!transactions || transactions.length === 0) return '<div class="no-data">No withdrawal history found.</div>';
-  let html = '<div class="history-list">';
-  transactions.forEach(tx => {
-    const amount = parseFloat(tx.amount);
-    const status = tx.status ? tx.status.toUpperCase() : 'PENDING';
-    const statusClass = status.toLowerCase();
-    let details = {};
-    try { details = typeof tx.details === 'string' ? JSON.parse(tx.details) : (tx.details || {}); } catch(e) {}
-    const bankCode = details.bc || details.bank_code || details.bank;
-    const bankName = getBankName(bankCode);
+  var html = '<div class="history-list">';
+  transactions.forEach(function(tx) {
+    var amount = parseFloat(tx.amount) || 0;
+    var status = tx.status ? tx.status.toUpperCase() : 'PENDING';
+    var statusClass = status.toLowerCase();
+    var details = tx.details || {};
+    if (typeof details === 'string') { try { details = JSON.parse(details); } catch(e) { details = {}; } }
+    var bankCode = details.bank_code || details.bc || details.bank || '';
+    var bankName = getBankName(bankCode);
     html += `
       <div class="history-item" onclick="showSingleReceipt('${tx.id}')">
-        <div class="history-item-header"><span class="history-amount">₦${amount.toLocaleString()}</span><span class="history-status status-${statusClass}">${status}</span></div>
+        <div class="history-item-header"><span class="history-amount">₦${Math.abs(amount).toLocaleString()}</span><span class="history-status status-${statusClass}">${status}</span></div>
         <div><strong>Bank:</strong> ${bankName}</div>
         <div><strong>ID:</strong> ${tx.id}</div>
         <div><strong>Date:</strong> ${formatDate(tx.timestamp)}</div>
@@ -169,16 +182,14 @@ function createHistoryHTML(transactions) {
 }
 
 function goBack() {
-  const urlParams = new URLSearchParams(window.location.search);
+  var urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('history') === 'true') { showSingleReceipt(); }
   else { window.location.href = 'index.html'; }
 }
-
 function goToDashboard() { window.location.href = 'index.html'; }
-
 function toggleHistory() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const isHistory = urlParams.get('history') === 'true';
+  var urlParams = new URLSearchParams(window.location.search);
+  var isHistory = urlParams.get('history') === 'true';
   if (isHistory) {
     window.history.replaceState({}, '', 'receipt.html');
     document.getElementById('history-toggle').textContent = 'View All History';
@@ -189,92 +200,113 @@ function toggleHistory() {
     loadHistory();
   }
 }
+function showSingleReceipt(txId) { loadSingleReceipt(txId); }
 
-function showSingleReceipt(txId = null) { loadSingleReceipt(txId); }
-
-async function loadSingleReceipt(txId = null) {
-  try {
-    const res = await fetch('/api/user/profile');
-    const data = await res.json();
-    if (!data.success) { window.location.href = 'index.html'; return; }
-    if (!data.user || !data.user.transactions) { document.getElementById('receipt-container').innerHTML = '<div class="no-data">No transactions found.</div>'; return; }
-    const transactions = data.user.transactions.filter(t => t.type === 'WITHDRAWAL');
-    let targetTx = txId ? transactions.find(t => t.id === txId) : transactions[transactions.length - 1];
-    if (targetTx) { document.getElementById('receipt-container').innerHTML = createReceiptHTML(targetTx); }
-    else { document.getElementById('receipt-container').innerHTML = '<div class="no-data">No withdrawal transactions found.</div>'; }
-  } catch(err) { console.error('Failed to load receipt:', err); document.getElementById('receipt-container').innerHTML = '<div class="no-data">Failed to load receipt.</div>'; }
+function loadSingleReceipt(txId) {
+  fetch('/api/user/profile', { credentials: 'include' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.success) { window.location.href = 'index.html'; return; }
+      var txs = data.user.transactions || [];
+      var withdrawals = txs.filter(function(t) { return t.type === 'WITHDRAWAL'; });
+      var target = txId ? withdrawals.find(function(t) { return t.id === txId; }) : withdrawals[withdrawals.length - 1];
+      var container = document.getElementById('receipt-container');
+      if (target) { container.innerHTML = createReceiptHTML(target); }
+      else { container.innerHTML = '<div class="no-data">No withdrawal transactions found.</div>'; }
+    })
+    .catch(function(err) {
+      console.error('Failed to load receipt:', err);
+      document.getElementById('receipt-container').innerHTML = '<div class="no-data">Failed to load receipt.</div>';
+    });
 }
 
-async function loadHistory() {
-  try {
-    const res = await fetch('/api/user/profile');
-    const data = await res.json();
-    if (!data.success) { window.location.href = 'index.html'; return; }
-    if (!data.user || !data.user.transactions) { document.getElementById('receipt-container').innerHTML = '<div class="no-data">No transactions found.</div>'; return; }
-    const transactions = data.user.transactions.filter(t => t.type === 'WITHDRAWAL').reverse();
-    document.getElementById('receipt-container').innerHTML = createHistoryHTML(transactions);
-  } catch(err) { console.error('Failed to load history:', err); document.getElementById('receipt-container').innerHTML = '<div class="no-data">Failed to load history.</div>'; }
+function loadHistory() {
+  fetch('/api/user/profile', { credentials: 'include' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.success) { window.location.href = 'index.html'; return; }
+      var txs = data.user.transactions || [];
+      var withdrawals = txs.filter(function(t) { return t.type === 'WITHDRAWAL'; }).reverse();
+      var container = document.getElementById('receipt-container');
+      container.innerHTML = createHistoryHTML(withdrawals);
+    })
+    .catch(function(err) {
+      console.error('Failed to load history:', err);
+      document.getElementById('receipt-container').innerHTML = '<div class="no-data">Failed to load history.</div>';
+    });
 }
 
-async function downloadReceipt() {
-  const receipt = document.querySelector('.receipt');
+function downloadReceipt() {
+  var receipt = document.querySelector('.receipt');
   if (!receipt) { alert('No receipt to download'); return; }
-  try {
-    if (typeof html2canvas === 'undefined') {
-      await new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = 'https://html2canvas.hertzen.com/dist/html2canvas.min.js';
-        s.onload = resolve; s.onerror = reject;
-        document.head.appendChild(s);
-      });
-    }
-    const canvas = await html2canvas(receipt, { scale: 2, useCORS: true, backgroundColor: null, logging: false });
-    const link = document.createElement('a');
-    link.download = `flexia-receipt-${receipt.id.replace('receipt-', '')}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-  } catch(err) { console.error('Download failed:', err); alert('Failed to download receipt.'); }
+  // Load html2canvas if not available
+  if (typeof html2canvas === 'undefined') {
+    var script = document.createElement('script');
+    script.src = 'https://html2canvas.hertzen.com/dist/html2canvas.min.js';
+    script.onload = function() { doDownloadReceipt(receipt); };
+    script.onerror = function() { alert('Failed to load download library. Please try again.'); };
+    document.head.appendChild(script);
+  } else {
+    doDownloadReceipt(receipt);
+  }
+}
+function doDownloadReceipt(receipt) {
+  html2canvas(receipt, { scale: 2, useCORS: true, backgroundColor: null, logging: false })
+    .then(function(canvas) {
+      var link = document.createElement('a');
+      link.download = 'flexia-receipt-' + (receipt.id.replace('receipt-', '') || Date.now()) + '.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    })
+    .catch(function(err) {
+      console.error('Download failed:', err);
+      alert('Failed to download receipt.');
+    });
 }
 
-// ═══ WITHDRAWAL CHECK ═══
+// ----- Withdrawal day check -----
 function checkWithdrawalStatus() {
-  const statusEl = document.getElementById('withdrawal-status-message');
-  const daysInfoEl = document.getElementById('withdrawal-days-info');
-  const checkContainer = document.getElementById('withdrawal-check');
+  var statusEl = document.getElementById('withdrawal-status-message');
+  var daysInfoEl = document.getElementById('withdrawal-days-info');
+  var checkContainer = document.getElementById('withdrawal-check');
   if (statusEl) statusEl.textContent = 'Checking...';
-  try {
-    fetch('/api/withdrawal/check-day', { credentials: 'include' })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data.success) {
-          var today = new Date().getDate();
-          var days = data.custom_withdrawal_days.length > 0 
-            ? data.custom_withdrawal_days 
-            : data.global_withdrawal_days;
-          if (statusEl) {
-            statusEl.innerHTML = data.can_withdraw 
-              ? '<span class="allowed-day">✅ Withdrawals ALLOWED today (Day ' + today + ')</span>'
-              : '<span class="not-allowed-day">❌ Withdrawals NOT ALLOWED today (Day ' + today + ')</span>';
-          }
-          if (daysInfoEl) {
-            daysInfoEl.innerHTML = '<strong>Allowed Days:</strong> ' + days.sort(function(a,b){return a-b;}).join(', ');
-          }
-          if (checkContainer) checkContainer.style.display = 'block';
+  fetch('/api/withdrawal/check-day', { credentials: 'include' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        var today = data.today || new Date().getDate();
+        var days = data.custom_withdrawal_days && data.custom_withdrawal_days.length > 0 
+          ? data.custom_withdrawal_days 
+          : data.global_withdrawal_days || [];
+        if (statusEl) {
+          statusEl.innerHTML = data.can_withdraw 
+            ? '<span class="allowed-day">Withdrawals ALLOWED today (Day ' + today + ')</span>'
+            : '<span class="not-allowed-day">Withdrawals NOT ALLOWED today (Day ' + today + ')</span>';
         }
-      })
-      .catch(function(e) { 
-        console.error('Withdrawal check error:', e);
-        if (statusEl) statusEl.innerHTML = '<span class="not-allowed-day">Error checking status</span>';
-      });
-  } catch(error) { console.error('Withdrawal check error:', error); if (statusEl) statusEl.innerHTML = '<span class="not-allowed-day">Error checking status</span>'; }
+        if (daysInfoEl) {
+          daysInfoEl.innerHTML = '<strong>Allowed Days:</strong> ' + days.slice().sort(function(a,b){return a-b;}).join(', ');
+        }
+        if (checkContainer) checkContainer.style.display = 'block';
+      }
+    })
+    .catch(function(e) {
+      console.error('Withdrawal check error:', e);
+      if (statusEl) statusEl.innerHTML = '<span class="not-allowed-day">Error checking status</span>';
+    });
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-  await loadBanks();
-  const urlParams = new URLSearchParams(window.location.search);
-  const isHistory = urlParams.get('history') === 'true';
-  if (isHistory) { document.getElementById('history-toggle').textContent = 'View Single Receipt'; loadHistory(); }
-  else { document.getElementById('history-toggle').textContent = 'View All History'; loadSingleReceipt(); }
+// ----- Init -----
+document.addEventListener('DOMContentLoaded', function() {
+  loadBanks();
+  var urlParams = new URLSearchParams(window.location.search);
+  var isHistory = urlParams.get('history') === 'true';
+  if (isHistory) {
+    document.getElementById('history-toggle').textContent = 'View Single Receipt';
+    loadHistory();
+  } else {
+    document.getElementById('history-toggle').textContent = 'View All History';
+    loadSingleReceipt();
+  }
   setTimeout(function() { checkWithdrawalStatus(); }, 1000);
 });
 </script>
