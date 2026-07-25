@@ -56,7 +56,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
 
 <div class="header">
   <div class="game-logo">
-    <div class="game-logo-icon">🎯</div>
+    <div class="game-logo-icon"><i class="fas fa-bowling-ball"></i></div>
     <div class="header-left">
       <h1>PLINKO 3D</h1>
       <p id="plinko-header-info">Bet & Multiply · Daily cap ₦3000</p>
@@ -106,7 +106,6 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
 
 <div class="controls-row">
   <div style="flex:1;">
-    <!-- BET INPUT FIELD -->
     <div style="margin-bottom:10px;display:flex;gap:10px;align-items:center;">
       <label for="bet-input" style="font-size:0.8rem;color:#A0A0B5;">Bet:</label>
       <input type="number" id="bet-input" value="100" min="100" max="50000" step="100"
@@ -143,21 +142,21 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
       <button onclick="closeInstructions()" style="background:none;border:none;font-size:2.4rem;color:#888;cursor:pointer;line-height:1;">×</button>
     </div>
     <div style="text-align:left;color:#ddd;line-height:1.8;">
-      <p style="font-weight:bold;margin-bottom:10px;">🎯 Drop the ball and multiply your bet!</p>
+      <p style="font-weight:bold;margin-bottom:10px;">Drop the ball and multiply your bet!</p>
       <div style="background:rgba(0,255,80,0.05);padding:16px;border-radius:12px;margin-bottom:14px;border:1px solid rgba(0,255,85,0.15);">
-        <div style="margin-bottom:6px;">💰 Bet amount: <strong style="color:#00FF55">Min ₦100, Max ₦50000</strong></div>
-        <div style="margin-bottom:6px;">📈 Multipliers: <strong style="color:#FFD700">0.5x, 1.0x, 3.0x, 10.0x</strong></div>
-        <div style="margin-bottom:6px;">🚀 Daily cap: <strong style="color:#FF8C00">₦3000</strong> (resets midnight UTC)</div>
-        <div>🎉 Hit ₦3000 cap → <strong style="color:#00FFCC">Auto-claim + Celebration!</strong></div>
+        <div style="margin-bottom:6px;">Bet amount: <strong style="color:#00FF55">Min ₦100, Max ₦50000</strong></div>
+        <div style="margin-bottom:6px;">Multipliers: <strong style="color:#FFD700">0.5x, 1.0x, 3.0x, 10.0x</strong></div>
+        <div style="margin-bottom:6px;">Daily cap: <strong style="color:#FF8C00">₦3000</strong> (resets midnight UTC)</div>
+        <div>Hit ₦3000 cap → <strong style="color:#00FFCC">Auto-claim + Celebration!</strong></div>
       </div>
       <div style="background:rgba(128,0,255,0.05);padding:14px;border-radius:10px;border:1px solid rgba(128,0,255,0.15);">
-        <div style="margin-bottom:5px;">🎮 Click <strong>DROP BALL</strong> to play</div>
-        <div style="margin-bottom:5px;">💀 If you lose, you lose your bet</div>
-        <div>🏆 If you win, you get <strong>bet × multiplier</strong></div>
+        <div style="margin-bottom:5px;">Click <strong>DROP BALL</strong> to play</div>
+        <div style="margin-bottom:5px;">If you lose, you lose your bet</div>
+        <div>If you win, you get <strong>bet × multiplier</strong></div>
       </div>
     </div>
     <button onclick="closeInstructions()" style="width:100%;padding:14px;margin-top:18px;background:linear-gradient(135deg,#a855f7,#6366f1);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:1rem;cursor:pointer;transition:all 0.3s;">
-      GOT IT — LET'S PLAY! 🎯
+      GOT IT — LET'S PLAY!
     </button>
   </div>
 </div>
@@ -204,7 +203,7 @@ function updateCapUI(earned) {
   document.getElementById('remaining-today').textContent = '₦' + remaining;
   const hdr = document.getElementById('plinko-header-info');
   if (hdr) {
-    hdr.textContent = remaining <= 0 ? '⚠️ Daily cap reached! Come back tomorrow.' : 'Bet & Multiply · Daily cap ₦3000';
+    hdr.textContent = remaining <= 0 ? 'Daily cap reached! Come back tomorrow.' : 'Bet & Multiply · Daily cap ₦3000';
     hdr.style.color = remaining <= 0 ? '#FF0055' : '#00CCFF';
   }
   if (earned >= PLINKO_CAP) { capReached = true; lockClaimBtn(); }
@@ -224,7 +223,7 @@ function lockClaimBtn() {
 function showFunPopup() {
   const d = document.createElement('div');
   d.className = 'happy-popup';
-  d.innerHTML = '<i class="fas fa-star"></i> 🎉 ₦3000 CAP REACHED! 🎉 <i class="fas fa-star"></i>';
+  d.innerHTML = '<i class="fas fa-star"></i> ₦3000 CAP REACHED! <i class="fas fa-star"></i>';
   document.body.appendChild(d);
   setTimeout(() => d && d.remove && d.remove(), 3000);
 }
@@ -278,8 +277,8 @@ async function autoClaim() {
 }
 
 async function manualClaim() {
-  if (capReached) { alert('🎉 Daily ₦3000 cap reached! Come back tomorrow.'); return; }
-  if (sessionEarned <= 0) { alert('🎯 No earnings yet. Drop a ball to earn!'); return; }
+  if (capReached) { alert('Daily ₦3000 cap reached! Come back tomorrow.'); return; }
+  if (sessionEarned <= 0) { alert('No earnings yet. Drop a ball to earn!'); return; }
   if (isClaiming) return;
 
   isClaiming = true;
@@ -308,7 +307,7 @@ async function manualClaim() {
           break;
         }
       } catch (e) {
-        console.error(`Attempt ${attempts} failed:`, e);
+        console.error('Attempt %d failed:', attempts, e);
         if (attempts < 3) {
           await new Promise(resolve => setTimeout(resolve, 2000 * attempts));
         } else {
@@ -335,7 +334,7 @@ async function manualClaim() {
     if (result.daily_won >= PLINKO_CAP) {
       showFunPopup(); 
       lockClaimBtn();
-      alert('🎉 CLAIMED ₦' + result.net_change + '! You hit the ₦3000 daily cap — amazing!');
+      alert('CLAIMED ₦' + result.net_change + '! You hit the ₦3000 daily cap — amazing!');
     } else {
       btn.innerHTML = '<i class="fas fa-check"></i> CLAIMED ₦' + result.net_change + '!';
       setTimeout(() => { 
@@ -343,25 +342,25 @@ async function manualClaim() {
         btn.innerHTML='<i class="fas fa-trophy"></i> CLAIM'; 
         isClaiming=false; 
       }, 2500);
-      alert('✅ Claimed ₦' + result.net_change + '! ₦' + (PLINKO_CAP - result.daily_won) + ' remaining today.');
+      alert('Claimed ₦' + result.net_change + '! ₦' + (PLINKO_CAP - result.daily_won) + ' remaining today.');
       return;
     }
   } catch(e) {
     console.error('Claim error:', e);
     btn.disabled=false; 
     btn.innerHTML=orig;
-    alert('❌ ' + (e.message || 'Network error. Please try again.'));
+    alert('Error: ' + (e.message || 'Network error. Please try again.'));
   }
   isClaiming = false;
 }
 
 async function claimAndClose() { await manualClaim(); closeModal(); }
 
-// ========== PLINKO BOARD DRAWING (TRIANGLE PEGS) ==========
+// ========== PLINKO BOARD DRAWING ==========
 function drawBoard() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
-  // Draw slots
+  // Draw slots with multipliers
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.font = 'bold 12px Orbitron';
@@ -374,12 +373,9 @@ function drawBoard() {
   
   // Draw pegs in a triangle pattern
   for (let row = 0; row < ROWS; row++) {
-    // Calculate number of pegs for this row (triangle: increasing then decreasing)
     let numPegs = row + 1;
     if (row >= ROWS / 2) numPegs = ROWS - row - 1;
-    // We'll limit to COLS max
     if (numPegs > COLS) numPegs = COLS;
-    // Calculate offset to center the row
     const rowWidth = (numPegs - 1) * SLOT_WIDTH;
     const offsetX = (canvas.width - rowWidth) / 2;
     for (let col = 0; col < numPegs; col++) {
@@ -397,12 +393,12 @@ function drawBoard() {
   }
 }
 
-// ========== BALL DROP SIMULATION ==========
-function dropBall() {
-  if (capReached) { alert('🎉 Daily ₦3000 cap reached! Come back tomorrow.'); return; }
+// ========== BALL DROP WITH PHYSICS (async) ==========
+async function dropBall() {
+  if (capReached) { alert('Daily ₦3000 cap reached! Come back tomorrow.'); return; }
   if (gameRunning) return;
   
-  // Get bet from input field
+  // Get bet from input
   const input = document.getElementById('bet-input');
   betAmount = parseFloat(input.value);
   if (isNaN(betAmount) || betAmount < MIN_BET || betAmount > MAX_BET) {
@@ -410,53 +406,107 @@ function dropBall() {
     return;
   }
   
-  // Check balance using App.currentUser.balance (ensure it's fresh)
-  if (window.App && window.App.currentUser) {
-    // Refresh balance just in case
-    App.fetchFreshBalance();
-    if (betAmount > App.currentUser.balance) {
-      alert('Insufficient balance. Your balance: ₦' + App.currentUser.balance.toLocaleString());
+  // Check balance with fresh API call
+  try {
+    const resp = await fetch('/api/user/profile', { credentials: 'include' });
+    const data = await resp.json();
+    if (!data.success) {
+      alert('Could not verify balance. Please log in again.');
       return;
     }
-  } else {
-    // Fallback: check via API
-    try {
-      const res = await fetch('/api/user/profile', { credentials: 'include' });
-      const data = await res.json();
-      if (data.success && data.user) {
-        if (betAmount > data.user.balance) {
-          alert('Insufficient balance. Your balance: ₦' + data.user.balance.toLocaleString());
-          return;
-        }
-      }
-    } catch (e) {
-      alert('Could not verify balance. Please try again.');
+    const balance = parseFloat(data.user.balance);
+    if (betAmount > balance) {
+      alert('Insufficient balance. Your balance: ₦' + balance.toLocaleString());
       return;
     }
+    // Update local balance if App exists
+    if (window.App && window.App.currentUser) {
+      window.App.currentUser.balance = balance;
+    }
+  } catch (e) {
+    alert('Could not verify balance. Please try again.');
+    return;
   }
   
   gameRunning = true;
   document.getElementById('drop-btn').disabled = true;
   
-  // Choose random column (0 to COLS-1) for the ball to land
+  // Choose random target column (0 to COLS-1) for landing
   const targetCol = Math.floor(Math.random() * COLS);
   multiplier = MULTIPLIERS[targetCol];
   
-  // Animate ball dropping
+  // Simulate ball falling with physics
   const startX = canvas.width / 2;
   const startY = 10;
   let ballX = startX;
   let ballY = startY;
-  const speed = 5;
-  let direction = 0; // -1 left, 1 right
+  let velocityX = (Math.random() - 0.5) * 2; // small random horizontal velocity
+  let velocityY = 2; // downward speed
+  const gravity = 0.15;
+  const damping = 0.8; // energy loss on peg hit
   
   function animate() {
+    // Apply gravity
+    velocityY += gravity;
+    ballY += velocityY;
+    ballX += velocityX;
+    
+    // Check collision with pegs (only if we are near a peg row)
+    // Simple collision: detect if ball is near a peg and if so, bounce
+    // We'll use a simplified approach: for each row, if ballY is near the row, check distance to each peg
+    const rowIndex = Math.floor((ballY - START_Y) / ROW_HEIGHT);
+    if (rowIndex >= 0 && rowIndex < ROWS) {
+      let numPegs = rowIndex + 1;
+      if (rowIndex >= ROWS / 2) numPegs = ROWS - rowIndex - 1;
+      if (numPegs > COLS) numPegs = COLS;
+      const rowWidth = (numPegs - 1) * SLOT_WIDTH;
+      const offsetX = (canvas.width - rowWidth) / 2;
+      for (let c = 0; c < numPegs; c++) {
+        const px = offsetX + c * SLOT_WIDTH;
+        const py = START_Y + rowIndex * ROW_HEIGHT;
+        const dx = ballX - px;
+        const dy = ballY - py;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < PEG_RADIUS + BALL_RADIUS) {
+          // Collision! Reflect velocity
+          const angle = Math.atan2(dy, dx);
+          const overlap = PEG_RADIUS + BALL_RADIUS - dist;
+          ballX += Math.cos(angle) * overlap;
+          ballY += Math.sin(angle) * overlap;
+          // Reflect velocity with damping
+          const speed = Math.sqrt(velocityX*velocityX + velocityY*velocityY);
+          const newAngle = Math.atan2(velocityY, velocityX) - 2 * (Math.atan2(dy, dx) - Math.atan2(velocityY, velocityX));
+          velocityX = Math.cos(newAngle) * speed * damping;
+          velocityY = Math.sin(newAngle) * speed * damping;
+          // Add some randomness to make it interesting
+          velocityX += (Math.random() - 0.5) * 0.5;
+          // Ensure we move away from peg
+          break;
+        }
+      }
+    }
+    
+    // Keep ball within canvas bounds (horizontal)
+    if (ballX < BALL_RADIUS) { ballX = BALL_RADIUS; velocityX = Math.abs(velocityX); }
+    if (ballX > canvas.width - BALL_RADIUS) { ballX = canvas.width - BALL_RADIUS; velocityX = -Math.abs(velocityX); }
+    
+    // Draw frame
+    drawBoard();
+    ctx.beginPath();
+    ctx.arc(ballX, ballY, BALL_RADIUS, 0, 2 * Math.PI);
+    ctx.fillStyle = '#FF0055';
+    ctx.fill();
+    ctx.shadowColor = 'rgba(255,0,85,0.5)';
+    ctx.shadowBlur = 12;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    
+    // Check if ball reached bottom
     if (ballY >= canvas.height - 30) {
-      // Reached bottom
+      // Landed
       gameRunning = false;
       document.getElementById('drop-btn').disabled = false;
       
-      // Determine win/loss
       const win = multiplier > 1;
       let winAmount = betAmount * multiplier;
       let netChange = winAmount - betAmount;
@@ -497,28 +547,6 @@ function dropBall() {
       drawBoard();
       return;
     }
-    
-    // Simulate bouncing
-    ballY += speed;
-    // Random horizontal deflection
-    if (Math.random() < 0.03) {
-      direction = (Math.random() < 0.5) ? -1 : 1;
-    }
-    ballX += direction * 1.5;
-    // Keep within canvas bounds
-    if (ballX < BALL_RADIUS) { ballX = BALL_RADIUS; direction = 1; }
-    if (ballX > canvas.width - BALL_RADIUS) { ballX = canvas.width - BALL_RADIUS; direction = -1; }
-    
-    // Draw frame
-    drawBoard();
-    ctx.beginPath();
-    ctx.arc(ballX, ballY, BALL_RADIUS, 0, 2 * Math.PI);
-    ctx.fillStyle = '#FF0055';
-    ctx.fill();
-    ctx.shadowColor = 'rgba(255,0,85,0.5)';
-    ctx.shadowBlur = 12;
-    ctx.fill();
-    ctx.shadowBlur = 0;
     
     requestAnimationFrame(animate);
   }
