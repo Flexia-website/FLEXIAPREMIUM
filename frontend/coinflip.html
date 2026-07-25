@@ -36,6 +36,10 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
 .mini-value{font-size:0.85rem;color:#00FFCC;font-weight:700;}
 .balance-info{display:flex;justify-content:space-between;margin-bottom:10px;color:#00FFCC;font-size:0.95rem;}
 .cap-mini{display:flex;align-items:center;gap:6px;font-size:0.7rem;color:#FFD700;background:rgba(255,215,0,0.08);padding:4px 12px;border-radius:20px;border:1px solid rgba(255,215,0,0.2);}
+.plays-left-bar{display:flex;align-items:center;gap:8px;margin-top:6px;padding:4px 10px;background:rgba(0,204,255,0.05);border-radius:6px;border:1px solid rgba(0,204,255,0.1);width:100%;}
+.plays-left-bar .label{font-size:0.6rem;color:#A0A0B5;text-transform:uppercase;}
+.plays-left-bar .count{font-size:0.8rem;font-weight:700;color:#00CCFF;}
+.plays-left-bar .count.danger{color:#FF0055;}
 .choice-buttons{display:flex;gap:10px;margin:12px 0;}
 .choice-btn{flex:1;padding:14px;background:rgba(128,0,255,0.15);border:2px solid rgba(128,0,255,0.3);border-radius:10px;color:#F0F0F0;font-weight:700;cursor:pointer;transition:all 0.3s;}
 .choice-btn:hover{background:rgba(128,0,255,0.3);}
@@ -77,7 +81,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
     <div class="game-logo-icon"><i class="fas fa-coins"></i></div>
     <div class="header-left">
       <h1>COIN FLIP</h1>
-      <p>Win 1.8x · Daily cap ₦5000</p>
+      <p>Win 1.8x · Daily cap ₦5000 · 5 plays/day</p>
     </div>
   </div>
   <button class="dashboard-btn" onclick="window.location.href='index.html'">
@@ -116,6 +120,10 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
       <button class="flip-btn" id="flip-btn" onclick="flipCoin()" disabled>
         <i class="fas fa-coins"></i> FLIP COIN
       </button>
+      <div class="plays-left-bar" id="plays-left-bar" style="margin-top:8px;">
+        <span class="label"><i class="fas fa-clock"></i> Plays Today</span>
+        <span class="count" id="plays-today">0/5</span>
+      </div>
     </div>
     <div class="scores-panel">
       <div class="score-card">
@@ -151,13 +159,13 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
 <div class="instruction-popup show" id="instruction-popup">
   <div class="instruction-content">
     <button class="instruction-close" onclick="closeInstructionPopup()">✕</button>
-    <div class="instruction-title"><i class="fas fa-coins"></i> HOW TO PLAY COIN FLIP</div>
+    <div class="instruction-title"><i class="fas fa-coins"></i> HOW TO PLAY</div>
     <div class="instruction-step"><strong>1. Choose Heads or Tails</strong><br>Click HEADS or TAILS to make your prediction.</div>
     <div class="instruction-step"><strong>2. Set Your Bet</strong><br>Enter any amount (min ₦100). Win pays <b style="color:#00FF55;">1.8× your bet</b>!</div>
     <div class="instruction-step"><strong>3. Flip & Win</strong><br>Press FLIP COIN. The coin will spin and land on a side.</div>
     <div class="instruction-step" style="border-color:rgba(255,0,85,0.2);background:rgba(255,0,85,0.03);">
       <strong style="color:#FF0055;">Important</strong><br>
-      Daily win cap of <b>₦5,000</b>. Max 5 plays per day.
+      Daily cap: <b>₦5,000</b> · Max <b>5 plays</b> per day
     </div>
     <button class="instruction-bet-btn" onclick="closeInstructionPopup()">
       <i class="fas fa-check-circle"></i> GOT IT, LET'S PLAY!
@@ -169,6 +177,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
 const COIN_CAP = 5000;
 const MIN_BET = 100;
 const MAX_BET = 50000;
+const MAX_PLAYS_PER_DAY = 5;
 
 let userChoice = null;
 let betAmount = 100;
@@ -178,7 +187,9 @@ let userBalance = 0;
 let dailyWon = 0;
 let wins = 0;
 let losses = 0;
-let currentRotation = 0; // Track accumulated rotation in degrees
+let currentRotation = 0;
+let playsToday = 0;
+let limitReached = false;
 
 const coin = document.getElementById('coin-3d');
 const shadow = document.getElementById('coin-shadow');
@@ -188,12 +199,22 @@ const resultDisplay = document.getElementById('result-display');
 function closeInstructionPopup() {
   document.getElementById('instruction-popup').classList.remove('show');
 }
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'i' || e.key === 'I') {
-    e.preventDefault();
-    document.getElementById('instruction-popup').classList.add('show');
+
+function updatePlaysUI() {
+  const el = document.getElementById('plays-today');
+  if (el) {
+    el.textContent = playsToday + '/' + MAX_PLAYS_PER_DAY;
+    el.className = 'count' + (playsToday >= MAX_PLAYS_PER_DAY ? ' danger' : '');
   }
-});
+  if (playsToday >= MAX_PLAYS_PER_DAY) {
+    limitReached = true;
+    flipBtn.disabled = true;
+    flipBtn.innerHTML = '<i class="fas fa-lock"></i> LIMIT REACHED';
+  } else {
+    limitReached = false;
+    checkFlipButton();
+  }
+}
 
 function updateCapUI(earned) {
   dailyWon = earned || 0;
@@ -238,7 +259,6 @@ function showResult(win, bet, payout) {
   setTimeout(() => { resultDisplay.className = 'result-display'; }, 3000);
 }
 
-// ═══ BALANCE SYNC - INSTANT UPDATE ═══
 function syncBalanceAfterClaim() {
   fetch('/api/user/profile', { credentials: 'include', headers: { 'Cache-Control': 'no-cache' } })
     .then(function(r) { return r.json(); })
@@ -249,13 +269,10 @@ function syncBalanceAfterClaim() {
         document.querySelectorAll('.balance-display, #balance, #user-balance, .balance-amount').forEach(function(el) {
           el.textContent = '₦' + balance.toFixed(2);
         });
-        var headerBalance = document.getElementById('header-balance');
-        if (headerBalance) headerBalance.textContent = '₦' + balance.toFixed(2);
         if (window.App && window.App.currentUser) {
           window.App.currentUser.balance = balance;
           if (window.App.updateBalanceDisplay) window.App.updateBalanceDisplay();
         }
-        console.log('Balance synced instantly: ₦' + balance.toFixed(2));
       }
     })
     .catch(function(e) { console.error('Balance sync error:', e); });
@@ -298,6 +315,22 @@ async function loadProfile() {
   } catch(e) { console.error('Profile load error:', e); }
 }
 
+async function loadPlaysToday() {
+  try {
+    const r = await fetch('/api/games/check-limit-with-logout/coinflip', {
+      credentials: 'include',
+      headers: { 'Cache-Control': 'no-cache' }
+    });
+    const d = await r.json();
+    if (d.success) {
+      playsToday = d.played_today || 0;
+      updatePlaysUI();
+    }
+  } catch(e) {
+    console.error('Failed to load plays:', e);
+  }
+}
+
 async function processCoinFlip(bet, won) {
   const response = await fetch('/api/games/coinflip/report', {
     method: 'POST',
@@ -318,33 +351,29 @@ function selectChoice(choice) {
 }
 
 function checkFlipButton() {
+  if (limitReached) { flipBtn.disabled = true; return; }
+  if (dailyWon >= COIN_CAP) { flipBtn.disabled = true; flipBtn.innerHTML = '<i class="fas fa-lock"></i> CAP REACHED'; return; }
   const input = document.getElementById('bet-amount');
   betAmount = parseFloat(input.value) || 0;
   if (betAmount < MIN_BET) { betAmount = MIN_BET; input.value = MIN_BET; }
   if (betAmount > MAX_BET) { betAmount = MAX_BET; input.value = MAX_BET; }
-  if (betAmount > userBalance || dailyWon >= COIN_CAP || !userChoice || isFlipping) {
+  if (betAmount > userBalance || !userChoice || isFlipping) {
     flipBtn.disabled = true;
   } else {
     flipBtn.disabled = false;
+    flipBtn.innerHTML = '<i class="fas fa-coins"></i> FLIP COIN';
   }
 }
 
 function getTargetRotation(result) {
-  // result: 'heads' or 'tails'
-  // We want to end at 0 mod 360 (heads) or 180 mod 360 (tails)
-  // Add at least 2 full spins for dramatic effect (720 deg)
-  const base = 720; // two full rotations
+  const base = 720;
   let target;
   if (result === 'heads') {
-    // Next multiple of 360 above current
     target = Math.ceil((currentRotation + 360) / 360) * 360;
-    // Ensure at least base rotation from current
     if (target - currentRotation < base) target += 360;
-  } else { // tails
-    // Next odd multiple of 180 above current
-    // We want a number where (target / 180) is odd.
+  } else {
     let candidate = Math.ceil(currentRotation / 180) * 180;
-    if ((candidate / 180) % 2 === 0) candidate += 180; // make it odd
+    if ((candidate / 180) % 2 === 0) candidate += 180;
     while (candidate - currentRotation < base) candidate += 360;
     target = candidate;
   }
@@ -352,7 +381,7 @@ function getTargetRotation(result) {
 }
 
 async function flipCoin() {
-  if (isFlipping || dailyWon >= COIN_CAP) return;
+  if (isFlipping || dailyWon >= COIN_CAP || limitReached) return;
   isFlipping = true;
   flipBtn.disabled = true;
   flipBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> FLIPPING...';
@@ -364,27 +393,25 @@ async function flipCoin() {
   const coinResult = Math.random() > 0.5 ? 'heads' : 'tails';
   const win = (userChoice === coinResult);
 
-  // Determine target rotation
   const targetRotation = getTargetRotation(coinResult);
-  
-  // Apply transition and rotation
   coin.style.transition = 'transform 2s cubic-bezier(0.68,-0.55,0.27,1.55)';
   shadow.style.transition = 'transform 2s cubic-bezier(0.68,-0.55,0.27,1.55), opacity 2s cubic-bezier(0.68,-0.55,0.27,1.55)';
   coin.style.transform = 'rotateY(' + targetRotation + 'deg)';
-  // Shadow pulse: scale and fade
   shadow.style.transform = 'scale(1.2)';
   shadow.style.opacity = '0.5';
 
   const apiPromise = processCoinFlip(bet, win);
 
   setTimeout(async () => {
-    // Reset shadow
     shadow.style.transform = 'scale(1)';
     shadow.style.opacity = '0.3';
     
     try {
       const result = await apiPromise;
       if (result.success) {
+        playsToday++;
+        updatePlaysUI();
+        
         userBalance = parseFloat(result.new_balance);
         document.getElementById('balance').textContent = '₦' + userBalance.toFixed(2);
         localStorage.setItem('flexia_balance', result.new_balance);
@@ -415,6 +442,11 @@ async function flipCoin() {
           flipBtn.innerHTML = '<i class="fas fa-lock"></i> CAP REACHED';
           flipBtn.disabled = true;
         }
+        if (playsToday >= MAX_PLAYS_PER_DAY) {
+          limitReached = true;
+          flipBtn.disabled = true;
+          flipBtn.innerHTML = '<i class="fas fa-lock"></i> LIMIT REACHED';
+        }
         syncBalanceAfterClaim();
       } else {
         alert('Failed: ' + (result.message || 'Unknown error'));
@@ -428,12 +460,10 @@ async function flipCoin() {
     document.getElementById('heads-btn').disabled = false;
     document.getElementById('tails-btn').disabled = false;
     document.getElementById('bet-amount').disabled = false;
-    // Keep the coin result visible, but allow new choice
     userChoice = null;
     document.getElementById('heads-btn').classList.remove('active');
     document.getElementById('tails-btn').classList.remove('active');
     checkFlipButton();
-    // Update currentRotation to the applied value
     currentRotation = targetRotation;
   }, 2000);
 }
@@ -450,9 +480,9 @@ document.addEventListener('keydown', (e) => {
 
 document.addEventListener('DOMContentLoaded', () => {
   loadProfile();
+  loadPlaysToday();
   selectChoice('heads');
   checkFlipButton();
-  // Set initial coin orientation to heads
   coin.style.transform = 'rotateY(0deg)';
 });
 </script>
