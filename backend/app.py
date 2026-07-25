@@ -1,5 +1,5 @@
 # app.py – FLEXIA Backend (Flask + SQLAlchemy) – Full Production Version
-# All admin features fully implemented
+# Includes automatic TikTok account seeding from a pool
 
 import os
 import json
@@ -185,6 +185,14 @@ class TikTokTask(db.Model):
     date = db.Column(db.Date, unique=True, nullable=False)
     tiktok_link = db.Column(db.String(255), nullable=False)
     reward_amount = db.Column(db.Float, default=150.0)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+
+class TikTokAccount(db.Model):
+    __tablename__ = 'tiktok_accounts'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 
@@ -802,9 +810,21 @@ def spin_execute():
 def tiktok_daily():
     user = g.user
     today = get_today_utc()
+    
+    # 1. Check if there is a manually set task for today (admin override)
     task = TikTokTask.query.filter_by(date=today).first()
-    if not task:
-        return jsonify({'success': False, 'message': 'No TikTok task for today'})
+    if task:
+        link = task.tiktok_link
+        reward = task.reward_amount
+    else:
+        # 2. Otherwise, pick a random active account from the pool
+        accounts = TikTokAccount.query.filter_by(active=True).all()
+        if accounts:
+            chosen = random.choice(accounts)
+            link = f'https://www.tiktok.com/@{chosen.username}'
+            reward = 150.0  # default reward
+        else:
+            return jsonify({'success': False, 'message': 'No TikTok accounts available and no manual task set'})
 
     if not user.game_stats:
         stats = GameStats(user_id=user.id)
@@ -817,9 +837,9 @@ def tiktok_daily():
     return jsonify({
         'success': True,
         'task': {
-            'tiktok_link': task.tiktok_link,
-            'reward_amount': task.reward_amount,
-            'date': task.date.isoformat()
+            'tiktok_link': link,
+            'reward_amount': reward,
+            'date': today.isoformat()
         }
     })
 
@@ -838,11 +858,16 @@ def tiktok_follow():
     if user.game_stats.tiktok_claimed_today and user.game_stats.tiktok_last_claim_date == today:
         return jsonify({'success': False, 'message': 'Already claimed today'}), 400
 
+    # Use the same logic to get the link for validation (optional)
+    # For simplicity, we just grant the reward if they claim it.
+    # We'll check if there is a manual task or an active account.
     task = TikTokTask.query.filter_by(date=today).first()
     if not task:
-        return jsonify({'success': False, 'message': 'No task today'}), 400
+        accounts = TikTokAccount.query.filter_by(active=True).all()
+        if not accounts:
+            return jsonify({'success': False, 'message': 'No TikTok account available'}), 400
 
-    reward = task.reward_amount
+    reward = task.reward_amount if task else 150.0
     tx = create_transaction(user.id, reward, 'TIKTOK_REWARD')
     user.balance += reward
     user.game_stats.tiktok_claimed_today = True
@@ -1117,7 +1142,6 @@ def admin_delete_user(user_id):
         return jsonify({'success': False, 'message': 'User not found'}), 404
     if user.is_admin:
         return jsonify({'success': False, 'message': 'Cannot delete admin user'}), 400
-    # Cascade delete handled by relationship cascade
     db.session.delete(user)
     db.session.commit()
     return jsonify({'success': True, 'message': 'User deleted successfully'})
@@ -1382,6 +1406,56 @@ def admin_delete_coupons():
     return jsonify({'success': True, 'message': 'All coupons deleted'})
 
 
+# ==================== TIKTOK ACCOUNT MANAGEMENT ====================
+@app.route('/api/admin/tiktok/accounts', methods=['GET'])
+@admin_required
+def admin_get_tiktok_accounts():
+    accounts = TikTokAccount.query.order_by(TikTokAccount.created_at.desc()).all()
+    return jsonify({
+        'success': True,
+        'accounts': [{'id': a.id, 'username': a.username, 'active': a.active} for a in accounts]
+    })
+
+
+@app.route('/api/admin/tiktok/accounts', methods=['POST'])
+@admin_required
+def admin_add_tiktok_account():
+    data = request.get_json()
+    username = data.get('username', '').strip().lower()
+    if not username:
+        return jsonify({'success': False, 'message': 'Username is required'}), 400
+    if username.startswith('@'):
+        username = username[1:]
+    if TikTokAccount.query.filter_by(username=username).first():
+        return jsonify({'success': False, 'message': 'Account already exists'}), 400
+    account = TikTokAccount(username=username)
+    db.session.add(account)
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Account added', 'account': {'id': account.id, 'username': account.username, 'active': account.active}})
+
+
+@app.route('/api/admin/tiktok/accounts/<int:account_id>', methods=['DELETE'])
+@admin_required
+def admin_delete_tiktok_account(account_id):
+    account = TikTokAccount.query.get(account_id)
+    if not account:
+        return jsonify({'success': False, 'message': 'Account not found'}), 404
+    db.session.delete(account)
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Account deleted'})
+
+
+@app.route('/api/admin/tiktok/accounts/<int:account_id>/toggle', methods=['POST'])
+@admin_required
+def admin_toggle_tiktok_account(account_id):
+    account = TikTokAccount.query.get(account_id)
+    if not account:
+        return jsonify({'success': False, 'message': 'Account not found'}), 404
+    account.active = not account.active
+    db.session.commit()
+    return jsonify({'success': True, 'active': account.active})
+
+
 @app.route('/api/admin/tiktok/set-daily', methods=['POST'])
 @admin_required
 def admin_set_tiktok_daily():
@@ -1416,6 +1490,7 @@ def admin_tiktok_history():
     return jsonify({'success': True, 'history': [{'date': t.date.isoformat(), 'tiktok_link': t.tiktok_link, 'reward_amount': t.reward_amount} for t in tasks]})
 
 
+# ==================== BACKUP ====================
 @app.route('/api/admin/backup/trigger', methods=['POST'])
 @admin_required
 def admin_trigger_backup():
@@ -1437,7 +1512,6 @@ def admin_backup_list():
 @app.route('/api/admin/export-data', methods=['POST'])
 @admin_required
 def admin_export_data():
-    """Export selected data (users, transactions, game plays) in JSON or CSV."""
     data = request.get_json()
     format_type = data.get('format', 'json')
     export_users = data.get('users', False)
@@ -1495,7 +1569,6 @@ def admin_export_data():
 @app.route('/api/admin/database/export-all', methods=['POST'])
 @admin_required
 def admin_export_full_db():
-    """Export the entire database as a .flexia file (JSON)."""
     try:
         data = {
             'version': '1.0',
@@ -1554,6 +1627,12 @@ def admin_export_full_db():
                     'tiktok_link': t.tiktok_link,
                     'reward_amount': t.reward_amount,
                 } for t in TikTokTask.query.all()],
+                'tiktok_accounts': [{
+                    'id': a.id,
+                    'username': a.username,
+                    'active': a.active,
+                    'created_at': a.created_at.isoformat(),
+                } for a in TikTokAccount.query.all()],
                 'social_settings': [{
                     'whatsapp_link': s.whatsapp_link,
                     'telegram_link': s.telegram_link,
@@ -1568,7 +1647,6 @@ def admin_export_full_db():
                 } for b in BackupLog.query.all()],
             }
         }
-        # Return as JSON response – the frontend will handle download
         return jsonify({'success': True, 'data': data})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
@@ -1577,7 +1655,6 @@ def admin_export_full_db():
 @app.route('/api/admin/database/import-all', methods=['POST'])
 @admin_required
 def admin_import_full_db():
-    """Import a full database from a .flexia file (JSON)."""
     if 'file' not in request.files:
         return jsonify({'success': False, 'message': 'No file uploaded'}), 400
     file = request.files['file']
@@ -1590,10 +1667,8 @@ def admin_import_full_db():
         if 'tables' not in data:
             return jsonify({'success': False, 'message': 'Invalid .flexia file'}), 400
 
-        # Begin transaction
         db.session.execute('PRAGMA foreign_keys=OFF;')
         try:
-            # Clear existing data
             User.query.delete()
             Transaction.query.delete()
             GameStats.query.delete()
@@ -1602,20 +1677,19 @@ def admin_import_full_db():
             Withdrawal.query.delete()
             Referral.query.delete()
             TikTokTask.query.delete()
+            TikTokAccount.query.delete()
             SocialSettings.query.delete()
             GlobalWithdrawalDay.query.delete()
             BackupLog.query.delete()
             db.session.commit()
 
-            # Import data
             tables = data['tables']
 
-            # Users (need to preserve IDs)
             for u in tables.get('users', []):
                 user = User(
                     id=u['id'],
                     username=u['username'],
-                    password_hash=u['password_hash'],  # Keep hashed password
+                    password_hash=u['password_hash'],
                     balance=u['balance'],
                     referral_code=u['referral_code'],
                     referred_by=u['referred_by'],
@@ -1631,7 +1705,6 @@ def admin_import_full_db():
                 )
                 db.session.add(user)
 
-            # Transactions
             for t in tables.get('transactions', []):
                 tx = Transaction(
                     id=t['id'],
@@ -1644,7 +1717,6 @@ def admin_import_full_db():
                 )
                 db.session.add(tx)
 
-            # GameStats
             for s in tables.get('game_stats', []):
                 stats = GameStats(
                     user_id=s['user_id'],
@@ -1665,7 +1737,6 @@ def admin_import_full_db():
                 )
                 db.session.add(stats)
 
-            # Achievements
             for a in tables.get('achievements', []):
                 ach = Achievement(
                     user_id=a['user_id'],
@@ -1679,7 +1750,6 @@ def admin_import_full_db():
                 )
                 db.session.add(ach)
 
-            # Coupons
             for c in tables.get('coupons', []):
                 coupon = Coupon(
                     code=c['code'],
@@ -1689,7 +1759,6 @@ def admin_import_full_db():
                 )
                 db.session.add(coupon)
 
-            # Withdrawals
             for w in tables.get('withdrawals', []):
                 wd = Withdrawal(
                     id=w['id'],
@@ -1704,7 +1773,6 @@ def admin_import_full_db():
                 )
                 db.session.add(wd)
 
-            # Referrals
             for r in tables.get('referrals', []):
                 ref = Referral(
                     referrer_id=r['referrer_id'],
@@ -1715,7 +1783,6 @@ def admin_import_full_db():
                 )
                 db.session.add(ref)
 
-            # TikTokTasks
             for t in tables.get('tiktok_tasks', []):
                 task = TikTokTask(
                     date=datetime.date.fromisoformat(t['date']),
@@ -1724,7 +1791,15 @@ def admin_import_full_db():
                 )
                 db.session.add(task)
 
-            # SocialSettings
+            for a in tables.get('tiktok_accounts', []):
+                account = TikTokAccount(
+                    id=a['id'],
+                    username=a['username'],
+                    active=a['active'],
+                    created_at=datetime.datetime.fromisoformat(a['created_at']),
+                )
+                db.session.add(account)
+
             for s in tables.get('social_settings', []):
                 social = SocialSettings(
                     whatsapp_link=s['whatsapp_link'],
@@ -1734,12 +1809,10 @@ def admin_import_full_db():
                 )
                 db.session.add(social)
 
-            # GlobalWithdrawalDays
             for day in tables.get('global_withdrawal_days', []):
                 gwd = GlobalWithdrawalDay(day=day)
                 db.session.add(gwd)
 
-            # BackupLogs
             for b in tables.get('backup_logs', []):
                 log = BackupLog(
                     filename=b['filename'],
@@ -1762,20 +1835,16 @@ def admin_import_full_db():
 @app.route('/api/admin/database/clear', methods=['POST'])
 @admin_required
 def admin_clear_db():
-    """Clear the database (keep admin only)."""
     data = request.get_json()
     confirmation = data.get('sudo_confirmation')
     if confirmation != 'DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN':
         return jsonify({'success': False, 'message': 'Invalid confirmation'}), 400
-    # Delete all non-admin users (cascade deletes related data)
     User.query.filter(User.is_admin == False).delete()
-    # Also explicitly delete orphaned data (if any)
     Transaction.query.filter(~Transaction.user.has()).delete()
     GameStats.query.filter(~GameStats.user.has()).delete()
     Achievement.query.filter(~Achievement.user.has()).delete()
     Withdrawal.query.filter(~Withdrawal.user.has()).delete()
     Referral.query.filter(~Referral.referrer.has()).delete()
-    # Reset coupons
     Coupon.query.update({'status': 'AVAILABLE', 'used_by': None, 'used_at': None})
     db.session.commit()
     return jsonify({'success': True, 'message': 'Database cleared (admin kept)', 'stats': {'users_deleted': 0, 'transactions_deleted': 0}})
@@ -1950,6 +2019,13 @@ def init_db():
             for d in [7, 14, 25, 30]:
                 db.session.add(GlobalWithdrawalDay(day=d))
             db.session.commit()
+        # Seed a few default TikTok accounts if none exist
+        if TikTokAccount.query.count() == 0:
+            default_accounts = ['flexia_official', 'earnwithflexia', 'flexiarewards', 'flexiadaily', 'flexiacash']
+            for username in default_accounts:
+                db.session.add(TikTokAccount(username=username))
+            db.session.commit()
+            print("✅ Default TikTok accounts seeded.")
 
 init_db()
 
