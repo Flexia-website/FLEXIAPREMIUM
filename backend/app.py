@@ -425,19 +425,39 @@ def validate_coupon():
     return jsonify({'success': False, 'message': 'Invalid or used coupon'})
 
 
-# -------------------- USER PROFILE --------------------
+# -------------------- USER PROFILE (ENHANCED) --------------------
 @app.route('/api/user/profile', methods=['GET'])
 @login_required
 def profile():
     user = g.user
     transactions = Transaction.query.filter_by(user_id=user.id).order_by(Transaction.timestamp.desc()).limit(50).all()
-    referrals = Referral.query.filter_by(referrer_id=user.id).count()
-    unclaimed_refs = Referral.query.filter_by(referrer_id=user.id, bonus_claimed=False).count()
-    unclaimed_bonus = unclaimed_refs * 7500
+    
+    # Referral data with list of referred users
+    referrals = Referral.query.filter_by(referrer_id=user.id).all()
+    referred_users = []
+    for ref in referrals:
+        referred = User.query.get(ref.referred_user_id)
+        if referred:
+            referred_users.append({
+                'username': referred.username,
+                'bonus_claimed': ref.bonus_claimed,
+                'claimed_at': ref.claimed_at.isoformat() if ref.claimed_at else None,
+                'created_at': ref.created_at.isoformat(),
+            })
+    unclaimed_refs = [r for r in referrals if not r.bonus_claimed]
+    unclaimed_bonus = len(unclaimed_refs) * 7500
+
+    # Referral bonus transactions
+    referral_txs = Transaction.query.filter_by(user_id=user.id, type='REFERRAL_BONUS').order_by(Transaction.timestamp.desc()).all()
 
     data = user.to_dict()
     data['transactions'] = [t.to_dict() for t in transactions]
-    data['referrals'] = {'count': referrals, 'unclaimed_bonus': unclaimed_bonus}
+    data['referrals'] = {
+        'count': len(referrals),
+        'unclaimed_bonus': unclaimed_bonus,
+        'referred_users': referred_users,
+        'claim_history': [t.to_dict() for t in referral_txs],
+    }
     data['game_stats'] = {
         'snake': {'high_score': user.game_stats.snake_high_score if user.game_stats else 0},
         'coin_flip': {'wins': user.game_stats.coinflip_wins if user.game_stats else 0,
@@ -538,7 +558,7 @@ def get_social_links():
     return jsonify({'success': False})
 
 
-# -------------------- GAME ROUTES --------------------
+# -------------------- GAME ROUTINES --------------------
 @app.route('/api/games/check-limit-with-logout/<game_type>', methods=['GET'])
 @login_required
 def check_game_limit(game_type):
@@ -906,7 +926,19 @@ def withdraw():
     )
     db.session.add(wd)
     user.balance -= amount
-    tx = create_transaction(user.id, -amount, 'WITHDRAWAL', status='PENDING')
+    
+    # Store bank details in transaction details so receipt can show them
+    banks_list = get_banks().json['banks']
+    bank_name = next((b['name'] for b in banks_list if b['code'] == bank_code), 'Unknown Bank')
+    tx = create_transaction(
+        user.id, -amount, 'WITHDRAWAL', status='PENDING',
+        details={
+            'bank_code': bank_code,
+            'account_number': account_number,
+            'account_name': account_name,
+            'bank_name': bank_name
+        }
+    )
     db.session.commit()
 
     return jsonify({'success': True, 'message': 'Withdrawal request submitted', 'new_balance': user.balance})
