@@ -1433,7 +1433,7 @@ def admin_backup_list():
     return jsonify({'success': True, 'backups': [{'filename': b.filename, 'created': b.created_at.isoformat(), 'size': b.size} for b in backups]})
 
 
-# ==================== NEW: EXPORT / IMPORT ====================
+# ==================== EXPORT / IMPORT ====================
 @app.route('/api/admin/export-data', methods=['POST'])
 @admin_required
 def admin_export_data():
@@ -1469,7 +1469,6 @@ def admin_export_data():
     if format_type == 'csv':
         import csv, io
         output = io.StringIO()
-        # Flatten the data for CSV (simplified)
         writer = csv.writer(output)
         if export_users:
             writer.writerow(['=== USERS ==='])
