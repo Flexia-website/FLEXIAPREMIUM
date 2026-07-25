@@ -35,6 +35,18 @@
   padding: 0;
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
+  user-select: none; /* Disable text selection globally */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Allow selection in inputs and textareas */
+input, textarea, select, [contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
 }
 
 html {
@@ -599,13 +611,6 @@ body {
 
 .balance-breakdown .item .up { color: var(--success); }
 .balance-breakdown .item .down { color: var(--danger); }
-
-/* ============================================================
-   TODAY'S EARNINGS - HIDDEN
-   ============================================================ */
-.today-earnings-card {
-  display: none;
-}
 
 /* ============================================================
    QUICK ACTIONS
