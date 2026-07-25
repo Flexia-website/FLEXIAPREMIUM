@@ -254,10 +254,11 @@ def is_withdrawal_day(user, today_day):
 
 
 def apply_game_limit(game_type, user_stats):
+    # DAILY LIMITS: coinflip & plinko set to 5 plays per day
     limit_map = {
         'snake': 17,
-        'coinflip': 12,
-        'plinko': 12,
+        'coinflip': 5,
+        'plinko': 5,
         'spin': 1,
         'tiktok': 3
     }
@@ -271,12 +272,12 @@ def apply_game_limit(game_type, user_stats):
         if user_stats.coinflip_last_play_date != today:
             user_stats.coinflip_plays_today = 0
             user_stats.coinflip_last_play_date = today
-        return user_stats.coinflip_plays_today < limit_map.get('coinflip', 12)
+        return user_stats.coinflip_plays_today < limit_map.get('coinflip', 5)
     elif game_type == 'plinko':
         if user_stats.plinko_last_play_date != today:
             user_stats.plinko_plays_today = 0
             user_stats.plinko_last_play_date = today
-        return user_stats.plinko_plays_today < limit_map.get('plinko', 12)
+        return user_stats.plinko_plays_today < limit_map.get('plinko', 5)
     elif game_type == 'spin':
         if user_stats.spin_last_play_date != today:
             user_stats.spin_plays_today = 0
@@ -558,7 +559,7 @@ def get_social_links():
     return jsonify({'success': False})
 
 
-# -------------------- GAME ROUTINES --------------------
+# -------------------- GAME ROUTES --------------------
 @app.route('/api/games/check-limit-with-logout/<game_type>', methods=['GET'])
 @login_required
 def check_game_limit(game_type):
@@ -576,10 +577,10 @@ def check_game_limit(game_type):
         max_plays = 17
     elif game_type == 'coinflip':
         played_today = user.game_stats.coinflip_plays_today
-        max_plays = 12
+        max_plays = 5
     elif game_type == 'plinko':
         played_today = user.game_stats.plinko_plays_today
-        max_plays = 12
+        max_plays = 5
     elif game_type == 'spin':
         played_today = user.game_stats.spin_plays_today
         max_plays = 1
