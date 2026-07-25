@@ -1,5 +1,5 @@
-# app.py – FLEXIA Backend (Flask + SQLAlchemy) – Full Production Version
-# Includes automatic TikTok account seeding from a pool
+# app.py – FLEXIA Backend – Full Production Version
+# All admin features, TikTok seeding, export/import, user deletion, database clear
 
 import os
 import json
@@ -17,7 +17,6 @@ import requests
 # -------------------- CONFIGURATION --------------------
 app = Flask(__name__)
 
-# Path to frontend folder (one level up from backend)
 frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend'))
 app.static_folder = frontend_path
 app.static_url_path = ''
@@ -27,10 +26,10 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:/
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SECURE'] = False  # set True if using HTTPS
+app.config['SESSION_COOKIE_SECURE'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=7)
 app.config['JSON_AS_ASCII'] = False
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max for import
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 db = SQLAlchemy(app)
 
@@ -142,7 +141,6 @@ class Achievement(db.Model):
     progress = db.Column(db.Integer, default=0)
     target = db.Column(db.Integer, default=1)
     processed = db.Column(db.Boolean, default=False)
-
     __table_args__ = (db.UniqueConstraint('user_id', 'achievement_id', name='uix_user_achievement'),)
 
 
@@ -268,14 +266,7 @@ def is_withdrawal_day(user, today_day):
 
 
 def apply_game_limit(game_type, user_stats):
-    # DAILY LIMITS: coinflip & plinko set to 5 plays per day
-    limit_map = {
-        'snake': 17,
-        'coinflip': 5,
-        'plinko': 5,
-        'spin': 1,
-        'tiktok': 3
-    }
+    limit_map = {'snake': 17, 'coinflip': 5, 'plinko': 5, 'spin': 1, 'tiktok': 3}
     today = get_today_utc()
     if game_type == 'snake':
         if user_stats.snake_last_play_date != today:
@@ -333,13 +324,7 @@ def increment_game_play(game_type, user_stats):
 
 
 def create_transaction(user_id, amount, tx_type, status='COMPLETED', details=None):
-    tx = Transaction(
-        user_id=user_id,
-        amount=amount,
-        type=tx_type,
-        status=status,
-        details=json.dumps(details) if details else None
-    )
+    tx = Transaction(user_id=user_id, amount=amount, type=tx_type, status=status, details=json.dumps(details) if details else None)
     db.session.add(tx)
     return tx
 
@@ -370,7 +355,6 @@ def register():
     coupon_code = data.get('coupon_code', '').strip().upper()
     referral_code = data.get('referral_code', '').strip()
     contact = data.get('contact', '').strip()
-
     if not username or not password or not coupon_code:
         return jsonify({'success': False, 'message': 'Username, password, and coupon are required'}), 400
     if len(username) < 3:
@@ -379,28 +363,23 @@ def register():
         return jsonify({'success': False, 'message': 'Password must be at least 6 characters'}), 400
     if User.query.filter_by(username=username).first():
         return jsonify({'success': False, 'message': 'Username already taken'}), 400
-
     coupon = Coupon.query.filter_by(code=coupon_code, status='AVAILABLE').first()
     if not coupon:
         return jsonify({'success': False, 'message': 'Invalid or used coupon code'}), 400
-
     user = User(username=username, contact=contact)
     user.set_password(password)
     user.referral_code = generate_referral_code()
     db.session.add(user)
     db.session.flush()
-
     coupon.status = 'USED'
     coupon.used_by = user.id
     coupon.used_at = datetime.datetime.utcnow()
-
     if referral_code:
         referrer = User.query.filter_by(referral_code=referral_code).first()
         if referrer and referrer.id != user.id:
             user.referred_by = referrer.id
             ref = Referral(referrer_id=referrer.id, referred_user_id=user.id)
             db.session.add(ref)
-
     db.session.commit()
     return jsonify({'success': True, 'message': 'Account created successfully'})
 
@@ -412,11 +391,9 @@ def login():
     password = data.get('password', '')
     if not username or not password:
         return jsonify({'success': False, 'message': 'Username and password required'}), 400
-
     user = User.query.filter_by(username=username).first()
     if not user or not user.check_password(password):
         return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
-
     session['user_id'] = user.id
     session.permanent = True
     return jsonify({'success': True, 'message': 'Login successful', 'user': user.to_dict()})
@@ -446,7 +423,6 @@ def validate_coupon():
 def profile():
     user = g.user
     transactions = Transaction.query.filter_by(user_id=user.id).order_by(Transaction.timestamp.desc()).limit(50).all()
-    
     referrals = Referral.query.filter_by(referrer_id=user.id).all()
     referred_users = []
     for ref in referrals:
@@ -460,9 +436,7 @@ def profile():
             })
     unclaimed_refs = [r for r in referrals if not r.bonus_claimed]
     unclaimed_bonus = len(unclaimed_refs) * 7500
-
     referral_txs = Transaction.query.filter_by(user_id=user.id, type='REFERRAL_BONUS').order_by(Transaction.timestamp.desc()).all()
-
     data = user.to_dict()
     data['transactions'] = [t.to_dict() for t in transactions]
     data['referrals'] = {
@@ -620,24 +594,19 @@ def snake_report():
         db.session.add(stats)
         db.session.commit()
         user.game_stats = stats
-
     today = get_today_utc()
     if not apply_game_limit('snake', user.game_stats):
         return jsonify({'success': False, 'message': 'Daily limit reached'}), 400
     increment_game_play('snake', user.game_stats)
-
     reward = apples * 20 + golden * 40
     if reward == 0:
         return jsonify({'success': True, 'message': 'No apples eaten', 'reward': 0, 'new_balance': user.balance})
-
     total_daily = db.session.query(func.sum(Transaction.amount)).filter(
-        Transaction.user_id == user.id,
-        Transaction.type == 'SNAKE_REWARD',
+        Transaction.user_id == user.id, Transaction.type == 'SNAKE_REWARD',
         func.date(Transaction.timestamp) == today
     ).scalar() or 0.0
     if total_daily + reward > 500:
         reward = max(0, 500 - total_daily)
-
     if reward > 0:
         tx = create_transaction(user.id, reward, 'SNAKE_REWARD')
         user.balance += reward
@@ -666,17 +635,14 @@ def coinflip_report():
         return jsonify({'success': False, 'message': 'Minimum bet is ₦100'}), 400
     if bet > user.balance:
         return jsonify({'success': False, 'message': 'Insufficient balance'}), 400
-
     if not user.game_stats:
         stats = GameStats(user_id=user.id)
         db.session.add(stats)
         db.session.commit()
         user.game_stats = stats
-
     if not apply_game_limit('coinflip', user.game_stats):
         return jsonify({'success': False, 'message': 'Daily limit reached'}), 400
     increment_game_play('coinflip', user.game_stats)
-
     payout = 0
     net_change = 0
     daily_cap = 5000
@@ -685,8 +651,7 @@ def coinflip_report():
         net_change = payout - bet
         today = get_today_utc()
         total_daily = db.session.query(func.sum(Transaction.amount)).filter(
-            Transaction.user_id == user.id,
-            Transaction.type == 'COINFLIP_WIN',
+            Transaction.user_id == user.id, Transaction.type == 'COINFLIP_WIN',
             func.date(Transaction.timestamp) == today
         ).scalar() or 0.0
         if total_daily + payout > daily_cap:
@@ -701,15 +666,13 @@ def coinflip_report():
         user.game_stats.coinflip_losses += 1
         net_change = -bet
         payout = 0
-
     db.session.commit()
     return jsonify({
         'success': True,
         'payout': payout,
         'new_balance': user.balance,
         'daily_won': (db.session.query(func.sum(Transaction.amount)).filter(
-            Transaction.user_id == user.id,
-            Transaction.type == 'COINFLIP_WIN',
+            Transaction.user_id == user.id, Transaction.type == 'COINFLIP_WIN',
             func.date(Transaction.timestamp) == get_today_utc()
         ).scalar() or 0.0)
     })
@@ -726,17 +689,14 @@ def plinko_report():
         return jsonify({'success': False, 'message': 'Minimum bet is ₦100'}), 400
     if bet > user.balance:
         return jsonify({'success': False, 'message': 'Insufficient balance'}), 400
-
     if not user.game_stats:
         stats = GameStats(user_id=user.id)
         db.session.add(stats)
         db.session.commit()
         user.game_stats = stats
-
     if not apply_game_limit('plinko', user.game_stats):
         return jsonify({'success': False, 'message': 'Daily limit reached'}), 400
     increment_game_play('plinko', user.game_stats)
-
     payout = 0
     net_change = 0
     if multiplier > 1:
@@ -744,8 +704,7 @@ def plinko_report():
         net_change = payout - bet
         today = get_today_utc()
         total_daily = db.session.query(func.sum(Transaction.amount)).filter(
-            Transaction.user_id == user.id,
-            Transaction.type == 'PLINKO_WIN',
+            Transaction.user_id == user.id, Transaction.type == 'PLINKO_WIN',
             func.date(Transaction.timestamp) == today
         ).scalar() or 0.0
         if total_daily + payout > 3000:
@@ -759,7 +718,6 @@ def plinko_report():
         user.balance -= bet
         net_change = -bet
         payout = 0
-
     db.session.commit()
     return jsonify({
         'success': True,
@@ -767,8 +725,7 @@ def plinko_report():
         'net_change': net_change,
         'new_balance': user.balance,
         'daily_won': (db.session.query(func.sum(Transaction.amount)).filter(
-            Transaction.user_id == user.id,
-            Transaction.type == 'PLINKO_WIN',
+            Transaction.user_id == user.id, Transaction.type == 'PLINKO_WIN',
             func.date(Transaction.timestamp) == get_today_utc()
         ).scalar() or 0.0)
     })
@@ -783,11 +740,9 @@ def spin_execute():
         db.session.add(stats)
         db.session.commit()
         user.game_stats = stats
-
     if not apply_game_limit('spin', user.game_stats):
         return jsonify({'success': False, 'message': 'Daily spin limit reached'}), 400
     increment_game_play('spin', user.game_stats)
-
     prizes = [1000, 500, 200, 100, 50, 0]
     idx = random.randint(0, 5)
     reward = prizes[idx]
@@ -810,22 +765,18 @@ def spin_execute():
 def tiktok_daily():
     user = g.user
     today = get_today_utc()
-    
-    # 1. Check if there is a manually set task for today (admin override)
     task = TikTokTask.query.filter_by(date=today).first()
     if task:
         link = task.tiktok_link
         reward = task.reward_amount
     else:
-        # 2. Otherwise, pick a random active account from the pool
         accounts = TikTokAccount.query.filter_by(active=True).all()
         if accounts:
             chosen = random.choice(accounts)
             link = f'https://www.tiktok.com/@{chosen.username}'
-            reward = 150.0  # default reward
+            reward = 150.0
         else:
             return jsonify({'success': False, 'message': 'No TikTok accounts available and no manual task set'})
-
     if not user.game_stats:
         stats = GameStats(user_id=user.id)
         db.session.add(stats)
@@ -833,7 +784,6 @@ def tiktok_daily():
         user.game_stats = stats
     if user.game_stats.tiktok_claimed_today and user.game_stats.tiktok_last_claim_date == today:
         return jsonify({'success': False, 'message': 'Already claimed today', 'already_claimed': True})
-
     return jsonify({
         'success': True,
         'task': {
@@ -854,19 +804,13 @@ def tiktok_follow():
         db.session.add(stats)
         db.session.commit()
         user.game_stats = stats
-
     if user.game_stats.tiktok_claimed_today and user.game_stats.tiktok_last_claim_date == today:
         return jsonify({'success': False, 'message': 'Already claimed today'}), 400
-
-    # Use the same logic to get the link for validation (optional)
-    # For simplicity, we just grant the reward if they claim it.
-    # We'll check if there is a manual task or an active account.
     task = TikTokTask.query.filter_by(date=today).first()
     if not task:
         accounts = TikTokAccount.query.filter_by(active=True).all()
         if not accounts:
             return jsonify({'success': False, 'message': 'No TikTok account available'}), 400
-
     reward = task.reward_amount if task else 150.0
     tx = create_transaction(user.id, reward, 'TIKTOK_REWARD')
     user.balance += reward
@@ -926,7 +870,6 @@ def withdraw():
     account_number = data.get('account_number')
     account_name = data.get('account_name')
     pin = data.get('pin')
-
     if not all([amount, bank_code, account_number, account_name, pin]):
         return jsonify({'success': False, 'message': 'Missing required fields'}), 400
     social = SocialSettings.query.first()
@@ -941,11 +884,9 @@ def withdraw():
         return jsonify({'success': False, 'message': 'Withdrawal PIN not set'}), 400
     if user.withdrawal_pin != pin:
         return jsonify({'success': False, 'message': 'Incorrect PIN'}), 400
-
     today_day = get_today_day()
     if not is_withdrawal_day(user, today_day):
         return jsonify({'success': False, 'message': 'Withdrawal not allowed today'}), 400
-
     wd = Withdrawal(
         user_id=user.id,
         amount=amount,
@@ -956,7 +897,6 @@ def withdraw():
     )
     db.session.add(wd)
     user.balance -= amount
-    
     banks_list = get_banks().json['banks']
     bank_name = next((b['name'] for b in banks_list if b['code'] == bank_code), 'Unknown Bank')
     tx = create_transaction(
@@ -969,7 +909,6 @@ def withdraw():
         }
     )
     db.session.commit()
-
     return jsonify({'success': True, 'message': 'Withdrawal request submitted', 'new_balance': user.balance})
 
 
@@ -1004,7 +943,6 @@ def get_achievements():
         {'id': 'refer_1', 'title': 'Referral Starter', 'description': 'Refer 1 friend', 'icon': 'fas fa-users', 'category': 'earnings', 'points': 30, 'cash_reward': 150, 'target': 1},
         {'id': 'daily_claim', 'title': 'Daily Grinder', 'description': 'Claim TikTok reward 3 times', 'icon': 'fab fa-tiktok', 'category': 'streaks', 'points': 25, 'cash_reward': 200, 'target': 3},
     ]
-
     achievements = []
     for ach in predefined:
         existing = Achievement.query.filter_by(user_id=user.id, achievement_id=ach['id']).first()
@@ -1027,8 +965,7 @@ def get_achievements():
         progress = 0
         if ach['id'] == 'snake_10':
             total_apples = db.session.query(func.sum(Transaction.amount)).filter(
-                Transaction.user_id == user.id,
-                Transaction.type == 'SNAKE_REWARD'
+                Transaction.user_id == user.id, Transaction.type == 'SNAKE_REWARD'
             ).scalar() or 0
             progress = int(total_apples / 20)
         elif ach['id'] == 'coinflip_5':
@@ -1043,14 +980,12 @@ def get_achievements():
             progress = 1 if Transaction.query.filter_by(user_id=user.id, type='COINFLIP_WIN').first() or \
                           Transaction.query.filter_by(user_id=user.id, type='PLINKO_WIN').first() or \
                           Transaction.query.filter_by(user_id=user.id, type='SNAKE_REWARD').first() else 0
-
         if not existing.unlocked and progress >= ach['target']:
             existing.unlocked = True
             existing.unlocked_at = datetime.datetime.utcnow()
             existing.progress = progress
         else:
             existing.progress = min(progress, ach['target'])
-
         achievements.append({
             'id': existing.achievement_id,
             'title': existing.title,
@@ -1065,9 +1000,7 @@ def get_achievements():
             'target_value': existing.target,
             'processed': existing.processed,
         })
-
     db.session.commit()
-
     stats = {
         'total': len(achievements),
         'unlocked': sum(1 for a in achievements if a['unlocked']),
@@ -1116,12 +1049,26 @@ def check_withdrawal_day():
     })
 
 
-# -------------------- ADMIN ROUTES (FULLY IMPLEMENTED) --------------------
+# ==================== ADMIN ROUTES ====================
 @app.route('/api/admin/users', methods=['GET'])
 @admin_required
 def admin_users():
     users = User.query.all()
     return jsonify({'success': True, 'users': [u.to_dict() for u in users]})
+
+
+# ----- IMPORTANT: DELETE before GET -----
+@app.route('/api/admin/user/<int:user_id>', methods=['DELETE'])
+@admin_required
+def admin_delete_user(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'success': False, 'message': 'User not found'}), 404
+    if user.is_admin:
+        return jsonify({'success': False, 'message': 'Cannot delete admin user'}), 400
+    db.session.delete(user)
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'User deleted successfully'})
 
 
 @app.route('/api/admin/user/<int:user_id>', methods=['GET'])
@@ -1131,20 +1078,6 @@ def admin_get_user(user_id):
     if not user:
         return jsonify({'success': False, 'message': 'User not found'}), 404
     return jsonify({'success': True, 'user': user.to_dict()})
-
-
-@app.route('/api/admin/user/<int:user_id>', methods=['DELETE'])
-@admin_required
-def admin_delete_user(user_id):
-    """Delete a user and all associated data."""
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({'success': False, 'message': 'User not found'}), 404
-    if user.is_admin:
-        return jsonify({'success': False, 'message': 'Cannot delete admin user'}), 400
-    db.session.delete(user)
-    db.session.commit()
-    return jsonify({'success': True, 'message': 'User deleted successfully'})
 
 
 @app.route('/api/admin/user/<int:user_id>/update-settings', methods=['POST'])
@@ -1258,7 +1191,6 @@ def admin_approve_withdrawal():
     wd = Withdrawal.query.filter_by(id=tx_id).first()
     if not wd:
         return jsonify({'success': False, 'message': 'Withdrawal record not found'}), 404
-
     if action == 'approve':
         tx.status = 'COMPLETED'
         wd.status = 'COMPLETED'
@@ -1406,7 +1338,7 @@ def admin_delete_coupons():
     return jsonify({'success': True, 'message': 'All coupons deleted'})
 
 
-# ==================== TIKTOK ACCOUNT MANAGEMENT ====================
+# ===== TIKTOK ACCOUNT MANAGEMENT =====
 @app.route('/api/admin/tiktok/accounts', methods=['GET'])
 @admin_required
 def admin_get_tiktok_accounts():
@@ -1490,7 +1422,7 @@ def admin_tiktok_history():
     return jsonify({'success': True, 'history': [{'date': t.date.isoformat(), 'tiktok_link': t.tiktok_link, 'reward_amount': t.reward_amount} for t in tasks]})
 
 
-# ==================== BACKUP ====================
+# ===== BACKUP =====
 @app.route('/api/admin/backup/trigger', methods=['POST'])
 @admin_required
 def admin_trigger_backup():
@@ -1508,7 +1440,7 @@ def admin_backup_list():
     return jsonify({'success': True, 'backups': [{'filename': b.filename, 'created': b.created_at.isoformat(), 'size': b.size} for b in backups]})
 
 
-# ==================== EXPORT / IMPORT ====================
+# ===== EXPORT / IMPORT =====
 @app.route('/api/admin/export-data', methods=['POST'])
 @admin_required
 def admin_export_data():
@@ -1517,10 +1449,8 @@ def admin_export_data():
     export_users = data.get('users', False)
     export_transactions = data.get('transactions', False)
     export_gameplays = data.get('game_plays', False)
-
     if not any([export_users, export_transactions, export_gameplays]):
         return jsonify({'success': False, 'message': 'Select at least one data type'}), 400
-
     export_data = {}
     if export_users:
         users = User.query.all()
@@ -1539,7 +1469,6 @@ def admin_export_data():
             'spin_plays_today': s.spin_plays_today,
             'tiktok_claimed_today': s.tiktok_claimed_today,
         } for s in stats]
-
     if format_type == 'csv':
         import csv, io
         output = io.StringIO()
@@ -1660,13 +1589,11 @@ def admin_import_full_db():
     file = request.files['file']
     if not file.filename.endswith('.flexia'):
         return jsonify({'success': False, 'message': 'Invalid file format. Must be .flexia'}), 400
-
     try:
         content = file.read().decode('utf-8')
         data = json.loads(content)
         if 'tables' not in data:
             return jsonify({'success': False, 'message': 'Invalid .flexia file'}), 400
-
         db.session.execute('PRAGMA foreign_keys=OFF;')
         try:
             User.query.delete()
@@ -1682,9 +1609,7 @@ def admin_import_full_db():
             GlobalWithdrawalDay.query.delete()
             BackupLog.query.delete()
             db.session.commit()
-
             tables = data['tables']
-
             for u in tables.get('users', []):
                 user = User(
                     id=u['id'],
@@ -1704,7 +1629,6 @@ def admin_import_full_db():
                     contact=u['contact'],
                 )
                 db.session.add(user)
-
             for t in tables.get('transactions', []):
                 tx = Transaction(
                     id=t['id'],
@@ -1716,7 +1640,6 @@ def admin_import_full_db():
                     timestamp=datetime.datetime.fromisoformat(t['timestamp']),
                 )
                 db.session.add(tx)
-
             for s in tables.get('game_stats', []):
                 stats = GameStats(
                     user_id=s['user_id'],
@@ -1736,7 +1659,6 @@ def admin_import_full_db():
                     tiktok_last_claim_date=datetime.date.fromisoformat(s['tiktok_last_claim_date']) if s['tiktok_last_claim_date'] else None,
                 )
                 db.session.add(stats)
-
             for a in tables.get('achievements', []):
                 ach = Achievement(
                     user_id=a['user_id'],
@@ -1749,7 +1671,6 @@ def admin_import_full_db():
                     processed=a['processed'],
                 )
                 db.session.add(ach)
-
             for c in tables.get('coupons', []):
                 coupon = Coupon(
                     code=c['code'],
@@ -1758,7 +1679,6 @@ def admin_import_full_db():
                     used_at=datetime.datetime.fromisoformat(c['used_at']) if c['used_at'] else None,
                 )
                 db.session.add(coupon)
-
             for w in tables.get('withdrawals', []):
                 wd = Withdrawal(
                     id=w['id'],
@@ -1772,7 +1692,6 @@ def admin_import_full_db():
                     processed_at=datetime.datetime.fromisoformat(w['processed_at']) if w['processed_at'] else None,
                 )
                 db.session.add(wd)
-
             for r in tables.get('referrals', []):
                 ref = Referral(
                     referrer_id=r['referrer_id'],
@@ -1782,7 +1701,6 @@ def admin_import_full_db():
                     created_at=datetime.datetime.fromisoformat(r['created_at']),
                 )
                 db.session.add(ref)
-
             for t in tables.get('tiktok_tasks', []):
                 task = TikTokTask(
                     date=datetime.date.fromisoformat(t['date']),
@@ -1790,7 +1708,6 @@ def admin_import_full_db():
                     reward_amount=t['reward_amount'],
                 )
                 db.session.add(task)
-
             for a in tables.get('tiktok_accounts', []):
                 account = TikTokAccount(
                     id=a['id'],
@@ -1799,7 +1716,6 @@ def admin_import_full_db():
                     created_at=datetime.datetime.fromisoformat(a['created_at']),
                 )
                 db.session.add(account)
-
             for s in tables.get('social_settings', []):
                 social = SocialSettings(
                     whatsapp_link=s['whatsapp_link'],
@@ -1808,11 +1724,9 @@ def admin_import_full_db():
                     min_withdrawal=s['min_withdrawal'],
                 )
                 db.session.add(social)
-
             for day in tables.get('global_withdrawal_days', []):
                 gwd = GlobalWithdrawalDay(day=day)
                 db.session.add(gwd)
-
             for b in tables.get('backup_logs', []):
                 log = BackupLog(
                     filename=b['filename'],
@@ -1820,7 +1734,6 @@ def admin_import_full_db():
                     created_at=datetime.datetime.fromisoformat(b['created_at']),
                 )
                 db.session.add(log)
-
             db.session.commit()
             db.session.execute('PRAGMA foreign_keys=ON;')
             return jsonify({'success': True, 'message': 'Database restored successfully'})
@@ -1956,9 +1869,11 @@ def paystack_status(reference):
 def serve_index():
     return send_from_directory(app.static_folder, 'index.html')
 
+
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(app.static_folder, 'logo/favicon.ico')
+
 
 @app.route('/<path:path>')
 def serve_static(path):
@@ -1980,6 +1895,7 @@ def health():
         'version': '2.0.0'
     })
 
+
 @app.route('/api/session/status', methods=['GET'])
 def session_status():
     if 'user_id' in session:
@@ -1988,6 +1904,7 @@ def session_status():
             return jsonify({'success': True, 'authenticated': True})
     return jsonify({'success': True, 'authenticated': False})
 
+
 @app.route('/api/session/refresh', methods=['POST'])
 @login_required
 def session_refresh():
@@ -1995,6 +1912,7 @@ def session_refresh():
     return jsonify({'success': True})
 
 
+# -------------------- DATABASE INIT --------------------
 def init_db():
     with app.app_context():
         db.create_all()
@@ -2019,13 +1937,13 @@ def init_db():
             for d in [7, 14, 25, 30]:
                 db.session.add(GlobalWithdrawalDay(day=d))
             db.session.commit()
-        # Seed a few default TikTok accounts if none exist
         if TikTokAccount.query.count() == 0:
             default_accounts = ['flexia_official', 'earnwithflexia', 'flexiarewards', 'flexiadaily', 'flexiacash']
             for username in default_accounts:
                 db.session.add(TikTokAccount(username=username))
             db.session.commit()
             print("✅ Default TikTok accounts seeded.")
+
 
 init_db()
 
