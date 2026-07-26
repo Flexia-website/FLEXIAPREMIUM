@@ -9,30 +9,37 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;width:100%;overflow:hidden;background:#000;color:#FFF;font-family:Arial,sans-serif;display:flex;flex-direction:column;}
-.header{background:#0A0A1F;padding:12px 16px;border-bottom:2px solid #8000FF;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
-.game-logo{display:flex;align-items:center;gap:12px;}
-.game-logo-icon{width:46px;height:46px;display:flex;align-items:center;justify-content:center;background:linear-gradient(45deg,#8000FF,#00CCFF);border-radius:12px;font-size:1.4rem;}
-.header-left h1{font-size:1.3rem;color:#8000FF;}
-.header-left p{color:#00CCFF;font-size:0.78rem;}
-.main-content{flex:1;display:flex;flex-direction:column;padding:10px;gap:10px;overflow:hidden;min-height:0;}
-.game-row{display:flex;flex:1;gap:10px;min-height:0;}
-.game-panel{flex:3.2;background:rgba(30,30,69,0.8);border:2px solid #8000FF;border-radius:12px;padding:10px;display:flex;flex-direction:column;overflow:hidden;}
+.header{background:#0A0A1F;padding:6px 10px;border-bottom:2px solid #8000FF;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+.game-logo{display:flex;align-items:center;gap:8px;}
+.game-logo-icon{width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:linear-gradient(45deg,#8000FF,#00CCFF);border-radius:9px;font-size:1rem;}
+.header-left h1{font-size:1rem;color:#8000FF;}
+.header-left p{color:#00CCFF;font-size:0.62rem;}
+.main-content{flex:1;display:flex;flex-direction:column;padding:6px;gap:6px;overflow:hidden;min-height:0;}
+.game-row{display:flex;flex:1;gap:6px;min-height:0;}
+.game-panel{flex:7;background:rgba(30,30,69,0.8);border:2px solid #8000FF;border-radius:10px;padding:6px;display:flex;flex-direction:column;overflow:hidden;}
 .game-board-container{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;}
 #game-board{border:3px solid #8000FF;border-radius:12px;background:#151535;box-shadow:0 10px 30px rgba(128,0,255,0.4);max-width:100%;max-height:100%;touch-action:none;}
-.scores-panel{flex:1.3;display:flex;flex-direction:column;gap:10px;}
-.score-card{background:rgba(30,30,69,0.9);border:2px solid #8000FF;border-radius:12px;padding:14px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.score-label{font-size:0.8rem;color:#A0A0B5;margin-bottom:6px;font-weight:600;}
-.score-value{font-size:1.7rem;font-weight:bold;color:#00FFCC;}
-.mini-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px;width:100%;}
-.mini-stat{text-align:center;padding:7px;background:rgba(128,0,255,0.1);border-radius:8px;border:1px solid #8000FF;}
-.mini-label{font-size:0.65rem;color:#A0A0B5;}
-.mini-value{font-size:0.9rem;color:#00FFCC;font-weight:bold;}
-.controls-row{display:flex;gap:10px;flex-shrink:0;padding:0 10px 12px;}
+.scores-panel{flex:0.55;display:flex;flex-direction:column;gap:5px;min-width:90px;}
+.score-card{background:rgba(30,30,69,0.9);border:2px solid #8000FF;border-radius:8px;padding:5px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.score-label{font-size:0.52rem;color:#A0A0B5;margin-bottom:2px;font-weight:600;}
+.score-value{font-size:0.95rem;font-weight:bold;color:#00FFCC;}
+.mini-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:3px;margin-top:4px;width:100%;}
+.mini-stat{text-align:center;padding:3px;background:rgba(128,0,255,0.1);border-radius:5px;border:1px solid #8000FF;}
+.mini-label{font-size:0.42rem;color:#A0A0B5;}
+.mini-value{font-size:0.6rem;color:#00FFCC;font-weight:bold;}
+.controls-row{display:flex;gap:8px;flex-shrink:0;padding:0 8px 8px;}
+.dpad{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(2,44px);gap:6px;justify-content:center;margin-bottom:10px;}
+.dpad-btn{background:linear-gradient(45deg,#8000FF,#00CCFF);border:none;border-radius:10px;color:#0A0A1F;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform 0.15s;}
+.dpad-btn:active{transform:scale(0.9);}
+.dpad-up{grid-column:2;grid-row:1;}
+.dpad-left{grid-column:1;grid-row:2;}
+.dpad-down{grid-column:2;grid-row:2;}
+.dpad-right{grid-column:3;grid-row:2;}
 .action-buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;}
 .action-btn{background:linear-gradient(45deg,#8000FF,#00CCFF);border:none;border-radius:10px;color:#0A0A1F;font-size:0.95rem;font-weight:bold;padding:13px;cursor:pointer;transition:all 0.2s;}
 .action-btn:active{transform:scale(0.95);}
 .action-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
-.dashboard-btn{background:linear-gradient(45deg,#8000FF,#00CCFF);border:none;border-radius:10px;color:#0A0A1F;padding:13px 18px;font-weight:bold;cursor:pointer;white-space:nowrap;}
+.dashboard-btn{background:linear-gradient(45deg,#8000FF,#00CCFF);border:none;border-radius:8px;color:#0A0A1F;padding:6px 10px;font-weight:bold;font-size:0.75rem;cursor:pointer;white-space:nowrap;}
 .happy-popup{position:fixed;top:30%;left:50%;transform:translate(-50%,-50%) scale(0.8);background:linear-gradient(135deg,#ffd966,#ffb347);color:#1e2a2e;padding:20px 30px;border-radius:60px;font-size:1.8rem;font-weight:bold;white-space:nowrap;z-index:3000;box-shadow:0 20px 40px rgba(0,0,0,0.5),0 0 0 8px rgba(255,215,0,0.4);display:flex;align-items:center;gap:14px;letter-spacing:2px;animation:popFly 0.6s cubic-bezier(0.34,1.2,0.64,1) forwards,fadeOutGlow 2s ease-in 0.8s forwards;pointer-events:none;}
 .happy-popup i{font-size:2.4rem;animation:bounceSmile 0.5s infinite alternate;}
 @keyframes popFly{0%{opacity:0;transform:translate(-50%,-50%) scale(0.4)}40%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
@@ -45,17 +52,18 @@ html,body{height:100%;width:100%;overflow:hidden;background:#000;color:#FFF;font
 .primary-btn{background:linear-gradient(45deg,#8000FF,#00CCFF);color:#0A0A1F;}
 .secondary-btn{background:#1A1A35;color:#A0A0B5;border:1px solid #8000FF;}
 .hidden{display:none!important;}
-@media(max-width:768px){.game-row{flex-direction:column}.game-panel{flex:2.5}.scores-panel{flex-direction:row;flex-wrap:wrap}.score-card{min-width:48%}.happy-popup{font-size:1.2rem;padding:14px 22px}}
+@media(max-width:768px){.game-row{flex-direction:column}.game-panel{flex:7}.scores-panel{flex:0.4;flex-direction:row;flex-wrap:wrap}.score-card{min-width:48%;padding:4px;}.happy-popup{font-size:1.2rem;padding:14px 22px}}
+@media(max-width:400px){.dpad{grid-template-columns:repeat(3,40px);grid-template-rows:repeat(2,40px);}}
 </style>
 </head>
 <body>
 
 <div class="header">
   <div class="game-logo">
-    <div class="game-logo-icon">🐍</div>
+    <div class="game-logo-icon"><i class="fas fa-gamepad"></i></div>
     <div class="header-left">
       <h1>SNAKE MINE</h1>
-      <p id="snake-header-info">🍎 ₦20 each | 🌟 Golden = ₦40 | Daily cap ₦500</p>
+      <p id="snake-header-info">₦20 each | Golden = ₦40 | Daily cap ₦500</p>
     </div>
   </div>
   <button class="dashboard-btn" onclick="window.location.href='index.html'">
@@ -102,6 +110,12 @@ html,body{height:100%;width:100%;overflow:hidden;background:#000;color:#FFF;font
 
 <div class="controls-row">
   <div style="flex:1;">
+    <div class="dpad">
+      <button class="dpad-btn dpad-up" onclick="changeDirection('up')" aria-label="Move up"><i class="fas fa-chevron-up"></i></button>
+      <button class="dpad-btn dpad-left" onclick="changeDirection('left')" aria-label="Move left"><i class="fas fa-chevron-left"></i></button>
+      <button class="dpad-btn dpad-down" onclick="changeDirection('down')" aria-label="Move down"><i class="fas fa-chevron-down"></i></button>
+      <button class="dpad-btn dpad-right" onclick="changeDirection('right')" aria-label="Move right"><i class="fas fa-chevron-right"></i></button>
+    </div>
     <div class="action-buttons">
       <button class="action-btn" onclick="startGame()" id="start-btn"><i class="fas fa-play"></i> START</button>
       <button class="action-btn" onclick="manualClaim()" id="claim-btn"><i class="fas fa-trophy"></i> CLAIM</button>
@@ -135,21 +149,21 @@ html,body{height:100%;width:100%;overflow:hidden;background:#000;color:#FFF;font
       <button onclick="closeInstructions()" style="background:none;border:none;font-size:2.4rem;color:#888;cursor:pointer;line-height:1;">×</button>
     </div>
     <div style="text-align:left;color:#ddd;line-height:1.8;">
-      <p style="font-weight:bold;margin-bottom:10px;">🐍 Control the snake, eat apples, earn ₦!</p>
+      <p style="font-weight:bold;margin-bottom:10px;"><i class="fas fa-gamepad"></i> Control the snake, eat apples, earn ₦!</p>
       <div style="background:rgba(0,255,80,0.1);padding:16px;border-radius:12px;margin-bottom:14px;border:1px solid rgba(0,255,85,0.2);">
-        <div style="margin-bottom:6px;">🍎 Normal Apple = <strong style="color:#00FF55">₦20</strong></div>
-        <div style="margin-bottom:6px;">✨ Golden Apple = <strong style="color:#FFD700">₦40</strong> (10% chance)</div>
-        <div style="margin-bottom:6px;">🚀 Daily cap: <strong style="color:#FF8C00">₦500</strong> (resets midnight UTC)</div>
-        <div>🎉 Hit ₦500 cap → <strong style="color:#00FFCC">Auto-claim + Celebration!</strong></div>
+        <div style="margin-bottom:6px;"><i class="fas fa-circle" style="color:#00FF55;"></i> Normal Apple = <strong style="color:#00FF55">₦20</strong></div>
+        <div style="margin-bottom:6px;"><i class="fas fa-star" style="color:#FFD700;"></i> Golden Apple = <strong style="color:#FFD700">₦40</strong> (10% chance)</div>
+        <div style="margin-bottom:6px;"><i class="fas fa-flag-checkered" style="color:#FF8C00;"></i> Daily cap: <strong style="color:#FF8C00">₦500</strong> (resets midnight UTC)</div>
+        <div><i class="fas fa-trophy" style="color:#00FFCC;"></i> Hit ₦500 cap → <strong style="color:#00FFCC">Auto-claim + Celebration!</strong></div>
       </div>
       <div style="background:rgba(128,0,255,0.1);padding:14px;border-radius:10px;border:1px solid rgba(128,0,255,0.3);">
-        <div style="margin-bottom:5px;">🎮 <strong>Arrow keys</strong> or <strong>Swipe</strong> to move</div>
-        <div style="margin-bottom:5px;">⏸ <strong>SPACE</strong> to start</div>
-        <div>💀 Hit wall or yourself = Game Over</div>
+        <div style="margin-bottom:5px;"><i class="fas fa-arrows-alt"></i> <strong>Arrow keys</strong>, <strong>Swipe</strong>, or the on-screen buttons to move</div>
+        <div style="margin-bottom:5px;"><i class="fas fa-pause"></i> <strong>SPACE</strong> to start</div>
+        <div><i class="fas fa-skull"></i> Hit wall or yourself = Game Over</div>
       </div>
     </div>
     <button onclick="closeInstructions()" style="width:100%;padding:15px;margin-top:18px;background:linear-gradient(45deg,#8000FF,#00CCFF);border:none;border-radius:10px;color:#0A0A1F;font-weight:bold;font-size:1rem;cursor:pointer;">
-      GOT IT — LET'S EAT! 🐍
+      GOT IT — LET'S EAT!
     </button>
   </div>
 </div>
@@ -191,7 +205,7 @@ function updateCapUI(earned) {
   document.getElementById('remaining-today').textContent = '\u20a6' + remaining;
   const hdr = document.getElementById('snake-header-info');
   if (hdr) {
-    hdr.textContent = remaining <= 0 ? '\u26a0\ufe0f Daily cap reached! Come back tomorrow.' : '\U0001f34e \u20a6' + APPLE_REWARD + ' each | \u2728 Golden = \u20a6' + GOLDEN_REWARD + ' | \u20a6' + remaining + ' left today';
+    hdr.textContent = remaining <= 0 ? 'Daily cap reached! Come back tomorrow.' : '\u20a6' + APPLE_REWARD + ' each | Golden = \u20a6' + GOLDEN_REWARD + ' | \u20a6' + remaining + ' left today';
     hdr.style.color = remaining <= 0 ? '#FF0055' : '#00CCFF';
   }
   if (earned >= DAILY_CAP) { capReached = true; lockClaimBtn(); }
@@ -212,7 +226,7 @@ function lockClaimBtn() {
 function showFunPopup() {
   const d = document.createElement('div');
   d.className = 'happy-popup';
-  d.innerHTML = '<i class="fas fa-star"></i> \U0001f389 \u20a6500 CAP REACHED! \U0001f389 <i class="fas fa-star"></i>';
+  d.innerHTML = '<i class="fas fa-star"></i> \u20a6500 CAP REACHED! <i class="fas fa-star"></i>';
   document.body.appendChild(d);
   setTimeout(() => d && d.remove && d.remove(), 3000);
 }
@@ -241,7 +255,7 @@ function syncBalanceAfterClaim() {
           if (window.App.updateBalanceDisplay) window.App.updateBalanceDisplay();
         }
         
-        console.log('✅ Balance synced instantly: ₦' + balance.toFixed(2));
+        console.log('Balance synced instantly: \u20a6' + balance.toFixed(2));
       }
     })
     .catch(function(e) { console.error('Balance sync error:', e); });
@@ -301,9 +315,9 @@ async function autoClaim() {
 }
 
 async function manualClaim() {
-  if (capReached) { alert('\U0001f389 Daily \u20a6500 cap reached! Come back tomorrow.'); return; }
-  if (gameRunning) { alert('\u26a0\ufe0f Finish the game first, then claim!'); return; }
-  if (sessionEarned <= 0) { alert('\U0001f40d No earnings yet. Play and eat apples!'); return; }
+  if (capReached) { alert('Daily \u20a6500 cap reached! Come back tomorrow.'); return; }
+  if (gameRunning) { alert('Finish the game first, then claim!'); return; }
+  if (sessionEarned <= 0) { alert('No earnings yet. Play and eat apples!'); return; }
   if (isClaiming) return;
 
   isClaiming = true;
@@ -360,7 +374,7 @@ async function manualClaim() {
     if (result.remaining_today <= 0) {
       showFunPopup(); 
       lockClaimBtn();
-      alert('🎉 CLAIMED ₦' + result.reward + '! You hit the ₦500 daily cap — amazing!');
+      alert('CLAIMED \u20a6' + result.reward + '! You hit the \u20a6500 daily cap — amazing!');
     } else {
       btn.innerHTML = '<i class="fas fa-check"></i> CLAIMED ₦' + result.reward + '!';
       setTimeout(() => { 
@@ -368,14 +382,14 @@ async function manualClaim() {
         btn.innerHTML='<i class="fas fa-trophy"></i> CLAIM'; 
         isClaiming=false; 
       }, 2500);
-      alert('✅ Claimed ₦' + result.reward + '! ₦' + result.remaining_today + ' remaining today.');
+      alert('Claimed \u20a6' + result.reward + '! \u20a6' + result.remaining_today + ' remaining today.');
       return;
     }
   } catch(e) {
     console.error('Claim error:', e);
     btn.disabled=false; 
     btn.innerHTML=orig;
-    alert('❌ ' + (e.message || 'Network error. Please try again.'));
+    alert((e.message || 'Network error. Please try again.'));
   }
   isClaiming = false;
 }
@@ -465,7 +479,7 @@ function gameOver() {
 
 function startGame() {
   if (gameRunning) return;
-  if (capReached) { alert("\U0001f389 Daily \u20a6500 cap reached! Come back tomorrow."); return; }
+  if (capReached) { alert("Daily \u20a6500 cap reached! Come back tomorrow."); return; }
   const btn=document.getElementById('start-btn');
   btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
   setTimeout(()=>{
