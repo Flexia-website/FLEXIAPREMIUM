@@ -69,7 +69,9 @@ class User(db.Model):
     game_stats = db.relationship('GameStats', backref='user', uselist=False, cascade='all, delete-orphan')
     achievements = db.relationship('Achievement', backref='user', lazy=True, cascade='all, delete-orphan')
     referrals = db.relationship('Referral', backref='referrer', lazy=True, cascade='all, delete-orphan',
-                                foreign_keys='Referral.referrer_id')
+                                foreign_keys='Referral.referrer_id', primaryjoin='User.id==Referral.referrer_id')
+    referred_from = db.relationship('Referral', backref='referred', lazy=True, cascade='all, delete-orphan',
+                                    foreign_keys='Referral.referred_user_id', primaryjoin='User.id==Referral.referred_user_id')
     withdrawals = db.relationship('Withdrawal', backref='user', lazy=True, cascade='all, delete-orphan')
 
     def set_password(self, password):
@@ -163,7 +165,7 @@ class Coupon(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(20), unique=True, nullable=False)
     status = db.Column(db.String(20), default='AVAILABLE')
-    used_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    used_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     used_at = db.Column(db.DateTime, nullable=True)
 
 
@@ -1084,11 +1086,9 @@ def admin_delete_user(user_id):
     if user.is_admin:
         return jsonify({'success': False, 'message': 'Cannot delete admin user'}), 400
     try:
-        # Referral.referrer_id is covered by the User.referrals cascade below, but
-        # Referral.referred_user_id is not (it's the *other* side of the relationship),
-        # so rows where this user was the one being referred would otherwise be left
-        # dangling. Both columns are NOT NULL, so these rows must be deleted, not nulled.
-        Referral.query.filter_by(referred_user_id=user_id).delete()
+        # Clear coupon references (used_by foreign key)
+        Coupon.query.filter_by(used_by=user_id).update({'used_by': None, 'status': 'AVAILABLE', 'used_at': None})
+        # Referrals are now cascaded on both directions via db.relationship
         # Any user this account referred should no longer point at a deleted referrer.
         User.query.filter_by(referred_by=user_id).update({'referred_by': None})
         db.session.delete(user)
@@ -1830,6 +1830,11 @@ def admin_clear_db():
 
     if non_admin_ids:
         if clear_users:
+            # Clear coupons that reference deleted users FIRST (foreign key safety)
+            Coupon.query.filter(Coupon.used_by.in_(non_admin_ids)).update(
+                {'used_by': None, 'status': 'AVAILABLE', 'used_at': None},
+                synchronize_session=False
+            )
             # Deleting the users implies deleting everything that has a NOT NULL
             # foreign key to them (transactions, game stats, achievements,
             # withdrawals, referrals) — that's a DB constraint, not a choice,
