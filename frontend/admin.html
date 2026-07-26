@@ -172,6 +172,7 @@
         .flex-wrap { flex-wrap: wrap; }
         .items-center { align-items: center; }
         .justify-between { justify-content: space-between; }
+        .grid { display: grid; }
         .gap-3 { gap: 12px; }
         .gap-4 { gap: 16px; }
         .w-full { width: 100%; }
@@ -264,6 +265,7 @@
 
     <!-- ===== DATABASE ===== -->
     <div id="database" class="tab-content">
+        <div id="database-message" class="text-sm mb-2"></div>
         <div class="card mb-4 border-l-4 border-red-400">
             <div class="section-title text-red-600"><i class="fas fa-database"></i> Management</div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -374,6 +376,7 @@
                 <input type="text" id="user-search" placeholder="Search…" class="max-w-xs text-sm">
                 <button onclick="loadUsers()" class="btn btn-primary text-sm"><i class="fas fa-sync"></i> Refresh</button>
             </div>
+            <div id="users-message" class="text-sm mb-2"></div>
             <div class="table-wrap">
                 <table>
                     <thead><tr><th>ID</th><th>Username</th><th>Balance</th><th>Withdrawal</th><th>Limit</th><th>Admin</th><th>Actions</th></tr></thead>
@@ -385,6 +388,7 @@
 
     <!-- ===== WITHDRAWALS ===== -->
     <div id="withdrawals" class="tab-content">
+        <div id="withdrawals-message" class="text-sm mb-2"></div>
         <div class="card mb-4">
             <div class="section-title"><i class="fas fa-money-bill-wave"></i> Pending Withdrawals</div>
             <div id="pending-withdrawals-list" class="text-sm">Loading…</div>
@@ -831,9 +835,9 @@
         try {
             const res = await fetch(`/api/admin/user/${userId}`, {method:'DELETE', credentials:'include'});
             const data = await res.json();
-            if (data.success) { showMessage('✅ User deleted', 'success'); loadUsers(); }
-            else { showMessage('❌ ' + (data.message || 'Delete failed'), 'error'); }
-        } catch(e) { showMessage('❌ Network error: ' + e.message, 'error'); }
+            if (data.success) { showMessage('✅ User deleted', 'success', 'users-message'); loadUsers(); }
+            else { showMessage('❌ ' + (data.message || 'Delete failed'), 'error', 'users-message'); }
+        } catch(e) { showMessage('❌ Network error: ' + e.message, 'error', 'users-message'); }
     }
 
     async function openUserSettings(userId, username) {
@@ -861,7 +865,7 @@
                 </div>
             `;
             new bootstrap.Modal(document.getElementById('withdrawalSettingsModal')).show();
-        } catch(e) { showMessage('Failed to load user', 'error'); }
+        } catch(e) { showMessage('Failed to load user', 'error', 'users-message'); }
     }
     async function saveWithdrawalSettings() {
         if (!selectedUserId) return;
@@ -870,17 +874,17 @@
         const customDays = document.getElementById('user-custom-days').value.split(',').map(d => parseInt(d.trim())).filter(d => !isNaN(d) && d>=1 && d<=31);
         try {
             const res = await postData(`/api/admin/user/${selectedUserId}/update-settings`, {restricted, limit, custom_days: customDays});
-            if (res.success) { showMessage('Saved', 'success'); bootstrap.Modal.getInstance(document.getElementById('withdrawalSettingsModal')).hide(); loadUsers(); }
-            else showMessage(res.message||'Failed', 'error');
-        } catch(e) { showMessage('Network error', 'error'); }
+            if (res.success) { showMessage('Saved', 'success', 'users-message'); bootstrap.Modal.getInstance(document.getElementById('withdrawalSettingsModal')).hide(); loadUsers(); }
+            else showMessage(res.message||'Failed', 'error', 'users-message');
+        } catch(e) { showMessage('Network error', 'error', 'users-message'); }
     }
     async function toggleAdminStatus(userId) {
         if (!confirm('Toggle admin status?')) return;
         try {
             const res = await postData(`/api/admin/user/${userId}/toggle-admin`, {});
-            if (res.success) { showMessage(`User is now ${res.is_admin?'admin':'user'}`, 'success'); loadUsers(); }
-            else showMessage(res.message, 'error');
-        } catch(e) { showMessage('Toggle failed', 'error'); }
+            if (res.success) { showMessage(`User is now ${res.is_admin?'admin':'user'}`, 'success', 'users-message'); loadUsers(); }
+            else showMessage(res.message, 'error', 'users-message');
+        } catch(e) { showMessage('Toggle failed', 'error', 'users-message'); }
     }
     function openAdjustBalance(userId, username) {
         adjustUserId = userId;
@@ -892,12 +896,12 @@
     async function saveBalanceAdjustment() {
         const amount = parseFloat(document.getElementById('adjust-amount').value);
         const note = document.getElementById('adjust-note').value.trim();
-        if (isNaN(amount) || !note) { showMessage('Enter amount and note', 'error'); return; }
+        if (isNaN(amount) || !note) { showMessage('Enter amount and note', 'error', 'users-message'); return; }
         try {
             const res = await postData(`/api/admin/user/${adjustUserId}/adjust-balance`, {amount, note});
-            if (res.success) { showMessage(`Adjusted ₦${amount.toFixed(2)}`, 'success'); bootstrap.Modal.getInstance(document.getElementById('adjustBalanceModal')).hide(); loadUsers(); }
-            else showMessage(res.message||'Failed', 'error');
-        } catch(e) { showMessage('Network error', 'error'); }
+            if (res.success) { showMessage(`Adjusted ₦${amount.toFixed(2)}`, 'success', 'users-message'); bootstrap.Modal.getInstance(document.getElementById('adjustBalanceModal')).hide(); loadUsers(); }
+            else showMessage(res.message||'Failed', 'error', 'users-message');
+        } catch(e) { showMessage('Network error', 'error', 'users-message'); }
     }
 
     // ----- WITHDRAWALS -----
@@ -942,9 +946,9 @@
         if (!confirm(`${action} withdrawal?`)) return;
         try {
             const res = await postData('/api/admin/approve-withdrawal', {transaction_id: txId, action});
-            if (res.success) { showMessage(`${action}ed`, 'success'); loadWithdrawals(); }
-            else showMessage(res.message, 'error');
-        } catch(e) { showMessage('Failed', 'error'); }
+            if (res.success) { showMessage(`${action}ed`, 'success', 'withdrawals-message'); loadWithdrawals(); }
+            else showMessage(res.message, 'error', 'withdrawals-message');
+        } catch(e) { showMessage('Failed', 'error', 'withdrawals-message'); }
     }
 
     // ----- WITHDRAWAL REPORT -----
@@ -1024,17 +1028,6 @@
             }
         } catch(e) {}
     }
-    function syncClearCheckboxes() {
-        const usersChecked = document.getElementById('clear-users').checked;
-        const txCb = document.getElementById('clear-transactions');
-        const gpCb = document.getElementById('clear-gameplays');
-        const note = document.getElementById('clear-users-note');
-        txCb.disabled = usersChecked;
-        gpCb.disabled = usersChecked;
-        if (usersChecked) { txCb.checked = true; gpCb.checked = true; }
-        note.textContent = usersChecked ? 'Deleting users always removes their transactions & game stats too (required by the database).' : '';
-    }
-    document.addEventListener('DOMContentLoaded', syncClearCheckboxes);
     async function previewDatabaseClear() {
         const stats = await fetchData('/api/admin/stats');
         if (!stats.success) return;
@@ -1070,6 +1063,17 @@
         document.getElementById('acknowledge-risk').checked = false;
         document.getElementById('execute-clear-btn').disabled = true;
     }
+    function syncClearCheckboxes() {
+        const usersChecked = document.getElementById('clear-users').checked;
+        const txCb = document.getElementById('clear-transactions');
+        const gpCb = document.getElementById('clear-gameplays');
+        const note = document.getElementById('clear-users-note');
+        txCb.disabled = usersChecked;
+        gpCb.disabled = usersChecked;
+        if (usersChecked) { txCb.checked = true; gpCb.checked = true; }
+        note.textContent = usersChecked ? 'Deleting users always removes their transactions & game stats too (required by the database).' : '';
+    }
+    document.addEventListener('DOMContentLoaded', syncClearCheckboxes);
     async function executeDatabaseClear() {
         const sudo = document.getElementById('sudo-confirmation').value.trim();
         const backup = document.getElementById('backup-option').value;
@@ -1078,7 +1082,7 @@
         const clearGameplays = document.getElementById('clear-gameplays').checked;
         const resetCoupons = document.getElementById('reset-coupons').checked;
         if (sudo !== 'DELETE_ALL_DATA_AND_USERS_KEEP_ADMIN') {
-            showMessage('❌ Confirmation phrase is incorrect', 'error');
+            showMessage('❌ Confirmation phrase is incorrect', 'error', 'database-message');
             return;
         }
         try {
@@ -1092,18 +1096,18 @@
             });
             if (res.success) {
                 const s = res.stats || {};
-                showMessage(`✅ Cleared — ${s.users_deleted||0} users, ${s.transactions_deleted||0} transactions, ${s.gameplays_deleted||0} game stats, ${s.coupons_reset||0} coupons reset${res.backup_file ? ' · backup: '+res.backup_file : ''}. Reloading…`, 'success');
+                showMessage(`✅ Cleared — ${s.users_deleted||0} users, ${s.transactions_deleted||0} transactions, ${s.gameplays_deleted||0} game stats, ${s.coupons_reset||0} coupons reset${res.backup_file ? ' · backup: '+res.backup_file : ''}. Reloading…`, 'success', 'database-message');
                 setTimeout(() => window.location.reload(), 2000);
             }
-            else { showMessage('❌ ' + (res.message || 'Clear failed'), 'error'); }
-        } catch(e) { showMessage('❌ Network error: ' + e.message, 'error'); } finally { closeClearModal(); }
+            else { showMessage('❌ ' + (res.message || 'Clear failed'), 'error', 'database-message'); }
+        } catch(e) { showMessage('❌ Network error: ' + e.message, 'error', 'database-message'); } finally { closeClearModal(); }
     }
     async function exportDatabaseData() {
         const format = document.getElementById('export-format').value;
         const users = document.getElementById('export-users').checked;
         const txs = document.getElementById('export-transactions').checked;
         const gp = document.getElementById('export-gameplays').checked;
-        if (!users && !txs && !gp) { showMessage('Select at least one', 'warning'); return; }
+        if (!users && !txs && !gp) { showMessage('Select at least one', 'warning', 'database-message'); return; }
         try {
             const res = await postData('/api/admin/export-data', {format, users, transactions:txs, game_plays:gp});
             if (res.success) {
@@ -1119,9 +1123,9 @@
                 const a = document.createElement('a');
                 a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
                 window.URL.revokeObjectURL(url);
-                showMessage('✅ Exported successfully', 'success');
-            } else showMessage(res.message, 'error');
-        } catch(e) { showMessage('Export failed', 'error'); }
+                showMessage('✅ Exported successfully', 'success', 'database-message');
+            } else showMessage(res.message, 'error', 'database-message');
+        } catch(e) { showMessage('Export failed', 'error', 'database-message'); }
     }
     async function exportFullDatabase() {
         try {
@@ -1133,9 +1137,9 @@
                 a.href = url; a.download = `flexia_full_${new Date().toISOString().slice(0,10)}.flexia`;
                 document.body.appendChild(a); a.click(); a.remove();
                 window.URL.revokeObjectURL(url);
-                showMessage('✅ Full backup downloaded', 'success');
-            } else showMessage(res.message, 'error');
-        } catch(e) { showMessage('Export failed', 'error'); }
+                showMessage('✅ Full backup downloaded', 'success', 'database-message');
+            } else showMessage(res.message, 'error', 'database-message');
+        } catch(e) { showMessage('Export failed', 'error', 'database-message'); }
     }
     document.getElementById('restore-file').addEventListener('change', function(e) {
         const file = e.target.files[0];
@@ -1150,16 +1154,16 @@
     });
     async function restoreDatabase() {
         const fileInput = document.getElementById('restore-file');
-        if (!fileInput.files || !fileInput.files[0]) { showMessage('Select a .flexia file', 'error'); return; }
+        if (!fileInput.files || !fileInput.files[0]) { showMessage('Select a .flexia file', 'error', 'database-message'); return; }
         if (!confirm('WARNING: This will replace ALL data. Proceed?')) return;
         const formData = new FormData();
         formData.append('file', fileInput.files[0]);
         try {
             const res = await fetch('/api/admin/database/import-all', {method:'POST', credentials:'include', body:formData});
             const data = await res.json();
-            if (data.success) { showMessage('✅ Restore successful! Reloading…', 'success'); setTimeout(() => window.location.reload(), 1500); }
-            else { showMessage('❌ ' + (data.message || 'Restore failed'), 'error'); }
-        } catch(e) { showMessage('Restore failed', 'error'); }
+            if (data.success) { showMessage('✅ Restore successful! Reloading…', 'success', 'database-message'); setTimeout(() => window.location.reload(), 1500); }
+            else { showMessage('❌ ' + (data.message || 'Restore failed'), 'error', 'database-message'); }
+        } catch(e) { showMessage('Restore failed', 'error', 'database-message'); }
     }
 
     // ----- SETTINGS -----
