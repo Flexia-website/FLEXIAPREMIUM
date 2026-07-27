@@ -1692,7 +1692,7 @@ var Referral = {
       var response = await App.requestWithTimeout('/api/user/profile');
       var data = await response.json();
       if (data.success) {
-        var referrals = data.referrals || {};
+        var referrals = data.user.referrals || {};
         var referredUsers = referrals.referred_users || [];
         var claimHistory = referrals.claim_history || [];
         var unclaimed = referrals.unclaimed_bonus || 0;
@@ -2661,65 +2661,4 @@ document.addEventListener('DOMContentLoaded', function() {
   
   var bankSelect = document.getElementById('bank-select');
   if (bankSelect) {
-    bankSelect.addEventListener('change', function() {
-      var accountNumber = document.getElementById('account-number').value.trim();
-      if (accountNumber.length >= 10) {
-        Banking.verifyAccount();
-      }
-    });
-  }
-
-  var spinModal = document.getElementById('spin-modal');
-  if (spinModal) {
-    var observer = new MutationObserver(function(mutations) {
-      mutations.forEach(function(mutation) {
-        if (mutation.attributeName === 'class') {
-          var isVisible = !spinModal.classList.contains('hidden');
-          if (isVisible) setTimeout(function() { initSpinWheel(); }, 100);
-        }
-      });
-    });
-    observer.observe(spinModal, { attributes: true, attributeFilter: ['class'] });
-  }
-
-  var scrollPos = sessionStorage.getItem('flexia_scroll_position');
-  if (scrollPos) {
-    setTimeout(function() {
-      window.scrollTo(0, parseInt(scrollPos));
-      sessionStorage.removeItem('flexia_scroll_position');
-    }, 300);
-  }
-});
-
-// ========== GLOBAL EXPORTS ==========
-window.App = App;
-window.GameManager = GameManager;
-window.GameLimiter = GameLimiter;
-window.EnhancedGameLimiter = EnhancedGameLimiter;
-window.Games = Games;
-window.Auth = Auth;
-window.Profile = Profile;
-window.Referral = Referral;
-window.Banking = Banking;
-window.Achievements = Achievements;
-window.Settings = Settings;
-window.PaystackPayment = PaystackPayment;
-window.SessionManager = SessionManager;
-window.PinModal = PinModal;
-window.checkWithdrawalDay = checkWithdrawalDay;
-window.closeWithdrawalDayModal = closeWithdrawalDayModal;
-window.updateBalance = App.updateBalance.bind(App);
-window.showMessage = App.showMessage.bind(App);
-window.goBackToDashboard = function() { window.location.href = 'index.html'; };
-
-window.claimSnakeReward = async function(apples) {
-  return await GameManager.safeClaim('/api/games/snake/report', { apples_eaten: apples }, 'snake');
-};
-window.claimCoinFlipReward = async function(bet, won) {
-  return await GameManager.safeClaim('/api/games/coinflip/report', { bet: bet, won: won }, 'coinflip');
-};
-window.claimPlinkoReward = async function(bet, multiplier) {
-  return await GameManager.safeClaim('/api/games/plinko/report', { bet: bet, multiplier: multiplier }, 'plinko');
-};
-
-console.log('FLEXIA Script v17.9 - 5-play limit applied');
+    bankSelect.addEvent
