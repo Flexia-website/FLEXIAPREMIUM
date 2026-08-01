@@ -90,6 +90,26 @@ body {
   z-index: 1;
 }
 
+/* Login page: fit to viewport, no page-level scroll */
+body.login-page {
+  min-height: 100vh;
+  height: 100vh;
+  padding: 0;
+  overflow: hidden;
+}
+
+body.login-page #auth-screen {
+  min-height: 100vh;
+  height: 100vh;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+body.login-page .auth-container {
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+}
+
 .auth-container {
   max-width: 420px;
   width: 100%;
