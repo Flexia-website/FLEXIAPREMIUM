@@ -90,112 +90,6 @@ var embeddedCSS = `
     from { opacity: 1; transform: translateX(-50%) translateY(0); }
     to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
   }
-  .payment-modal-content {
-    max-width: 400px;
-    text-align: center;
-  }
-  .payment-modal-content .modal-title.success {
-    color: #00FF55;
-  }
-  .payment-modal-content .modal-title.failed {
-    color: #FF4757;
-  }
-  #payment-coupon-display {
-    background: #1a1a35;
-    padding: 12px;
-    border-radius: 8px;
-    font-family: monospace;
-    font-size: 1.2rem;
-    letter-spacing: 2px;
-    color: #FFD700;
-    margin: 12px 0;
-    word-break: break-all;
-  }
-  .payment-timer-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 10px;
-    padding: 8px 12px;
-    background: rgba(255, 0, 0, 0.05);
-    border-radius: 8px;
-    border: 1px solid rgba(255, 0, 0, 0.1);
-  }
-  .payment-timer-label {
-    font-size: 0.7rem;
-    color: var(--text-muted);
-  }
-  .payment-timer-value {
-    font-family: monospace;
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: #6BCB77;
-  }
-  .payment-timer-value.warning {
-    color: #FFD93D;
-  }
-  .payment-timer-value.danger {
-    color: #FF6B6B;
-    animation: pulse 1s infinite;
-  }
-  .payment-timer-value.expired {
-    color: #FF0000;
-    animation: none;
-  }
-  .payment-timer-note {
-    font-size: 0.6rem;
-    color: var(--text-muted);
-    margin-top: 8px;
-  }
-  .bank-transfer-info {
-    margin-top: 15px;
-    padding: 15px;
-    background: rgba(0, 255, 85, 0.03);
-    border-radius: 12px;
-    border: 1px solid rgba(0, 255, 85, 0.1);
-    display: none;
-  }
-  .bank-transfer-info.visible {
-    display: block;
-    animation: fadeSlide 0.3s ease;
-  }
-  .bank-transfer-info h4 {
-    color: var(--success);
-    font-family: var(--font-display);
-    font-size: 0.8rem;
-    margin-bottom: 10px;
-  }
-  .bank-transfer-details {
-    background: rgba(0, 0, 0, 0.2);
-    padding: 12px;
-    border-radius: 8px;
-    margin: 8px 0;
-  }
-  .bank-transfer-details .row {
-    display: flex;
-    justify-content: space-between;
-    padding: 4px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-  }
-  .bank-transfer-details .row:last-child {
-    border-bottom: none;
-  }
-  .bank-transfer-details .label {
-    color: var(--text-muted);
-    font-size: 0.7rem;
-  }
-  .bank-transfer-details .value {
-    color: var(--text-light);
-    font-weight: 600;
-    font-size: 0.8rem;
-  }
-  .bank-transfer-details .value.account-number {
-    color: var(--success);
-    font-family: monospace;
-    font-size: 1.1rem;
-    font-weight: bold;
-    letter-spacing: 1px;
-  }
 `;
 
 // Inject CSS
@@ -221,7 +115,6 @@ var CONFIG = {
     'spin': 1,
     'tiktok': 3
   },
-  PAYSTACK_MIN_AMOUNT: window.APP_CONFIG?.PAYSTACK?.MIN_AMOUNT || 500,
   MAX_RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 2000
 };
@@ -236,15 +129,13 @@ var App = {
   init: async function () {
     console.log('App.init() called');
     await this.checkAuth();
-    if (document.getElementById('app-screen')) {
+    if (document.getElementById('app-screen') && this.currentUser) {
       await Profile.load();
       await Banking.loadBanks();
       this.setupTheme();
-      if (this.currentUser) {
-        SessionManager.init();
-        this.updateBalanceDisplay();
-        this.startBalanceRefresh();
-      }
+      SessionManager.init();
+      this.updateBalanceDisplay();
+      this.startBalanceRefresh();
     }
   },
 
@@ -284,15 +175,20 @@ var App = {
       if (data.success) {
         this.currentUser = data.user;
         this.showAppScreen();
+        if (!document.getElementById('app-screen')) {
+          // On the login page, showAppScreen() already redirected to the dashboard.
+          return;
+        }
         this.updateBalanceDisplay();
-        document.getElementById('dashboard-username').textContent = data.user.username;
-        document.getElementById('dashboard-avatar').textContent = data.user.username.charAt(0).toUpperCase();
+        var usernameEl = document.getElementById('dashboard-username');
+        var avatarEl = document.getElementById('dashboard-avatar');
+        if (usernameEl) usernameEl.textContent = data.user.username;
+        if (avatarEl) avatarEl.textContent = data.user.username.charAt(0).toUpperCase();
         if (data.user.ui_theme === 'dark') {
           document.body.classList.add('dark-mode');
         }
         SessionManager.init();
         console.log('User logged in:', data.user.username);
-        this.checkPaymentStatus();
       } else {
         console.log('No valid session, showing auth screen');
         this.showAuthScreen();
@@ -303,119 +199,14 @@ var App = {
     }
   },
 
-  checkPaymentStatus: function() {
-    var params = new URLSearchParams(window.location.search);
-    var status = params.get('payment');
-    var ref = params.get('ref');
-    var error = params.get('error');
-
-    if (!status) return;
-
-    if (status === 'success' && ref) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-      setTimeout(async function() {
-        try {
-          var result = await PaystackPayment.checkStatus(ref);
-          if (result.success && result.coupon_code) {
-            App.showPaymentSuccessModal(result.coupon_code);
-          } else {
-            App.showPaymentSuccessModal(null);
-          }
-        } catch (e) {
-          App.showPaymentSuccessModal(null);
-        }
-      }, 1000);
-    } else if (status === 'failed') {
-      window.history.replaceState({}, document.title, window.location.pathname);
-      App.showMessage('Payment failed: ' + (error || 'Please try again.'), 'error', 8000);
-    }
-  },
-
-  showPaymentSuccessModal: function(couponCode) {
-    var existing = document.getElementById('payment-success-modal');
-    if (existing) existing.remove();
-    
-    var modal = document.createElement('div');
-    modal.id = 'payment-success-modal';
-    modal.style.cssText = `
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(12px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100000;
-      animation: fadeIn 0.3s ease;
-    `;
-    
-    var content = document.createElement('div');
-    content.style.cssText = `
-      background: rgba(20, 12, 40, 0.95);
-      border: 2px solid #00FF55;
-      border-radius: 24px;
-      padding: 40px 32px;
-      max-width: 440px;
-      width: 90%;
-      text-align: center;
-      box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5);
-      animation: modalSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    `;
-    
-    var couponHTML = couponCode ? `
-      <div style="background: #1a1a35; padding: 16px; border-radius: 12px; margin: 16px 0; border: 2px solid #FFD700;">
-        <div style="font-size: 0.7rem; color: #A0A0B5; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Your Coupon Code</div>
-        <div style="font-family: 'Orbitron', monospace; font-size: 1.8rem; color: #FFD700; letter-spacing: 3px; font-weight: bold;">${couponCode}</div>
-      </div>
-      <p style="color: #A0A0B5; font-size: 0.8rem;">Use this code to register on FLEXIA</p>
-    ` : `
-      <p style="color: #A0A0B5; font-size: 0.9rem;">Check your email for the coupon code.</p>
-    `;
-    
-    content.innerHTML = `
-      <div style="font-size: 3rem; margin-bottom: 10px;">✔️</div>
-      <h2 style="color: #00FF55; font-family: 'Orbitron', sans-serif; font-size: 1.4rem; margin-bottom: 8px;">Payment Successful!</h2>
-      ${couponHTML}
-      <div style="display: flex; gap: 10px; margin-top: 20px;">
-        <button onclick="App.closePaymentSuccessModal()" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #8000FF, #00CCFF); border: none; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; transition: all 0.3s;">
-          <i class="fas fa-check"></i> OK, Got It!
-        </button>
-        <button onclick="window.location.href='index.html'" style="flex: 1; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: #A0A0B5; cursor: pointer; transition: all 0.3s;">
-          <i class="fas fa-home"></i> Dashboard
-        </button>
-      </div>
-    `;
-    
-    modal.appendChild(content);
-    document.body.appendChild(modal);
-    
-    modal.addEventListener('click', function(e) {
-      if (e.target === modal) {
-        App.closePaymentSuccessModal();
-      }
-    });
-    
-    document.addEventListener('keydown', function handler(e) {
-      if (e.key === 'Escape') {
-        App.closePaymentSuccessModal();
-        document.removeEventListener('keydown', handler);
-      }
-    });
-  },
-
-  closePaymentSuccessModal: function() {
-    var modal = document.getElementById('payment-success-modal');
-    if (modal) modal.remove();
-  },
-
   showAppScreen: function () {
-    console.log('Showing app screen');
-    var authScreen = document.getElementById('auth-screen');
-    var appScreen = document.getElementById('app-screen');
-    
-    if (authScreen) {
-      authScreen.style.display = 'none';
+    // Login page: successful auth redirects to the dashboard.
+    if (document.getElementById('auth-screen') && !document.getElementById('app-screen')) {
+      window.location.href = 'index.html';
+      return;
     }
+    console.log('Showing app screen');
+    var appScreen = document.getElementById('app-screen');
     if (appScreen) {
       appScreen.style.display = 'block';
       appScreen.classList.add('active');
@@ -423,16 +214,15 @@ var App = {
   },
 
   showAuthScreen: function () {
+    // Dashboard page: no valid session, send the user to login.
+    if (document.getElementById('app-screen') && !document.getElementById('auth-screen')) {
+      window.location.href = 'login.html';
+      return;
+    }
     console.log('Showing auth screen');
     var authScreen = document.getElementById('auth-screen');
-    var appScreen = document.getElementById('app-screen');
-    
     if (authScreen) {
       authScreen.style.display = 'flex';
-    }
-    if (appScreen) {
-      appScreen.style.display = 'none';
-      appScreen.classList.remove('active');
     }
     this.stopBalanceRefresh();
   },
@@ -817,22 +607,8 @@ var Auth = {
 
       if (data.success) {
         App.currentUser = data.user;
-        App.showAppScreen();
-        App.updateBalanceDisplay();
-        document.getElementById('login-username').value = '';
-        document.getElementById('login-password').value = '';
-
-        var loginPassword = document.getElementById('login-password');
-        if (loginPassword.type === 'text') {
-          loginPassword.type = 'password';
-          var toggleBtn = loginPassword.nextElementSibling;
-          if (toggleBtn) {
-            toggleBtn.innerHTML = '<i class="fas fa-eye"></i>';
-            toggleBtn.setAttribute('title', 'Show password');
-          }
-        }
-        SessionManager.init();
-        console.log('Login successful, dashboard shown');
+        console.log('Login successful, redirecting to dashboard');
+        window.location.href = 'index.html';
       }
     } catch (error) {
       messageEl.textContent = error.message || 'Network error. Please try again.';
@@ -1106,222 +882,6 @@ function getNextAllowedDay(currentDay, allowedDays) {
   }
   return 'Day ' + sorted[0] + ' (next month)';
 }
-
-// ========== PAYSTACK PAYMENT ==========
-var PaystackPayment = {
-  timerInterval: null,
-  timerSeconds: 3600,
-
-  async initiate() {
-    var email = document.getElementById('payment-email').value.trim();
-    var amount = parseFloat(document.getElementById('payment-amount').value);
-    var btn = document.getElementById('paystack-pay-btn');
-    var msg = document.getElementById('payment-message');
-
-    if (!email || email.indexOf('@') === -1) {
-      msg.textContent = 'Please enter a valid email address';
-      msg.className = 'message error';
-      return;
-    }
-
-    if (!amount || amount < CONFIG.PAYSTACK_MIN_AMOUNT) {
-      msg.textContent = 'Minimum amount is ₦' + CONFIG.PAYSTACK_MIN_AMOUNT;
-      msg.className = 'message error';
-      return;
-    }
-
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-    msg.textContent = 'Initializing payment...';
-    msg.className = 'message info';
-
-    try {
-      var requestBody = { 
-        email: email, 
-        amount: amount 
-      };
-
-      var response = await App.requestWithTimeout('/api/paystack/initialize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(requestBody)
-      });
-
-      var data = await response.json();
-
-      if (data.success) {
-        msg.textContent = 'Payment initialized!';
-        msg.className = 'message success';
-
-        sessionStorage.setItem('paystack_ref', data.reference);
-        sessionStorage.setItem('paystack_email', email);
-
-        if (data.bank_transfer_details) {
-          this.showBankTransferDetails(data.bank_transfer_details, data.expires_at);
-          this.startTimer(data.expires_at);
-        }
-
-        setTimeout(function() {
-          window.location.href = data.authorization_url;
-        }, 2000);
-      } else {
-        msg.textContent = data.message || 'Payment initialization failed';
-        msg.className = 'message error';
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-credit-card"></i> Pay Now';
-      }
-    } catch (error) {
-      console.error('Payment error:', error);
-      msg.textContent = error.message || 'Network error. Please try again.';
-      msg.className = 'message error';
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-credit-card"></i> Pay Now';
-    }
-  },
-
-  showBankTransferDetails: function(details, expiresAt) {
-    var container = document.getElementById('bank-transfer-info');
-    var detailsDiv = document.getElementById('transfer-details');
-
-    container.style.display = 'block';
-    container.classList.add('visible');
-
-    detailsDiv.innerHTML = `
-      <div class="row">
-        <span class="label">Bank</span>
-        <span class="value">${details.bank_name || 'GTBank'}</span>
-      </div>
-      <div class="row">
-        <span class="label">Account Number</span>
-        <span class="value account-number">${details.account_number || '0123456789'}</span>
-      </div>
-      <div class="row">
-        <span class="label">Account Name</span>
-        <span class="value">${details.account_name || 'FLEXIA Payments'}</span>
-      </div>
-      <div class="row">
-        <span class="label">Amount to Transfer</span>
-        <span class="value" style="color:#00FF55;font-weight:bold;">₦${details.amount || '500.00'}</span>
-      </div>
-    `;
-
-    if (expiresAt) {
-      this.timerSeconds = Math.floor((new Date(expiresAt) - new Date()) / 1000);
-      if (this.timerSeconds < 0) this.timerSeconds = 3600;
-    } else {
-      this.timerSeconds = 3600;
-    }
-
-    container.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  },
-
-  startTimer: function(expiresAt) {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-    }
-
-    if (expiresAt) {
-      this.timerSeconds = Math.floor((new Date(expiresAt) - new Date()) / 1000);
-      if (this.timerSeconds < 0) this.timerSeconds = 3600;
-    } else {
-      this.timerSeconds = 3600;
-    }
-
-    var timerEl = document.getElementById('payment-timer-value');
-
-    var self = this;
-    this.timerInterval = setInterval(function() {
-      self.timerSeconds--;
-
-      if (self.timerSeconds <= 0) {
-        clearInterval(self.timerInterval);
-        timerEl.textContent = '00:00';
-        timerEl.className = 'payment-timer-value expired';
-        document.getElementById('bank-transfer-info').style.borderColor = '#FF0000';
-
-        var msg = document.getElementById('payment-message');
-        msg.textContent = 'Payment window expired. Please start a new payment.';
-        msg.className = 'message error';
-
-        document.getElementById('paystack-pay-btn').disabled = true;
-        return;
-      }
-
-      var minutes = Math.floor(self.timerSeconds / 60);
-      var seconds = self.timerSeconds % 60;
-      timerEl.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
-
-      if (self.timerSeconds < 300) {
-        timerEl.className = 'payment-timer-value danger';
-      } else if (self.timerSeconds < 600) {
-        timerEl.className = 'payment-timer-value warning';
-      } else {
-        timerEl.className = 'payment-timer-value';
-      }
-    }, 1000);
-  },
-
-  closeModal: function() {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
-      this.timerInterval = null;
-    }
-
-    document.getElementById('bank-transfer-info').style.display = 'none';
-    document.getElementById('bank-transfer-info').classList.remove('visible');
-    document.getElementById('payment-timer-value').textContent = '60:00';
-    document.getElementById('payment-timer-value').className = 'payment-timer-value';
-
-    App.closeModal('paystack-payment-modal');
-  },
-
-  async checkStatus(reference) {
-    try {
-      var response = await App.requestWithTimeout('/api/paystack/status/' + reference, {
-        credentials: 'include'
-      });
-      var data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Status check error:', error);
-      return { success: false, message: 'Failed to check status' };
-    }
-  },
-
-  openRegistrationPayment: function() {
-    App.showModal('paystack-payment-modal');
-    document.getElementById('payment-message').textContent = '';
-    document.getElementById('payment-message').className = 'message';
-    document.getElementById('paystack-pay-btn').disabled = false;
-    document.getElementById('paystack-pay-btn').innerHTML = '<i class="fas fa-credit-card"></i> Pay Now';
-    document.getElementById('bank-transfer-info').style.display = 'none';
-    document.getElementById('bank-transfer-info').classList.remove('visible');
-    document.getElementById('payment-timer-value').textContent = '60:00';
-    document.getElementById('payment-timer-value').className = 'payment-timer-value';
-
-    var regEmail = document.getElementById('reg-contact')?.value || '';
-    if (regEmail && regEmail.indexOf('@') !== -1) {
-      document.getElementById('payment-email').value = regEmail;
-    }
-
-    var modalInfo = document.querySelector('#paystack-payment-modal .modal-info');
-    if (modalInfo) {
-      modalInfo.innerHTML = `
-        <div style="margin-bottom: 12px;">
-          <span style="background: rgba(0,255,85,0.1); color: #00FF55; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 600;">
-            <i class="fas fa-user-plus"></i> No Login Required
-          </span>
-        </div>
-        Pay via <strong>Bank Transfer</strong> or <strong>Card</strong> and receive your coupon code via email.
-        <br><br>
-        <span style="color: #00FF55; font-size: 0.85rem;">
-          <i class="fas fa-info-circle"></i> After payment, use the coupon code to register!
-        </span>
-      `;
-    }
-  }
-};
 
 // ========== GAME MANAGER ==========
 var GameManager = {
@@ -2393,7 +1953,7 @@ var Settings = {
         <div class="settings-section">
           <h4><i class="fas fa-shopping-cart"></i> Buy Coupon</h4>
           <p style="font-size:0.8rem;color:#A0A0B5;margin-bottom:8px;">Coupons are for new users who want to register on the platform.</p>
-          <button class="btn-primary" onclick="window.location.href='/#register'" style="width:100%;background:linear-gradient(135deg,#00CCFF,#8000FF);">
+          <button class="btn-primary" onclick="window.location.href='login.html?tab=register'" style="width:100%;background:linear-gradient(135deg,#00CCFF,#8000FF);">
             <i class="fas fa-user-plus"></i> Go to Registration to Buy
           </button>
         </div>
@@ -2493,7 +2053,7 @@ var Settings = {
     } catch (e) { /* silent */ }
     document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax' +
       (window.location.protocol === 'https:' ? '; secure' : '');
-    window.location.href = '/';
+    window.location.href = 'login.html';
   }
 };
 
@@ -2609,36 +2169,28 @@ document.addEventListener('DOMContentLoaded', function() {
   Auth.initPasswordToggles();
   App.init();
 
-  var urlParams = new URLSearchParams(window.location.search);
-  var coupon = urlParams.get('coupon');
-  var tab = urlParams.get('tab');
-  var ref = urlParams.get('ref');
+  if (document.getElementById('reg-coupon')) {
+    var urlParams = new URLSearchParams(window.location.search);
+    var coupon = urlParams.get('coupon');
+    var tab = urlParams.get('tab');
+    var ref = urlParams.get('ref');
 
-  if (coupon) {
-    document.getElementById('reg-coupon').value = coupon;
-    if (tab === 'register') {
+    if (coupon) {
+      document.getElementById('reg-coupon').value = coupon;
+      if (tab === 'register') {
+        document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+        document.querySelector('[data-tab="register"]').classList.add('active');
+        document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
+        document.getElementById('register-form').classList.add('active');
+      }
+    }
+
+    if (ref) {
+      document.getElementById('reg-referral').value = ref;
       document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
       document.querySelector('[data-tab="register"]').classList.add('active');
       document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
       document.getElementById('register-form').classList.add('active');
-    }
-  }
-
-  if (ref) {
-    document.getElementById('reg-referral').value = ref;
-    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
-    document.querySelector('[data-tab="register"]').classList.add('active');
-    document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
-    document.getElementById('register-form').classList.add('active');
-    if (ref && ref.length > 10) {
-      setTimeout(async function() {
-        if (typeof PaystackPayment !== 'undefined') {
-          var result = await PaystackPayment.checkStatus(ref);
-          if (result.success && result.status === 'COMPLETED') {
-            window.history.replaceState({}, document.title, window.location.pathname);
-          }
-        }
-      }, 2000);
     }
   }
 
@@ -2703,7 +2255,6 @@ window.Referral = Referral;
 window.Banking = Banking;
 window.Achievements = Achievements;
 window.Settings = Settings;
-window.PaystackPayment = PaystackPayment;
 window.SessionManager = SessionManager;
 window.PinModal = PinModal;
 window.checkWithdrawalDay = checkWithdrawalDay;

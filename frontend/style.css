@@ -324,17 +324,6 @@ body {
   border-color: rgba(168, 85, 247, 0.2);
 }
 
-.btn-merchant.paystack {
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  color: #fff;
-  border: none;
-}
-
-.btn-merchant.paystack:hover {
-  background: linear-gradient(135deg, var(--primary-dark), var(--secondary));
-  box-shadow: 0 4px 16px rgba(168, 85, 247, 0.3);
-}
-
 .btn-close {
   margin-top: 1.2rem;
   background: rgba(255, 255, 255, 0.015);
@@ -1054,151 +1043,6 @@ body {
 .withdraw-balance-row.total strong {
   font-size: 1.1rem;
   color: var(--accent);
-}
-
-/* ============================================================
-   PAYSTACK PAYMENT
-   ============================================================ */
-.payment-methods-badges {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  margin: 10px 0;
-  flex-wrap: wrap;
-}
-
-.payment-method-badge {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.65rem;
-  font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.payment-method-badge.bank {
-  border-color: rgba(0, 255, 85, 0.2);
-  color: var(--success);
-}
-
-.payment-method-badge.card {
-  border-color: rgba(56, 189, 248, 0.2);
-  color: var(--secondary);
-}
-
-.payment-method-badge.ussd {
-  border-color: rgba(251, 191, 36, 0.2);
-  color: var(--gold);
-}
-
-.payment-method-badge.qr {
-  border-color: rgba(168, 85, 247, 0.2);
-  color: var(--primary);
-}
-
-.bank-transfer-info {
-  margin-top: 15px;
-  padding: 15px;
-  background: rgba(0, 255, 85, 0.03);
-  border-radius: 12px;
-  border: 1px solid rgba(0, 255, 85, 0.1);
-  display: none;
-}
-
-.bank-transfer-info.visible {
-  display: block;
-  animation: fadeSlide 0.3s ease;
-}
-
-.bank-transfer-info h4 {
-  color: var(--success);
-  font-family: var(--font-display);
-  font-size: 0.8rem;
-  margin-bottom: 10px;
-}
-
-.bank-transfer-details {
-  background: rgba(0, 0, 0, 0.2);
-  padding: 12px;
-  border-radius: 8px;
-  margin: 8px 0;
-}
-
-.bank-transfer-details .row {
-  display: flex;
-  justify-content: space-between;
-  padding: 4px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-}
-
-.bank-transfer-details .row:last-child {
-  border-bottom: none;
-}
-
-.bank-transfer-details .label {
-  color: var(--text-muted);
-  font-size: 0.7rem;
-}
-
-.bank-transfer-details .value {
-  color: var(--text-light);
-  font-weight: 600;
-  font-size: 0.8rem;
-}
-
-.bank-transfer-details .value.account-number {
-  color: var(--success);
-  font-family: monospace;
-  font-size: 1.1rem;
-  font-weight: bold;
-  letter-spacing: 1px;
-}
-
-.payment-timer-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 10px;
-  padding: 8px 12px;
-  background: rgba(255, 0, 0, 0.05);
-  border-radius: 8px;
-  border: 1px solid rgba(255, 0, 0, 0.1);
-}
-
-.payment-timer-label {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-}
-
-.payment-timer-label i {
-  margin-right: 4px;
-}
-
-.payment-timer-value {
-  font-family: monospace;
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: #6BCB77;
-}
-
-.payment-timer-value.warning {
-  color: #FFD93D;
-}
-
-.payment-timer-value.danger {
-  color: #FF6B6B;
-  animation: pulse 1s infinite;
-}
-
-.payment-timer-value.expired {
-  color: #FF0000;
-  animation: none;
-}
-
-.payment-timer-note {
-  font-size: 0.6rem;
-  color: var(--text-muted);
-  margin-top: 8px;
 }
 
 /* ============================================================
@@ -2020,69 +1864,6 @@ body {
 }
 
 /* ============================================================
-   PAYMENT STATUS MODAL - ADDED
-   ============================================================ */
-.payment-modal-content {
-    max-width: 400px;
-    text-align: center;
-}
-.payment-modal-content .modal-title.success {
-    color: #00FF55;
-}
-.payment-modal-content .modal-title.failed {
-    color: #FF4757;
-}
-#payment-coupon-display {
-    background: #1a1a35;
-    padding: 12px;
-    border-radius: 8px;
-    font-family: monospace;
-    font-size: 1.2rem;
-    letter-spacing: 2px;
-    color: #FFD700;
-    margin: 12px 0;
-    word-break: break-all;
-}
-
-/* Payment Success Modal (Persistent) */
-#payment-success-modal {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(12px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 100000;
-    animation: fadeIn 0.3s ease;
-}
-#payment-success-modal .modal-box {
-    background: rgba(20, 12, 40, 0.95);
-    border: 2px solid #00FF55;
-    border-radius: 24px;
-    padding: 40px 32px;
-    max-width: 440px;
-    width: 90%;
-    text-align: center;
-    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5);
-    animation: modalSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-#payment-success-modal .coupon-display {
-    background: #1a1a35;
-    padding: 16px;
-    border-radius: 12px;
-    margin: 16px 0;
-    border: 2px solid #FFD700;
-}
-#payment-success-modal .coupon-code {
-    font-family: 'Orbitron', monospace;
-    font-size: 1.8rem;
-    color: #FFD700;
-    letter-spacing: 3px;
-    font-weight: bold;
-}
-
-/* ============================================================
    RESPONSIVE DESIGN
    ============================================================ */
 @media (max-width: 768px) {
@@ -2337,15 +2118,6 @@ body {
   .modal-logo-icon img {
     width: 36px;
     height: 36px;
-  }
-  .bank-transfer-info {
-    padding: 10px;
-  }
-  .payment-timer-container {
-    padding: 6px 10px;
-  }
-  .payment-timer-value {
-    font-size: 1rem;
   }
   .bottom-nav {
     padding: 3px 6px;

@@ -18,84 +18,9 @@
     <div class="grid-bg"></div>
 
     <!-- ============================================================
-         AUTH SCREEN
-         ============================================================ -->
-    <div id="auth-screen" class="screen">
-        <div class="auth-container">
-            <div class="logo-container">
-                <div class="logo-icon">
-                    <img src="logo/flexia-logo.png" alt="FLEXIA Logo" />
-                </div>
-                <h1 class="app-title">FLEXIA</h1>
-                <p class="app-subtitle">Referral Banking &amp; Earnings Platform</p>
-            </div>
-
-            <div class="auth-tabs">
-                <button class="tab active" data-tab="login">LOGIN</button>
-                <button class="tab" data-tab="register">REGISTER</button>
-            </div>
-
-            <!-- LOGIN FORM -->
-            <div id="login-form" class="auth-form active">
-                <div class="input-group">
-                    <input type="text" id="login-username" class="form-input" placeholder="Username" />
-                    <i class="fas fa-user input-icon"></i>
-                </div>
-                <div class="input-group">
-                    <input type="password" id="login-password" class="form-input" placeholder="Password" />
-                    <i class="fas fa-lock input-icon"></i>
-                </div>
-                <button class="btn-primary" id="login-btn" onclick="Auth.login()">
-                    <i class="fas fa-sign-in-alt"></i> ENTER VAULT
-                </button>
-                <div id="login-message" class="message"></div>
-            </div>
-
-            <!-- REGISTER FORM -->
-            <div id="register-form" class="auth-form">
-                <div class="input-group">
-                    <input type="text" id="reg-username" class="form-input" placeholder="Choose Username" required />
-                    <i class="fas fa-user input-icon"></i>
-                </div>
-                <div class="input-group">
-                    <input type="password" id="reg-password" class="form-input" placeholder="Create Password" required />
-                    <i class="fas fa-lock input-icon"></i>
-                </div>
-                <div class="input-group">
-                    <input type="text" id="reg-coupon" class="form-input" placeholder="Coupon Code" required />
-                    <i class="fas fa-ticket input-icon"></i>
-                </div>
-                <div class="input-group">
-                    <input type="text" id="reg-referral" class="form-input" placeholder="Referral Code (Optional)" />
-                    <i class="fas fa-user-plus input-icon"></i>
-                </div>
-                <div class="input-group">
-                    <input type="text" id="reg-contact" class="form-input" placeholder="Email or Phone (Optional)" />
-                    <i class="fas fa-envelope input-icon"></i>
-                </div>
-                <button class="btn-primary" id="register-btn" onclick="Auth.register()">
-                    <i class="fas fa-user-plus"></i> CREATE ACCOUNT
-                </button>
-
-                <!-- BUY COUPON BUTTONS - Registration Only (No Login Required) -->
-                <div style="text-align: center; margin-top: 12px; display: flex; flex-direction: column; gap: 8px; width: 100%;">
-                    <button class="btn-merchant paystack" onclick="PaystackPayment.openRegistrationPayment()" style="width:100%;justify-content:center;background:linear-gradient(135deg,#8000FF,#00CCFF);color:#fff;border:none;">
-                        <i class="fas fa-credit-card"></i> Buy Coupon via Paystack
-                    </button>
-                    <button class="btn-merchant" onclick="Auth.buyCoupon()" style="width:100%;justify-content:center;">
-                        <i class="fas fa-store"></i> Buy Coupon from Merchant
-                    </button>
-                </div>
-
-                <div id="register-message" class="message"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ============================================================
          DASHBOARD SCREEN
          ============================================================ -->
-    <div id="app-screen" class="screen" style="display:none;">
+    <div id="app-screen" class="screen active">
         <div class="dashboard">
 
             <!-- STICKY HEADER -->
@@ -446,74 +371,6 @@
             </div>
         </div>
 
-        <!-- Paystack Payment Modal -->
-        <div id="paystack-payment-modal" class="modal hidden">
-            <div class="modal-content">
-                <div class="modal-logo">
-                    <div class="modal-logo-icon">
-                        <img src="logo/flexia-logo.png" alt="FLEXIA" />
-                    </div>
-                </div>
-                <h3 class="modal-title">Buy Coupon Code</h3>
-
-                <p class="modal-info">
-                    Pay via <strong>Bank Transfer</strong> or <strong>Card</strong> and receive your coupon code via email.
-                </p>
-
-                <div class="payment-methods-badges">
-                    <span class="payment-method-badge bank"><i class="fas fa-university"></i> Bank Transfer</span>
-                    <span class="payment-method-badge card"><i class="fas fa-credit-card"></i> Card</span>
-                    <span class="payment-method-badge ussd"><i class="fas fa-mobile-alt"></i> USSD</span>
-                    <span class="payment-method-badge qr"><i class="fas fa-qrcode"></i> QR</span>
-                </div>
-
-                <div class="input-group">
-                    <input type="email" id="payment-email" class="form-input" placeholder="Your Email Address" required />
-                    <i class="fas fa-envelope input-icon"></i>
-                </div>
-
-                <div class="input-group">
-                    <input type="number" id="payment-amount" class="form-input" placeholder="Amount (₦)" min="500" value="500" />
-                    <i class="fas fa-money-bill-wave input-icon"></i>
-                </div>
-
-                <button class="btn-primary" onclick="PaystackPayment.initiate()" id="paystack-pay-btn">
-                    <i class="fas fa-credit-card"></i> Pay Now
-                </button>
-
-                <div id="bank-transfer-info" class="bank-transfer-info">
-                    <h4><i class="fas fa-university"></i> Bank Transfer Details</h4>
-                    <div id="transfer-details" class="bank-transfer-details">
-                        <!-- Dynamically populated -->
-                    </div>
-                    <div class="payment-timer-container">
-                        <span class="payment-timer-label"><i class="fas fa-clock"></i> Time Remaining:</span>
-                        <span id="payment-timer-value" class="payment-timer-value">60:00</span>
-                    </div>
-                    <p class="payment-timer-note">
-                        <i class="fas fa-info-circle"></i> Transfer the exact amount before the timer expires
-                    </p>
-                </div>
-
-                <div id="payment-message" class="message"></div>
-                <button class="btn-close" onclick="PaystackPayment.closeModal()">CLOSE</button>
-            </div>
-        </div>
-
-        <!-- ========== PAYMENT STATUS MODAL ========== -->
-        <div id="payment-status-modal" class="modal hidden">
-            <div class="modal-content payment-modal-content">
-                <div class="modal-logo">
-                    <div class="modal-logo-icon">
-                        <img src="logo/flexia-logo.png" alt="FLEXIA" />
-                    </div>
-                </div>
-                <h3 id="payment-status-title" class="modal-title">Payment Status</h3>
-                <div id="payment-status-message" class="modal-info"></div>
-                <div id="payment-coupon-display" style="display:none; background:#1a1a35; padding:12px; border-radius:8px; font-family:monospace; font-size:1.2rem; letter-spacing:2px; color:#FFD700; margin:12px 0;"></div>
-                <button class="btn-close" onclick="closePaymentModal()">Close</button>
-            </div>
-        </div>
 
         <!-- ========== PIN MODAL (for withdrawals & PIN changes) ========== -->
         <div id="pin-modal" class="modal hidden">
@@ -540,44 +397,8 @@
     <script src="script.js"></script>
 
     <script>
-        // Additional init
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('FLEXIA Production Frontend v17.9 Loaded');
-
-            // Auto-fill coupon from URL parameter
-            var urlParams = new URLSearchParams(window.location.search);
-            var coupon = urlParams.get('coupon');
-            var tab = urlParams.get('tab');
-            var ref = urlParams.get('ref');
-
-            if (coupon) {
-                document.getElementById('reg-coupon').value = coupon;
-                if (tab === 'register') {
-                    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
-                    document.querySelector('[data-tab="register"]').classList.add('active');
-                    document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
-                    document.getElementById('register-form').classList.add('active');
-                }
-            }
-
-            // Auto-fill referral code from URL parameter and switch to register tab
-            if (ref) {
-                document.getElementById('reg-referral').value = ref;
-                document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
-                document.querySelector('[data-tab="register"]').classList.add('active');
-                document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
-                document.getElementById('register-form').classList.add('active');
-                if (ref && ref.length > 10) {
-                    setTimeout(async function() {
-                        if (typeof PaystackPayment !== 'undefined') {
-                            var result = await PaystackPayment.checkStatus(ref);
-                            if (result.success && result.status === 'COMPLETED') {
-                                window.history.replaceState({}, document.title, window.location.pathname);
-                            }
-                        }
-                    }, 2000);
-                }
-            }
+            console.log('FLEXIA Dashboard Loaded');
         });
 
         function navigateTab(tab) {
@@ -586,17 +407,6 @@
 
         function viewAllActivity() {
             // silent
-        }
-
-        function openPaymentModal() {
-            if (typeof PaystackPayment !== 'undefined') {
-                PaystackPayment.openRegistrationPayment();
-            }
-        }
-
-        function closePaymentModal() {
-            document.getElementById('payment-status-modal').classList.add('hidden');
-            window.history.replaceState({}, document.title, window.location.pathname);
         }
     </script>
 

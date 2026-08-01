@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>FLEXIA · Login</title>
+    <link rel="icon" type="image/x-icon" href="logo/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="logo/flexia-logo.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="logo/flexia-logo.png" />
+    <link rel="apple-touch-icon" href="logo/apple-touch-icon.png" />
+    <link rel="manifest" href="manifest.json" />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+    <div class="grid-bg"></div>
+
+    <!-- ============================================================
+         AUTH SCREEN
+         ============================================================ -->
+    <div id="auth-screen" class="screen">
+        <div class="auth-container">
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <img src="logo/flexia-logo.png" alt="FLEXIA Logo" />
+                </div>
+                <h1 class="app-title">FLEXIA</h1>
+                <p class="app-subtitle">Referral Banking &amp; Earnings Platform</p>
+            </div>
+
+            <div class="auth-tabs">
+                <button class="tab active" data-tab="login">LOGIN</button>
+                <button class="tab" data-tab="register">REGISTER</button>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <div id="login-form" class="auth-form active">
+                <div class="input-group">
+                    <input type="text" id="login-username" class="form-input" placeholder="Username" />
+                    <i class="fas fa-user input-icon"></i>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="login-password" class="form-input" placeholder="Password" />
+                    <i class="fas fa-lock input-icon"></i>
+                </div>
+                <button class="btn-primary" id="login-btn" onclick="Auth.login()">
+                    <i class="fas fa-sign-in-alt"></i> ENTER VAULT
+                </button>
+                <div id="login-message" class="message"></div>
+            </div>
+
+            <!-- REGISTER FORM -->
+            <div id="register-form" class="auth-form">
+                <div class="input-group">
+                    <input type="text" id="reg-username" class="form-input" placeholder="Choose Username" required />
+                    <i class="fas fa-user input-icon"></i>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="reg-password" class="form-input" placeholder="Create Password" required />
+                    <i class="fas fa-lock input-icon"></i>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="reg-coupon" class="form-input" placeholder="Coupon Code" required />
+                    <i class="fas fa-ticket input-icon"></i>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="reg-referral" class="form-input" placeholder="Referral Code (Optional)" />
+                    <i class="fas fa-user-plus input-icon"></i>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="reg-contact" class="form-input" placeholder="Email or Phone (Optional)" />
+                    <i class="fas fa-envelope input-icon"></i>
+                </div>
+                <button class="btn-primary" id="register-btn" onclick="Auth.register()">
+                    <i class="fas fa-user-plus"></i> CREATE ACCOUNT
+                </button>
+
+                <!-- BUY COUPON BUTTON - Registration Only (No Login Required) -->
+                <div style="text-align: center; margin-top: 12px; display: flex; flex-direction: column; gap: 8px; width: 100%;">
+                    <button class="btn-merchant" onclick="Auth.buyCoupon()" style="width:100%;justify-content:center;">
+                        <i class="fas fa-store"></i> Buy Coupon from Merchant
+                    </button>
+                </div>
+
+                <div id="register-message" class="message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         SCRIPTS
+         ============================================================ -->
+    <script src="script.js"></script>
+
+    <script>
+        // Additional init
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('FLEXIA Login Loaded');
+
+            // Auto-fill coupon from URL parameter
+            var urlParams = new URLSearchParams(window.location.search);
+            var coupon = urlParams.get('coupon');
+            var tab = urlParams.get('tab');
+            var ref = urlParams.get('ref');
+
+            if (coupon) {
+                document.getElementById('reg-coupon').value = coupon;
+                if (tab === 'register') {
+                    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+                    document.querySelector('[data-tab="register"]').classList.add('active');
+                    document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
+                    document.getElementById('register-form').classList.add('active');
+                }
+            }
+
+            // Auto-fill referral code from URL parameter and switch to register tab
+            if (ref) {
+                document.getElementById('reg-referral').value = ref;
+                document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+                document.querySelector('[data-tab="register"]').classList.add('active');
+                document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
+                document.getElementById('register-form').classList.add('active');
+            }
+        });
+    </script>
+
+</body>
+</html>
