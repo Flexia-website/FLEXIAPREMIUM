@@ -12,7 +12,6 @@ from flask import Flask, request, jsonify, session, g, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func
 from werkzeug.security import generate_password_hash, check_password_hash
-import requests
 
 # -------------------- CONFIGURATION --------------------
 app = Flask(__name__)
@@ -344,23 +343,6 @@ def create_transaction(user_id, amount, tx_type, status='COMPLETED', details=Non
     tx = Transaction(user_id=user_id, amount=amount, type=tx_type, status=status, details=json.dumps(details) if details else None)
     db.session.add(tx)
     return tx
-
-
-def verify_bank_account(bank_code, account_number):
-    paystack_secret = os.environ.get('PAYSTACK_SECRET_KEY')
-    if not paystack_secret:
-        return {'success': True, 'account_name': 'John Doe'}
-    url = f'https://api.paystack.co/bank/resolve?account_number={account_number}&bank_code={bank_code}'
-    headers = {'Authorization': f'Bearer {paystack_secret}'}
-    try:
-        resp = requests.get(url, headers=headers, timeout=10)
-        data = resp.json()
-        if data.get('status'):
-            return {'success': True, 'account_name': data['data']['account_name']}
-        else:
-            return {'success': False, 'message': data.get('message', 'Verification failed')}
-    except Exception as e:
-        return {'success': False, 'message': str(e)}
 
 
 # -------------------- AUTH ROUTES --------------------
@@ -873,8 +855,7 @@ def verify_account():
     account_number = data.get('account_number')
     if not bank_code or not account_number or len(account_number) != 10:
         return jsonify({'success': False, 'message': 'Invalid bank code or account number'}), 400
-    result = verify_bank_account(bank_code, account_number)
-    return jsonify(result)
+    return jsonify({'success': False, 'message': 'Automatic verification unavailable. Please enter account name manually.'})
 
 
 @app.route('/api/banking/withdraw', methods=['POST'])
@@ -1904,80 +1885,10 @@ def admin_withdrawal_report():
     })
 
 
-# -------------------- PAYSTACK PAYMENT --------------------
-@app.route('/api/paystack/initialize', methods=['POST'])
-def paystack_initialize():
-    data = request.get_json()
-    email = data.get('email')
-    amount = data.get('amount')
-    if not email or not amount:
-        return jsonify({'success': False, 'message': 'Email and amount required'}), 400
-    paystack_secret = os.environ.get('PAYSTACK_SECRET_KEY')
-    if not paystack_secret:
-        ref = str(uuid.uuid4())
-        return jsonify({
-            'success': True,
-            'authorization_url': f'https://example.com/pay?ref={ref}',
-            'reference': ref,
-            'bank_transfer_details': {
-                'bank_name': 'GTBank',
-                'account_number': '0123456789',
-                'account_name': 'FLEXIA Payments',
-                'amount': amount,
-            },
-            'expires_at': (datetime.datetime.utcnow() + datetime.timedelta(hours=1)).isoformat()
-        })
-    url = 'https://api.paystack.co/transaction/initialize'
-    headers = {'Authorization': f'Bearer {paystack_secret}', 'Content-Type': 'application/json'}
-    payload = {
-        'email': email,
-        'amount': int(amount * 100),
-        'currency': 'NGN',
-        'callback_url': f"{request.host_url}?payment=success",
-        'metadata': {'coupon_for': email}
-    }
-    try:
-        resp = requests.post(url, json=payload, headers=headers, timeout=10)
-        result = resp.json()
-        if result['status']:
-            return jsonify({
-                'success': True,
-                'authorization_url': result['data']['authorization_url'],
-                'reference': result['data']['reference'],
-                'bank_transfer_details': result['data']['bank_transfer_details'] if 'bank_transfer_details' in result['data'] else None,
-                'expires_at': result['data']['expires_at'] if 'expires_at' in result['data'] else None,
-            })
-        else:
-            return jsonify({'success': False, 'message': result.get('message', 'Payment initialization failed')}), 400
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-
-@app.route('/api/paystack/status/<reference>', methods=['GET'])
-def paystack_status(reference):
-    paystack_secret = os.environ.get('PAYSTACK_SECRET_KEY')
-    if not paystack_secret:
-        return jsonify({'success': True, 'status': 'COMPLETED', 'coupon_code': 'MOCK123'})
-    url = f'https://api.paystack.co/transaction/verify/{reference}'
-    headers = {'Authorization': f'Bearer {paystack_secret}'}
-    try:
-        resp = requests.get(url, headers=headers, timeout=10)
-        result = resp.json()
-        if result['status'] and result['data']['status'] == 'success':
-            coupon_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-            db.session.add(Coupon(code=coupon_code, status='AVAILABLE'))
-            db.session.commit()
-            return jsonify({'success': True, 'status': 'COMPLETED', 'coupon_code': coupon_code})
-        else:
-            return jsonify({'success': False, 'status': result['data']['status'] if 'data' in result else 'FAILED'})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-
 # -------------------- STATIC FILE SERVING --------------------
 @app.route('/')
 def serve_index():
-    return send_from_directory(app.static_folder, 'index.html')
+    return send_from_directory(app.static_folder, 'login.html')
 
 
 @app.route('/favicon.ico')
@@ -1992,7 +1903,7 @@ def serve_static(path):
     full_path = os.path.join(app.static_folder, path)
     if os.path.isfile(full_path):
         return send_from_directory(app.static_folder, path)
-    return send_from_directory(app.static_folder, 'index.html')
+    return send_from_directory(app.static_folder, 'login.html')
 
 
 @app.route('/api/health', methods=['GET'])
