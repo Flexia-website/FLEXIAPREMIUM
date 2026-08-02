@@ -19,44 +19,9 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
 .main-content{flex:1;display:flex;flex-direction:column;padding:12px;gap:12px;overflow:hidden;min-height:0;max-width:1200px;margin:0 auto;width:100%;}
 .game-row{display:flex;flex:1;gap:12px;min-height:0;}
 .game-panel{flex:1;background:rgba(255,255,255,0.02);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:20px;display:flex;flex-direction:column;}
-.coin-container{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;}
-.coin-stage{
-  width:220px;height:240px;position:relative;
-  perspective:900px;perspective-origin:50% 35%;
-}
-.coin-floor{
-  position:absolute;left:50%;bottom:22px;width:280px;height:120px;
-  transform:translateX(-50%) rotateX(78deg);
-  background:radial-gradient(ellipse at center, rgba(168,85,247,0.14) 0%, rgba(168,85,247,0.05) 45%, transparent 75%);
-  border-radius:50%;
-  transform-style:preserve-3d;
-}
-.coin-floor::before{
-  content:'';position:absolute;inset:0;border-radius:50%;
-  background-image:
-    repeating-radial-gradient(circle at center, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 22px),
-    repeating-conic-gradient(from 0deg, rgba(255,255,255,0.04) 0deg 2deg, transparent 2deg 30deg);
-}
-.coin-world{
-  position:absolute;left:50%;bottom:52px;width:0;height:0;
-  transform-style:preserve-3d;
-}
-.coin-3d{
-  width:92px;height:92px;position:absolute;left:-46px;top:-46px;
-  transform-style:preserve-3d;
-  transform:translateZ(0) rotateX(0deg) rotateY(0deg);
-}
-.coin-face{position:absolute;width:100%;height:100%;border-radius:50%;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;border:5px solid #FFD700;}
-.heads{background:linear-gradient(145deg,#FFEA9E,#FFD700 40%,#B8860B 100%);color:#5c3a00;transform:rotateY(0deg) translateZ(4px);box-shadow:inset 0 0 18px rgba(255,255,255,0.35), inset 0 -8px 16px rgba(0,0,0,0.25);}
-.tails{background:linear-gradient(145deg,#F2F2F2,#C0C0C0 40%,#7d7d7d 100%);color:#2F4F4F;transform:rotateY(180deg) translateZ(4px);border-color:#C9C9C9;box-shadow:inset 0 0 18px rgba(255,255,255,0.4), inset 0 -8px 16px rgba(0,0,0,0.25);}
-.coin-rim{position:absolute;width:100%;height:100%;border-radius:50%;transform-style:preserve-3d;}
-.coin-shadow{
-  position:absolute;left:50%;bottom:20px;width:100px;height:26px;
-  background:radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.3) 55%, transparent 80%);
-  border-radius:50%;filter:blur(3px);
-  transform:translateX(-50%) rotateX(78deg);
-  transition:opacity 0.15s linear;
-}
+.coin-container{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;min-height:220px;}
+.coin-canvas-wrap{width:100%;max-width:280px;height:220px;position:relative;touch-action:none;}
+.coin-canvas-wrap canvas{display:block;width:100% !important;height:100% !important;border-radius:12px;}
 .scores-panel{flex:0.8;display:flex;flex-direction:column;gap:10px;min-width:180px;}
 .score-card{background:rgba(255,255,255,0.02);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:16px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;}
 .score-label{font-size:0.7rem;color:#A0A0B5;text-transform:uppercase;letter-spacing:1px;}
@@ -101,8 +66,8 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
 .instruction-step strong{color:#FFD700;}
 .instruction-bet-btn{display:block;width:100%;padding:14px;margin-top:18px;background:linear-gradient(135deg,#a855f7,#6366f1);border:none;border-radius:10px;color:#fff;font-weight:700;cursor:pointer;transition:all 0.3s;}
 .instruction-bet-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(168,85,247,0.3);}
-@media(max-width:768px){.game-row{flex-direction:column}.scores-panel{flex-direction:row;flex-wrap:wrap}.score-card{min-width:48%;}.coin-stage{width:180px;height:200px;}.coin-3d{width:76px;height:76px;left:-38px;top:-38px;}.coin-face{font-size:1.7rem;}}
-@media(max-width:480px){.coin-stage{width:150px;height:170px;}.coin-3d{width:64px;height:64px;left:-32px;top:-32px;}.coin-face{font-size:1.4rem;}.choice-btn{font-size:0.85rem;padding:12px}}
+@media(max-width:768px){.game-row{flex-direction:column}.scores-panel{flex-direction:row;flex-wrap:wrap}.score-card{min-width:48%;}.coin-canvas-wrap{height:190px;}}
+@media(max-width:480px){.coin-canvas-wrap{height:170px;}.choice-btn{font-size:0.85rem;padding:12px}}
 </style>
 </head>
 <body>
@@ -136,17 +101,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
         <button class="choice-btn" id="tails-btn" onclick="selectChoice('tails')"><i class="fas fa-feather"></i> TAILS</button>
       </div>
       <div class="coin-container">
-        <div class="coin-stage" id="coin-stage">
-          <div class="coin-floor"></div>
-          <div class="coin-shadow" id="coin-shadow"></div>
-          <div class="coin-world">
-            <div class="coin-3d" id="coin-3d">
-              <div class="coin-rim" id="coin-rim"></div>
-              <div class="coin-face heads">H</div>
-              <div class="coin-face tails">T</div>
-            </div>
-          </div>
-        </div>
+        <div class="coin-canvas-wrap" id="coin-canvas-wrap"></div>
         <div class="winning-streak" id="winning-streak"></div>
         <div class="result-display" id="result-display">
           <div id="result-text"></div>
@@ -226,42 +181,8 @@ let losses = 0;
 let playsToday = 0;
 let limitReached = false;
 
-const coin = document.getElementById('coin-3d');
-const coinWorld = document.querySelector('.coin-world');
-const coinRim = document.getElementById('coin-rim');
-const shadow = document.getElementById('coin-shadow');
 const flipBtn = document.getElementById('flip-btn');
 const resultDisplay = document.getElementById('result-display');
-
-// ========== BUILD REAL COIN EDGE GEOMETRY ==========
-// A single flat div rotated 90° only reads correctly side-on and looks
-// wrong (a flat line, or disappears via backface-visibility) at every
-// other angle during a tumble. A real cylindrical edge is built from many
-// thin strips arranged in a ring, each pushed out along its own angle and
-// facing outward — the standard CSS-3D technique for a coin's rim that
-// looks correct from any rotation, not just face-on or edge-on.
-(function buildCoinRim() {
-  const SEGMENTS = 40;
-  const RADIUS = 46; // matches .coin-3d half-width
-  const THICKNESS = 8; // coin depth (front face at +4px, back at -4px)
-  const frag = document.createDocumentFragment();
-  for (let i = 0; i < SEGMENTS; i++) {
-    const angle = (360 / SEGMENTS) * i;
-    const strip = document.createElement('div');
-    strip.style.position = 'absolute';
-    strip.style.left = '50%';
-    strip.style.top = '50%';
-    strip.style.width = (2 * Math.PI * RADIUS / SEGMENTS + 0.6) + 'px';
-    strip.style.height = THICKNESS + 'px';
-    strip.style.marginLeft = -(2 * Math.PI * RADIUS / SEGMENTS + 0.6) / 2 + 'px';
-    strip.style.marginTop = -THICKNESS / 2 + 'px';
-    strip.style.background = 'linear-gradient(90deg, #B8860B, #DAA520 45%, #B8860B)';
-    strip.style.transform = 'rotateY(' + angle + 'deg) translateZ(' + RADIUS + 'px)';
-    strip.style.backfaceVisibility = 'hidden';
-    frag.appendChild(strip);
-  }
-  coinRim.appendChild(frag);
-})();
 
 function closeInstructionPopup() {
   document.getElementById('instruction-popup').classList.remove('show');
@@ -432,76 +353,12 @@ function checkFlipButton() {
   }
 }
 
-// ========== REAL COIN TOSS PHYSICS ==========
-// Replaces the old single CSS transition (spin in place, no vertical
-// motion) with a per-frame simulation: the coin launches upward, gravity
-// pulls it back down, it bounces on the floor losing energy each time,
-// and settles on the correct face — while tumbling continuously the
-// whole time. Runs on requestAnimationFrame, not setTimeout, so the
-// motion is a real simulation rather than an eased animation.
-const GRAVITY = 0.62;          // px/frame^2 pulling the coin back down
-const RESTITUTION = 0.42;      // energy kept after each bounce (0-1)
-const MIN_BOUNCE_VELOCITY = 3; // below this, treat the bounce as "settled"
-const FLOOR_Y = 0;             // coin's resting height above the floor plane
-
-function animateCoinToss(finalFace, onSettled) {
-  // finalFace: 0 for heads-up, 180 for tails-up (as a rotateX angle)
-  let height = 0;
-  let velocityY = -19 - Math.random() * 3;   // launch strength (negative = up)
-  let rotX = 0;
-  let angularVel = 28 + Math.random() * 10;  // deg/frame tumble speed
-  let bounces = 0;
-  const maxBounces = 2 + Math.floor(Math.random() * 2); // 2-3 bounces
-
-  function frame() {
-    velocityY += GRAVITY;
-    height -= velocityY; // moving up decreases screen Y (height above floor)
-    rotX += angularVel;
-
-    let settled = false;
-
-    if (height <= FLOOR_Y && velocityY > 0) {
-      // Hit the floor
-      height = FLOOR_Y;
-      if (bounces < maxBounces && Math.abs(velocityY) > MIN_BOUNCE_VELOCITY) {
-        velocityY = -velocityY * RESTITUTION;
-        angularVel *= 0.55;
-        bounces++;
-      } else {
-        // Settle: snap rotation to the exact final face so it doesn't
-        // wobble forever, and stop the loop.
-        velocityY = 0;
-        const remainder = ((rotX % 360) + 360) % 360;
-        const nearestFullTurn = rotX - remainder;
-        rotX = nearestFullTurn + finalFace;
-        settled = true;
-      }
-    }
-
-    // Apply transforms
-    coinWorld.style.transform = 'translateY(' + height + 'px)';
-    coin.style.transform = 'rotateX(' + rotX + 'deg) rotateY(6deg)';
-
-    // Shadow: shrink/fade with height, grow/darken near the floor —
-    // real perspective-shadow behavior instead of a fixed pulse.
-    const heightAboveFloor = Math.max(0, -height);
-    const shadowScale = Math.max(0.35, 1 - heightAboveFloor / 140);
-    const shadowOpacity = Math.max(0.15, 1 - heightAboveFloor / 110);
-    shadow.style.transform = 'translateX(-50%) rotateX(78deg) scale(' + shadowScale + ')';
-    shadow.style.opacity = shadowOpacity;
-
-    if (settled) {
-      onSettled();
-    } else {
-      requestAnimationFrame(frame);
-    }
-  }
-
-  requestAnimationFrame(frame);
-}
-
 async function flipCoin() {
   if (isFlipping || dailyWon >= COIN_CAP || limitReached) return;
+  if (!window.CoinScene || !window.CoinScene.ready) {
+    alert('Coin is still loading, please try again in a moment.');
+    return;
+  }
   isFlipping = true;
   flipBtn.disabled = true;
   flipBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> FLIPPING...';
@@ -512,19 +369,20 @@ async function flipCoin() {
   const bet = betAmount;
   const coinResult = Math.random() > 0.5 ? 'heads' : 'tails';
   const win = (userChoice === coinResult);
-  const finalFace = coinResult === 'heads' ? 0 : 180;
 
   const apiPromise = processCoinFlip(bet, win);
   let physicsDone = false;
   let apiResult = null;
 
-  animateCoinToss(finalFace, () => { physicsDone = true; afterBothReady(); });
-  apiPromise.then((r) => { apiResult = r; afterBothReady(); }).catch((e) => { apiResult = { success: false, message: 'Network error. Please try again.' }; afterBothReady(); });
+  // The 3D scene runs its own real gravity/bounce simulation and only
+  // calls back once the coin has actually settled on the commanded face.
+  window.CoinScene.toss(coinResult, () => { physicsDone = true; afterBothReady(); });
+  apiPromise.then((r) => { apiResult = r; afterBothReady(); }).catch(() => { apiResult = { success: false, message: 'Network error. Please try again.' }; afterBothReady(); });
 
   async function afterBothReady() {
-    // Wait for both the physics animation and the API call before
-    // revealing the result, so the coin never freezes mid-air waiting
-    // on a slow request, and the result never appears before landing.
+    // Wait for both the physics landing and the API response so the
+    // coin never freezes mid-toss on a slow request, and the result
+    // never appears before it actually lands.
     if (!physicsDone || apiResult === null) return;
 
     try {
@@ -603,8 +461,302 @@ document.addEventListener('DOMContentLoaded', () => {
   loadPlaysToday();
   selectChoice('heads');
   checkFlipButton();
-  coin.style.transform = 'rotateX(0deg) rotateY(6deg)';
 });
+</script>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ========== 3D COIN SCENE ==========
+// Real Three.js/WebGL scene: actual geometry, lighting, shadow maps, and
+// a sub-stepped gravity/bounce physics simulation — not a CSS transform
+// pretending to be 3D. Camera is fixed (no OrbitControls / drag / zoom)
+// so the player can't rotate or zoom the view; only the toss itself
+// moves the coin.
+
+const wrap = document.getElementById('coin-canvas-wrap');
+
+const scene = new THREE.Scene();
+scene.background = null;
+scene.fog = new THREE.Fog('#0a0518', 6, 16);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+wrap.appendChild(renderer.domElement);
+
+function sizeRenderer() {
+  const w = wrap.clientWidth || 280;
+  const h = wrap.clientHeight || 220;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+
+const camera = new THREE.PerspectiveCamera(45, 1, 0.5, 40);
+camera.position.set(3.2, 2.6, 4.6);
+camera.lookAt(0, 0.5, 0);
+// Camera is intentionally static — no OrbitControls attached, so the
+// player cannot drag-rotate or scroll-zoom the scene.
+
+const ambientLight = new THREE.AmbientLight('#4a4a6a', 1.8);
+scene.add(ambientLight);
+
+const keyLight = new THREE.DirectionalLight('#fff8e7', 6);
+keyLight.position.set(8, 10, 4);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.width = 1024;
+keyLight.shadow.mapSize.height = 1024;
+keyLight.shadow.camera.near = 0.5;
+keyLight.shadow.camera.far = 40;
+keyLight.shadow.camera.left = -6;
+keyLight.shadow.camera.right = 6;
+keyLight.shadow.camera.top = 6;
+keyLight.shadow.camera.bottom = -6;
+keyLight.shadow.bias = -0.0004;
+scene.add(keyLight);
+
+const fillLight = new THREE.DirectionalLight('#b0c8f0', 2.2);
+fillLight.position.set(-4, 3, -2);
+scene.add(fillLight);
+
+const rimLight = new THREE.DirectionalLight('#ffd8a0', 2.5);
+rimLight.position.set(0, 2, -5);
+scene.add(rimLight);
+
+// ── Ground / floor ──────────
+const GROUND_Y = 0;
+const platformGeo = new THREE.CylinderGeometry(2.1, 2.3, 0.2, 48);
+const platformMat = new THREE.MeshStandardMaterial({ color: '#1a1035', roughness: 0.85, metalness: 0.1 });
+const platform = new THREE.Mesh(platformGeo, platformMat);
+platform.position.y = GROUND_Y - 0.1;
+platform.receiveShadow = true;
+scene.add(platform);
+
+const rimGeo = new THREE.TorusGeometry(2.18, 0.05, 16, 64);
+const rimMat = new THREE.MeshStandardMaterial({ color: '#a855f7', roughness: 0.3, metalness: 0.85 });
+const platformRim = new THREE.Mesh(rimGeo, rimMat);
+platformRim.rotation.x = -Math.PI / 2;
+platformRim.position.y = GROUND_Y + 0.005;
+scene.add(platformRim);
+
+const shadowGeo = new THREE.CircleGeometry(0.7, 48);
+const shadowMat = new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.45, depthWrite: false });
+const shadowDisc = new THREE.Mesh(shadowGeo, shadowMat);
+shadowDisc.rotation.x = -Math.PI / 2;
+shadowDisc.position.y = GROUND_Y + 0.003;
+shadowDisc.renderOrder = 1;
+scene.add(shadowDisc);
+
+// ── Coin face textures ──────
+function createCoinFaceTexture(isHeads) {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  const bgGrad = ctx.createRadialGradient(size*0.35, size*0.35, size*0.05, size*0.5, size*0.5, size*0.52);
+  bgGrad.addColorStop(0, '#fef3c7');
+  bgGrad.addColorStop(0.3, '#f0c940');
+  bgGrad.addColorStop(0.7, '#c8860a');
+  bgGrad.addColorStop(0.9, '#8b5e14');
+  bgGrad.addColorStop(1, '#5a3a08');
+  ctx.fillStyle = bgGrad;
+  ctx.beginPath();
+  ctx.arc(size/2, size/2, size*0.48, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.strokeStyle = '#6b3a0a';
+  ctx.lineWidth = size*0.035;
+  ctx.beginPath();
+  ctx.arc(size/2, size/2, size*0.46, 0, Math.PI*2);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#8b5a1a';
+  ctx.lineWidth = size*0.015;
+  ctx.beginPath();
+  ctx.arc(size/2, size/2, size*0.4, 0, Math.PI*2);
+  ctx.stroke();
+
+  ctx.font = 'bold ' + (size*0.34) + 'px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = isHeads ? '#5c3a00' : '#2F4F4F';
+  ctx.fillText(isHeads ? 'H' : 'T', size/2, size/2 + size*0.01);
+
+  const hlGrad = ctx.createRadialGradient(size*0.3, size*0.28, 0, size*0.5, size*0.5, size*0.5);
+  hlGrad.addColorStop(0, 'rgba(255,255,255,0.25)');
+  hlGrad.addColorStop(0.4, 'rgba(255,255,255,0.05)');
+  hlGrad.addColorStop(1, 'rgba(0,0,0,0.15)');
+  ctx.fillStyle = hlGrad;
+  ctx.beginPath();
+  ctx.arc(size/2, size/2, size*0.48, 0, Math.PI*2);
+  ctx.fill();
+
+  return new THREE.CanvasTexture(canvas);
+}
+
+function createEdgeTexture() {
+  const width = 512, height = 64;
+  const canvas = document.createElement('canvas');
+  canvas.width = width; canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, height);
+  grad.addColorStop(0, '#8b5e14'); grad.addColorStop(0.2, '#e8c547');
+  grad.addColorStop(0.5, '#fef3c0'); grad.addColorStop(0.8, '#d4a020'); grad.addColorStop(1, '#6b3a08');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, width, height);
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1.5;
+  for (let x = 0; x < width; x += 8) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke(); }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(4, 1);
+  return texture;
+}
+
+const headsTex = createCoinFaceTexture(true);
+const tailsTex = createCoinFaceTexture(false);
+const edgeTex = createEdgeTexture();
+headsTex.colorSpace = THREE.SRGBColorSpace;
+tailsTex.colorSpace = THREE.SRGBColorSpace;
+edgeTex.colorSpace = THREE.SRGBColorSpace;
+
+// ── Coin mesh ──────────────
+const COIN_R = 0.62, COIN_H = 0.1, HALF_H = COIN_H / 2;
+const coinGeo = new THREE.CylinderGeometry(COIN_R, COIN_R, COIN_H, 48);
+const sideMat = new THREE.MeshStandardMaterial({ map: edgeTex, roughness: 0.35, metalness: 0.85, color: '#d4a840' });
+const headsMat = new THREE.MeshStandardMaterial({ map: headsTex, roughness: 0.3, metalness: 0.7, color: '#f5d060' });
+const tailsMat = new THREE.MeshStandardMaterial({ map: tailsTex, roughness: 0.35, metalness: 0.65, color: '#d4b840' });
+const coinMesh = new THREE.Mesh(coinGeo, [sideMat, headsMat, tailsMat]);
+coinMesh.castShadow = true;
+coinMesh.receiveShadow = true;
+const coinGroup = new THREE.Group();
+coinGroup.add(coinMesh);
+coinGroup.position.set(0, HALF_H + GROUND_Y, 0);
+scene.add(coinGroup);
+
+// ── Physics state ──────────
+const GRAVITY = 14;
+let groupY = HALF_H + GROUND_Y;
+let vy = 0;
+let flipRot = 0;
+let angVel = 0;
+let ySpinRot = 0;
+let ySpinVel = 0;
+let isTossing = false;
+let bounceCount = 0;
+let commandedResult = null; // 'heads' | 'tails' — the outcome the API/game logic already decided
+let onSettledCallback = null;
+
+function updateShadow() {
+  const h = Math.max(0, groupY - GROUND_Y - HALF_H);
+  const t = Math.min(1, h / 4);
+  shadowDisc.scale.setScalar(0.7 + t * 1.6);
+  shadowDisc.material.opacity = Math.max(0.05, 0.45 * (1 - t * 0.85));
+}
+
+function effectiveBottom(rotX) {
+  return HALF_H * Math.abs(Math.cos(rotX)) + COIN_R * Math.abs(Math.sin(rotX));
+}
+
+function settleCoin() {
+  // The result is commanded by the game logic (server-authoritative bet
+  // outcome), not decided by wherever the coin happens to stop — the
+  // physics always corrects the final bounce onto the commanded face so
+  // the visual never contradicts the actual bet result.
+  const targetFlipRot = commandedResult === 'heads' ? 0 : Math.PI;
+  flipRot = targetFlipRot;
+  angVel = 0; vy = 0; groupY = HALF_H + GROUND_Y;
+  ySpinVel = 0; isTossing = false;
+  bounceCount = 0;
+  coinGroup.position.y = groupY;
+  coinMesh.rotation.x = flipRot;
+  coinMesh.rotation.y = ySpinRot;
+  updateShadow();
+
+  const cb = onSettledCallback;
+  onSettledCallback = null;
+  if (cb) cb();
+}
+
+function toss(result, onSettled) {
+  commandedResult = result;
+  onSettledCallback = onSettled;
+  isTossing = true;
+  bounceCount = 0;
+  vy = 8.2 + Math.random() * 3.5;
+  angVel = (14 + Math.random() * 16) * (Math.random() > 0.5 ? 1 : -1);
+  ySpinVel = (Math.random() * 4 + 2) * (Math.random() > 0.5 ? 1 : -1);
+  if (groupY <= HALF_H + GROUND_Y + 0.01) groupY = HALF_H + GROUND_Y + 0.02;
+}
+
+window.CoinScene = { ready: true, toss: toss };
+
+window.addEventListener('resize', sizeRenderer);
+sizeRenderer();
+
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.1);
+  const physDt = Math.min(dt, 0.04);
+
+  if (isTossing) {
+    const subSteps = 3;
+    const subDt = physDt / subSteps;
+    for (let s = 0; s < subSteps; s++) {
+      vy -= GRAVITY * subDt;
+      groupY += vy * subDt;
+      flipRot += angVel * subDt;
+      ySpinRot += ySpinVel * subDt;
+      ySpinVel *= (1 - 0.7 * subDt);
+
+      const bottom = effectiveBottom(flipRot);
+      if (groupY - bottom <= GROUND_Y) {
+        groupY = GROUND_Y + bottom;
+        bounceCount++;
+        const cosA = Math.abs(Math.cos(flipRot));
+        const restitution = cosA > 0.75 ? 0.3 : 0.16;
+        const angDamp = cosA > 0.75 ? 0.58 : 0.72;
+        vy = Math.abs(vy) * restitution;
+        angVel *= angDamp;
+        ySpinVel *= 0.65;
+
+        const lowEnergy = Math.abs(vy) < 0.7 && Math.abs(angVel) < 3.0;
+        // Force a settle by the 5th bounce regardless of energy, so a
+        // toss can never run away and fail to land.
+        if (lowEnergy || bounceCount >= 5) {
+          settleCoin();
+          break;
+        }
+      }
+    }
+    coinGroup.position.y = groupY;
+    coinMesh.rotation.x = flipRot;
+    coinMesh.rotation.y = ySpinRot;
+    updateShadow();
+
+    if (groupY < GROUND_Y - 3) { groupY = HALF_H + GROUND_Y; settleCoin(); }
+  }
+
+  renderer.render(scene, camera);
+}
+
+coinGroup.position.y = groupY;
+coinMesh.rotation.x = flipRot;
+coinMesh.rotation.y = ySpinRot;
+updateShadow();
+requestAnimationFrame(animate);
 </script>
 </body>
 </html>
