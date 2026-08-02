@@ -182,7 +182,7 @@ const ROWS = 12;
 const COLS = 12;
 const PEG_RADIUS = 6;
 const SLOT_WIDTH = canvas.width / COLS;
-const BALL_RADIUS = 4;
+const BALL_RADIUS = 7;
 const ROW_HEIGHT = 65.45;
 const START_Y = 104;
 const MULTIPLIERS = [10.0, 5.0, 3.0, 1.0, 1.0, 0.5, 0.5, 1.0, 1.0, 3.0, 5.0, 10.0];
@@ -624,15 +624,22 @@ async function dropBall() {
     // The old version drew 5 separate shapes (2 glow rings, gradient fill,
     // highlight, outer ring) every frame; that's what made the fall feel
     // heavy/laggy on top of the particle spam. This is the real, fast look.
+    // Ball — bright gradient fill + a single shadowBlur glow pass (one draw
+    // call, not stacked circles) so it's clearly visible against the dark
+    // board without bringing back the per-frame cost that caused the lag.
+    ctx.shadowColor = '#FF3388';
+    ctx.shadowBlur = 14;
     const ballGradient = ctx.createRadialGradient(ballX - 3, ballY - 3, 0, ballX, ballY, BALL_RADIUS);
-    ballGradient.addColorStop(0, '#FF66CC');
-    ballGradient.addColorStop(1, '#CC0033');
+    ballGradient.addColorStop(0, '#FFFFFF');
+    ballGradient.addColorStop(0.35, '#FF66CC');
+    ballGradient.addColorStop(1, '#FF0055');
     
     ctx.beginPath();
     ctx.arc(ballX, ballY, BALL_RADIUS, 0, 2 * Math.PI);
     ctx.fillStyle = ballGradient;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,0,85,0.7)';
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#FFFFFF';
     ctx.lineWidth = 1.5;
     ctx.stroke();
     
