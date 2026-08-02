@@ -471,8 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
 import * as THREE from 'three';
 
 // ========== 3D COIN SCENE ==========
-// Real Three.js/WebGL scene with improved toss physics:
-// higher arc, more spin, better bounce, and smoother settling.
+// Improved physics with moderate toss height that stays in frame.
 
 const wrap = document.getElementById('coin-canvas-wrap');
 
@@ -496,10 +495,10 @@ function sizeRenderer() {
   camera.updateProjectionMatrix();
 }
 
-// Camera adjusted to show the full arc
-const camera = new THREE.PerspectiveCamera(42, 1, 0.5, 40);
-camera.position.set(4.0, 2.8, 6.0);
-camera.lookAt(0, 1.2, 0);
+// Camera adjusted to keep the full arc visible
+const camera = new THREE.PerspectiveCamera(50, 1, 0.5, 40);
+camera.position.set(4.0, 3.2, 6.5);
+camera.lookAt(0, 1.6, 0);
 
 const ambientLight = new THREE.AmbientLight('#4a4a6a', 1.8);
 scene.add(ambientLight);
@@ -526,7 +525,7 @@ const rimLight = new THREE.DirectionalLight('#ffd8a0', 2.5);
 rimLight.position.set(0, 2, -5);
 scene.add(rimLight);
 
-// ── Ground / floor ──────────
+// Ground
 const GROUND_Y = 0;
 const platformGeo = new THREE.CylinderGeometry(2.1, 2.3, 0.2, 48);
 const platformMat = new THREE.MeshStandardMaterial({ color: '#1a1035', roughness: 0.85, metalness: 0.1 });
@@ -550,7 +549,7 @@ shadowDisc.position.y = GROUND_Y + 0.003;
 shadowDisc.renderOrder = 1;
 scene.add(shadowDisc);
 
-// ── Coin face textures ──────
+// Coin textures
 function createCoinFaceTexture(isHeads) {
   const size = 512;
   const canvas = document.createElement('canvas');
@@ -622,7 +621,7 @@ headsTex.colorSpace = THREE.SRGBColorSpace;
 tailsTex.colorSpace = THREE.SRGBColorSpace;
 edgeTex.colorSpace = THREE.SRGBColorSpace;
 
-// ── Coin mesh (bigger for visibility) ──
+// Coin mesh (bigger for visibility)
 const COIN_R = 0.85, COIN_H = 0.14, HALF_H = COIN_H / 2;
 const coinGeo = new THREE.CylinderGeometry(COIN_R, COIN_R, COIN_H, 48);
 const sideMat = new THREE.MeshStandardMaterial({ map: edgeTex, roughness: 0.35, metalness: 0.85, color: '#d4a840' });
@@ -636,8 +635,8 @@ coinGroup.add(coinMesh);
 coinGroup.position.set(0, HALF_H + GROUND_Y, 0);
 scene.add(coinGroup);
 
-// ── Physics state ──
-const GRAVITY = 10;          // lower gravity => longer hang time
+// Physics state
+const GRAVITY = 10;
 let groupY = HALF_H + GROUND_Y;
 let vy = 0;
 let flipRot = 0;
@@ -661,10 +660,7 @@ function effectiveBottom(rotX) {
 }
 
 function settleCoin() {
-  // Smoothly set to target orientation (no instant teleport)
   const target = commandedResult === 'heads' ? 0 : Math.PI;
-  // Instead of snapping, we can lerp, but for simplicity we'll just set it
-  // and stop physics, which already feels fine because the coin is nearly still.
   flipRot = target;
   angVel = 0; vy = 0; groupY = HALF_H + GROUND_Y;
   ySpinVel = 0; isTossing = false;
@@ -684,9 +680,8 @@ function toss(result, onSettled) {
   onSettledCallback = onSettled;
   isTossing = true;
   bounceCount = 0;
-  // Higher initial velocity for visible arc
-  vy = 11 + Math.random() * 2.5;        // peak height ≈ vy²/(2g) ≈ 6-9 m
-  // More spin, random direction
+  // Moderate upward velocity – peak at ~3.2–4.5m (stays in view)
+  vy = 8.0 + Math.random() * 1.5;
   angVel = (28 + Math.random() * 22) * (Math.random() > 0.5 ? 1 : -1);
   ySpinVel = (6 + Math.random() * 6) * (Math.random() > 0.5 ? 1 : -1);
   groupY = HALF_H + GROUND_Y;
@@ -704,31 +699,26 @@ function animate() {
   const physDt = Math.min(dt, 0.04);
 
   if (isTossing) {
-    const subSteps = 4;  // more substeps for stability
+    const subSteps = 4;
     const subDt = physDt / subSteps;
     for (let s = 0; s < subSteps; s++) {
       vy -= GRAVITY * subDt;
       groupY += vy * subDt;
       flipRot += angVel * subDt;
       ySpinRot += ySpinVel * subDt;
-      // No air damping for ySpinVel – it keeps spinning in air
-      // (we'll damp only on bounce)
 
-      // Ground collision
       if (vy <= 0) {
         const bottom = effectiveBottom(flipRot);
         if (groupY - bottom <= GROUND_Y) {
           groupY = GROUND_Y + bottom;
           bounceCount++;
           const cosA = Math.abs(Math.cos(flipRot));
-          // Increased restitution for bouncier feel
           const restitution = cosA > 0.75 ? 0.50 : 0.30;
           const angDamp = cosA > 0.75 ? 0.65 : 0.75;
           vy = Math.abs(vy) * restitution;
           angVel *= angDamp;
-          ySpinVel *= 0.70;  // spin damping on bounce (more realistic)
+          ySpinVel *= 0.70;
 
-          // Settle when nearly still or after enough bounces
           const lowEnergy = Math.abs(vy) < 0.3 && Math.abs(angVel) < 1.0;
           if (lowEnergy || bounceCount >= 6) {
             settleCoin();
@@ -742,7 +732,6 @@ function animate() {
     coinMesh.rotation.y = ySpinRot;
     updateShadow();
 
-    // Safety fallback
     if (groupY < GROUND_Y - 3) { groupY = HALF_H + GROUND_Y; settleCoin(); }
   }
 
