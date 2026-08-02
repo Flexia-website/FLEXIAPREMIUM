@@ -23,6 +23,17 @@ app.static_url_path = ''
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-this-in-production')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///flexia.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# Neon (and most serverless Postgres) suspends idle compute and silently
+# drops connections. Without these, a pooled connection left idle for a
+# few minutes goes stale and the next query fails with
+# "psycopg2.OperationalError: SSL SYSCALL error: EOF detected".
+# pool_pre_ping tests each connection with a cheap SELECT 1 before use and
+# transparently reconnects if it's dead; pool_recycle retires connections
+# before Neon's own idle timeout can kill them server-side first.
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 280,
+}
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = False
@@ -1181,7 +1192,14 @@ def admin_adjust_balance(user_id):
 @admin_required
 def admin_transactions():
     transactions = Transaction.query.order_by(Transaction.timestamp.desc()).limit(100).all()
-    return jsonify({'success': True, 'transactions': [t.to_dict() for t in transactions]})
+    user_ids = {t.user_id for t in transactions}
+    usernames = {u.id: u.username for u in User.query.filter(User.id.in_(user_ids)).all()}
+    result = []
+    for t in transactions:
+        d = t.to_dict()
+        d['username'] = usernames.get(t.user_id, 'Unknown')
+        result.append(d)
+    return jsonify({'success': True, 'transactions': result})
 
 
 @app.route('/api/admin/approve-withdrawal', methods=['POST'])
