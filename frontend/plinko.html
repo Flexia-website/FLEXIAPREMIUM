@@ -75,7 +75,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
   <div class="game-row">
     <div class="game-panel">
       <div class="game-board-container">
-        <canvas id="game-board" width="500" height="900"></canvas>
+        <canvas id="game-board" width="640" height="900"></canvas>
       </div>
     </div>
     <div class="scores-panel">
@@ -178,13 +178,13 @@ const MAX_BET = 50000;
 const MAX_PLAYS_PER_DAY = 5;
 
 // ========== GAME CONFIG ==========
-const ROWS = 16;
+const ROWS = 12;
 const COLS = 12;
 const PEG_RADIUS = 6;
 const SLOT_WIDTH = canvas.width / COLS;
 const BALL_RADIUS = 4;
-const ROW_HEIGHT = 48;
-const START_Y = 50;
+const ROW_HEIGHT = 65.45;
+const START_Y = 104;
 const MULTIPLIERS = [10.0, 5.0, 3.0, 1.0, 1.0, 0.5, 0.5, 1.0, 1.0, 3.0, 5.0, 10.0];
 
 let betAmount = 100;
@@ -198,9 +198,19 @@ let gameRunning = false;
 let limitReached = false;
 let particles = [];
 
-// Perfect triangle arrangement - row 0 has 1 peg, expands to COLS at bottom (full width)
+// Pure triangle - row 0 has 1 peg, row (COLS-1) has COLS pegs (full width).
+// ROWS == COLS so the triangle is never truncated or clamped.
 function pegsInRow(row) {
-  return Math.min(row + 1, COLS);
+  return row + 1;
+}
+
+// Odd "full minus one" rows are horizontally centered, which offsets them
+// by exactly half a slot from the even rows above/below — that half-slot
+// gap is what gives the ball somewhere to fall through.
+function rowOffsetX(row) {
+  const numPegs = pegsInRow(row);
+  const rowWidth = (numPegs - 1) * SLOT_WIDTH;
+  return (canvas.width - rowWidth) / 2;
 }
 
 // Particle effect system
@@ -446,74 +456,83 @@ async function manualClaim() {
 async function claimAndClose() { await manualClaim(); closeModal(); }
 
 // ========== PLINKO BOARD DRAWING ==========
-function drawBoard() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
+// The board (slots + pegs) never changes between frames, so it's rendered
+// once to an offscreen canvas and simply copied (drawImage) every frame.
+// This removes ~150 gradient fills + double shadowBlur passes per frame,
+// which was the main cause of the lag during ball drops.
+let boardCache = null;
+
+function renderBoardCache() {
+  const off = document.createElement('canvas');
+  off.width = canvas.width;
+  off.height = canvas.height;
+  const octx = off.getContext('2d');
+
   // Draw multiplier labels with enhanced styling (at very bottom)
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.font = 'bold 14px Orbitron';
+  octx.textAlign = 'center';
+  octx.textBaseline = 'middle';
+  octx.font = 'bold 14px Orbitron';
   for (let i = 0; i < COLS; i++) {
     const x = i * SLOT_WIDTH + SLOT_WIDTH / 2;
     const y = canvas.height - 30;
-    const multiplier = MULTIPLIERS[i];
-    
-    // Slot background
-    ctx.fillStyle = multiplier >= 5 ? 'rgba(255,0,85,0.15)' : multiplier <= 0.5 ? 'rgba(100,150,255,0.15)' : 'rgba(0,255,100,0.1)';
-    ctx.fillRect(i * SLOT_WIDTH + 2, canvas.height - 50, SLOT_WIDTH - 4, 45);
-    
-    // Multiplier text with glow
-    ctx.shadowColor = multiplier >= 5 ? 'rgba(255,0,85,0.8)' : 'rgba(0,255,200,0.8)';
-    ctx.shadowBlur = 10;
-    ctx.fillStyle = multiplier >= 5 ? '#FF0055' : multiplier <= 0.5 ? '#00CCFF' : '#00FF55';
-    ctx.fillText(multiplier + 'x', x, y);
-    ctx.shadowBlur = 0;
+    const m = MULTIPLIERS[i];
+
+    octx.fillStyle = m >= 5 ? 'rgba(255,0,85,0.15)' : m <= 0.5 ? 'rgba(100,150,255,0.15)' : 'rgba(0,255,100,0.1)';
+    octx.fillRect(i * SLOT_WIDTH + 2, canvas.height - 50, SLOT_WIDTH - 4, 45);
+
+    octx.shadowColor = m >= 5 ? 'rgba(255,0,85,0.8)' : 'rgba(0,255,200,0.8)';
+    octx.shadowBlur = 10;
+    octx.fillStyle = m >= 5 ? '#FF0055' : m <= 0.5 ? '#00CCFF' : '#00FF55';
+    octx.fillText(m + 'x', x, y);
+    octx.shadowBlur = 0;
   }
-  
-  // Draw pegs with enhanced 3D effect
+
+  // Draw pegs with enhanced 3D effect (baked once — this is the expensive part)
   for (let row = 0; row < ROWS; row++) {
     const numPegs = pegsInRow(row);
-    const rowWidth = (numPegs - 1) * SLOT_WIDTH;
-    const offsetX = (canvas.width - rowWidth) / 2;
-    
+    const offsetX = rowOffsetX(row);
+
     for (let col = 0; col < numPegs; col++) {
       const x = offsetX + col * SLOT_WIDTH;
       const y = START_Y + row * ROW_HEIGHT;
-      
-      // Peg gradient fill - cyan with purple tint
-      const gradient = ctx.createRadialGradient(x - 3, y - 3, 0, x, y, PEG_RADIUS);
+
+      const gradient = octx.createRadialGradient(x - 3, y - 3, 0, x, y, PEG_RADIUS);
       gradient.addColorStop(0, '#00FFFF');
       gradient.addColorStop(0.5, '#00CCFF');
       gradient.addColorStop(1, '#6600FF');
-      
-      // Main peg circle
-      ctx.beginPath();
-      ctx.arc(x, y, PEG_RADIUS, 0, 2 * Math.PI);
-      ctx.fillStyle = gradient;
-      ctx.fill();
-      
-      // Outer glow - bright cyan
-      ctx.strokeStyle = 'rgba(0,255,255,0.6)';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      
-      // Inner highlight for 3D effect
-      ctx.beginPath();
-      ctx.arc(x - 2.5, y - 2.5, PEG_RADIUS * 0.4, 0, 2 * Math.PI);
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
-      ctx.fill();
-      
-      // Soft outer glow
-      ctx.shadowColor = 'rgba(0,204,255,0.8)';
-      ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.arc(x, y, PEG_RADIUS + 1, 0, 2 * Math.PI);
-      ctx.strokeStyle = 'rgba(0,204,255,0.3)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.shadowBlur = 0;
+
+      octx.beginPath();
+      octx.arc(x, y, PEG_RADIUS, 0, 2 * Math.PI);
+      octx.fillStyle = gradient;
+      octx.fill();
+
+      octx.strokeStyle = 'rgba(0,255,255,0.6)';
+      octx.lineWidth = 2;
+      octx.stroke();
+
+      octx.beginPath();
+      octx.arc(x - 2.5, y - 2.5, PEG_RADIUS * 0.4, 0, 2 * Math.PI);
+      octx.fillStyle = 'rgba(255,255,255,0.4)';
+      octx.fill();
+
+      octx.shadowColor = 'rgba(0,204,255,0.8)';
+      octx.shadowBlur = 12;
+      octx.beginPath();
+      octx.arc(x, y, PEG_RADIUS + 1, 0, 2 * Math.PI);
+      octx.strokeStyle = 'rgba(0,204,255,0.3)';
+      octx.lineWidth = 1.5;
+      octx.stroke();
+      octx.shadowBlur = 0;
     }
   }
+
+  boardCache = off;
+}
+
+function drawBoard() {
+  if (!boardCache) renderBoardCache();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(boardCache, 0, 0);
 }
 
 // ========== BALL DROP WITH PHYSICS ==========
@@ -556,7 +575,7 @@ async function dropBall() {
   multiplier = MULTIPLIERS[targetCol];
   
   const startX = canvas.width / 2;
-  const startY = 10;
+  const startY = START_Y - PEG_RADIUS - BALL_RADIUS - 2;
   let ballX = startX;
   let ballY = startY;
   let velocityX = (Math.random() - 0.5) * 2;
@@ -572,8 +591,7 @@ async function dropBall() {
     const rowIndex = Math.floor((ballY - START_Y) / ROW_HEIGHT);
     if (rowIndex >= 0 && rowIndex < ROWS) {
       const numPegs = pegsInRow(rowIndex);
-      const rowWidth = (numPegs - 1) * SLOT_WIDTH;
-      const offsetX = (canvas.width - rowWidth) / 2;
+      const offsetX = rowOffsetX(rowIndex);
       for (let c = 0; c < numPegs; c++) {
         const px = offsetX + c * SLOT_WIDTH;
         const py = START_Y + rowIndex * ROW_HEIGHT;
