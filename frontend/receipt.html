@@ -136,7 +136,6 @@ function createReceiptHTML(tx) {
   }
   
   var amountDisplay = Math.abs(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  var sign = amount < 0 ? '-' : '';
   
   return `
     <div class="receipt" id="receipt-${tx.id}">
@@ -145,7 +144,7 @@ function createReceiptHTML(tx) {
         <div class="receipt-subtitle">ID: ${tx.id}</div>
       </div>
       <div class="receipt-details">
-        <div class="detail-row"><span class="detail-label">Amount</span><span class="amount-value">${sign}₦${amountDisplay}</span></div>
+        <div class="detail-row"><span class="detail-label">Amount</span><span class="amount-value">₦${amountDisplay}</span></div>
         <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value"><span class="status-badge status-${statusClass}">${status}</span></span></div>
         <div class="detail-row"><span class="detail-label">Date & Time</span><span class="detail-value">${formatDate(tx.timestamp)}</span></div>
         <div class="detail-row"><span class="detail-label">Bank</span><span class="detail-value">${bankName}</span></div>
@@ -209,6 +208,9 @@ function loadSingleReceipt(txId) {
       if (!data.success) { window.location.href = 'index.html'; return; }
       var txs = data.user.transactions || [];
       var withdrawals = txs.filter(function(t) { return t.type === 'WITHDRAWAL'; });
+      // Sort oldest->newest by actual timestamp so "latest" is always
+      // correct, regardless of what order the API returns the array in.
+      withdrawals.sort(function(a, b) { return new Date(a.timestamp) - new Date(b.timestamp); });
       var target = txId ? withdrawals.find(function(t) { return t.id === txId; }) : withdrawals[withdrawals.length - 1];
       var container = document.getElementById('receipt-container');
       if (target) { container.innerHTML = createReceiptHTML(target); }
@@ -226,7 +228,9 @@ function loadHistory() {
     .then(function(data) {
       if (!data.success) { window.location.href = 'index.html'; return; }
       var txs = data.user.transactions || [];
-      var withdrawals = txs.filter(function(t) { return t.type === 'WITHDRAWAL'; }).reverse();
+      var withdrawals = txs.filter(function(t) { return t.type === 'WITHDRAWAL'; });
+      // Sort newest->oldest by actual timestamp, not array order.
+      withdrawals.sort(function(a, b) { return new Date(b.timestamp) - new Date(a.timestamp); });
       var container = document.getElementById('receipt-container');
       container.innerHTML = createHistoryHTML(withdrawals);
     })
@@ -251,7 +255,18 @@ function downloadReceipt() {
   }
 }
 function doDownloadReceipt(receipt) {
-  html2canvas(receipt, { scale: 2, useCORS: true, backgroundColor: null, logging: false })
+  // html2canvas cannot render CSS backdrop-filter (the glass-blur look),
+  // so it was falling back to flattening that near-transparent overlay
+  // into a flat grey blob on the PNG. Swap in a solid background that
+  // matches the app's real color scheme just for the capture, then
+  // restore the live glass style right after so the on-screen receipt
+  // is unaffected.
+  var originalBackground = receipt.style.background;
+  var originalBackdrop = receipt.style.backdropFilter;
+  receipt.style.background = 'linear-gradient(160deg, #1b1135, #0a0518)';
+  receipt.style.backdropFilter = 'none';
+
+  html2canvas(receipt, { scale: 2, useCORS: true, backgroundColor: '#0a0518', logging: false })
     .then(function(canvas) {
       var link = document.createElement('a');
       link.download = 'flexia-receipt-' + (receipt.id.replace('receipt-', '') || Date.now()) + '.png';
@@ -261,6 +276,10 @@ function doDownloadReceipt(receipt) {
     .catch(function(err) {
       console.error('Download failed:', err);
       alert('Failed to download receipt.');
+    })
+    .finally(function() {
+      receipt.style.background = originalBackground;
+      receipt.style.backdropFilter = originalBackdrop;
     });
 }
 
