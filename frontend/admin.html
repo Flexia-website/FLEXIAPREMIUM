@@ -916,31 +916,51 @@
     }
     function renderPendingWithdrawals(txs) {
         const c = document.getElementById('pending-withdrawals-list');
-        const pend = txs.filter(t => t.status==='PENDING');
+        const pend = txs.filter(t => t.status==='PENDING' && t.type==='WITHDRAWAL');
         if (!pend.length) { c.innerHTML = '<div class="text-gray-500 text-sm">None pending.</div>'; return; }
-        c.innerHTML = pend.map(t => `
-            <div class="bg-gray-50 p-3 rounded-lg mb-2 text-sm flex flex-wrap items-center justify-between">
-                <div><span class="font-mono">${t.id.slice(0,8)}</span> | User ${t.user_id} | ₦${t.amount.toFixed(2)}</div>
-                <div class="flex gap-2">
-                    <button onclick="processWithdrawal('${t.id}','approve')" class="btn btn-success text-sm py-0 px-2"><i class="fas fa-check"></i></button>
-                    <button onclick="processWithdrawal('${t.id}','reject')" class="btn btn-danger text-sm py-0 px-2"><i class="fas fa-times"></i></button>
+        c.innerHTML = pend.map(t => {
+            const d = t.details || {};
+            const bankName = d.bank_name || 'Unknown Bank';
+            const acctNumber = d.account_number || '—';
+            const acctName = d.account_name || '—';
+            return `
+            <div class="bg-gray-50 p-3 rounded-lg mb-2 text-sm">
+                <div class="flex flex-wrap items-center justify-between mb-2">
+                    <div><span class="font-mono">${t.id.slice(0,8)}</span> | ${t.username || 'User ' + t.user_id} | <span class="font-bold text-green-700">₦${t.amount.toFixed(2)}</span></div>
+                    <div class="flex gap-2">
+                        <button onclick="processWithdrawal('${t.id}','approve')" class="btn btn-success text-sm py-0 px-2"><i class="fas fa-check"></i></button>
+                        <button onclick="processWithdrawal('${t.id}','reject')" class="btn btn-danger text-sm py-0 px-2"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+                <div class="bg-white border border-gray-200 rounded-md p-2 text-xs text-gray-700 grid grid-cols-3 gap-2">
+                    <div><span class="text-gray-400">Bank:</span> ${bankName}</div>
+                    <div><span class="text-gray-400">Account #:</span> <span class="font-mono">${acctNumber}</span></div>
+                    <div><span class="text-gray-400">Name:</span> ${acctName}</div>
                 </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
     }
     function renderAllTransactions(txs) {
         const tbody = document.getElementById('all-transactions');
         if (!txs.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-gray-500">No transactions</td></tr>'; return; }
-        tbody.innerHTML = txs.slice(0,30).map(t => `
+        tbody.innerHTML = txs.slice(0,30).map(t => {
+            const isWithdrawal = t.type === 'WITHDRAWAL';
+            const d = t.details || {};
+            const userCell = isWithdrawal
+                ? `${t.username || 'User ' + t.user_id}<div class="text-xs text-gray-400">${d.bank_name || ''} · ${d.account_number || ''} · ${d.account_name || ''}</div>`
+                : (t.username || t.user_id);
+            return `
             <tr>
                 <td>${t.id.slice(0,8)}…</td>
-                <td>${t.user_id}</td>
+                <td>${userCell}</td>
                 <td>₦${t.amount.toFixed(2)}</td>
                 <td><span class="badge ${t.status==='COMPLETED'?'badge-success':t.status==='PENDING'?'badge-warning':'badge-danger'}">${t.status}</span></td>
                 <td>${new Date(t.timestamp).toLocaleDateString()}</td>
                 <td>${t.status==='PENDING'? `<button onclick="processWithdrawal('${t.id}','approve')" class="btn btn-success text-sm py-0 px-2"><i class="fas fa-check"></i></button><button onclick="processWithdrawal('${t.id}','reject')" class="btn btn-danger text-sm py-0 px-2"><i class="fas fa-times"></i></button>` : '—'}</td>
             </tr>
-        `).join('');
+        `;
+        }).join('');
     }
     async function processWithdrawal(txId, action) {
         if (!confirm(`${action} withdrawal?`)) return;

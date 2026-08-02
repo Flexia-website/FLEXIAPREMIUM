@@ -579,9 +579,9 @@ async function dropBall() {
   let ballX = startX;
   let ballY = startY;
   let velocityX = (Math.random() - 0.5) * 2;
-  let velocityY = 2;
-  const gravity = 0.15;
-  const damping = 0.8;
+  let velocityY = 4;
+  const gravity = 0.35;
+  const damping = 0.72;
   
   function animate() {
     velocityY += gravity;
@@ -599,9 +599,6 @@ async function dropBall() {
         const dy = ballY - py;
         const dist = Math.sqrt(dx*dx + dy*dy);
         if (dist < PEG_RADIUS + BALL_RADIUS) {
-          // Create spark effect on peg collision
-          createParticles(px, py, 4, '#00FFFF');
-          
           const angle = Math.atan2(dy, dx);
           const overlap = PEG_RADIUS + BALL_RADIUS - dist;
           ballX += Math.cos(angle) * overlap;
@@ -623,39 +620,20 @@ async function dropBall() {
     drawBoard();
     drawParticles();
     
-    // Draw ball with enhanced visuals
-    // Outer glow layer
-    ctx.beginPath();
-    ctx.arc(ballX, ballY, BALL_RADIUS + 6, 0, 2 * Math.PI);
-    ctx.fillStyle = 'rgba(255,0,85,0.2)';
-    ctx.fill();
-    
-    // Mid glow layer
-    ctx.beginPath();
-    ctx.arc(ballX, ballY, BALL_RADIUS + 3, 0, 2 * Math.PI);
-    ctx.fillStyle = 'rgba(255,0,100,0.35)';
-    ctx.fill();
-    
-    // Main ball with gradient
-    const ballGradient = ctx.createRadialGradient(ballX - 4, ballY - 4, 0, ballX, ballY, BALL_RADIUS);
+    // Ball — single gradient fill + thin outline, no stacked glow layers.
+    // The old version drew 5 separate shapes (2 glow rings, gradient fill,
+    // highlight, outer ring) every frame; that's what made the fall feel
+    // heavy/laggy on top of the particle spam. This is the real, fast look.
+    const ballGradient = ctx.createRadialGradient(ballX - 3, ballY - 3, 0, ballX, ballY, BALL_RADIUS);
     ballGradient.addColorStop(0, '#FF66CC');
-    ballGradient.addColorStop(0.6, '#FF0055');
     ballGradient.addColorStop(1, '#CC0033');
     
     ctx.beginPath();
     ctx.arc(ballX, ballY, BALL_RADIUS, 0, 2 * Math.PI);
     ctx.fillStyle = ballGradient;
     ctx.fill();
-    
-    // Bright highlight on ball
-    ctx.beginPath();
-    ctx.arc(ballX - 4, ballY - 4, BALL_RADIUS * 0.35, 0, 2 * Math.PI);
-    ctx.fillStyle = 'rgba(255,200,200,0.6)';
-    ctx.fill();
-    
-    // Outer ring with shadow
-    ctx.strokeStyle = 'rgba(255,0,85,0.8)';
-    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = 'rgba(255,0,85,0.7)';
+    ctx.lineWidth = 1.5;
     ctx.stroke();
     
     if (ballY >= canvas.height - 55) {
