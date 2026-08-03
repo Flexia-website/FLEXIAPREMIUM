@@ -75,7 +75,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
   <div class="game-row">
     <div class="game-panel">
       <div class="game-board-container">
-        <canvas id="game-board" width="640" height="900"></canvas>
+        <canvas id="game-board" width="800" height="1125"></canvas>
       </div>
     </div>
     <div class="scores-panel">
@@ -114,7 +114,11 @@ html,body{height:100%;width:100%;overflow:hidden;background:radial-gradient(elli
       <label for="bet-input" style="font-size:0.8rem;color:#A0A0B5;">Bet:</label>
       <input type="number" id="bet-input" value="100" min="100" max="50000" step="100"
              style="flex:1;padding:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(128,0,255,0.3);border-radius:8px;color:#F0F0F0;font-size:1rem;text-align:center;outline:none;">
+      <label for="ball-count-input" style="font-size:0.8rem;color:#A0A0B5;">Balls:</label>
+      <input type="number" id="ball-count-input" value="1" min="1" max="5" step="1"
+             style="width:64px;padding:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(128,0,255,0.3);border-radius:8px;color:#F0F0F0;font-size:1rem;text-align:center;outline:none;">
     </div>
+    <div style="font-size:0.65rem;color:#A0A0B5;margin:-6px 0 10px 2px;">Bet is charged <strong>per ball</strong> — each ball is settled as its own round, same as dropping one at a time.</div>
     <div class="action-buttons">
       <button class="action-btn" onclick="dropBall()" id="drop-btn"><i class="fas fa-bowling-ball"></i> DROP BALL</button>
       <button class="action-btn" onclick="manualClaim()" id="claim-btn"><i class="fas fa-trophy"></i> CLAIM</button>
@@ -180,11 +184,11 @@ const MAX_PLAYS_PER_DAY = 5;
 // ========== GAME CONFIG ==========
 const ROWS = 12;
 const COLS = 12;
-const PEG_RADIUS = 6;
+const PEG_RADIUS = 7.5;
 const SLOT_WIDTH = canvas.width / COLS;
-const BALL_RADIUS = 7;
-const ROW_HEIGHT = 65.45;
-const START_Y = 104;
+const BALL_RADIUS = 8.75;
+const ROW_HEIGHT = 81.81;
+const START_Y = 130;
 const MULTIPLIERS = [10.0, 5.0, 3.0, 1.0, 1.0, 0.5, 0.5, 1.0, 1.0, 3.0, 5.0, 10.0];
 
 let betAmount = 100;
@@ -348,6 +352,9 @@ async function loadPlaysToday() {
   }
 }
 
+// Single-round settlement endpoint: one bet, one multiplier, one net result.
+// Multi-ball drops call this once per ball as it lands — the contract itself
+// is unchanged from the original one-ball-per-click flow.
 async function callBackend(bet, multiplier) {
   const r = await fetch('/api/games/plinko/report', {
     method:'POST',
@@ -471,14 +478,14 @@ function renderBoardCache() {
   // Draw multiplier labels with enhanced styling (at very bottom)
   octx.textAlign = 'center';
   octx.textBaseline = 'middle';
-  octx.font = 'bold 14px Orbitron';
+  octx.font = 'bold 17px Orbitron';
   for (let i = 0; i < COLS; i++) {
     const x = i * SLOT_WIDTH + SLOT_WIDTH / 2;
-    const y = canvas.height - 30;
+    const y = canvas.height - 37;
     const m = MULTIPLIERS[i];
 
     octx.fillStyle = m >= 5 ? 'rgba(255,0,85,0.15)' : m <= 0.5 ? 'rgba(100,150,255,0.15)' : 'rgba(0,255,100,0.1)';
-    octx.fillRect(i * SLOT_WIDTH + 2, canvas.height - 50, SLOT_WIDTH - 4, 45);
+    octx.fillRect(i * SLOT_WIDTH + 2, canvas.height - 62, SLOT_WIDTH - 4, 56);
 
     octx.shadowColor = m >= 5 ? 'rgba(255,0,85,0.8)' : 'rgba(0,255,200,0.8)';
     octx.shadowBlur = 10;
@@ -540,14 +547,32 @@ async function dropBall() {
   if (capReached) { alert('Daily ₦3000 cap reached! Come back tomorrow.'); return; }
   if (limitReached) { alert('Daily play limit reached (5 plays). Come back tomorrow!'); return; }
   if (gameRunning) return;
-  
+
   const input = document.getElementById('bet-input');
   betAmount = parseFloat(input.value);
   if (isNaN(betAmount) || betAmount < MIN_BET || betAmount > MAX_BET) {
     alert('Invalid bet amount. Min ₦' + MIN_BET + ', Max ₦' + MAX_BET);
     return;
   }
-  
+
+  const MAX_BALLS_PER_DROP = 5;
+  const countInput = document.getElementById('ball-count-input');
+  const rawCount = countInput.value;
+  const ballCount = parseInt(rawCount);
+
+  if (isNaN(ballCount) || ballCount < 1 || ballCount > MAX_BALLS_PER_DROP || String(ballCount) !== String(rawCount).trim()) {
+    alert('Invalid ball count. Enter a whole number between 1 and ' + MAX_BALLS_PER_DROP + '.');
+    return;
+  }
+
+  // Still respect the daily play limit — a valid ball count can still exceed
+  // how many plays are left today, and that's refused too, not clamped.
+  const playsRemaining = MAX_PLAYS_PER_DAY - playsToday;
+  if (ballCount > playsRemaining) {
+    alert('Only ' + playsRemaining + ' play(s) left today — reduce your ball count to ' + playsRemaining + ' or fewer.');
+    return;
+  }
+
   try {
     const resp = await fetch('/api/user/profile', { credentials: 'include' });
     const data = await resp.json();
@@ -556,8 +581,9 @@ async function dropBall() {
       return;
     }
     const balance = parseFloat(data.user.balance);
-    if (betAmount > balance) {
-      alert('Insufficient balance. Your balance: ₦' + balance.toLocaleString());
+    const totalStake = betAmount * ballCount;
+    if (totalStake > balance) {
+      alert('Insufficient balance for ' + ballCount + ' ball(s) at ₦' + betAmount + ' each (₦' + totalStake + ' total). Your balance: ₦' + balance.toLocaleString());
       return;
     }
     if (window.App && window.App.currentUser) {
@@ -567,146 +593,229 @@ async function dropBall() {
     alert('Could not verify balance. Please try again.');
     return;
   }
-  
+
   gameRunning = true;
   document.getElementById('drop-btn').disabled = true;
-  
-  const targetCol = Math.floor(Math.random() * COLS);
-  multiplier = MULTIPLIERS[targetCol];
-  
+
+  // Physics constants shared by every ball in the batch.
+  const gravity = 0.85;
+  const restitution = 0.62;
+  const friction = 0.94;
+  const maxFallSpeed = 18;
+  const steps = 2;
   const startX = canvas.width / 2;
   const startY = START_Y - PEG_RADIUS - BALL_RADIUS - 2;
-  let ballX = startX;
-  let ballY = startY;
-  let velocityX = (Math.random() - 0.5) * 2;
-  let velocityY = 4;
-  const gravity = 0.35;
-  const damping = 0.72;
-  
+
+  // Each ball is a fully independent physics body + independent backend
+  // round. Nothing about how a single ball resolves changes — we're just
+  // running several of them through the same code at once.
+  const balls = [];
+  for (let i = 0; i < ballCount; i++) {
+    const targetCol = Math.floor(Math.random() * COLS);
+    balls.push({
+      x: startX,
+      y: startY - i * 26, // stagger start height so they don't perfectly overlap
+      vx: (Math.random() - 0.5) * 2,
+      vy: 2,
+      lastHitRow: -1,
+      lastHitCol: -1,
+      multiplier: MULTIPLIERS[targetCol],
+      landed: false,
+      settled: false,   // true once this ball's backend round has resolved
+      settling: false,  // true while its callBackend() call is in flight
+      launchDelay: i * 10 // frames to wait before this ball starts falling
+    });
+  }
+
+  const batchResults = []; // { bet, multiplier, netChange, win }
+  let frame = 0;
+
+  // Settles one landed ball through the existing single-round backend
+  // contract — same callBackend(bet, multiplier) call as the single-ball
+  // flow, just invoked once per ball as it lands.
+  async function settleBall(ball) {
+    ball.settling = true;
+    playsToday++;
+    updatePlaysUI();
+
+    // Same single-round call the original one-ball flow used — bet in,
+    // multiplier in, one net result out. Multi-ball just calls it once
+    // per landed ball instead of once per click.
+    const result = await callBackend(betAmount, ball.multiplier);
+    const netChange = result.success ? result.net_change : 0;
+    const win = ball.multiplier > 1;
+
+    sessionEarned += netChange;
+    updateSessionUI();
+    updateCapUI(result.daily_won !== undefined ? result.daily_won : dailyEarned);
+
+    batchResults.push({ bet: betAmount, multiplier: ball.multiplier, netChange, win });
+
+    const particleCount = ball.multiplier > 5 ? 24 : ball.multiplier > 2 ? 18 : 12;
+    const particleColor = ball.multiplier > 5 ? '#FFD700' : ball.multiplier > 2 ? '#FF0055' : '#00FFFF';
+    createParticles(ball.x, ball.y, particleCount, particleColor);
+
+    if (dailyEarned >= PLINKO_CAP) capReached = true;
+    if (playsToday >= MAX_PLAYS_PER_DAY) limitReached = true;
+
+    ball.settled = true;
+    ball.settling = false;
+  }
+
+  function allDone() {
+    return balls.every(b => b.settled);
+  }
+
   function animate() {
-    velocityY += gravity;
-    ballY += velocityY;
-    ballX += velocityX;
-    
-    const rowIndex = Math.floor((ballY - START_Y) / ROW_HEIGHT);
-    if (rowIndex >= 0 && rowIndex < ROWS) {
-      const numPegs = pegsInRow(rowIndex);
-      const offsetX = rowOffsetX(rowIndex);
-      for (let c = 0; c < numPegs; c++) {
-        const px = offsetX + c * SLOT_WIDTH;
-        const py = START_Y + rowIndex * ROW_HEIGHT;
-        const dx = ballX - px;
-        const dy = ballY - py;
-        const dist = Math.sqrt(dx*dx + dy*dy);
-        if (dist < PEG_RADIUS + BALL_RADIUS) {
-          const angle = Math.atan2(dy, dx);
-          const overlap = PEG_RADIUS + BALL_RADIUS - dist;
-          ballX += Math.cos(angle) * overlap;
-          ballY += Math.sin(angle) * overlap;
-          const speed = Math.sqrt(velocityX*velocityX + velocityY*velocityY);
-          const newAngle = Math.atan2(velocityY, velocityX) - 2 * (Math.atan2(dy, dx) - Math.atan2(velocityY, velocityX));
-          velocityX = Math.cos(newAngle) * speed * damping;
-          velocityY = Math.sin(newAngle) * speed * damping;
-          velocityX += (Math.random() - 0.5) * 0.5;
-          break;
+    frame++;
+
+    for (const ball of balls) {
+      if (ball.settled || ball.settling) continue;
+      if (frame < ball.launchDelay) continue;
+
+      if (!ball.landed) {
+        for (let s = 0; s < steps; s++) {
+          ball.vy = Math.min(ball.vy + gravity / steps, maxFallSpeed);
+          ball.y += ball.vy / steps;
+          ball.x += ball.vx / steps;
+
+          const rowIndex = Math.floor((ball.y - START_Y) / ROW_HEIGHT);
+          let closestDist = Infinity, closestPx = 0, closestPy = 0, closestRow = -1, closestCol = -1;
+
+          for (let r = Math.max(0, rowIndex - 1); r <= Math.min(ROWS - 1, rowIndex + 1); r++) {
+            const numPegs = pegsInRow(r);
+            const offsetX = rowOffsetX(r);
+            const py = START_Y + r * ROW_HEIGHT;
+            for (let c = 0; c < numPegs; c++) {
+              const px = offsetX + c * SLOT_WIDTH;
+              const dx = ball.x - px;
+              const dy = ball.y - py;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist < PEG_RADIUS + BALL_RADIUS && dist < closestDist) {
+                closestDist = dist; closestPx = px; closestPy = py; closestRow = r; closestCol = c;
+              }
+            }
+          }
+
+          if (closestRow !== -1 && !(closestRow === ball.lastHitRow && closestCol === ball.lastHitCol)) {
+            const dx = ball.x - closestPx;
+            const dy = ball.y - closestPy;
+            const dist = closestDist || 0.0001;
+            const nx = dx / dist, ny = dy / dist;
+
+            const overlap = PEG_RADIUS + BALL_RADIUS - dist;
+            ball.x += nx * overlap;
+            ball.y += ny * overlap;
+
+            const vDotN = ball.vx * nx + ball.vy * ny;
+            let rvx = ball.vx - 2 * vDotN * nx;
+            let rvy = ball.vy - 2 * vDotN * ny;
+
+            const newDotN = rvx * nx + rvy * ny;
+            const normalX = newDotN * nx, normalY = newDotN * ny;
+            const tangX = rvx - normalX, tangY = rvy - normalY;
+
+            ball.vx = normalX * restitution + tangX * friction;
+            ball.vy = normalY * restitution + tangY * friction;
+            ball.vx += (Math.random() - 0.5) * 0.9;
+
+            ball.lastHitRow = closestRow; ball.lastHitCol = closestCol;
+          } else if (closestRow === -1) {
+            ball.lastHitRow = -1; ball.lastHitCol = -1;
+          }
+        }
+
+        if (ball.x < BALL_RADIUS) { ball.x = BALL_RADIUS; ball.vx = Math.abs(ball.vx) * restitution; }
+        if (ball.x > canvas.width - BALL_RADIUS) { ball.x = canvas.width - BALL_RADIUS; ball.vx = -Math.abs(ball.vx) * restitution; }
+
+        if (ball.y >= canvas.height - 69) {
+          ball.landed = true;
+          settleBall(ball); // fire-and-forget; loop keeps animating other balls
         }
       }
     }
-    
-    if (ballX < BALL_RADIUS) { ballX = BALL_RADIUS; velocityX = Math.abs(velocityX); }
-    if (ballX > canvas.width - BALL_RADIUS) { ballX = canvas.width - BALL_RADIUS; velocityX = -Math.abs(velocityX); }
-    
+
     updateParticles();
     drawBoard();
     drawParticles();
-    
-    // Ball — single gradient fill + thin outline, no stacked glow layers.
-    // The old version drew 5 separate shapes (2 glow rings, gradient fill,
-    // highlight, outer ring) every frame; that's what made the fall feel
-    // heavy/laggy on top of the particle spam. This is the real, fast look.
-    // Ball — bright gradient fill + a single shadowBlur glow pass (one draw
-    // call, not stacked circles) so it's clearly visible against the dark
-    // board without bringing back the per-frame cost that caused the lag.
-    ctx.shadowColor = '#FF3388';
-    ctx.shadowBlur = 14;
-    const ballGradient = ctx.createRadialGradient(ballX - 3, ballY - 3, 0, ballX, ballY, BALL_RADIUS);
-    ballGradient.addColorStop(0, '#FFFFFF');
-    ballGradient.addColorStop(0.35, '#FF66CC');
-    ballGradient.addColorStop(1, '#FF0055');
-    
-    ctx.beginPath();
-    ctx.arc(ballX, ballY, BALL_RADIUS, 0, 2 * Math.PI);
-    ctx.fillStyle = ballGradient;
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    
-    if (ballY >= canvas.height - 55) {
-      gameRunning = false;
-      document.getElementById('drop-btn').disabled = false;
-      
-      // Create explosion particles based on multiplier
-      const particleCount = multiplier > 5 ? 24 : multiplier > 2 ? 18 : 12;
-      const particleColor = multiplier > 5 ? '#FFD700' : multiplier > 2 ? '#FF0055' : '#00FFFF';
-      createParticles(ballX, ballY, particleCount, particleColor);
-      
-      playsToday++;
-      updatePlaysUI();
-      
-      const win = multiplier > 1;
-      let winAmount = betAmount * multiplier;
-      let netChange = winAmount - betAmount;
-      
-      if (win && dailyEarned + netChange > PLINKO_CAP && netChange > 0) {
-        netChange = PLINKO_CAP - dailyEarned;
-        if (netChange <= 0) { alert('Cap reached!'); return; }
-        winAmount = betAmount + netChange;
-      }
-      
-      sessionEarned += netChange;
-      updateSessionUI();
-      
-      document.getElementById('modal-bet').textContent = '₦' + betAmount;
-      document.getElementById('modal-multiplier').textContent = multiplier + 'x';
-      document.getElementById('modal-result').textContent = win ? 'WIN +₦' + netChange : 'LOSS -₦' + Math.abs(netChange);
-      document.getElementById('modal-daily').textContent = '₦' + (dailyEarned + sessionEarned);
-      document.getElementById('modal-plays').textContent = playsToday + '/5';
-      
-      if (sessionEarned > 0) {
-        document.getElementById('modal-action-area').innerHTML = `
-          <button class="modal-btn primary-btn" onclick="claimAndClose()"><i class="fas fa-coins"></i> CLAIM & CLOSE</button>
-          <button class="modal-btn secondary-btn" onclick="playAgain()">PLAY AGAIN</button>
-        `;
-      } else {
-        document.getElementById('modal-action-area').innerHTML = `
-          <button class="modal-btn primary-btn" onclick="playAgain()">PLAY AGAIN</button>
-          <button class="modal-btn secondary-btn" onclick="closeModal()">CLOSE</button>
-        `;
-      }
-      
-      document.getElementById('game-over-modal').classList.remove('hidden');
-      
-      if (dailyEarned + sessionEarned >= PLINKO_CAP) {
-        capReached = true;
-        if (sessionEarned > 0) autoClaim();
-      }
-      
-      if (playsToday >= MAX_PLAYS_PER_DAY) {
-        limitReached = true;
-        document.getElementById('drop-btn').disabled = true;
-        document.getElementById('drop-btn').innerHTML = '<i class="fas fa-lock"></i> LIMIT REACHED';
-      }
-      
-      drawBoard();
+
+    for (const ball of balls) {
+      if (ball.settled || frame < ball.launchDelay) continue;
+      ctx.shadowColor = '#FF3388';
+      ctx.shadowBlur = 14;
+      const ballGradient = ctx.createRadialGradient(ball.x - 3, ball.y - 3, 0, ball.x, ball.y, BALL_RADIUS);
+      ballGradient.addColorStop(0, '#FFFFFF');
+      ballGradient.addColorStop(0.35, '#FF66CC');
+      ballGradient.addColorStop(1, '#FF0055');
+
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, 2 * Math.PI);
+      ctx.fillStyle = ballGradient;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    if (allDone()) {
+      finishBatch(batchResults);
       return;
     }
-    
+
     requestAnimationFrame(animate);
   }
-  
+
   animate();
+}
+
+// Aggregates all per-ball results from the batch into one summary modal.
+// Each entry in `results` already went through callBackend individually —
+// this just presents them together instead of one modal per ball.
+function finishBatch(results) {
+  gameRunning = false;
+  document.getElementById('drop-btn').disabled = false;
+
+  const totalBet = results.reduce((s, r) => s + r.bet, 0);
+  const totalNet = results.reduce((s, r) => s + r.netChange, 0);
+  const wins = results.filter(r => r.win).length;
+
+  const breakdown = results.map((r, i) =>
+    `Ball ${i + 1}: ${r.multiplier}x → ${r.netChange >= 0 ? '+' : ''}₦${r.netChange}`
+  ).join('<br>');
+
+  document.getElementById('modal-bet').textContent = '₦' + totalBet + (results.length > 1 ? ' (' + results.length + ' balls)' : '');
+  document.getElementById('modal-multiplier').textContent = results.length === 1 ? results[0].multiplier + 'x' : wins + '/' + results.length + ' wins';
+  document.getElementById('modal-result').innerHTML = (totalNet >= 0 ? 'WIN +₦' + totalNet : 'LOSS -₦' + Math.abs(totalNet)) + (results.length > 1 ? '<div style="margin-top:8px;font-size:0.8rem;font-weight:normal;color:#A0A0B5;">' + breakdown + '</div>' : '');
+  document.getElementById('modal-daily').textContent = '₦' + dailyEarned;
+  document.getElementById('modal-plays').textContent = playsToday + '/' + MAX_PLAYS_PER_DAY;
+
+  if (sessionEarned > 0) {
+    document.getElementById('modal-action-area').innerHTML = `
+      <button class="modal-btn primary-btn" onclick="claimAndClose()"><i class="fas fa-coins"></i> CLAIM & CLOSE</button>
+      <button class="modal-btn secondary-btn" onclick="playAgain()">PLAY AGAIN</button>
+    `;
+  } else {
+    document.getElementById('modal-action-area').innerHTML = `
+      <button class="modal-btn primary-btn" onclick="playAgain()">PLAY AGAIN</button>
+      <button class="modal-btn secondary-btn" onclick="closeModal()">CLOSE</button>
+    `;
+  }
+
+  document.getElementById('game-over-modal').classList.remove('hidden');
+
+  if (dailyEarned >= PLINKO_CAP) {
+    capReached = true;
+    if (sessionEarned > 0) autoClaim();
+  }
+
+  if (playsToday >= MAX_PLAYS_PER_DAY) {
+    limitReached = true;
+    document.getElementById('drop-btn').disabled = true;
+    document.getElementById('drop-btn').innerHTML = '<i class="fas fa-lock"></i> LIMIT REACHED';
+  }
+
+  drawBoard();
 }
 
 function playAgain() { document.getElementById('game-over-modal').classList.add('hidden'); }
